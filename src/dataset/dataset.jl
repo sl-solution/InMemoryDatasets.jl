@@ -77,7 +77,7 @@ duplicate).
 If an `AbstractRange` is passed to a `dataset` constructor as a column it is
 always collected to a `Vector` (even if `copycols=false`). As a general rule
 `AbstractRange` values are always materialized to a `Vector` by all functions in
-datasets.jl before being stored in a `dataset`.
+Dataset.jl before being stored in a `dataset`.
 
 `dataset` can store only columns that use 1-based indexing. Attempting
 to store a vector using non-standard indexing raises an error.
@@ -188,22 +188,8 @@ struct dataset <: Abstractdataset
         end
         len == -1 && (len = 1) # we got no vectors so make one row of scalars
 
-        # we write into columns as we know that it is guaranteed
-        # that it was freshly allocated in the outer constructor
-        @static if VERSION >= v"1.4"
-            if copycols && len >= 1_000_000 && length(columns) > 1 && Threads.nthreads() > 1
-                @sync for i in eachindex(columns)
-                    Threads.@spawn columns[i] = _preprocess_column(columns[i], len, copycols)
-                end
-            else
-                for i in eachindex(columns)
-                    columns[i] = _preprocess_column(columns[i], len, copycols)
-                end
-            end
-        else
-            for i in eachindex(columns)
-                columns[i] = _preprocess_column(columns[i], len, copycols)
-            end
+        for i in eachindex(columns)
+            columns[i] = _preprocess_column(columns[i], len, copycols)
         end
 
         for (i, col) in enumerate(columns)
@@ -403,10 +389,10 @@ index(df::dataset) = getfield(df, :colindex)
 _columns(df::dataset) = getfield(df, :columns)
 
 _onebased_check_error() =
-    throw(ArgumentError("Currently datasets.jl supports only columns " *
+    throw(ArgumentError("Currently Dataset.jl supports only columns " *
                         "that use 1-based indexing"))
 _onebased_check_error(i, col) =
-    throw(ArgumentError("Currently datasets.jl supports only " *
+    throw(ArgumentError("Currently Dataset.jl supports only " *
                         "columns that use 1-based indexing, but " *
                         "column $i has starting index equal to $(firstindex(col))"))
 
@@ -598,10 +584,12 @@ function insert_single_column!(df::dataset, v::AbstractVector, col_ind::ColumnIn
     if haskey(index(df), col_ind)
         j = index(df)[col_ind]
         _columns(df)[j] = dv
+        _modified(getfield(df, :attributes))
     else
         if col_ind isa SymbolOrString
             push!(index(df), Symbol(col_ind))
             push!(_columns(df), dv)
+            _modified(getfield(df, :attributes))
         else
             throw(ArgumentError("Cannot assign to non-existent column: $col_ind"))
         end
@@ -612,6 +600,7 @@ end
 function insert_single_entry!(df::dataset, v::Any, row_ind::Integer, col_ind::ColumnIndex)
     if haskey(index(df), col_ind)
         _columns(df)[index(df)[col_ind]][row_ind] = v
+        _modified(getfield(df, :attributes))
         return v
     else
         throw(ArgumentError("Cannot assign to non-existent column: $col_ind"))
@@ -621,15 +610,22 @@ end
 # df[!, SingleColumnIndex] = AbstractVector
 function Base.setindex!(df::dataset, v::AbstractVector, ::typeof(!), col_ind::ColumnIndex)
     insert_single_column!(df, v, col_ind)
+    _modified(getfield(df, :attributes))
     return df
 end
 
 # df.col = AbstractVector
 # separate methods are needed due to dispatch ambiguity
-Base.setproperty!(df::dataset, col_ind::Symbol, v::AbstractVector) =
-    (df[!, col_ind] = v)
-Base.setproperty!(df::dataset, col_ind::AbstractString, v::AbstractVector) =
-    (df[!, col_ind] = v)
+function Base.setproperty!(df::dataset, col_ind::Symbol, v::AbstractVector)
+    df[!, col_ind] = v
+    _modified(getfield(df, :attributes))
+    v
+end
+function Base.setproperty!(df::dataset, col_ind::AbstractString, v::AbstractVector)
+    df[!, col_ind] = v
+    _modified(getfield(df, :attributes))
+    v
+end
 Base.setproperty!(::dataset, col_ind::Symbol, v::Any) =
     throw(ArgumentError("It is only allowed to pass a vector as a column of a dataset. " *
                         "Instead use `df[!, col_ind] .= v` if you want to use broadcasting."))

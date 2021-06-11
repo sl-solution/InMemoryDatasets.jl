@@ -1,5 +1,5 @@
 Base.summary(df::Abstractdataset) =
-    @sprintf("%d×%d %s\ncreated: %s\nmodified: %s\ndescription: %s\n", size(df)..., nameof(typeof(df)), getfield(df, :attributes).general[1], getfield(df, :attributes).general[2], getfield(df, :attributes).general[3])
+    @sprintf("%d×%d %s", size(df)..., nameof(typeof(df)))
 Base.summary(io::IO, df::Abstractdataset) = print(io, summary(df))
 
 """

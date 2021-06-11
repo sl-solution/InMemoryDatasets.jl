@@ -7,6 +7,7 @@ using Compat
 using Printf
 using PrettyTables, REPL
 using Markdown
+using PooledArrays
 @reexport using Missings, InvertedIndices
 import DataAPI,
        DataAPI.All,
@@ -19,6 +20,7 @@ import DataAPI,
 export
       Abstractdataset,
       DatasetColumns,
+      SubDataset,
       dataset
 
 include("other/utils.jl")
@@ -26,6 +28,10 @@ include("other/index.jl")
 
 include("abstractdataset/abstractdataset.jl")
 include("dataset/dataset.jl")
+include("subdataset/subdataset.jl")
+
+
+include("other/broadcasting.jl")
 
 include("abstractdataset/iteration.jl")
 include("abstractdataset/prettytables.jl")

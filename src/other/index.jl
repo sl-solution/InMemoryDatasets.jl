@@ -24,11 +24,20 @@ struct Index <: AbstractIndex   # an OrderedDict would be nice here...
     names::Vector{Symbol}
 end
 
-struct Attributes <: AbstractAttributes
-    general::NamedTuple{(:created, :modified, :info),Tuple{DateTime, DateTime, String}}
+struct DatasetMeta
+    created::DateTime
+    modified::Ref{DateTime}
+    info::Ref{String}
 end
 
-Attributes() = Attributes((created = now(), modified = now(), info = ""))
+struct Attributes <: AbstractAttributes
+    meta::DatasetMeta
+end
+
+Attributes() = Attributes(DatasetMeta(now(), now(), ""))
+
+_modified(x::Attributes) = x.meta.modified[] = now()
+
 
 function Index(names::AbstractVector{Symbol}; makeunique::Bool=false)
     u = make_unique(names, makeunique=makeunique)
