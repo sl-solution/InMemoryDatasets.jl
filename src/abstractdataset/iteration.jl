@@ -171,7 +171,7 @@ julia> sum.(eachcol(df))
  50
 ```
 """
-eachcol(df::AbstractDataset) = DatasetColumns(df)
+Base.eachcol(df::AbstractDataset) = DatasetColumns(df)
 
 Base.IteratorSize(::Type{<:DatasetColumns}) = Base.HasShape{1}()
 Base.size(itr::DatasetColumns) = (size(parent(itr), 2),)
