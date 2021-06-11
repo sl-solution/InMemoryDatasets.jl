@@ -144,7 +144,7 @@ function Base.merge!(x::Index, y::AbstractIndex; makeunique::Bool=false)
     for add in adds
         i += 1
         x.lookup[add] = i
-        if haskey(y.format, i)
+        if haskey(y.format, i - length(x))
             x.format[i] = y.format[i - length(x)]
         end
     end
@@ -157,6 +157,7 @@ Base.merge(x::Index, y::AbstractIndex; makeunique::Bool=false) =
 
 function Base.delete!(x::Index, idx::Integer)
     # reset the lookup's beyond the deleted item
+    delete!(x.format, idx)
     for i in (idx + 1):length(x.names)
         x.lookup[x.names[i]] = i - 1
         if haskey(x.format, i)
