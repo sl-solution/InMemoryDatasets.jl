@@ -1,4 +1,4 @@
-module Dataset
+module InMemoryDatasets
 
 using Dates
 using TableTraits,IteratorInterfaceExtensions
