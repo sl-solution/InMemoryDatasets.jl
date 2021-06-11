@@ -14,11 +14,6 @@ with each row represented as a `datasetRow`.
 A value of this type is returned by the [`eachrow`](@ref) function.
 """
 
-# a temp struct for avoiding errors
-struct DatasetRow
-
-end
-
 struct DatasetRows{D<:Abstractdataset} <: AbstractVector{DatasetRow}
     df::D
 end

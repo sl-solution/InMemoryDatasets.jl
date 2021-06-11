@@ -29,7 +29,7 @@ include("other/index.jl")
 include("abstractdataset/abstractdataset.jl")
 include("dataset/dataset.jl")
 include("subdataset/subdataset.jl")
-
+include("datasetrow/datasetrow.jl")
 
 include("other/broadcasting.jl")
 
