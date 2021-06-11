@@ -6,4 +6,4 @@
 
 ```julia
 > using InMemoryDatasets
-> a = dataset(x = [1,2], y = [1,2])
+> a = Dataset(x = [1,2], y = [1,2])
