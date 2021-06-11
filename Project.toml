@@ -1,4 +1,4 @@
-name = "Dataset"
+name = "InMemoryDatasets"
 uuid = "5c01b14b-ab03-46ff-b164-14c663efdd9f"
 authors = ["sl-solution <github.sl.solution@icloud.com> and contributors"]
 version = "0.1.0"
