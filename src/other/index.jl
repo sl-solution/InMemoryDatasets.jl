@@ -22,6 +22,7 @@ const MULTICOLUMNINDEX_STR = "`:`, `Cols`, `All`, `Between`, `Not`, a regular ex
 struct Index <: AbstractIndex   # an OrderedDict would be nice here...
     lookup::Dict{Symbol, Int}      # name => names array position
     names::Vector{Symbol}
+    format::Dict{Int, Function} # assign a function as a formater to colsidx
 end
 
 struct DatasetMeta
@@ -42,17 +43,17 @@ _modified(x::Attributes) = x.meta.modified[] = now()
 function Index(names::AbstractVector{Symbol}; makeunique::Bool=false)
     u = make_unique(names, makeunique=makeunique)
     lookup = Dict{Symbol, Int}(zip(u, 1:length(u)))
-    return Index(lookup, u)
+    return Index(lookup, u, Dict{Int, Function}())
 end
 
-Index() = Index(Dict{Symbol, Int}(), Symbol[])
+Index() = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
 Base.length(x::Index) = length(x.names)
 Base.names(x::Index) = string.(x.names)
 
 # _names returns Vector{Symbol}
 _names(x::Index) = x.names
 
-Base.copy(x::Index) = Index(copy(x.lookup), copy(x.names))
+Base.copy(x::Index) = Index(copy(x.lookup), copy(x.names), copy(x.format))
 Base.isequal(x::AbstractIndex, y::AbstractIndex) = _names(x) == _names(y) # it is enough to check names
 Base.:(==)(x::AbstractIndex, y::AbstractIndex) = isequal(x, y)
 
@@ -143,6 +144,9 @@ function Base.merge!(x::Index, y::AbstractIndex; makeunique::Bool=false)
     for add in adds
         i += 1
         x.lookup[add] = i
+        if haskey(y.format, i)
+            x.format[i] = y.format[i - length(x)]
+        end
     end
     append!(x.names, adds)
     return x
@@ -155,6 +159,10 @@ function Base.delete!(x::Index, idx::Integer)
     # reset the lookup's beyond the deleted item
     for i in (idx + 1):length(x.names)
         x.lookup[x.names[i]] = i - 1
+        if haskey(x.format, i)
+            x.format[i-1] = x.format[i]
+            delete!(x.format, i)
+        end
     end
     delete!(x.lookup, x.names[idx])
     deleteat!(x.names, idx)
@@ -174,6 +182,7 @@ Base.delete!(x::Index, nm::AbstractString) = delete!(x, Symbol(nm))
 function Base.empty!(x::Index)
     empty!(x.lookup)
     empty!(x.names)
+    empty!(x.format)
     return x
 end
 
@@ -183,6 +192,12 @@ function Base.insert!(x::Index, idx::Integer, nm::Symbol)
      end
     for i = idx:length(x.names)
         x.lookup[x.names[i]] = i + 1
+    end
+    for i in length(x.names):-1:idx
+        if haskey(x.format, i)
+            x.format[i+1] = x.format[i]
+            delete!(x.format, i)
+        end
     end
     x.lookup[nm] = idx
     insert!(x.names, idx, nm)

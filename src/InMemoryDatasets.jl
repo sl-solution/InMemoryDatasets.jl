@@ -21,7 +21,9 @@ export
       AbstractDataset,
       DatasetColumns,
       SubDataset,
-      Dataset
+      Dataset,
+      nrow,
+      ncol
 
 include("other/utils.jl")
 include("other/index.jl")
