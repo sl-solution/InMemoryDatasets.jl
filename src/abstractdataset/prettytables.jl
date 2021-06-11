@@ -13,7 +13,7 @@ function _pretty_tables_highlighter_func(data, i::Integer, j::Integer)
         cell = data[i, j]
         return ismissing(cell) ||
             cell === nothing ||
-            cell isa Union{Abstractdataset}
+            cell isa Union{AbstractDataset}
     catch e
         if isa(e, UndefRefError)
             return true
@@ -35,7 +35,7 @@ const _PRETTY_TABLES_HIGHLIGHTER = Highlighter(_pretty_tables_highlighter_func,
 #     - Cells with types related to DataFrames.jl.
 
 function _pretty_tables_general_formatter(v, i::Integer, j::Integer)
-    if typeof(v) <: Union{Abstractdataset}
+    if typeof(v) <: Union{AbstractDataset}
 
         # Here, we must not use `print` or `show`. Otherwise, we will call
         # `_pretty_table` to render the current table leading to a stack

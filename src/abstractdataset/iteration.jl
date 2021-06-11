@@ -6,27 +6,27 @@
 
 # Iteration by rows
 """
-    datasetRows{D<:Abstractdataset} <: AbstractVector{datasetRow}
+    datasetRows{D<:AbstractDataset} <: AbstractVector{datasetRow}
 
-Iterator over rows of an `Abstractdataset`,
+Iterator over rows of an `AbstractDataset`,
 with each row represented as a `datasetRow`.
 
 A value of this type is returned by the [`eachrow`](@ref) function.
 """
 
-struct DatasetRows{D<:Abstractdataset} <: AbstractVector{DatasetRow}
+struct DatasetRows{D<:AbstractDataset} <: AbstractVector{DatasetRow}
     df::D
 end
 #
 # Base.summary(dfrs::datasetRows) = "$(length(dfrs))-element datasetRows"
 # Base.summary(io::IO, dfrs::datasetRows) = print(io, summary(dfrs))
 
-Base.iterate(::Abstractdataset) =
-    error("Abstractdataset is not iterable. Use eachrow(df) to get a row iterator " *
+Base.iterate(::AbstractDataset) =
+    error("AbstractDataset is not iterable. Use eachrow(df) to get a row iterator " *
           "or eachcol(df) to get a column iterator")
 
 """
-    eachrow(df::Abstractdataset)
+    eachrow(df::AbstractDataset)
 
 Return a `datasetRows` that iterates a data frame row by row,
 with each row represented as a `datasetRow`.
@@ -37,8 +37,8 @@ but also passes information on the `eltypes` of the columns of `df`.
 
 # Examples
 ```jldoctest
-julia> df = dataset(x=1:4, y=11:14)
-4×2 dataset
+julia> df = Dataset(x=1:4, y=11:14)
+4×2 Dataset
  Row │ x      y
      │ Int64  Int64
 ─────┼──────────────
@@ -73,7 +73,7 @@ julia> eachrow(view(df, [4, 3], [2, 1]))
    2 │    13      3
 ```
 """
-# eachrow(df::Abstractdataset) = datasetRows(df)
+# eachrow(df::AbstractDataset) = datasetRows(df)
 
 # Base.IndexStyle(::Type{<:datasetRows}) = Base.IndexLinear()
 # Base.size(itr::datasetRows) = (size(parent(itr), 1), )
@@ -110,13 +110,13 @@ to pass an integer, string, or `Symbol` as a reference index.
 """
 
 """
-    DatasetColumns{<:Abstractdataset}
+    DatasetColumns{<:AbstractDataset}
 
-A vector-like object that allows iteration over columns of an `Abstractdataset`.
+A vector-like object that allows iteration over columns of an `AbstractDataset`.
 
 $DATASETCOLUMNS_DOCSTR
 """
-struct DatasetColumns{T<:Abstractdataset}
+struct DatasetColumns{T<:AbstractDataset}
     df::T
 end
 
@@ -124,17 +124,17 @@ Base.summary(dfcs::DatasetColumns)= "$(length(dfcs))-element DatasetColumns"
 Base.summary(io::IO, dfcs::DatasetColumns) = print(io, summary(dfcs))
 
 """
-    eachcol(df::Abstractdataset)
+    eachcol(df::AbstractDataset)
 
 Return a `DatasetColumns` object that is a vector-like that allows iterating
-an `Abstractdataset` column by column.
+an `AbstractDataset` column by column.
 
 $DATASETCOLUMNS_DOCSTR
 
 # Examples
 ```jldoctest
-julia> df = dataset(x=1:4, y=11:14)
-4×2 dataset
+julia> df = Dataset(x=1:4, y=11:14)
+4×2 Dataset
  Row │ x      y
      │ Int64  Int64
 ─────┼──────────────
@@ -171,7 +171,7 @@ julia> sum.(eachcol(df))
  50
 ```
 """
-eachcol(df::Abstractdataset) = DatasetColumns(df)
+eachcol(df::AbstractDataset) = DatasetColumns(df)
 
 Base.IteratorSize(::Type{<:DatasetColumns}) = Base.HasShape{1}()
 Base.size(itr::DatasetColumns) = (size(parent(itr), 2),)
@@ -337,19 +337,19 @@ Base.show(dfcs::DatasetColumns;
          summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
 
 """
-    mapcols(f::Union{Function, Type}, df::Abstractdataset)
+    mapcols(f::Union{Function, Type}, df::AbstractDataset)
 
-Return a `dataset` where each column of `df` is transformed using function `f`.
+Return a `Dataset` where each column of `df` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
 (all values other than `AbstractVector` are considered to be a scalar).
 
 Note that `mapcols` guarantees not to reuse the columns from `df` in the returned
-`dataset`. If `f` returns its argument then it gets copied before being stored.
+`Dataset`. If `f` returns its argument then it gets copied before being stored.
 
 # Examples
 ```jldoctest
-julia> df = dataset(x=1:4, y=11:14)
-4×2 dataset
+julia> df = Dataset(x=1:4, y=11:14)
+4×2 Dataset
  Row │ x      y
      │ Int64  Int64
 ─────┼──────────────
@@ -359,7 +359,7 @@ julia> df = dataset(x=1:4, y=11:14)
    4 │     4     14
 
 julia> mapcols(x -> x.^2, df)
-4×2 dataset
+4×2 Dataset
  Row │ x      y
      │ Int64  Int64
 ─────┼──────────────
@@ -369,7 +369,7 @@ julia> mapcols(x -> x.^2, df)
    4 │    16    196
 ```
 """
-function mapcols(f::Union{Function, Type}, df::Abstractdataset)
+function mapcols(f::Union{Function, Type}, df::AbstractDataset)
     # note: `f` must return a consistent length
     vs = AbstractVector[]
     seenscalar = false
@@ -390,13 +390,13 @@ function mapcols(f::Union{Function, Type}, df::Abstractdataset)
             push!(vs, [fv])
         end
     end
-    return dataset(vs, _names(df), copycols=false)
+    return Dataset(vs, _names(df), copycols=false)
 end
 
 """
-    mapcols!(f::Union{Function, Type}, df::dataset)
+    mapcols!(f::Union{Function, Type}, df::Dataset)
 
-Update a `dataset` in-place where each column of `df` is transformed using function `f`.
+Update a `Dataset` in-place where each column of `df` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
 (all values other than `AbstractVector` are considered to be a scalar).
 
@@ -404,8 +404,8 @@ Note that `mapcols!` reuses the columns from `df` if they are returned by `f`.
 
 # Examples
 ```jldoctest
-julia> df = dataset(x=1:4, y=11:14)
-4×2 dataset
+julia> df = Dataset(x=1:4, y=11:14)
+4×2 Dataset
  Row │ x      y
      │ Int64  Int64
 ─────┼──────────────
@@ -417,7 +417,7 @@ julia> df = dataset(x=1:4, y=11:14)
 julia> mapcols!(x -> x.^2, df);
 
 julia> df
-4×2 dataset
+4×2 Dataset
  Row │ x      y
      │ Int64  Int64
 ─────┼──────────────
@@ -427,7 +427,7 @@ julia> df
    4 │    16    196
 ```
 """
-function mapcols!(f::Union{Function, Type}, df::dataset)
+function mapcols!(f::Union{Function, Type}, df::Dataset)
     # note: `f` must return a consistent length
     ncol(df) == 0 && return df # skip if no columns
 

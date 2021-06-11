@@ -18,10 +18,10 @@ import DataAPI,
        Tables.columnindex
 
 export
-      Abstractdataset,
+      AbstractDataset,
       DatasetColumns,
       SubDataset,
-      dataset
+      Dataset
 
 include("other/utils.jl")
 include("other/index.jl")

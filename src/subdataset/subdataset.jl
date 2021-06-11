@@ -1,11 +1,11 @@
 """
-    SubDataset{<:Abstractdataset, <:AbstractIndex, <:AbstractVector{Int}} <: Abstractdataset
+    SubDataset{<:AbstractDataset, <:AbstractIndex, <:AbstractVector{Int}} <: AbstractDataset
 
-A view of an `Abstractdataset`. It is returned by a call to the `view` function
-on an `Abstractdataset` if a collections of rows and columns are specified.
+A view of an `AbstractDataset`. It is returned by a call to the `view` function
+on an `AbstractDataset` if a collections of rows and columns are specified.
 
-A `SubDataset` is an `Abstractdataset`, so expect that most
-dataset functions should work. Such methods include `describe`,
+A `SubDataset` is an `AbstractDataset`, so expect that most
+Dataset functions should work. Such methods include `describe`,
 `summary`, `nrow`, `size`, `by`, `stack`, and `join`.
 
 If the selection of columns in a parent data frame is passed as `:` (a colon)
@@ -14,10 +14,10 @@ even if they are added or removed after its creation.
 
 # Examples
 ```jldoctest
-julia> df = dataset(a = repeat([1, 2, 3, 4], outer=[2]),
+julia> df = Dataset(a = repeat([1, 2, 3, 4], outer=[2]),
                       b = repeat([2, 1], outer=[4]),
                       c = 1:8)
-8×3 dataset
+8×3 Dataset
  Row │ a      b      c
      │ Int64  Int64  Int64
 ─────┼─────────────────────
@@ -58,7 +58,7 @@ julia> sdf2 = @view df[end:-1:1, [1, 3]]  # row and column subsetting
    7 │     2      2
    8 │     1      1
 
-julia> sdf3 = groupby(df, :a)[1]  # indexing a Groupeddataset returns a SubDataset
+julia> sdf3 = groupby(df, :a)[1]  # indexing a GroupedDataset returns a SubDataset
 2×3 SubDataset
  Row │ a      b      c
      │ Int64  Int64  Int64
@@ -67,31 +67,31 @@ julia> sdf3 = groupby(df, :a)[1]  # indexing a Groupeddataset returns a SubDatas
    2 │     1      2      5
 ```
 """
-struct SubDataset{D<:Abstractdataset, S<:AbstractIndex, T<:AbstractVector{Int}} <: Abstractdataset
+struct SubDataset{D<:AbstractDataset, S<:AbstractIndex, T<:AbstractVector{Int}} <: AbstractDataset
     parent::D
     colindex::S
     rows::T # maps from subdf row indexes to parent row indexes
 end
 
-Base.@propagate_inbounds function SubDataset(parent::dataset, rows::AbstractVector{Int}, cols)
+Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVector{Int}, cols)
     @boundscheck if !checkindex(Bool, axes(parent, 1), rows)
         throw(BoundsError(parent, (rows, cols)))
     end
     SubDataset(parent, SubIndex(index(parent), cols), rows)
 end
-Base.@propagate_inbounds SubDataset(parent::dataset, ::Colon, cols) =
+Base.@propagate_inbounds SubDataset(parent::Dataset, ::Colon, cols) =
     SubDataset(parent, axes(parent, 1), cols)
-@inline SubDataset(parent::dataset, row::Integer, cols) =
+@inline SubDataset(parent::Dataset, row::Integer, cols) =
     throw(ArgumentError("invalid row index: $row of type $(typeof(row))"))
 
-Base.@propagate_inbounds function SubDataset(parent::dataset, rows::AbstractVector{<:Integer}, cols)
+Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVector{<:Integer}, cols)
     if any(x -> x isa Bool, rows)
         throw(ArgumentError("invalid row index of type `Bool`"))
     end
     return SubDataset(parent, convert(Vector{Int}, rows), cols)
 end
 
-Base.@propagate_inbounds function SubDataset(parent::dataset, rows::AbstractVector{Bool}, cols)
+Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVector{Bool}, cols)
     if length(rows) != nrow(parent)
         throw(ArgumentError("invalid length of `AbstractVector{Bool}` row index " *
                             "(got $(length(rows)), expected $(nrow(parent)))"))
@@ -99,7 +99,7 @@ Base.@propagate_inbounds function SubDataset(parent::dataset, rows::AbstractVect
     return SubDataset(parent, _findall(rows), cols)
 end
 
-Base.@propagate_inbounds function SubDataset(parent::dataset, rows::AbstractVector, cols)
+Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVector, cols)
     if !all(x -> (x isa Integer) && !(x isa Bool), rows)
         throw(ArgumentError("only `Integer` indices are accepted in `rows`"))
     end
@@ -126,25 +126,25 @@ rows(sdf::SubDataset) = getfield(sdf, :rows)
 Base.parent(sdf::SubDataset) = getfield(sdf, :parent)
 Base.parentindices(sdf::SubDataset) = (rows(sdf), parentcols(index(sdf)))
 
-Base.@propagate_inbounds Base.view(adf::Abstractdataset, rowinds, colind::ColumnIndex) =
+Base.@propagate_inbounds Base.view(adf::AbstractDataset, rowinds, colind::ColumnIndex) =
     view(adf[!, colind], rowinds)
-Base.@propagate_inbounds Base.view(adf::Abstractdataset, ::typeof(!), colind::ColumnIndex) =
+Base.@propagate_inbounds Base.view(adf::AbstractDataset, ::typeof(!), colind::ColumnIndex) =
     view(adf[!, colind], :)
-@inline Base.view(adf::Abstractdataset, rowinds, colind::Bool) =
+@inline Base.view(adf::AbstractDataset, rowinds, colind::Bool) =
     throw(ArgumentError("invalid column index $colind of type `Bool`"))
-Base.@propagate_inbounds Base.view(adf::Abstractdataset, rowinds,
+Base.@propagate_inbounds Base.view(adf::AbstractDataset, rowinds,
                                    colinds::MultiColumnIndex) =
     SubDataset(adf, rowinds, colinds)
-Base.@propagate_inbounds Base.view(adf::Abstractdataset, rowinds::typeof(!),
+Base.@propagate_inbounds Base.view(adf::AbstractDataset, rowinds::typeof(!),
                                    colinds::MultiColumnIndex) =
     SubDataset(adf, :, colinds)
-Base.@propagate_inbounds Base.view(adf::Abstractdataset, rowinds::Not,
+Base.@propagate_inbounds Base.view(adf::AbstractDataset, rowinds::Not,
                                    colinds::MultiColumnIndex) =
     SubDataset(adf, axes(adf, 1)[rowinds], colinds)
 
 ##############################################################################
 ##
-## Abstractdataset interface
+## AbstractDataset interface
 ##
 ##############################################################################
 
@@ -214,12 +214,12 @@ Base.copy(sdf::SubDataset) = parent(sdf)[rows(sdf), parentcols(index(sdf), :)]
 Base.delete!(df::SubDataset, ind) =
     throw(ArgumentError("SubDataset does not support deleting rows"))
 
-function dataset(sdf::SubDataset; copycols::Bool=true)
+function Dataset(sdf::SubDataset; copycols::Bool=true)
     if copycols
         sdf[:, :]
     else
-        dataset(collect(eachcol(sdf)), _names(sdf), copycols=false)
+        Dataset(collect(eachcol(sdf)), _names(sdf), copycols=false)
     end
 end
 
-Base.convert(::Type{dataset}, sdf::SubDataset) = dataset(sdf)
+Base.convert(::Type{Dataset}, sdf::SubDataset) = Dataset(sdf)

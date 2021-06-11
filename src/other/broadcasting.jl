@@ -1,15 +1,15 @@
 ### Broadcasting
 
-Base.getindex(df::Abstractdataset, idx::CartesianIndex{2}) = df[idx[1], idx[2]]
-Base.view(df::Abstractdataset, idx::CartesianIndex{2}) = view(df, idx[1], idx[2])
-Base.setindex!(df::Abstractdataset, val, idx::CartesianIndex{2}) =
+Base.getindex(df::AbstractDataset, idx::CartesianIndex{2}) = df[idx[1], idx[2]]
+Base.view(df::AbstractDataset, idx::CartesianIndex{2}) = view(df, idx[1], idx[2])
+Base.setindex!(df::AbstractDataset, val, idx::CartesianIndex{2}) =
     (df[idx[1], idx[2]] = val)
 
-Base.broadcastable(df::Abstractdataset) = df
+Base.broadcastable(df::AbstractDataset) = df
 
 struct DatasetStyle <: Base.Broadcast.BroadcastStyle end
 
-Base.Broadcast.BroadcastStyle(::Type{<:Abstractdataset}) =
+Base.Broadcast.BroadcastStyle(::Type{<:AbstractDataset}) =
     DatasetStyle()
 
 Base.Broadcast.BroadcastStyle(::DatasetStyle, ::Base.Broadcast.BroadcastStyle) =
@@ -38,7 +38,7 @@ end
 function getcolbc(bcf::Base.Broadcast.Broadcasted{Style}, colind) where {Style}
     # we assume that bcf is already flattened and unaliased
     newargs = map(bcf.args) do x
-        Base.Broadcast.extrude(x isa Abstractdataset ? x[!, colind] : x)
+        Base.Broadcast.extrude(x isa AbstractDataset ? x[!, colind] : x)
     end
     return Base.Broadcast.Broadcasted{Style}(bcf.f, newargs, bcf.axes)
 end
@@ -49,7 +49,7 @@ function Base.copy(bc::Base.Broadcast.Broadcasted{DatasetStyle})
         throw(DimensionMismatch("cannot broadcast a data frame into $ndim dimensions"))
     end
     bcf = Base.Broadcast.flatten(bc)
-    colnames = unique!(Any[_names(df) for df in bcf.args if df isa Abstractdataset])
+    colnames = unique!(Any[_names(df) for df in bcf.args if df isa AbstractDataset])
     if length(colnames) != 1
         wrongnames = setdiff(union(colnames...), intersect(colnames...))
         if isempty(wrongnames)
@@ -62,7 +62,7 @@ function Base.copy(bc::Base.Broadcast.Broadcasted{DatasetStyle})
         end
     end
     nrows = length(axes(bcf)[1])
-    df = dataset()
+    df = Dataset()
     for i in axes(bcf)[2]
         if nrows == 0
             col = Any[]
@@ -81,7 +81,7 @@ end
 ### Broadcasting assignment
 
 struct LazyNewColDataset{T}
-    df::dataset
+    df::Dataset
     col::T
 end
 
@@ -89,18 +89,18 @@ Base.axes(x::LazyNewColDataset) = (Base.OneTo(nrow(x.df)),)
 Base.ndims(::Type{<:LazyNewColDataset}) = 1
 
 struct ColReplaceDataset
-    df::dataset
+    df::Dataset
     cols::Vector{Int}
 end
 
 Base.axes(x::ColReplaceDataset) = (axes(x.df, 1), Base.OneTo(length(x.cols)))
 Base.ndims(::Type{ColReplaceDataset}) = 2
 
-Base.maybeview(df::Abstractdataset, idx::CartesianIndex{2}) = df[idx]
-Base.maybeview(df::Abstractdataset, row::Integer, col::ColumnIndex) = df[row, col]
-Base.maybeview(df::Abstractdataset, rows, cols) = view(df, rows, cols)
+Base.maybeview(df::AbstractDataset, idx::CartesianIndex{2}) = df[idx]
+Base.maybeview(df::AbstractDataset, row::Integer, col::ColumnIndex) = df[row, col]
+Base.maybeview(df::AbstractDataset, rows, cols) = view(df, rows, cols)
 
-function Base.dotview(df::dataset, ::Colon, cols::ColumnIndex)
+function Base.dotview(df::Dataset, ::Colon, cols::ColumnIndex)
     haskey(index(df), cols) && return view(df, :, cols)
     if !(cols isa SymbolOrString)
         throw(ArgumentError("creating new columns using an integer index is disallowed"))
@@ -108,7 +108,7 @@ function Base.dotview(df::dataset, ::Colon, cols::ColumnIndex)
     return LazyNewColDataset(df, Symbol(cols))
 end
 
-function Base.dotview(df::dataset, ::typeof(!), cols)
+function Base.dotview(df::Dataset, ::typeof(!), cols)
     if !(cols isa ColumnIndex)
         return ColReplaceDataset(df, index(df)[cols])
     end
@@ -125,7 +125,7 @@ end
 # TODO: remove the deprecations when Julia 1.7 functionality is commonly used
 #       by the community
 if isdefined(Base, :dotgetproperty)
-    function Base.dotgetproperty(df::dataset, col::SymbolOrString)
+    function Base.dotgetproperty(df::Dataset, col::SymbolOrString)
         if columnindex(df, col) == 0
             return LazyNewColDataset(df, Symbol(col))
         else
@@ -166,14 +166,14 @@ function _copyto_helper!(dfcol::AbstractVector, bc::Base.Broadcast.Broadcasted, 
     end
 end
 
-function Base.Broadcast.broadcast_unalias(dest::Abstractdataset, src)
+function Base.Broadcast.broadcast_unalias(dest::AbstractDataset, src)
     for col in eachcol(dest)
         src = Base.Broadcast.unalias(col, src)
     end
     return src
 end
 
-function Base.Broadcast.broadcast_unalias(dest, src::Abstractdataset)
+function Base.Broadcast.broadcast_unalias(dest, src::AbstractDataset)
     wascopied = false
     for (i, col) in enumerate(eachcol(src))
         if Base.mightalias(dest, col)
@@ -196,8 +196,8 @@ function Base.Broadcast.broadcast_unalias(dest, src::Abstractdataset)
     return src
 end
 
-function _broadcast_unalias_helper(dest::Abstractdataset, scol::AbstractVector,
-                                   src::Abstractdataset, col2::Int, wascopied::Bool)
+function _broadcast_unalias_helper(dest::AbstractDataset, scol::AbstractVector,
+                                   src::AbstractDataset, col2::Int, wascopied::Bool)
     # col1 can be checked till col2 point as we are writing broadcasting
     # results from 1 to ncol
     # we go downwards because aliasing when col1 == col2 is most probable
@@ -223,7 +223,7 @@ function _broadcast_unalias_helper(dest::Abstractdataset, scol::AbstractVector,
     return src, wascopied
 end
 
-function Base.Broadcast.broadcast_unalias(dest::Abstractdataset, src::Abstractdataset)
+function Base.Broadcast.broadcast_unalias(dest::AbstractDataset, src::AbstractDataset)
     if size(dest, 2) != size(src, 2)
         throw(DimensionMismatch("Dimension mismatch in broadcasting."))
     end
@@ -235,9 +235,9 @@ function Base.Broadcast.broadcast_unalias(dest::Abstractdataset, src::Abstractda
     return src
 end
 
-function Base.copyto!(df::Abstractdataset, bc::Base.Broadcast.Broadcasted)
+function Base.copyto!(df::AbstractDataset, bc::Base.Broadcast.Broadcasted)
     bcf = Base.Broadcast.flatten(bc)
-    colnames = unique!(Any[_names(x) for x in bcf.args if x isa Abstractdataset])
+    colnames = unique!(Any[_names(x) for x in bcf.args if x isa AbstractDataset])
     if length(colnames) > 1 || (length(colnames) == 1 && _names(df) != colnames[1])
         push!(colnames, _names(df))
         wrongnames = setdiff(union(colnames...), intersect(colnames...))
@@ -258,7 +258,7 @@ function Base.copyto!(df::Abstractdataset, bc::Base.Broadcast.Broadcasted)
     return df
 end
 
-function Base.copyto!(df::Abstractdataset,
+function Base.copyto!(df::AbstractDataset,
                       bc::Base.Broadcast.Broadcasted{<:Base.Broadcast.AbstractArrayStyle{0}})
     # special case of fast approach when bc is providing an untransformed scalar
     if bc.f === identity && bc.args isa Tuple{Any} && Base.Broadcast.isflat(bc)
@@ -276,7 +276,7 @@ create_bc_tmp(bcf′_col::Base.Broadcast.Broadcasted{T}) where {T} =
 
 function Base.copyto!(crdf::ColReplaceDataset, bc::Base.Broadcast.Broadcasted)
     bcf = Base.Broadcast.flatten(bc)
-    colnames = unique!(Any[_names(x) for x in bcf.args if x isa Abstractdataset])
+    colnames = unique!(Any[_names(x) for x in bcf.args if x isa AbstractDataset])
     if length(colnames) > 1 ||
         (length(colnames) == 1 && view(_names(crdf.df), crdf.cols) != colnames[1])
         push!(colnames, view(_names(crdf.df), crdf.cols))

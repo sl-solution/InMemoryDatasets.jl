@@ -1,13 +1,13 @@
-Tables.istable(::Type{<:Abstractdataset}) = true
-Tables.columnaccess(::Type{<:Abstractdataset}) = true
-Tables.columns(df::Abstractdataset) = eachcol(df)
-Tables.rowaccess(::Type{<:Abstractdataset}) = true
-Tables.rows(df::Abstractdataset) = eachrow(df)
-Tables.rowtable(df::Abstractdataset) = Tables.rowtable(Tables.columntable(df))
-Tables.namedtupleiterator(df::Abstractdataset) =
+Tables.istable(::Type{<:AbstractDataset}) = true
+Tables.columnaccess(::Type{<:AbstractDataset}) = true
+Tables.columns(df::AbstractDataset) = eachcol(df)
+Tables.rowaccess(::Type{<:AbstractDataset}) = true
+Tables.rows(df::AbstractDataset) = eachrow(df)
+Tables.rowtable(df::AbstractDataset) = Tables.rowtable(Tables.columntable(df))
+Tables.namedtupleiterator(df::AbstractDataset) =
     Tables.namedtupleiterator(Tables.columntable(df))
 
-function Tables.columnindex(df::Union{Abstractdataset, DatasetRow}, idx::Symbol)
+function Tables.columnindex(df::Union{AbstractDataset, DatasetRow}, idx::Symbol)
     ind = index(df)
     if ind isa Index
         return get(ind.lookup, idx, 0)
@@ -18,14 +18,14 @@ function Tables.columnindex(df::Union{Abstractdataset, DatasetRow}, idx::Symbol)
     end
 end
 
-Tables.columnindex(df::Union{Abstractdataset, DatasetRow}, idx::AbstractString) =
+Tables.columnindex(df::Union{AbstractDataset, DatasetRow}, idx::AbstractString) =
     columnindex(df, Symbol(idx))
 
-Tables.schema(df::Abstractdataset) = Tables.Schema{Tuple(_names(df)), Tuple{[eltype(col) for col in eachcol(df)]...}}()
-Tables.materializer(df::Abstractdataset) = dataset
+Tables.schema(df::AbstractDataset) = Tables.Schema{Tuple(_names(df)), Tuple{[eltype(col) for col in eachcol(df)]...}}()
+Tables.materializer(df::AbstractDataset) = Dataset
 
-Tables.getcolumn(df::Abstractdataset, i::Int) = df[!, i]
-Tables.getcolumn(df::Abstractdataset, nm::Symbol) = df[!, nm]
+Tables.getcolumn(df::AbstractDataset, i::Int) = df[!, i]
+Tables.getcolumn(df::AbstractDataset, nm::Symbol) = df[!, nm]
 
 Tables.getcolumn(dfr::DatasetRow, i::Int) = dfr[i]
 Tables.getcolumn(dfr::DatasetRow, nm::Symbol) = dfr[nm]
@@ -34,7 +34,7 @@ getvector(x::AbstractVector) = x
 getvector(x) = [x[i] for i = 1:length(x)]
 
 fromcolumns(x, names; copycols::Union{Nothing, Bool}=nothing) =
-    dataset(AbstractVector[getvector(Tables.getcolumn(x, nm)) for nm in names],
+    Dataset(AbstractVector[getvector(Tables.getcolumn(x, nm)) for nm in names],
               Index(names),
               copycols=something(copycols, true))
 
@@ -45,13 +45,13 @@ fromcolumns(x, names; copycols::Union{Nothing, Bool}=nothing) =
 fromcolumns(x::Tables.CopiedColumns, names; copycols::Union{Nothing, Bool}=nothing) =
     fromcolumns(Tables.source(x), names; copycols=something(copycols, false))
 
-function dataset(x::T; copycols::Union{Nothing, Bool}=nothing) where {T}
+function Dataset(x::T; copycols::Union{Nothing, Bool}=nothing) where {T}
     if !Tables.istable(x) && x isa AbstractVector && !isempty(x)
         # here we handle eltypes not specific enough to be dispatched
-        # to other datasets constructors taking vector of `Pair`s
+        # to other Datasets constructors taking vector of `Pair`s
         if all(v -> v isa Pair{Symbol, <:AbstractVector}, x) ||
             all(v -> v isa Pair{<:AbstractString, <:AbstractVector}, x)
-            return dataset(AbstractVector[last(v) for v in x], [first(v) for v in x],
+            return Dataset(AbstractVector[last(v) for v in x], [first(v) for v in x],
                              copycols=something(copycols, true))
         end
     end
@@ -60,17 +60,17 @@ function dataset(x::T; copycols::Union{Nothing, Bool}=nothing) where {T}
     return fromcolumns(cols, names, copycols=copycols)
 end
 
-function Base.append!(df::dataset, table; cols::Symbol=:setequal,
+function Base.append!(df::Dataset, table; cols::Symbol=:setequal,
                       promote::Bool=(cols in [:union, :subset]))
     if table isa Dict && cols == :orderequal
         throw(ArgumentError("passing `Dict` as `table` when `cols` is equal to " *
                             "`:orderequal` is not allowed as it is unordered"))
     end
-    append!(df, dataset(table, copycols=false), cols=cols, promote=promote)
+    append!(df, Dataset(table, copycols=false), cols=cols, promote=promote)
 end
 
 # This supports the Tables.RowTable type; needed to avoid ambiguities w/ another constructor
-dataset(x::AbstractVector{NamedTuple{names, T}}; copycols::Bool=true) where {names, T} =
+Dataset(x::AbstractVector{NamedTuple{names, T}}; copycols::Bool=true) where {names, T} =
     fromcolumns(Tables.columns(Tables.IteratorWrapper(x)), collect(names), copycols=false)
 
 Tables.istable(::Type{<:Union{DatasetRows, DatasetColumns}}) = true
@@ -90,7 +90,7 @@ Tables.getcolumn(itr::Union{DatasetRows, DatasetColumns}, i::Int) =
 Tables.getcolumn(itr::Union{DatasetRows, DatasetColumns}, nm::Symbol) =
     Tables.getcolumn(parent(itr), nm)
 
-IteratorInterfaceExtensions.getiterator(df::Abstractdataset) =
+IteratorInterfaceExtensions.getiterator(df::AbstractDataset) =
     Tables.datavaluerows(Tables.columntable(df))
-IteratorInterfaceExtensions.isiterable(x::Abstractdataset) = true
-TableTraits.isiterabletable(x::Abstractdataset) = true
+IteratorInterfaceExtensions.isiterable(x::AbstractDataset) = true
+TableTraits.isiterabletable(x::AbstractDataset) = true

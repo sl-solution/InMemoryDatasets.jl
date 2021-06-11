@@ -1,6 +1,6 @@
-Base.summary(df::Abstractdataset) =
+Base.summary(df::AbstractDataset) =
     @sprintf("%d×%d %s", size(df)..., nameof(typeof(df)))
-Base.summary(io::IO, df::Abstractdataset) = print(io, summary(df))
+Base.summary(io::IO, df::AbstractDataset) = print(io, summary(df))
 
 """
     DataFrames.ourstrwidth(io::IO, x::Any, buffer::IOBuffer, truncstring::Int)
@@ -40,7 +40,7 @@ function ourshow(io::IO, x::Any, truncstring::Int; styled::Bool=false)
     styled ? printstyled(io_ctx, sx, color=:light_black) : print(io_ctx, sx)
 end
 
-const SHOW_TABULAR_TYPES = Union{Abstractdataset}
+const SHOW_TABULAR_TYPES = Union{AbstractDataset}
 
 # workaround Julia 1.0 for Char
 ourshow(io::IO, x::Char, truncstring::Int; styled::Bool=false) =
@@ -148,7 +148,7 @@ function compacttype(T::Type, maxwidth::Int=8)
 end
 
 function _show(io::IO,
-               df::Abstractdataset;
+               df::AbstractDataset;
                allrows::Bool = !get(io, :limit, false),
                allcols::Bool = !get(io, :limit, false),
                rowlabel::Symbol = :Row,
@@ -282,7 +282,7 @@ function _show(io::IO,
 end
 
 """
-    show([io::IO, ]df::Abstractdataset;
+    show([io::IO, ]df::AbstractDataset;
          allrows::Bool = !get(io, :limit, false),
          allcols::Bool = !get(io, :limit, false),
          allgroups::Bool = !get(io, :limit, false),
@@ -300,7 +300,7 @@ and `allrows`, `allcols` and `allgroups` default to `false`.
 
 # Arguments
 - `io::IO`: The I/O stream to which `df` will be printed.
-- `df::Abstractdataset`: The data frame to print.
+- `df::AbstractDataset`: The data frame to print.
 - `allrows::Bool `: Whether to print all rows, rather than
   a subset that fits the device height. By default this is the case only if
   `io` does not have the `IOContext` property `limit` set.
@@ -337,7 +337,7 @@ julia> show(df, show_row_number=false)
 ```
 """
 Base.show(io::IO,
-          df::Abstractdataset;
+          df::AbstractDataset;
           allrows::Bool = !get(io, :limit, false),
           allcols::Bool = !get(io, :limit, false),
           rowlabel::Symbol = :Row,
@@ -348,7 +348,7 @@ Base.show(io::IO,
     _show(io, df; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
           summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
 
-Base.show(df::Abstractdataset;
+Base.show(df::AbstractDataset;
           allrows::Bool = !get(stdout, :limit, true),
           allcols::Bool = !get(stdout, :limit, true),
           rowlabel::Symbol = :Row,

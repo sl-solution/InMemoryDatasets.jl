@@ -1,7 +1,7 @@
 """
-    DatasetRow{<:Abstractdataset, <:AbstractIndex}
+    DatasetRow{<:AbstractDataset, <:AbstractIndex}
 
-A view of one row of an `Abstractdataset`.
+A view of one row of an `AbstractDataset`.
 
 A `DatasetRow` is returned by `getindex` or `view` functions when one row and a
 selection of columns are requested, or when iterating the result
@@ -10,13 +10,13 @@ of the call to the [`eachrow`](@ref) function.
 The `DatasetRow` constructor can also be called directly:
 
 ```
-DatasetRow(parent::Abstractdataset, row::Integer, cols=:)
+DatasetRow(parent::AbstractDataset, row::Integer, cols=:)
 ```
 
 A `DatasetRow` supports the iteration interface and can therefore be passed to
 functions that expect a collection as an argument. Its element type is always `Any`.
 
-Indexing is one-dimensional like specifying a column of a `dataset`.
+Indexing is one-dimensional like specifying a column of a `Dataset`.
 You can also access the data in a `DatasetRow` using the `getproperty` and
 `setproperty!` functions and convert it to a `Tuple`, `NamedTuple`, or `Vector`
 using the corresponding functions.
@@ -27,10 +27,10 @@ even if they are added or removed after its creation.
 
 # Examples
 ```jldoctest
-julia> df = dataset(a = repeat([1, 2], outer=[2]),
+julia> df = Dataset(a = repeat([1, 2], outer=[2]),
                       b = repeat(["a", "b"], inner=[2]),
                       c = 1:4)
-4×3 dataset
+4×3 Dataset
  Row │ a      b       c
      │ Int64  String  Int64
 ─────┼──────────────────────
@@ -73,29 +73,29 @@ julia> Vector(df[1, :])
  1
 ```
 """
-struct DatasetRow{D<:Abstractdataset, S<:AbstractIndex}
-    # although we allow D to be Abstractdataset to support extensions
-    # in Dataset.jl it will always be a dataset unless an inner constructor
+struct DatasetRow{D<:AbstractDataset, S<:AbstractIndex}
+    # although we allow D to be AbstractDataset to support extensions
+    # in Dataset.jl it will always be a Dataset unless an inner constructor
     # is used. In this way we have a fast access to the data frame that
     # actually stores the data that DatasetRow refers to
     df::D
     colindex::S
     dfrow::Int # row number in df
-    rownumber::Int # row number in the direct source Abstractdataset from which DatasetRow was created
+    rownumber::Int # row number in the direct source AbstractDataset from which DatasetRow was created
 
     @inline DatasetRow(df::D, colindex::S, row::Union{Signed, Unsigned},
                          rownumber::Union{Signed, Unsigned}) where
-        {D<:Abstractdataset, S<:AbstractIndex} = new{D, S}(df, colindex, row, rownumber)
+        {D<:AbstractDataset, S<:AbstractIndex} = new{D, S}(df, colindex, row, rownumber)
 end
 
-Base.@propagate_inbounds function DatasetRow(df::dataset, row::Integer, cols)
+Base.@propagate_inbounds function DatasetRow(df::Dataset, row::Integer, cols)
     @boundscheck if !checkindex(Bool, axes(df, 1), row)
         throw(BoundsError(df, (row, cols)))
     end
     DatasetRow(df, SubIndex(index(df), cols), row, row)
 end
 
-Base.@propagate_inbounds DatasetRow(df::dataset, row::Bool, cols) =
+Base.@propagate_inbounds DatasetRow(df::Dataset, row::Bool, cols) =
     throw(ArgumentError("invalid row index of type Bool"))
 
 Base.@propagate_inbounds function DatasetRow(sdf::SubDataset, row::Integer, cols)
@@ -113,7 +113,7 @@ end
 Base.@propagate_inbounds DatasetRow(df::SubDataset, row::Bool, cols) =
     throw(ArgumentError("invalid row index of type Bool"))
 
-Base.@propagate_inbounds DatasetRow(df::Abstractdataset, row::Integer) =
+Base.@propagate_inbounds DatasetRow(df::AbstractDataset, row::Integer) =
     DatasetRow(df, row, :)
 
 row(r::DatasetRow) = getfield(r, :dfrow)
@@ -121,16 +121,16 @@ row(r::DatasetRow) = getfield(r, :dfrow)
 """
     rownumber(dfr::DatasetRow)
 
-Return a row number in the `Abstractdataset` that `dfr` was created from.
+Return a row number in the `AbstractDataset` that `dfr` was created from.
 
 Note that this differs from the first element in the tuple returned by
 `parentindices`. The latter gives the row number in the `parent(dfr)`, which is
-the source `dataset` where data that `dfr` gives access to is stored.
+the source `Dataset` where data that `dfr` gives access to is stored.
 
 # Examples
 ```jldoctest
-julia> df = dataset(reshape(1:12, 3, 4), :auto)
-3×4 dataset
+julia> df = Dataset(reshape(1:12, 3, 4), :auto)
+3×4 Dataset
  Row │ x1     x2     x3     x4
      │ Int64  Int64  Int64  Int64
 ─────┼────────────────────────────
@@ -152,7 +152,7 @@ julia> parentindices(dfr)
 (2, Base.OneTo(4))
 
 julia> parent(dfr)
-3×4 dataset
+3×4 Dataset
  Row │ x1     x2     x3     x4
      │ Int64  Int64  Int64  Int64
 ─────┼────────────────────────────
@@ -182,7 +182,7 @@ julia> parentindices(dfrv)
 (3, 1:3)
 
 julia> parent(dfrv)
-3×4 dataset
+3×4 Dataset
  Row │ x1     x2     x3     x4
      │ Int64  Int64  Int64  Int64
 ─────┼────────────────────────────
@@ -200,14 +200,14 @@ Base.summary(dfr::DatasetRow) = # -> String
     @sprintf("%d-element %s", length(dfr), nameof(typeof(dfr)))
 Base.summary(io::IO, dfr::DatasetRow) = print(io, summary(dfr))
 
-Base.@propagate_inbounds Base.view(adf::Abstractdataset, rowind::Integer,
+Base.@propagate_inbounds Base.view(adf::AbstractDataset, rowind::Integer,
                                    colinds::MultiColumnIndex) =
     DatasetRow(adf, rowind, colinds)
 
-Base.@propagate_inbounds Base.getindex(df::Abstractdataset, rowind::Integer,
+Base.@propagate_inbounds Base.getindex(df::AbstractDataset, rowind::Integer,
                                        colinds::MultiColumnIndex) =
     DatasetRow(df, rowind, colinds)
-Base.@propagate_inbounds Base.getindex(df::Abstractdataset, rowind::Integer, ::Colon) =
+Base.@propagate_inbounds Base.getindex(df::AbstractDataset, rowind::Integer, ::Colon) =
     DatasetRow(df, rowind, :)
 Base.@propagate_inbounds Base.getindex(r::DatasetRow, idx::ColumnIndex) =
     parent(r)[row(r), parentcols(index(r), idx)]
@@ -225,7 +225,7 @@ end
 Base.@propagate_inbounds Base.getindex(r::DatasetRow, ::Colon) = r
 
 for T in MULTICOLUMNINDEX_TUPLE
-    @eval function Base.setindex!(df::dataset,
+    @eval function Base.setindex!(df::Dataset,
                                   v::Union{DatasetRow, NamedTuple, AbstractDict},
                                   row_ind::Integer,
                                   col_inds::$(T))
@@ -332,7 +332,7 @@ See also: [`length`](@ref)
 
 # Examples
 ```jldoctest
-julia> dfr = dataset(a=1:3, b='a':'c')[1, :]
+julia> dfr = Dataset(a=1:3, b='a':'c')[1, :]
 DatasetRow
  Row │ a      b
      │ Int64  Char
@@ -358,7 +358,7 @@ See also: [`size`](@ref)
 
 # Examples
 ```jldoctest
-julia> dfr = dataset(a=1:3, b='a':'c')[1, :]
+julia> dfr = Dataset(a=1:3, b='a':'c')[1, :]
 DatasetRow
  Row │ a      b
      │ Int64  Char
@@ -489,14 +489,14 @@ for (eqfun, cmpfun) in ((:isequal, :isless), (:(==), :(<))),
     end
 end
 
-function dataset(dfr::DatasetRow)
+function Dataset(dfr::DatasetRow)
     row, cols = parentindices(dfr)
     parent(dfr)[row:row, cols]
 end
 
 @noinline pushhelper!(x, r) = push!(x, x[r])
 
-function Base.push!(df::dataset, dfr::DatasetRow; cols::Symbol=:setequal,
+function Base.push!(df::Dataset, dfr::DatasetRow; cols::Symbol=:setequal,
                     promote::Bool=(cols in [:union, :subset]))
     possible_cols = (:orderequal, :setequal, :intersect, :subset, :union)
     if !(cols in possible_cols)

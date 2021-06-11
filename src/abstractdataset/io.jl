@@ -1,5 +1,5 @@
 """
-    Dataset.getmaxwidths(df::Abstractdataset,
+    Dataset.getmaxwidths(df::AbstractDataset,
                             io::IO,
                             rowindices1::AbstractVector{Int},
                             rowindices2::AbstractVector{Int},
@@ -8,7 +8,7 @@
                             show_eltype::Bool,
                             buffer::IOBuffer)
 
-Calculate, for each column of an Abstractdataset, the maximum
+Calculate, for each column of an AbstractDataset, the maximum
 string width used to render the name of that column, its type, and the
 longest entry in that column -- among the rows of the data frame
 will be rendered to IO. The widths for all columns are returned as a
@@ -18,16 +18,16 @@ Return a `Vector{Int}` giving the maximum string widths required to render
 each column, including that column's name and type.
 
 NOTE: The last entry of the result vector is the string width of the
-implicit row ID column contained in every `Abstractdataset`.
+implicit row ID column contained in every `AbstractDataset`.
 
 # Arguments
-- `df::Abstractdataset`: The data frame whose columns will be printed.
+- `df::AbstractDataset`: The data frame whose columns will be printed.
 - `io::IO`: The `IO` to which `df` is to be printed
 - `rowindices1::AbstractVector{Int}: A set of indices of the first
-  chunk of the Abstractdataset that would be rendered to IO.
+  chunk of the AbstractDataset that would be rendered to IO.
 - `rowindices2::AbstractVector{Int}: A set of indices of the second
-  chunk of the Abstractdataset that would be rendered to IO. Can
-  be empty if the Abstractdataset would be printed without any
+  chunk of the AbstractDataset that would be rendered to IO. Can
+  be empty if the AbstractDataset would be printed without any
   ellipses.
 - `rowlabel::AbstractString`: The label that will be used when rendered the
   numeric ID's of each row. Typically, this will be set to "Row".
@@ -36,7 +36,7 @@ implicit row ID column contained in every `Abstractdataset`.
    under the column name in the heading.
 - `buffer`: buffer passed around to avoid reallocations in `ourstrwidth`
 """
-function getmaxwidths(df::Abstractdataset,
+function getmaxwidths(df::AbstractDataset,
                       io::IO,
                       rowindices1::AbstractVector{Int},
                       rowindices2::AbstractVector{Int},
@@ -87,7 +87,7 @@ function getmaxwidths(df::Abstractdataset,
 end
 
 """
-    show(io::IO, mime::MIME, df::Abstractdataset)
+    show(io::IO, mime::MIME, df::AbstractDataset)
 
 Render a data frame to an I/O stream in MIME type `mime`.
 
@@ -96,11 +96,11 @@ Render a data frame to an I/O stream in MIME type `mime`.
 - `mime::MIME`: supported MIME types are: `"text/plain"`, `"text/html"`, `"text/latex"`,
   `"text/csv"`, `"text/tab-separated-values"` (the last two MIME types do not support
    showing `#undef` values)
-- `df::Abstractdataset`: The data frame to print.
+- `df::AbstractDataset`: The data frame to print.
 
 Additionally selected MIME types support passing the following keyword arguments:
 - MIME type `"text/plain"` accepts all listed keyword arguments and therir behavior
-  is identical as for `show(::IO, ::Abstractdataset)`
+  is identical as for `show(::IO, ::AbstractDataset)`
 - MIME type `"text/html"` accepts `summary` keyword argument which
   allows to choose whether to print a brief string summary of the data frame.
 
@@ -125,17 +125,17 @@ julia> show(stdout, MIME("text/csv"), DataFrame(A = 1:3, B = ["x", "y", "z"]))
 3,"z"
 ```
 """
-Base.show(io::IO, mime::MIME, df::Abstractdataset)
-Base.show(io::IO, mime::MIME"text/html", df::Abstractdataset;
+Base.show(io::IO, mime::MIME, df::AbstractDataset)
+Base.show(io::IO, mime::MIME"text/html", df::AbstractDataset;
           summary::Bool=true, eltypes::Bool=true) =
     _show(io, mime, df, summary=summary, eltypes=eltypes)
-Base.show(io::IO, mime::MIME"text/latex", df::Abstractdataset; eltypes::Bool=true) =
+Base.show(io::IO, mime::MIME"text/latex", df::AbstractDataset; eltypes::Bool=true) =
     _show(io, mime, df, eltypes=eltypes)
-Base.show(io::IO, mime::MIME"text/csv", df::Abstractdataset) =
+Base.show(io::IO, mime::MIME"text/csv", df::AbstractDataset) =
     printtable(io, df, header = true, separator = ',')
-Base.show(io::IO, mime::MIME"text/tab-separated-values", df::Abstractdataset) =
+Base.show(io::IO, mime::MIME"text/tab-separated-values", df::AbstractDataset) =
     printtable(io, df, header = true, separator = '\t')
-Base.show(io::IO, mime::MIME"text/plain", df::Abstractdataset; kwargs...) =
+Base.show(io::IO, mime::MIME"text/plain", df::AbstractDataset; kwargs...) =
     show(io, df; kwargs...)
 
 ##############################################################################
@@ -164,7 +164,7 @@ function html_escape(cell::AbstractString)
     return cell
 end
 
-function _show(io::IO, ::MIME"text/html", df::Abstractdataset;
+function _show(io::IO, ::MIME"text/html", df::AbstractDataset;
                summary::Bool=true, eltypes::Bool=true, rowid::Union{Int, Nothing}=nothing)
     _check_consistency(df)
 
@@ -342,7 +342,7 @@ function latex_escape(cell::AbstractString)
     replace(cell, ['\\','~', '#', '$', '%', '&', '_', '^', '{', '}']=>latex_char_escape)
 end
 
-function _show(io::IO, ::MIME"text/latex", df::Abstractdataset;
+function _show(io::IO, ::MIME"text/latex", df::AbstractDataset;
                eltypes::Bool=true, rowid=nothing)
     _check_consistency(df)
 
@@ -485,7 +485,7 @@ escapedprint(io::IO, x::AbstractString, escapes::AbstractString) =
     escape_string(io, x, escapes)
 
 function printtable(io::IO,
-                    df::Abstractdataset;
+                    df::AbstractDataset;
                     header::Bool = true,
                     separator::Char = ',',
                     quotemark::Char = '"',
