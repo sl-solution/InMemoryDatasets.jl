@@ -187,9 +187,15 @@ struct Dataset <: AbstractDataset
             end
         end
         len == -1 && (len = 1) # we got no vectors so make one row of scalars
-
-        for i in eachindex(columns)
-            columns[i] = _preprocess_column(columns[i], len, copycols)
+        # it is not good idea to use threads when we have many rows (memory wise)
+        if length(columns) > 100
+            Threads.@threads for i in eachindex(columns)
+              columns[i] = _preprocess_column(columns[i], len, copycols)
+            end
+        else
+            for i in eachindex(columns)
+              columns[i] = _preprocess_column(columns[i], len, copycols)
+            end
         end
 
         for (i, col) in enumerate(columns)
@@ -210,7 +216,7 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
         return fill!(Tables.allocatecolumn(typeof(x), len), x)
     elseif col isa AbstractArray
         throw(ArgumentError("adding AbstractArray other than AbstractVector " *
-                            "as a column of a data frame is not allowed"))
+                            "as a column of a data set is not allowed"))
     else
         return fill!(Tables.allocatecolumn(typeof(col), len), col)
     end
@@ -407,11 +413,11 @@ ncol(df::Dataset) = length(index(df))
 ##############################################################################
 
 corrupt_msg(df::Dataset, i::Integer) =
-    "Data frame is corrupt: length of column " *
+    "Data set is corrupt: length of column " *
     ":$(_names(df)[i]) ($(length(df[!, i]))) " *
     "does not match length of column 1 ($(length(df[!, 1]))). " *
     "The column vector has likely been resized unintentionally " *
-    "(either directly or because it is shared with another data frame)."
+    "(either directly or because it is shared with another data set)."
 
 function _check_consistency(df::Dataset)
     cols, idx = _columns(df), index(df)
@@ -501,6 +507,7 @@ function _threaded_getindex(selected_rows::AbstractVector,
                             selected_columns::AbstractVector,
                             df_columns::AbstractVector,
                             idx::AbstractIndex)
+  # FIXME threading should be done along rows rather than columns
     @static if VERSION >= v"1.4"
         if length(selected_rows) >= 1_000_000 && Threads.nthreads() > 1
             new_columns = Vector{AbstractVector}(undef, length(selected_columns))
@@ -527,9 +534,16 @@ end
 
     u = _names(df)[selected_columns]
     lookup = Dict{Symbol, Int}(zip(u, 1:length(u)))
+    dfformat = getfield(df, :colindex).format
+    format = Dict{Int, Function}()
+    for i in 1:length(selected_columns)
+      if haskey(dfformat, selected_columns[i])
+        push!(format, i => dfformat[selected_columns[i]])
+      end
+    end
     # use this constructor to avoid checking twice if column names are not
     # duplicate as index(df)[col_inds] already checks this
-    idx = Index(lookup, u)
+    idx = Index(lookup, u, format)
 
     if length(selected_columns) == 1
         return Dataset(AbstractVector[_columns(df)[selected_columns[1]][row_inds]],
@@ -641,7 +655,7 @@ end
 
 # df[SingleRowIndex, MultiColumnIndex] = value
 # the method for value of type DatasetRow, AbstractDict and NamedTuple
-# is defined in dataframerow.jl
+# is defined in datasetrow.jl
 
 for T in MULTICOLUMNINDEX_TUPLE
     @eval function Base.setindex!(df::Dataset,
@@ -701,7 +715,7 @@ for T in MULTICOLUMNINDEX_TUPLE
                                   col_inds::$T)
         idxs = index(df)[col_inds]
         if view(_names(df), idxs) != _names(new_df)
-            throw(ArgumentError("Column names in source and target data frames do not match"))
+            throw(ArgumentError("Column names in source and target data sets do not match"))
         end
         for (j, col) in enumerate(idxs)
             # make sure we make a copy on assignment
@@ -741,7 +755,7 @@ end
     insertcols!(df::Dataset[, col], (name=>val)::Pair...;
                 makeunique::Bool=false, copycols::Bool=true)
 
-Insert a column into a data frame in place. Return the updated `Dataset`.
+Insert a column into a data set in place. Return the updated `Dataset`.
 If `col` is omitted it is set to `ncol(df)+1`
 (the column is inserted as the last column).
 
@@ -796,18 +810,18 @@ function insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
                      makeunique::Bool=false, copycols::Bool=true)
     col_ind = Int(col isa SymbolOrString ? columnindex(df, col) : col)
     if !(0 < col_ind <= ncol(df) + 1)
-        throw(ArgumentError("attempt to insert a column to a data frame with " *
+        throw(ArgumentError("attempt to insert a column to a data set with " *
                             "$(ncol(df)) columns at index $col_ind"))
     end
 
     if !makeunique
         if !allunique(first.(name_cols))
-            throw(ArgumentError("Names of columns to be inserted into a data frame " *
+            throw(ArgumentError("Names of columns to be inserted into a data set " *
                                 "must be unique when `makeunique=true`"))
         end
         for (n, _) in name_cols
             if hasproperty(df, n)
-                throw(ArgumentError("Column $n is already present in the data frame " *
+                throw(ArgumentError("Column $n is already present in the data set " *
                                     "which is not allowed when `makeunique=true`"))
             end
         end
@@ -827,15 +841,15 @@ function insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
                 if target_row_count == nrow(df)
                     throw(DimensionMismatch("length of new column $n which is " *
                                             "$(length(v)) must match the number " *
-                                            "of rows in data frame ($(nrow(df)))"))
+                                            "of rows in data set ($(nrow(df)))"))
                 else
                     throw(DimensionMismatch("all vectors passed to be inserted into " *
-                                            "a data frame must have the same length"))
+                                            "a data set must have the same length"))
                 end
             end
         elseif v isa AbstractArray && ndims(v) > 1
             throw(ArgumentError("adding AbstractArray other than AbstractVector as " *
-                                "a column of a data frame is not allowed"))
+                                "a column of a data set is not allowed"))
         end
     end
     if target_row_count == -1
@@ -900,7 +914,7 @@ insertcols!(df::Dataset, name_cols::Pair{<:AbstractString, <:Any}...;
 
 function insertcols!(df::Dataset, col::Int=ncol(df)+1; makeunique::Bool=false, name_cols...)
     if !(0 < col <= ncol(df) + 1)
-        throw(ArgumentError("attempt to insert a column to a data frame with " *
+        throw(ArgumentError("attempt to insert a column to a data set with " *
                             "$(ncol(df)) columns at index $col"))
     end
     if !isempty(name_cols)
@@ -914,7 +928,7 @@ end
 """
     copy(df::Dataset; copycols::Bool=true)
 
-Copy data frame `df`.
+Copy data set `df`.
 If `copycols=true` (the default), return a new  `Dataset` holding
 copies of column vectors in `df`.
 If `copycols=false`, return a new `Dataset` sharing column vectors with `df`.
@@ -958,7 +972,7 @@ function Base.delete!(df::Dataset, inds)
     end
 
     # we require ind to be stored and unique like in Base
-    # otherwise an error will be thrown and the data frame will get corrupted
+    # otherwise an error will be thrown and the data set will get corrupted
     return _delete!_helper(df, inds)
 end
 
@@ -1012,7 +1026,7 @@ end
 ##
 ##############################################################################
 
-# hcat! for 2 arguments, only a vector or a data frame is allowed
+# hcat! for 2 arguments, only a vector or a data set is allowed
 function hcat!(df1::Dataset, df2::AbstractDataset;
                makeunique::Bool=false, copycols::Bool=true)
     u = add_names(index(df1), index(df2), makeunique=makeunique)
@@ -1066,12 +1080,12 @@ Base.hcat(df1::Dataset, df2::AbstractDataset, dfn::AbstractDataset...;
 """
     allowmissing!(df::Dataset, cols=:)
 
-Convert columns `cols` of data frame `df` from element type `T` to
+Convert columns `cols` of data set `df` from element type `T` to
 `Union{T, Missing}` to support missing values.
 
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
-If `cols` is omitted all columns in the data frame are converted.
+If `cols` is omitted all columns in the data set are converted.
 """
 function allowmissing! end
 
@@ -1104,12 +1118,12 @@ allowmissing!(df::Dataset, cols::Colon=:) =
 """
     disallowmissing!(df::Dataset, cols=:; error::Bool=true)
 
-Convert columns `cols` of data frame `df` from element type `Union{T, Missing}` to
+Convert columns `cols` of data set `df` from element type `Union{T, Missing}` to
 `T` to drop support for missing values.
 
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
-If `cols` is omitted all columns in the data frame are converted.
+If `cols` is omitted all columns in the data set are converted.
 
 If `error=false` then columns containing a `missing` value will be skipped instead
 of throwing an error.
@@ -1187,8 +1201,8 @@ columns that are aliases (equal when compared with `===`).
 
 # See also
 
-Use [`push!`](@ref) to add individual rows to a data frame and [`vcat`](@ref)
-to vertically concatenate data frames.
+Use [`push!`](@ref) to add individual rows to a data set and [`vcat`](@ref)
+to vertically concatenate data sets.
 
 # Examples
 ```jldoctest
@@ -1248,12 +1262,12 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
             throw(ArgumentError("Columns number " *
                                 join(mismatches, ", ", " and ") *
                                 " do not have the same names in both passed " *
-                                "data frames and `cols == :orderequal`"))
+                                "data sets and `cols == :orderequal`"))
         else
             mismatchmsg = " Column names :" *
             throw(ArgumentError("Column names :" *
                                 join(wrongnames, ", :", " and :") *
-                                " were found in only one of the passed data frames " *
+                                " were found in only one of the passed data sets " *
                                 "and `cols == :orderequal`"))
         end
     elseif cols == :setequal
@@ -1261,7 +1275,7 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
         if !isempty(wrongnames)
             throw(ArgumentError("Column names :" *
                                 join(wrongnames, ", :", " and :") *
-                                " were found in only one of the passed data frames " *
+                                " were found in only one of the passed data sets " *
                                 "and `cols == :setequal`"))
         end
     elseif cols == :intersect
@@ -1269,7 +1283,7 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
         if !isempty(wrongnames)
             throw(ArgumentError("Column names :" *
                                 join(wrongnames, ", :", " and :") *
-                                " were found in only in destination data frame " *
+                                " were found in only in destination data set " *
                                 "and `cols == :intersect`"))
         end
     end
@@ -1279,7 +1293,7 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
     current_col = 0
     # in the code below we use a direct access to _columns because
     # we resize the columns so temporarily the `Dataset` is internally
-    # inconsistent and normal data frame indexing would error.
+    # inconsistent and normal data set indexing would error.
     try
         for (j, n) in enumerate(_names(df1))
             current_col += 1
@@ -1310,7 +1324,7 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
                     firstindex(newcol) != 1 && _onebased_check_error()
                     _columns(df1)[j] = newcol
                 else
-                    throw(ArgumentError("promote=false and source data frame does " *
+                    throw(ArgumentError("promote=false and source data set does " *
                                         "not contain column :$n, while destination " *
                                         "column does not allow for missing values"))
                 end
@@ -1368,7 +1382,7 @@ function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
 
     # in the code below we use a direct access to _columns because
     # we resize the columns so temporarily the `Dataset` is internally
-    # inconsistent and normal data frame indexing would error.
+    # inconsistent and normal data set indexing would error.
     if cols == :union
         if row isa AbstractDict && keytype(row) !== Symbol && !all(x -> x isa Symbol, keys(row))
             throw(ArgumentError("when `cols == :union` all keys of row must be Symbol"))
@@ -1432,7 +1446,7 @@ function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
         elseif length(row) != ncol(df) || any(x -> x[1] != x[2], zip(keys(row), _names(df)))
             throw(ArgumentError("when `cols == :orderequal` pushed row must " *
                                 "have the same column names and in the " *
-                                "same order as the target data frame"))
+                                "same order as the target data set"))
         end
     elseif cols === :setequal
         # Only check for equal lengths if :setequal is selected,
@@ -1640,7 +1654,7 @@ end
 """
     repeat!(df::Dataset; inner::Integer = 1, outer::Integer = 1)
 
-Update a data frame `df` in-place by repeating its rows. `inner` specifies how many
+Update a data set `df` in-place by repeating its rows. `inner` specifies how many
 times each row is repeated, and `outer` specifies how many times the full set
 of rows is repeated. Columns of `df` are freshly allocated.
 
@@ -1684,7 +1698,7 @@ end
 """
     repeat!(df::Dataset, count::Integer)
 
-Update a data frame `df` in-place by repeating its rows the number of times
+Update a data set `df` in-place by repeating its rows the number of times
 specified by `count`. Columns of `df` are freshly allocated.
 
 # Example
