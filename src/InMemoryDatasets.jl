@@ -1,7 +1,7 @@
 module InMemoryDatasets
 
 using Dates
-using TableTraits,IteratorInterfaceExtensions
+# using TableTraits,IteratorInterfaceExtensions
 using Reexport
 using Compat
 using Printf
