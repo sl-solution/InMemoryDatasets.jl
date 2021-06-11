@@ -2,6 +2,7 @@
 # will also accept a position or set of positions or range or other things and pass them
 # through cleanly.
 abstract type AbstractIndex end
+abstract type AbstractAttributes end
 
 function Base.summary(idx::AbstractIndex)
     l = length(idx)
@@ -22,6 +23,12 @@ struct Index <: AbstractIndex   # an OrderedDict would be nice here...
     lookup::Dict{Symbol, Int}      # name => names array position
     names::Vector{Symbol}
 end
+
+struct Attributes <: AbstractAttributes
+    general::NamedTuple{(:created, :modified, :info),Tuple{DateTime, DateTime, String}}
+end
+
+Attributes() = Attributes((created = now(), modified = now(), info = ""))
 
 function Index(names::AbstractVector{Symbol}; makeunique::Bool=false)
     u = make_unique(names, makeunique=makeunique)

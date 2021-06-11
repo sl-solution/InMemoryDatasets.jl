@@ -1,15 +1,15 @@
 """
-    AbstractDataset
+    Abstractdataset
 
 An abstract type for which all concrete types expose an interface
 for working with tabular data.
 
 # Common methods
 
-An `AbstractDataset` is a two-dimensional table with `Symbol`s or strings
+An `Abstractdataset` is a two-dimensional table with `Symbol`s or strings
 for column names.
 
-The following are normally implemented for AbstractDatasets:
+The following are normally implemented for Abstractdatasets:
 
 * [`describe`](@ref) : summarize columns
 * `summary` : show number of rows and columns
@@ -39,17 +39,17 @@ The following are normally implemented for AbstractDatasets:
 
 # Indexing and broadcasting
 
-`AbstractDataset` can be indexed by passing two indices specifying
+`Abstractdataset` can be indexed by passing two indices specifying
 row and column selectors. The allowed indices are a superset of indices
 that can be used for standard arrays. You can also access a single column
-of an `AbstractDataset` using `getproperty` and `setproperty!` functions.
+of an `Abstractdataset` using `getproperty` and `setproperty!` functions.
 Columns can be selected using integers, `Symbol`s, or strings.
-In broadcasting `AbstractDataset` behavior is similar to a `Matrix`.
+In broadcasting `Abstractdataset` behavior is similar to a `Matrix`.
 
 A detailed description of `getindex`, `setindex!`, `getproperty`, `setproperty!`,
 
 """
-abstract type AbstractDataset end
+abstract type Abstractdataset end
 
 ##############################################################################
 ##
@@ -58,8 +58,8 @@ abstract type AbstractDataset end
 ##############################################################################
 
 """
-    names(df::AbstractDataset)
-    names(df::AbstractDataset, cols)
+    names(df::Abstractdataset)
+    names(df::Abstractdataset, cols)
 
 Return a freshly allocated `Vector{String}` of names of columns contained in `df`.
 
@@ -74,41 +74,41 @@ selector (this is useful in particular with regular expressions, `Cols`, `Not`, 
 
 See also [`propertynames`](@ref) which returns a `Vector{Symbol}`.
 """
-Base.names(df::AbstractDataset, cols::Colon=:) = names(index(df))
+Base.names(df::Abstractdataset, cols::Colon=:) = names(index(df))
 
-function Base.names(df::AbstractDataset, cols)
+function Base.names(df::Abstractdataset, cols)
     nms = _names(index(df))
     idx = index(df)[cols]
     idxs = idx isa Int ? (idx:idx) : idx
     return [String(nms[i]) for i in idxs]
 end
 
-Base.names(df::AbstractDataset, T::Type) =
+Base.names(df::Abstractdataset, T::Type) =
     [String(n) for (n, c) in pairs(eachcol(df)) if eltype(c) <: T]
-Base.names(df::AbstractDataset, fun::Function) = filter!(fun, names(df))
+Base.names(df::Abstractdataset, fun::Function) = filter!(fun, names(df))
 
 # _names returns Vector{Symbol} without copying
-_names(df::AbstractDataset) = _names(index(df))
+_names(df::Abstractdataset) = _names(index(df))
 
 # separate methods are needed due to dispatch ambiguity
-Compat.hasproperty(df::AbstractDataset, s::Symbol) = haskey(index(df), s)
-Compat.hasproperty(df::AbstractDataset, s::AbstractString) = haskey(index(df), s)
+Compat.hasproperty(df::Abstractdataset, s::Symbol) = haskey(index(df), s)
+Compat.hasproperty(df::Abstractdataset, s::AbstractString) = haskey(index(df), s)
 
 """
-    rename!(df::AbstractDataset, vals::AbstractVector{Symbol};
+    rename!(df::Abstractdataset, vals::AbstractVector{Symbol};
             makeunique::Bool=false)
-    rename!(df::AbstractDataset, vals::AbstractVector{<:AbstractString};
+    rename!(df::Abstractdataset, vals::AbstractVector{<:AbstractString};
             makeunique::Bool=false)
-    rename!(df::AbstractDataset, (from => to)::Pair...)
-    rename!(df::AbstractDataset, d::AbstractDict)
-    rename!(df::AbstractDataset, d::AbstractVector{<:Pair})
-    rename!(f::Function, df::AbstractDataset)
+    rename!(df::Abstractdataset, (from => to)::Pair...)
+    rename!(df::Abstractdataset, d::AbstractDict)
+    rename!(df::Abstractdataset, d::AbstractVector{<:Pair})
+    rename!(f::Function, df::Abstractdataset)
 
 Rename columns of `df` in-place.
 Each name is changed at most once. Permutation of names is allowed.
 
 # Arguments
-- `df` : the `AbstractDataset`
+- `df` : the `Abstractdataset`
 - `d` : an `AbstractDict` or an `AbstractVector` of `Pair`s that maps
   the original names or column numbers to new names
 - `f` : a function which for each column takes the old name as a `String`
@@ -169,24 +169,24 @@ julia> rename!(uppercase, df)
    1 │     1      2      3
 ```
 """
-function rename!(df::AbstractDataset, vals::AbstractVector{Symbol};
+function rename!(df::Abstractdataset, vals::AbstractVector{Symbol};
                  makeunique::Bool=false)
     rename!(index(df), vals, makeunique=makeunique)
     return df
 end
 
-function rename!(df::AbstractDataset, vals::AbstractVector{<:AbstractString};
+function rename!(df::Abstractdataset, vals::AbstractVector{<:AbstractString};
                  makeunique::Bool=false)
     rename!(index(df), Symbol.(vals), makeunique=makeunique)
     return df
 end
 
-function rename!(df::AbstractDataset, args::AbstractVector{Pair{Symbol, Symbol}})
+function rename!(df::Abstractdataset, args::AbstractVector{Pair{Symbol, Symbol}})
     rename!(index(df), args)
     return df
 end
 
-function rename!(df::AbstractDataset,
+function rename!(df::Abstractdataset,
                  args::Union{AbstractVector{<:Pair{Symbol, <:AbstractString}},
                              AbstractVector{<:Pair{<:AbstractString, Symbol}},
                              AbstractVector{<:Pair{<:AbstractString, <:AbstractString}},
@@ -198,7 +198,7 @@ function rename!(df::AbstractDataset,
     return df
 end
 
-function rename!(df::AbstractDataset,
+function rename!(df::Abstractdataset,
                  args::Union{AbstractVector{<:Pair{<:Integer, <:AbstractString}},
                              AbstractVector{<:Pair{<:Integer, Symbol}},
                              AbstractDict{<:Integer, <:AbstractString},
@@ -207,28 +207,28 @@ function rename!(df::AbstractDataset,
     return df
 end
 
-rename!(df::AbstractDataset, args::Pair...) = rename!(df, collect(args))
+rename!(df::Abstractdataset, args::Pair...) = rename!(df, collect(args))
 
-function rename!(f::Function, df::AbstractDataset)
+function rename!(f::Function, df::Abstractdataset)
     rename!(f, index(df))
     return df
 end
 
 """
-    rename(df::AbstractDataset, vals::AbstractVector{Symbol};
+    rename(df::Abstractdataset, vals::AbstractVector{Symbol};
            makeunique::Bool=false)
-    rename(df::AbstractDataset, vals::AbstractVector{<:AbstractString};
+    rename(df::Abstractdataset, vals::AbstractVector{<:AbstractString};
            makeunique::Bool=false)
-    rename(df::AbstractDataset, (from => to)::Pair...)
-    rename(df::AbstractDataset, d::AbstractDict)
-    rename(df::AbstractDataset, d::AbstractVector{<:Pair})
-    rename(f::Function, df::AbstractDataset)
+    rename(df::Abstractdataset, (from => to)::Pair...)
+    rename(df::Abstractdataset, d::AbstractDict)
+    rename(df::Abstractdataset, d::AbstractVector{<:Pair})
+    rename(f::Function, df::Abstractdataset)
 
 Create a new data frame that is a copy of `df` with changed column names.
 Each name is changed at most once. Permutation of names is allowed.
 
 # Arguments
-- `df` : the `AbstractDataset`; if it is a `SubDataFrame` then renaming is
+- `df` : the `Abstractdataset`; if it is a `SubDataFrame` then renaming is
   only allowed if it was created using `:` as a column selector.
 - `d` : an `AbstractDict` or an `AbstractVector` of `Pair`s that maps
   the original names or column numbers to new names
@@ -294,15 +294,15 @@ julia> rename(uppercase, df)
    1 │     1      2      3
 ```
 """
-rename(df::AbstractDataset, vals::AbstractVector{Symbol};
+rename(df::Abstractdataset, vals::AbstractVector{Symbol};
        makeunique::Bool=false) = rename!(copy(df), vals, makeunique=makeunique)
-rename(df::AbstractDataset, vals::AbstractVector{<:AbstractString};
+rename(df::Abstractdataset, vals::AbstractVector{<:AbstractString};
        makeunique::Bool=false) = rename!(copy(df), vals, makeunique=makeunique)
-rename(df::AbstractDataset, args...) = rename!(copy(df), args...)
-rename(f::Function, df::AbstractDataset) = rename!(f, copy(df))
+rename(df::Abstractdataset, args...) = rename!(copy(df), args...)
+rename(f::Function, df::Abstractdataset) = rename!(f, copy(df))
 
 """
-    size(df::AbstractDataset[, dim])
+    size(df::Abstractdataset[, dim])
 
 Return a tuple containing the number of rows and columns of `df`.
 Optionally a dimension `dim` can be specified, where `1` corresponds to rows
@@ -321,8 +321,8 @@ julia> size(df, 1)
 3
 ```
 """
-Base.size(df::AbstractDataset) = (nrow(df), ncol(df))
-function Base.size(df::AbstractDataset, i::Integer)
+Base.size(df::Abstractdataset) = (nrow(df), ncol(df))
+function Base.size(df::Abstractdataset, i::Integer)
     if i == 1
         nrow(df)
     elseif i == 2
@@ -332,34 +332,34 @@ function Base.size(df::AbstractDataset, i::Integer)
     end
 end
 
-Base.isempty(df::AbstractDataset) = size(df, 1) == 0 || size(df, 2) == 0
+Base.isempty(df::Abstractdataset) = size(df, 1) == 0 || size(df, 2) == 0
 
 if VERSION < v"1.6"
-    Base.firstindex(df::AbstractDataset, i::Integer) = first(axes(df, i))
-    Base.lastindex(df::AbstractDataset, i::Integer) = last(axes(df, i))
+    Base.firstindex(df::Abstractdataset, i::Integer) = first(axes(df, i))
+    Base.lastindex(df::Abstractdataset, i::Integer) = last(axes(df, i))
 end
-Base.axes(df::AbstractDataset, i::Integer) = Base.OneTo(size(df, i))
+Base.axes(df::Abstractdataset, i::Integer) = Base.OneTo(size(df, i))
 
 """
-    ndims(::AbstractDataset)
-    ndims(::Type{<:AbstractDataset})
+    ndims(::Abstractdataset)
+    ndims(::Type{<:Abstractdataset})
 
 Return the number of dimensions of a data frame, which is always `2`.
 """
-Base.ndims(::AbstractDataset) = 2
-Base.ndims(::Type{<:AbstractDataset}) = 2
+Base.ndims(::Abstractdataset) = 2
+Base.ndims(::Type{<:Abstractdataset}) = 2
 
 # separate methods are needed due to dispatch ambiguity
-Base.getproperty(df::AbstractDataset, col_ind::Symbol) = df[!, col_ind]
-Base.getproperty(df::AbstractDataset, col_ind::AbstractString) = df[!, col_ind]
+Base.getproperty(df::Abstractdataset, col_ind::Symbol) = df[!, col_ind]
+Base.getproperty(df::Abstractdataset, col_ind::AbstractString) = df[!, col_ind]
 
 # Private fields are never exposed since they can conflict with column names
 """
-    propertynames(df::AbstractDataset)
+    propertynames(df::Abstractdataset)
 
 Return a freshly allocated `Vector{Symbol}` of names of columns contained in `df`.
 """
-Base.propertynames(df::AbstractDataset, private::Bool=false) = copy(_names(df))
+Base.propertynames(df::Abstractdataset, private::Bool=false) = copy(_names(df))
 
 ##############################################################################
 ##
@@ -368,25 +368,25 @@ Base.propertynames(df::AbstractDataset, private::Bool=false) = copy(_names(df))
 ##############################################################################
 
 """
-    similar(df::AbstractDataset, rows::Integer=nrow(df))
+    similar(df::Abstractdataset, rows::Integer=nrow(df))
 
 Create a new `DataFrame` with the same column names and column element types
 as `df`. An optional second argument can be provided to request a number of rows
 that is different than the number of rows present in `df`.
 """
-function Base.similar(df::AbstractDataset, rows::Integer = size(df, 1))
+function Base.similar(df::Abstractdataset, rows::Integer = size(df, 1))
     rows < 0 && throw(ArgumentError("the number of rows must be non-negative"))
     DataFrame(AbstractVector[similar(x, rows) for x in eachcol(df)], copy(index(df)),
               copycols=false)
 end
 
 """
-    empty(df::AbstractDataset)
+    empty(df::Abstractdataset)
 
 Create a new `DataFrame` with the same column names and column element types
 as `df` but with zero rows.
 """
-Base.empty(df::AbstractDataset) = similar(df, 0)
+Base.empty(df::Abstractdataset) = similar(df, 0)
 
 ##############################################################################
 ##
@@ -394,7 +394,7 @@ Base.empty(df::AbstractDataset) = similar(df, 0)
 ##
 ##############################################################################
 
-function Base.:(==)(df1::AbstractDataset, df2::AbstractDataset)
+function Base.:(==)(df1::Abstractdataset, df2::Abstractdataset)
     size(df1, 2) == size(df2, 2) || return false
     isequal(index(df1), index(df2)) || return false
     eq = true
@@ -407,7 +407,7 @@ function Base.:(==)(df1::AbstractDataset, df2::AbstractDataset)
     return eq
 end
 
-function Base.isequal(df1::AbstractDataset, df2::AbstractDataset)
+function Base.isequal(df1::Abstractdataset, df2::Abstractdataset)
     size(df1, 2) == size(df2, 2) || return false
     isequal(index(df1), index(df2)) || return false
     for idx in 1:size(df1, 2)
@@ -417,7 +417,7 @@ function Base.isequal(df1::AbstractDataset, df2::AbstractDataset)
 end
 
 """
-    isapprox(df1::AbstractDataset, df2::AbstractDataset;
+    isapprox(df1::Abstractdataset, df2::Abstractdataset;
              rtol::Real=atol>0 ? 0 : √eps, atol::Real=0,
              nans::Bool=false, norm::Function=norm)
 
@@ -425,7 +425,7 @@ Inexact equality comparison. `df1` and `df2` must have the same size and column 
 Return  `true` if `isapprox` with given keyword arguments
 applied to all pairs of columns stored in `df1` and `df2` returns `true`.
 """
-function Base.isapprox(df1::AbstractDataset, df2::AbstractDataset;
+function Base.isapprox(df1::Abstractdataset, df2::Abstractdataset;
                        atol::Real=0, rtol::Real=atol>0 ? 0 : √eps(),
                        nans::Bool=false, norm::Function=norm)
     if size(df1) != size(df2)
@@ -444,53 +444,53 @@ end
 ##############################################################################
 
 """
-    only(df::AbstractDataset)
+    only(df::Abstractdataset)
 
 If `df` has a single row return it as a `DataFrameRow`; otherwise throw `ArgumentError`.
 """
-function only(df::AbstractDataset)
+function only(df::Abstractdataset)
     nrow(df) != 1 && throw(ArgumentError("data frame must contain exactly 1 row"))
     return df[1, :]
 end
 
 """
-    first(df::AbstractDataset)
+    first(df::Abstractdataset)
 
 Get the first row of `df` as a `DataFrameRow`.
 """
-Base.first(df::AbstractDataset) = df[1, :]
+Base.first(df::Abstractdataset) = df[1, :]
 
 """
-    first(df::AbstractDataset, n::Integer)
+    first(df::Abstractdataset, n::Integer)
 
 Get a data frame with the `n` first rows of `df`.
 """
-Base.first(df::AbstractDataset, n::Integer) = df[1:min(n, nrow(df)), :]
+Base.first(df::Abstractdataset, n::Integer) = df[1:min(n, nrow(df)), :]
 
 """
-    last(df::AbstractDataset)
+    last(df::Abstractdataset)
 
 Get the last row of `df` as a `DataFrameRow`.
 """
-Base.last(df::AbstractDataset) = df[nrow(df), :]
+Base.last(df::Abstractdataset) = df[nrow(df), :]
 
 """
-    last(df::AbstractDataset, n::Integer)
+    last(df::Abstractdataset, n::Integer)
 
 Get a data frame with the `n` last rows of `df`.
 """
-Base.last(df::AbstractDataset, n::Integer) = df[max(1, nrow(df)-n+1):nrow(df), :]
+Base.last(df::Abstractdataset, n::Integer) = df[max(1, nrow(df)-n+1):nrow(df), :]
 
 
 """
-    describe(df::AbstractDataset; cols=:)
-    describe(df::AbstractDataset, stats::Union{Symbol, Pair}...; cols=:)
+    describe(df::Abstractdataset; cols=:)
+    describe(df::Abstractdataset, stats::Union{Symbol, Pair}...; cols=:)
 
 Return descriptive statistics for a data frame as a new `DataFrame`
 where each row represents a variable and each column a summary statistic.
 
 # Arguments
-- `df` : the `AbstractDataset`
+- `df` : the `Abstractdataset`
 - `stats::Union{Symbol, Pair}...` : the summary statistics to report.
   Arguments can be:
     - A symbol from the list `:mean`, `:std`, `:min`, `:q25`,
@@ -562,16 +562,16 @@ julia> describe(df, :min, sum => :sum, cols=:x)
    1 │ x             0.1      5.5
 ```
 """
-DataAPI.describe(df::AbstractDataset,
+DataAPI.describe(df::Abstractdataset,
                  stats::Union{Symbol, Pair{<:Base.Callable, <:SymbolOrString}}...;
                  cols=:) =
     _describe(select(df, cols, copycols=false), Any[s for s in stats])
 
-DataAPI.describe(df::AbstractDataset; cols=:) =
+DataAPI.describe(df::Abstractdataset; cols=:) =
     _describe(select(df, cols, copycols=false),
               Any[:mean, :min, :median, :max, :nmissing, :eltype])
 
-function _describe(df::AbstractDataset, stats::AbstractVector)
+function _describe(df::Abstractdataset, stats::AbstractVector)
     predefined_funs = Symbol[s for s in stats if s isa Symbol]
 
     allowed_fields = [:mean, :std, :min, :q25, :median, :q75,
@@ -700,7 +700,7 @@ end
 ##############################################################################
 
 """
-    completecases(df::AbstractDataset, cols=:)
+    completecases(df::Abstractdataset, cols=:)
 
 Return a Boolean vector with `true` entries indicating rows without missing values
 (complete cases) in data frame `df`.
@@ -752,7 +752,7 @@ julia> completecases(df, [:x, :y])
  1
 ```
 """
-function completecases(df::AbstractDataset, col::Colon=:)
+function completecases(df::Abstractdataset, col::Colon=:)
     if ncol(df) == 0
         throw(ArgumentError("Unable to compute complete cases of a " *
                             "data frame with no columns"))
@@ -770,7 +770,7 @@ function completecases(df::AbstractDataset, col::Colon=:)
     return res
 end
 
-function completecases(df::AbstractDataset, col::ColumnIndex)
+function completecases(df::Abstractdataset, col::ColumnIndex)
     v = df[!, col]
     if Missing <: eltype(v)
         res = BitVector(undef, size(df, 1))
@@ -781,11 +781,11 @@ function completecases(df::AbstractDataset, col::ColumnIndex)
     end
 end
 
-completecases(df::AbstractDataset, cols::MultiColumnIndex) =
+completecases(df::Abstractdataset, cols::MultiColumnIndex) =
     completecases(df[!, cols])
 
 """
-    dropmissing(df::AbstractDataset, cols=:; view::Bool=false, disallowmissing::Bool=!view)
+    dropmissing(df::Abstractdataset, cols=:; view::Bool=false, disallowmissing::Bool=!view)
 
 Return a data frame excluding rows with missing values in `df`.
 
@@ -852,7 +852,7 @@ julia> dropmissing(df, [:x, :y])
    2 │     5      1  e
 ```
 """
-@inline function dropmissing(df::AbstractDataset,
+@inline function dropmissing(df::Abstractdataset,
                              cols::Union{ColumnIndex, MultiColumnIndex}=:;
                              view::Bool=false, disallowmissing::Bool=!view)
     rowidxs = completecases(df, cols)
@@ -869,7 +869,7 @@ julia> dropmissing(df, [:x, :y])
 end
 
 """
-    dropmissing!(df::AbstractDataset, cols=:; disallowmissing::Bool=true)
+    dropmissing!(df::Abstractdataset, cols=:; disallowmissing::Bool=true)
 
 Remove rows with missing values from data frame `df` and return it.
 
@@ -929,7 +929,7 @@ julia> dropmissing!(df, [:x, :y])
    2 │     5      1  e
 ```
 """
-function dropmissing!(df::AbstractDataset,
+function dropmissing!(df::Abstractdataset,
                       cols::Union{ColumnIndex, MultiColumnIndex}=:;
                       disallowmissing::Bool=true)
     inds = completecases(df, cols)
@@ -940,8 +940,8 @@ function dropmissing!(df::AbstractDataset,
 end
 
 """
-    filter(fun, df::AbstractDataset; view::Bool=false)
-    filter(cols => fun, df::AbstractDataset; view::Bool=false)
+    filter(fun, df::Abstractdataset; view::Bool=false)
+    filter(cols => fun, df::Abstractdataset; view::Bool=false)
 
 Return a data frame containing only rows from `df` for which `fun`
 returns `true`.
@@ -1009,12 +1009,12 @@ julia> filter(AsTable(:) => nt -> nt.x == 1 || nt.y == "b", df)
    3 │     1  b
 ```
 """
-@inline function Base.filter(f, df::AbstractDataset; view::Bool=false)
+@inline function Base.filter(f, df::Abstractdataset; view::Bool=false)
     rowidxs = _filter_helper(f, eachrow(df))
     return view ? Base.view(df, rowidxs, :) : df[rowidxs, :]
 end
 
-@inline function Base.filter((cols, f)::Pair, df::AbstractDataset; view::Bool=false)
+@inline function Base.filter((cols, f)::Pair, df::Abstractdataset; view::Bool=false)
     int_cols = index(df)[cols] # it will be AbstractVector{Int} or Int
     if length(int_cols) == 0
         rowidxs = [f() for _ in axes(df, 1)]
@@ -1028,7 +1028,7 @@ end
 @inline function Base.filter((cols, f)::Pair{<:Union{AbstractVector{<:Integer},
                                                      AbstractVector{<:AbstractString},
                                                      AbstractVector{<:Symbol}}},
-                             df::AbstractDataset; view::Bool=false)
+                             df::Abstractdataset; view::Bool=false)
     if length(cols) == 0
         rowidxs = [f() for _ in axes(df, 1)]
     else
@@ -1039,22 +1039,22 @@ end
 
 _filter_helper(f, cols...)::BitVector = ((x...) -> f(x...)::Bool).(cols...)
 
-@inline function Base.filter((cols, f)::Pair{AsTable}, df::AbstractDataset;
-                             view::Bool=false)
-    df_tmp = select(df, cols.cols, copycols=false)
-    if ncol(df_tmp) == 0
-        rowidxs = [f(NamedTuple()) for _ in axes(df, 1)]
-    else
-        rowidxs = _filter_helper_astable(f, Tables.namedtupleiterator(df_tmp))
-    end
-    return view ? Base.view(df, rowidxs, :) : df[rowidxs, :]
-end
+# @inline function Base.filter((cols, f)::Pair{AsTable}, df::Abstractdataset;
+#                              view::Bool=false)
+#     df_tmp = select(df, cols.cols, copycols=false)
+#     if ncol(df_tmp) == 0
+#         rowidxs = [f(NamedTuple()) for _ in axes(df, 1)]
+#     else
+#         rowidxs = _filter_helper_astable(f, Tables.namedtupleiterator(df_tmp))
+#     end
+#     return view ? Base.view(df, rowidxs, :) : df[rowidxs, :]
+# end
 
 _filter_helper_astable(f, nti::Tables.NamedTupleIterator)::BitVector = (x -> f(x)::Bool).(nti)
 
 """
-    filter!(fun, df::AbstractDataset)
-    filter!(cols => fun, df::AbstractDataset)
+    filter!(fun, df::Abstractdataset)
+    filter!(cols => fun, df::Abstractdataset)
 
 Remove rows from data frame `df` for which `fun` returns `false`.
 
@@ -1121,19 +1121,19 @@ julia> filter!(AsTable(:) => nt -> nt.x == 1 || nt.y == "b", df)
    3 │     1  b
 ```
 """
-Base.filter!(f, df::AbstractDataset) = delete!(df, findall(!f, eachrow(df)))
-Base.filter!((col, f)::Pair{<:ColumnIndex}, df::AbstractDataset) =
+Base.filter!(f, df::Abstractdataset) = delete!(df, findall(!f, eachrow(df)))
+Base.filter!((col, f)::Pair{<:ColumnIndex}, df::Abstractdataset) =
     _filter!_helper(df, f, df[!, col])
-Base.filter!((cols, f)::Pair{<:AbstractVector{Symbol}}, df::AbstractDataset) =
+Base.filter!((cols, f)::Pair{<:AbstractVector{Symbol}}, df::Abstractdataset) =
     filter!([index(df)[col] for col in cols] => f, df)
-Base.filter!((cols, f)::Pair{<:AbstractVector{<:AbstractString}}, df::AbstractDataset) =
+Base.filter!((cols, f)::Pair{<:AbstractVector{<:AbstractString}}, df::Abstractdataset) =
     filter!([index(df)[col] for col in cols] => f, df)
-Base.filter!((cols, f)::Pair, df::AbstractDataset) =
+Base.filter!((cols, f)::Pair, df::Abstractdataset) =
     filter!(index(df)[cols] => f, df)
-Base.filter!((cols, f)::Pair{<:AbstractVector{Int}}, df::AbstractDataset) =
+Base.filter!((cols, f)::Pair{<:AbstractVector{Int}}, df::Abstractdataset) =
     _filter!_helper(df, f, (df[!, i] for i in cols)...)
 
-function _filter!_helper(df::AbstractDataset, f, cols...)
+function _filter!_helper(df::Abstractdataset, f, cols...)
     if length(cols) == 0
         rowidxs = findall(x -> !f(), axes(df, 1))
     else
@@ -1142,24 +1142,24 @@ function _filter!_helper(df::AbstractDataset, f, cols...)
     return delete!(df, rowidxs)
 end
 
-function Base.filter!((cols, f)::Pair{<:AsTable}, df::AbstractDataset)
-    dff = select(df, cols.cols, copycols=false)
-    if ncol(dff) == 0
-        return delete!(df, findall(x -> !f(NamedTuple()), axes(df, 1)))
-    else
-        return _filter!_helper_astable(df, Tables.namedtupleiterator(dff), f)
-    end
-end
+# function Base.filter!((cols, f)::Pair{<:AsTable}, df::Abstractdataset)
+#     dff = select(df, cols.cols, copycols=false)
+#     if ncol(dff) == 0
+#         return delete!(df, findall(x -> !f(NamedTuple()), axes(df, 1)))
+#     else
+#         return _filter!_helper_astable(df, Tables.namedtupleiterator(dff), f)
+#     end
+# end
 
-_filter!_helper_astable(df::AbstractDataset, nti::Tables.NamedTupleIterator, f) =
+_filter!_helper_astable(df::Abstractdataset, nti::Tables.NamedTupleIterator, f) =
     delete!(df, _findall((x -> !(f(x)::Bool)).(nti)))
 
-function Base.Matrix(df::AbstractDataset)
+function Base.Matrix(df::Abstractdataset)
     T = reduce(promote_type, (eltype(v) for v in eachcol(df)))
     return Matrix{T}(df)
 end
 
-function Base.Matrix{T}(df::AbstractDataset) where T
+function Base.Matrix{T}(df::Abstractdataset) where T
     n, p = size(df)
     res = Matrix{T}(undef, n, p)
     idx = 1
@@ -1180,12 +1180,12 @@ function Base.Matrix{T}(df::AbstractDataset) where T
     return res
 end
 
-Base.Array(df::AbstractDataset) = Matrix(df)
-Base.Array{T}(df::AbstractDataset) where {T} = Matrix{T}(df)
+Base.Array(df::Abstractdataset) = Matrix(df)
+Base.Array{T}(df::Abstractdataset) where {T} = Matrix{T}(df)
 
 """
-    nonunique(df::AbstractDataset)
-    nonunique(df::AbstractDataset, cols)
+    nonunique(df::Abstractdataset)
+    nonunique(df::Abstractdataset, cols)
 
 Return a `Vector{Bool}` in which `true` entries indicate duplicate rows.
 A row is a duplicate if there exists a prior row with all columns containing
@@ -1194,7 +1194,7 @@ equal values (according to `isequal`).
 See also [`unique`](@ref) and [`unique!`](@ref).
 
 # Arguments
-- `df` : `AbstractDataset`
+- `df` : `Abstractdataset`
 - `cols` : a selector specifying the column(s) or their transformations to compare.
   Can be any column selector or transformation accepted by [`select`](@ref).
 
@@ -1247,7 +1247,7 @@ julia> nonunique(df, 2)
  1
 ```
 """
-function nonunique(df::AbstractDataset)
+function nonunique(df::Abstractdataset)
     if ncol(df) == 0
         throw(ArgumentError("finding duplicate rows in data frame with no " *
                             "columns is not allowed"))
@@ -1262,30 +1262,30 @@ function nonunique(df::AbstractDataset)
     return res
 end
 
-nonunique(df::AbstractDataset, cols) = nonunique(select(df, cols, copycols=false))
+nonunique(df::Abstractdataset, cols) = nonunique(select(df, cols, copycols=false))
 
-Base.unique!(df::AbstractDataset) = delete!(df, _findall(nonunique(df)))
-Base.unique!(df::AbstractDataset, cols::AbstractVector) =
+Base.unique!(df::Abstractdataset) = delete!(df, _findall(nonunique(df)))
+Base.unique!(df::Abstractdataset, cols::AbstractVector) =
     delete!(df, _findall(nonunique(df, cols)))
-Base.unique!(df::AbstractDataset, cols) =
+Base.unique!(df::Abstractdataset, cols) =
     delete!(df, _findall(nonunique(df, cols)))
 
-# Unique rows of an AbstractDataset.
-@inline function Base.unique(df::AbstractDataset; view::Bool=false)
+# Unique rows of an Abstractdataset.
+@inline function Base.unique(df::Abstractdataset; view::Bool=false)
     rowidxs = (!).(nonunique(df))
     return view ? Base.view(df, rowidxs, :) : df[rowidxs, :]
 end
 
-@inline function Base.unique(df::AbstractDataset, cols; view::Bool=false)
+@inline function Base.unique(df::Abstractdataset, cols; view::Bool=false)
     rowidxs = (!).(nonunique(df, cols))
     return view ? Base.view(df, rowidxs, :) : df[rowidxs, :]
 end
 
 """
-    unique(df::AbstractDataset; view::Bool=false)
-    unique(df::AbstractDataset, cols; view::Bool=false)
-    unique!(df::AbstractDataset)
-    unique!(df::AbstractDataset, cols)
+    unique(df::Abstractdataset; view::Bool=false)
+    unique(df::Abstractdataset, cols; view::Bool=false)
+    unique!(df::Abstractdataset)
+    unique!(df::Abstractdataset, cols)
 
 Return a data frame containing only the first occurrence of unique rows in `df`.
 When `cols` is specified, the returned `DataFrame` contains complete rows,
@@ -1302,7 +1302,7 @@ and if `view=true` then a `SubDataFrame` view into `df` is returned.
 See also [`nonunique`](@ref).
 
 # Arguments
-- `df` : the AbstractDataset
+- `df` : the Abstractdataset
 - `cols` :  column indicator (Symbol, Int, Vector{Symbol}, Regex, etc.)
 specifying the column(s) to compare.
 
@@ -1364,14 +1364,14 @@ julia> unique!(df)  # modifies df
 (unique, unique!)
 
 """
-    hcat(df::AbstractDataset...;
+    hcat(df::Abstractdataset...;
          makeunique::Bool=false, copycols::Bool=true)
-    hcat(df::AbstractDataset..., vs::AbstractVector;
+    hcat(df::Abstractdataset..., vs::AbstractVector;
          makeunique::Bool=false, copycols::Bool=true)
-    hcat(vs::AbstractVector, df::AbstractDataset;
+    hcat(vs::AbstractVector, df::Abstractdataset;
          makeunique::Bool=false, copycols::Bool=true)
 
-Horizontally concatenate `AbstractDatasets` and optionally `AbstractVector`s.
+Horizontally concatenate `Abstractdatasets` and optionally `AbstractVector`s.
 
 If `AbstractVector` is passed then a column name for it is automatically generated
 as `:x1` by default.
@@ -1425,34 +1425,34 @@ julia> df3.A === df1.A
 true
 ```
 """
-Base.hcat(df::AbstractDataset; makeunique::Bool=false, copycols::Bool=true) =
+Base.hcat(df::Abstractdataset; makeunique::Bool=false, copycols::Bool=true) =
     DataFrame(df, copycols=copycols)
-Base.hcat(df::AbstractDataset, x; makeunique::Bool=false, copycols::Bool=true) =
+Base.hcat(df::Abstractdataset, x; makeunique::Bool=false, copycols::Bool=true) =
     hcat!(DataFrame(df, copycols=copycols), x,
           makeunique=makeunique, copycols=copycols)
-Base.hcat(x, df::AbstractDataset; makeunique::Bool=false, copycols::Bool=true) =
+Base.hcat(x, df::Abstractdataset; makeunique::Bool=false, copycols::Bool=true) =
     hcat!(x, df, makeunique=makeunique, copycols=copycols)
-Base.hcat(df1::AbstractDataset, df2::AbstractDataset;
+Base.hcat(df1::Abstractdataset, df2::Abstractdataset;
           makeunique::Bool=false, copycols::Bool=true) =
     hcat!(DataFrame(df1, copycols=copycols), df2,
           makeunique=makeunique, copycols=copycols)
-Base.hcat(df::AbstractDataset, x, y...;
+Base.hcat(df::Abstractdataset, x, y...;
           makeunique::Bool=false, copycols::Bool=true) =
     hcat!(hcat(df, x, makeunique=makeunique, copycols=copycols), y...,
           makeunique=makeunique, copycols=copycols)
-Base.hcat(df1::AbstractDataset, df2::AbstractDataset, dfn::AbstractDataset...;
+Base.hcat(df1::Abstractdataset, df2::Abstractdataset, dfn::Abstractdataset...;
           makeunique::Bool=false, copycols::Bool=true) =
     hcat!(hcat(df1, df2, makeunique=makeunique, copycols=copycols), dfn...,
           makeunique=makeunique, copycols=copycols)
 
 """
-    vcat(dfs::AbstractDataset...;
+    vcat(dfs::Abstractdataset...;
          cols::Union{Symbol, AbstractVector{Symbol},
                      AbstractVector{<:AbstractString}}=:setequal,
          source::Union{Nothing, Symbol, AbstractString,
                        Pair{<:Union{Symbol, AbstractString}, <:AbstractVector}}=nothing)
 
-Vertically concatenate `AbstractDataset`s.
+Vertically concatenate `Abstractdataset`s.
 
 The `cols` keyword argument determines the columns of the returned data frame:
 
@@ -1595,7 +1595,7 @@ julia> vcat(df1, df2, df4, df3, cols=:union, source=:source => 'a':'d')
    9 │     9  missing        9  d
 ```
 """
-Base.vcat(dfs::AbstractDataset...;
+Base.vcat(dfs::Abstractdataset...;
           cols::Union{Symbol, AbstractVector{Symbol},
                       AbstractVector{<:AbstractString}}=:setequal,
           source::Union{Nothing, SymbolOrString,
@@ -1604,18 +1604,18 @@ Base.vcat(dfs::AbstractDataset...;
 
 """
     reduce(::typeof(vcat),
-           dfs::Union{AbstractVector{<:AbstractDataset},
-                      Tuple{AbstractDataset, Vararg{AbstractDataset}}};
+           dfs::Union{AbstractVector{<:Abstractdataset},
+                      Tuple{Abstractdataset, Vararg{Abstractdataset}}};
            cols::Union{Symbol, AbstractVector{Symbol},
                        AbstractVector{<:AbstractString}}=:setequal,
            source::Union{Nothing, Symbol, AbstractString,
                          Pair{<:Union{Symbol, AbstractString}, <:AbstractVector}}=nothing)
 
-Efficiently reduce the given vector or tuple of `AbstractDataset`s with `vcat`.
+Efficiently reduce the given vector or tuple of `Abstractdataset`s with `vcat`.
 
 The column order, names, and types of the resulting `DataFrame`, and
 the behavior of `cols` and `source` keyword arguments follow the rules specified
-for [`vcat`](@ref) of `AbstractDataset`s.
+for [`vcat`](@ref) of `Abstractdataset`s.
 
 # Example
 ```jldoctest
@@ -1675,13 +1675,13 @@ julia> reduce(vcat, [df1, df2, df3], cols=:union, source=:source)
 ```
 """
 function Base.reduce(::typeof(vcat),
-                     dfs::Union{AbstractVector{<:AbstractDataset},
-                                Tuple{AbstractDataset, Vararg{AbstractDataset}}};
+                     dfs::Union{AbstractVector{<:Abstractdataset},
+                                Tuple{Abstractdataset, Vararg{Abstractdataset}}};
                      cols::Union{Symbol, AbstractVector{Symbol},
                                  AbstractVector{<:AbstractString}}=:setequal,
                      source::Union{Nothing, SymbolOrString,
                                    Pair{<:SymbolOrString, <:AbstractVector}}=nothing)
-    res = _vcat(AbstractDataset[df for df in dfs if ncol(df) != 0]; cols=cols)
+    res = _vcat(Abstractdataset[df for df in dfs if ncol(df) != 0]; cols=cols)
     if source !== nothing
         len = length(dfs)
         if source isa SymbolOrString
@@ -1719,7 +1719,7 @@ function Base.reduce(::typeof(vcat),
     return res
 end
 
-function _vcat(dfs::AbstractVector{AbstractDataset};
+function _vcat(dfs::AbstractVector{Abstractdataset};
                cols::Union{Symbol, AbstractVector{Symbol},
                            AbstractVector{<:AbstractString}}=:setequal)
 
@@ -1802,7 +1802,7 @@ function _vcat(dfs::AbstractVector{AbstractDataset};
 end
 
 """
-    repeat(df::AbstractDataset; inner::Integer = 1, outer::Integer = 1)
+    repeat(df::Abstractdataset; inner::Integer = 1, outer::Integer = 1)
 
 Construct a data frame by repeating rows in `df`. `inner` specifies how many
 times each row is repeated, and `outer` specifies how many times the full set
@@ -1837,14 +1837,14 @@ julia> repeat(df, inner = 2, outer = 3)
   12 │     2      4
 ```
 """
-function Base.repeat(df::AbstractDataset; inner::Integer=1, outer::Integer=1)
+function Base.repeat(df::Abstractdataset; inner::Integer=1, outer::Integer=1)
     inner < 0 && throw(ArgumentError("inner keyword argument must be non-negative"))
     outer < 0 && throw(ArgumentError("outer keyword argument must be non-negative"))
     return mapcols(x -> repeat(x, inner = Int(inner), outer = Int(outer)), df)
 end
 
 """
-    repeat(df::AbstractDataset, count::Integer)
+    repeat(df::Abstractdataset, count::Integer)
 
 Construct a data frame by repeating each row in `df` the number of times
 specified by `count`.
@@ -1870,7 +1870,7 @@ julia> repeat(df, 2)
    4 │     2      4
 ```
 """
-function Base.repeat(df::AbstractDataset, count::Integer)
+function Base.repeat(df::Abstractdataset, count::Integer)
     count < 0 && throw(ArgumentError("count must be non-negative"))
     return mapcols(x -> repeat(x, Int(count)), df)
 end
@@ -1883,7 +1883,7 @@ end
 
 const hashdf_seed = UInt == UInt32 ? 0xfd8bb02e : 0x6215bada8c8c46de
 
-function Base.hash(df::AbstractDataset, h::UInt)
+function Base.hash(df::Abstractdataset, h::UInt)
     h += hashdf_seed
     h += hash(size(df))
     for i in 1:size(df, 2)
@@ -1892,8 +1892,8 @@ function Base.hash(df::AbstractDataset, h::UInt)
     return h
 end
 
-Base.parent(adf::AbstractDataset) = adf
-Base.parentindices(adf::AbstractDataset) = axes(adf)
+Base.parent(adf::Abstractdataset) = adf
+Base.parentindices(adf::Abstractdataset) = axes(adf)
 
 ## Documentation for methods defined elsewhere
 
@@ -1901,10 +1901,10 @@ function nrow end
 function ncol end
 
 """
-    nrow(df::AbstractDataset)
-    ncol(df::AbstractDataset)
+    nrow(df::Abstractdataset)
+    ncol(df::Abstractdataset)
 
-Return the number of rows or columns in an `AbstractDataset` `df`.
+Return the number of rows or columns in an `Abstractdataset` `df`.
 
 See also [`size`](@ref).
 
@@ -1927,7 +1927,7 @@ julia> ncol(df)
 (nrow, ncol)
 
 """
-    disallowmissing(df::AbstractDataset, cols=:; error::Bool=true)
+    disallowmissing(df::Abstractdataset, cols=:; error::Bool=true)
 
 Return a copy of data frame `df` with columns `cols` converted
 from element type `Union{T, Missing}` to `T` to drop support for missing values.
@@ -1975,7 +1975,7 @@ julia> disallowmissing(df, error=false)
    2 │ missing
 ```
 """
-function Missings.disallowmissing(df::AbstractDataset,
+function Missings.disallowmissing(df::Abstractdataset,
                                   cols::Union{ColumnIndex, MultiColumnIndex}=:;
                                   error::Bool=true)
     idxcols = Set(index(df)[cols])
@@ -1997,7 +1997,7 @@ function Missings.disallowmissing(df::AbstractDataset,
 end
 
 """
-    allowmissing(df::AbstractDataset, cols=:)
+    allowmissing(df::Abstractdataset, cols=:)
 
 Return a copy of data frame `df` with columns `cols` converted
 to element type `Union{T, Missing}` from `T` to allow support for missing values.
@@ -2026,7 +2026,7 @@ julia> allowmissing(df)
    2 │      2
 ```
 """
-function Missings.allowmissing(df::AbstractDataset,
+function Missings.allowmissing(df::Abstractdataset,
                                cols::Union{ColumnIndex, MultiColumnIndex}=:)
     idxcols = Set(index(df)[cols])
     newcols = AbstractVector[]
@@ -2043,7 +2043,7 @@ function Missings.allowmissing(df::AbstractDataset,
 end
 
 """
-    flatten(df::AbstractDataset, cols)
+    flatten(df::Abstractdataset, cols)
 
 When columns `cols` of data frame `df` have iterable elements that define
 `length` (for example a `Vector` of `Vector`s), return a `DataFrame` where each
@@ -2118,7 +2118,7 @@ julia> flatten(df3, [:b, :c])
 ERROR: ArgumentError: Lengths of iterables stored in columns :b and :c are not the same in row 2
 ```
 """
-function flatten(df::AbstractDataset,
+function flatten(df::Abstractdataset,
                  cols::Union{ColumnIndex, MultiColumnIndex})
     _check_consistency(df)
 
@@ -2165,8 +2165,8 @@ end
 
 # Disallowed operations that are a common mistake
 
-Base.getindex(::AbstractDataset, ::Union{Symbol, Integer, AbstractString}) =
+Base.getindex(::Abstractdataset, ::Union{Symbol, Integer, AbstractString}) =
     throw(ArgumentError("syntax df[column] is not supported use df[!, column] instead"))
 
-Base.setindex!(::AbstractDataset, ::Any, ::Union{Symbol, Integer, AbstractString}) =
+Base.setindex!(::Abstractdataset, ::Any, ::Union{Symbol, Integer, AbstractString}) =
     throw(ArgumentError("syntax df[column] is not supported use df[!, column] instead"))
