@@ -161,6 +161,16 @@ function _show(io::IO,
     _check_consistency(df)
 
     names_str = names(df)
+    column_formats = _getformats(df)
+    names_format = fill("identity", length(names_str))
+    _pt_formmatters_ = Function[]
+    push!(_pt_formmatters_, _pretty_tables_general_formatter)
+    for (k,v) in column_formats
+        names_format[k] = string(v)
+        push!(_pt_formmatters_, (vv, i, j) -> j == k ? v(vv) : vv)
+    end
+
+    pt_formatter = ntuple(i->_pt_formmatters_[i], length(_pt_formmatters_))
     names_len = Int[textwidth(n) for n in names_str]
     maxwidth = Int[max(9, nl) for nl in names_len]
     types = Any[eltype(c) for c in eachcol(df)]
@@ -258,8 +268,8 @@ function _show(io::IO,
                  crop                        = crop,
                  crop_num_lines_at_beginning = 2,
                  ellipsis_line_skip          = 3,
-                 formatters                  = (_pretty_tables_general_formatter,),
-                 header                      = (names_str, types_str),
+                 formatters                  = pt_formatter,
+                 header                      = (names_str, names_format, types_str),
                  header_alignment            = :l,
                  hlines                      = [:header],
                  highlighters                = (_PRETTY_TABLES_HIGHLIGHTER,),

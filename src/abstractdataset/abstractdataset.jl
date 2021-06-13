@@ -90,6 +90,8 @@ Base.names(df::AbstractDataset, fun::Function) = filter!(fun, names(df))
 # _names returns Vector{Symbol} without copying
 _names(df::AbstractDataset) = _names(index(df))
 
+_getformats(df::AbstractDataset) = getfield(df, :colindex).format
+
 # separate methods are needed due to dispatch ambiguity
 Compat.hasproperty(df::AbstractDataset, s::Symbol) = haskey(index(df), s)
 Compat.hasproperty(df::AbstractDataset, s::AbstractString) = haskey(index(df), s)
