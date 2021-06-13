@@ -1,4 +1,4 @@
-# Dataset
+# Datasets
 
 `InMemoryDatasets.jl` is a `Julia` package for working with tabular data sets.
 
