@@ -222,8 +222,10 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
     end
 end
 
+# Create Dataset
 Dataset(df::Dataset; copycols::Bool=true) = copy(df, copycols=copycols)
 
+# Create Dataset
 function Dataset(pairs::Pair{Symbol, <:Any}...; makeunique::Bool=false,
                    copycols::Bool=true)::Dataset
     colnames = [Symbol(k) for (k, v) in pairs]
@@ -232,6 +234,7 @@ function Dataset(pairs::Pair{Symbol, <:Any}...; makeunique::Bool=false,
                      copycols=copycols)
 end
 
+# Create Dataset
 function Dataset(pairs::Pair{<:AbstractString, <:Any}...; makeunique::Bool=false,
                    copycols::Bool=true)::Dataset
     colnames = [Symbol(k) for (k, v) in pairs]
@@ -240,6 +243,8 @@ function Dataset(pairs::Pair{<:AbstractString, <:Any}...; makeunique::Bool=false
                      copycols=copycols)
 end
 
+
+# Create Dataset
 # this is needed as a workaround for Tables.jl dispatch
 function Dataset(pairs::AbstractVector{<:Pair}; makeunique::Bool=false,
                    copycols::Bool=true)
@@ -256,6 +261,7 @@ function Dataset(pairs::AbstractVector{<:Pair}; makeunique::Bool=false,
     end
 end
 
+# Create Dataset
 function Dataset(d::AbstractDict; copycols::Bool=true)
     if all(k -> k isa Symbol, keys(d))
         colnames = collect(Symbol, keys(d))
@@ -272,6 +278,7 @@ function Dataset(d::AbstractDict; copycols::Bool=true)
     return df
 end
 
+# Create Dataset
 function Dataset(; kwargs...)
     if isempty(kwargs)
         Dataset([], Index())
@@ -298,6 +305,7 @@ function Dataset(; kwargs...)
     end
 end
 
+# Create Dataset
 function Dataset(columns::AbstractVector, cnames::AbstractVector{Symbol};
                    makeunique::Bool=false, copycols::Bool=true)::Dataset
     if !(eltype(columns) <: AbstractVector) && !all(col -> isa(col, AbstractVector), columns)
@@ -308,20 +316,24 @@ function Dataset(columns::AbstractVector, cnames::AbstractVector{Symbol};
                      copycols=copycols)
 end
 
+# Create Dataset
 Dataset(columns::AbstractVector, cnames::AbstractVector{<:AbstractString};
           makeunique::Bool=false, copycols::Bool=true) =
     Dataset(columns, Symbol.(cnames), makeunique=makeunique, copycols=copycols)
 
+# Create Dataset
 Dataset(columns::AbstractVector{<:AbstractVector}, cnames::AbstractVector{Symbol};
           makeunique::Bool=false, copycols::Bool=true)::Dataset =
     Dataset(collect(AbstractVector, columns),
               Index(convert(Vector{Symbol}, cnames), makeunique=makeunique),
               copycols=copycols)
 
+# Create Dataset
 Dataset(columns::AbstractVector{<:AbstractVector}, cnames::AbstractVector{<:AbstractString};
           makeunique::Bool=false, copycols::Bool=true) =
     Dataset(columns, Symbol.(cnames); makeunique=makeunique, copycols=copycols)
 
+# Create Dataset
 function Dataset(columns::AbstractVector, cnames::Symbol; copycols::Bool=true)
     if cnames !== :auto
         throw(ArgumentError("if the first positional argument to Dataset " *
@@ -332,14 +344,17 @@ function Dataset(columns::AbstractVector, cnames::Symbol; copycols::Bool=true)
     return Dataset(columns, gennames(length(columns)), copycols=copycols)
 end
 
+# Create Dataset
 Dataset(columns::AbstractMatrix, cnames::AbstractVector{Symbol}; makeunique::Bool=false) =
     Dataset(AbstractVector[columns[:, i] for i in 1:size(columns, 2)], cnames,
               makeunique=makeunique, copycols=false)
 
+# Create Dataset
 Dataset(columns::AbstractMatrix, cnames::AbstractVector{<:AbstractString};
           makeunique::Bool=false) =
     Dataset(columns, Symbol.(cnames); makeunique=makeunique)
 
+# Create Dataset
 function Dataset(columns::AbstractMatrix, cnames::Symbol)
     if cnames !== :auto
         throw(ArgumentError("if the first positional argument to Dataset " *
@@ -352,22 +367,26 @@ end
 
 # Discontinued constructors
 
+# Create Dataset
 Dataset(matrix::Matrix) =
     throw(ArgumentError("`Dataset` constructor from a `Matrix` requires " *
                         "passing :auto as a second argument to automatically " *
                         "generate column names: `Dataset(matrix, :auto)`"))
 
+# Create Dataset
 Dataset(vecs::Vector{<:AbstractVector}) =
     throw(ArgumentError("`Dataset` constructor from a `Vector` of vectors requires " *
                         "passing :auto as a second argument to automatically " *
                         "generate column names: `Dataset(vecs, :auto)`"))
 
+# Create Dataset
 Dataset(column_eltypes::AbstractVector{T}, cnames::AbstractVector{Symbol},
           nrows::Integer=0; makeunique::Bool=false) where T<:Type =
     throw(ArgumentError("`Dataset` constructor with passed eltypes is " *
                         "not supported. Pass explicitly created columns to a " *
                         "`Dataset` constructor instead."))
 
+# Create Dataset
 Dataset(column_eltypes::AbstractVector{<:Type}, cnames::AbstractVector{<:AbstractString},
           nrows::Integer=0; makeunique::Bool=false) where T<:Type =
     throw(ArgumentError("`Dataset` constructor with passed eltypes is " *
@@ -503,6 +522,7 @@ end
 
 # df[MultiRowIndex, MultiColumnIndex] => Dataset
 
+# Create Dataset
 function _threaded_getindex(selected_rows::AbstractVector,
                             selected_columns::AbstractVector,
                             df_columns::AbstractVector,
@@ -525,6 +545,7 @@ function _threaded_getindex(selected_rows::AbstractVector,
     end
 end
 
+# Create Dataset
 @inline function Base.getindex(df::Dataset, row_inds::AbstractVector{T},
                                col_inds::MultiColumnIndex) where T
     @boundscheck if !checkindex(Bool, axes(df, 1), row_inds)
@@ -555,6 +576,7 @@ end
     end
 end
 
+# Create Dataset
 @inline function Base.getindex(df::Dataset, row_inds::AbstractVector{T}, ::Colon) where T
     @boundscheck if !checkindex(Bool, axes(df, 1), row_inds)
         throw(BoundsError(df, (row_inds, :)))
@@ -570,14 +592,17 @@ end
     end
 end
 
+# Create Dataset
 @inline Base.getindex(df::Dataset, row_inds::Not, col_inds::MultiColumnIndex) =
     df[axes(df, 1)[row_inds], col_inds]
 
 # df[:, MultiColumnIndex] => Dataset
+# Create Dataset
 Base.getindex(df::Dataset, row_ind::Colon, col_inds::MultiColumnIndex) =
     select(df, col_inds, copycols=true)
 
 # df[!, MultiColumnIndex] => Dataset
+# Create Dataset
 Base.getindex(df::Dataset, row_ind::typeof(!), col_inds::MultiColumnIndex) =
     select(df, col_inds, copycols=false)
 
@@ -588,6 +613,8 @@ Base.getindex(df::Dataset, row_ind::typeof(!), col_inds::MultiColumnIndex) =
 ##############################################################################
 
 # Will automatically add a new column if needed
+
+# Modify Dataset
 function insert_single_column!(df::Dataset, v::AbstractVector, col_ind::ColumnIndex)
     if ncol(df) != 0 && nrow(df) != length(v)
         throw(ArgumentError("New columns must have the same length as old columns"))
@@ -611,6 +638,7 @@ function insert_single_column!(df::Dataset, v::AbstractVector, col_ind::ColumnIn
     return dv
 end
 
+# Modify Dataset
 function insert_single_entry!(df::Dataset, v::Any, row_ind::Integer, col_ind::ColumnIndex)
     if haskey(index(df), col_ind)
         _columns(df)[index(df)[col_ind]][row_ind] = v
@@ -622,6 +650,8 @@ function insert_single_entry!(df::Dataset, v::Any, row_ind::Integer, col_ind::Co
 end
 
 # df[!, SingleColumnIndex] = AbstractVector
+
+# Modify Dataset
 function Base.setindex!(df::Dataset, v::AbstractVector, ::typeof(!), col_ind::ColumnIndex)
     insert_single_column!(df, v, col_ind)
     _modified(getfield(df, :attributes))
@@ -630,24 +660,34 @@ end
 
 # df.col = AbstractVector
 # separate methods are needed due to dispatch ambiguity
+
+# Modify Dataset
 function Base.setproperty!(df::Dataset, col_ind::Symbol, v::AbstractVector)
     df[!, col_ind] = v
     _modified(getfield(df, :attributes))
     v
 end
+
+# Modify Dataset
 function Base.setproperty!(df::Dataset, col_ind::AbstractString, v::AbstractVector)
     df[!, col_ind] = v
     _modified(getfield(df, :attributes))
     v
 end
+
+# Modify Dataset
 Base.setproperty!(::Dataset, col_ind::Symbol, v::Any) =
     throw(ArgumentError("It is only allowed to pass a vector as a column of a Dataset. " *
                         "Instead use `df[!, col_ind] .= v` if you want to use broadcasting."))
+
+# Modify Dataset
 Base.setproperty!(::Dataset, col_ind::AbstractString, v::Any) =
     throw(ArgumentError("It is only allowed to pass a vector as a column of a Dataset. " *
                         "Instead use `df[!, col_ind] .= v` if you want to use broadcasting."))
 
 # df[SingleRowIndex, SingleColumnIndex] = Single Item
+
+# Modify Dataset
 function Base.setindex!(df::Dataset, v::Any, row_ind::Integer, col_ind::ColumnIndex)
     insert_single_entry!(df, v, row_ind, col_ind)
     return df
@@ -657,6 +697,7 @@ end
 # the method for value of type DatasetRow, AbstractDict and NamedTuple
 # is defined in datasetrow.jl
 
+# Modify Dataset
 for T in MULTICOLUMNINDEX_TUPLE
     @eval function Base.setindex!(df::Dataset,
                                   v::Union{Tuple, AbstractArray},
@@ -675,6 +716,8 @@ for T in MULTICOLUMNINDEX_TUPLE
 end
 
 # df[MultiRowIndex, SingleColumnIndex] = AbstractVector
+
+# Modify Dataset
 for T in (:AbstractVector, :Not, :Colon)
     @eval function Base.setindex!(df::Dataset,
                                   v::AbstractVector,
@@ -691,6 +734,8 @@ for T in (:AbstractVector, :Not, :Colon)
 end
 
 # df[MultiRowIndex, MultiColumnIndex] = AbstractDataset
+
+# Modify Dataset
 for T1 in (:AbstractVector, :Not, :Colon),
     T2 in MULTICOLUMNINDEX_TUPLE
     @eval function Base.setindex!(df::Dataset,
@@ -708,6 +753,7 @@ for T1 in (:AbstractVector, :Not, :Colon),
     end
 end
 
+# Modify Dataset
 for T in MULTICOLUMNINDEX_TUPLE
     @eval function Base.setindex!(df::Dataset,
                                   new_df::AbstractDataset,
@@ -726,6 +772,8 @@ for T in MULTICOLUMNINDEX_TUPLE
 end
 
 # df[MultiRowIndex, MultiColumnIndex] = AbstractMatrix
+
+# Modify Dataset
 for T1 in (:AbstractVector, :Not, :Colon, :(typeof(!))),
     T2 in MULTICOLUMNINDEX_TUPLE
     @eval function Base.setindex!(df::Dataset,
@@ -808,6 +856,8 @@ julia> insertcols!(df, 2, :c => 2:4, :c => 3:5, makeunique=true)
 """
 function insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:Any}...;
                      makeunique::Bool=false, copycols::Bool=true)
+
+# Modify Dataset
     col_ind = Int(col isa SymbolOrString ? columnindex(df, col) : col)
     if !(0 < col_ind <= ncol(df) + 1)
         throw(ArgumentError("attempt to insert a column to a data set with " *
@@ -898,20 +948,24 @@ function insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
     return df
 end
 
+# Modify Dataset
 insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{<:AbstractString, <:Any}...;
                      makeunique::Bool=false, copycols::Bool=true) =
     insertcols!(df, col, (Symbol(n) => v for (n, v) in name_cols)...,
                 makeunique=makeunique, copycols=copycols)
 
+# Modify Dataset
 insertcols!(df::Dataset, name_cols::Pair{Symbol, <:Any}...;
             makeunique::Bool=false, copycols::Bool=true) =
     insertcols!(df, ncol(df)+1, name_cols..., makeunique=makeunique, copycols=copycols)
 
+# Modify Dataset
 insertcols!(df::Dataset, name_cols::Pair{<:AbstractString, <:Any}...;
             makeunique::Bool=false, copycols::Bool=true) =
     insertcols!(df, (Symbol(n) => v for (n, v) in name_cols)...,
                 makeunique=makeunique, copycols=copycols)
 
+# Modify Dataset
 function insertcols!(df::Dataset, col::Int=ncol(df)+1; makeunique::Bool=false, name_cols...)
     if !(0 < col <= ncol(df) + 1)
         throw(ArgumentError("attempt to insert a column to a data set with " *
@@ -934,6 +988,8 @@ copies of column vectors in `df`.
 If `copycols=false`, return a new `Dataset` sharing column vectors with `df`.
 """
 function Base.copy(df::Dataset; copycols::Bool=true)
+
+# Create Dataset
     return Dataset(copy(_columns(df)), copy(index(df)), copycols=copycols)
 end
 
@@ -967,6 +1023,8 @@ julia> delete!(df, 2)
 
 """
 function Base.delete!(df::Dataset, inds)
+
+# Modify Dataset
     if !isempty(inds) && size(df, 2) == 0
         throw(BoundsError(df, (inds, :)))
     end
@@ -976,6 +1034,7 @@ function Base.delete!(df::Dataset, inds)
     return _delete!_helper(df, inds)
 end
 
+# Modify Dataset
 function Base.delete!(df::Dataset, inds::AbstractVector{Bool})
     if length(inds) != size(df, 1)
         throw(BoundsError(df, (inds, :)))
@@ -984,8 +1043,10 @@ function Base.delete!(df::Dataset, inds::AbstractVector{Bool})
     return _delete!_helper(df, drop)
 end
 
+# Modify Dataset
 Base.delete!(df::Dataset, inds::Not) = delete!(df, axes(df, 1)[inds])
 
+# Modify Dataset
 function _delete!_helper(df::Dataset, drop)
     cols = _columns(df)
     isempty(cols) && return df
@@ -1016,6 +1077,8 @@ end
 Remove all rows from `df`, making each of its columns empty.
 """
 function Base.empty!(df::Dataset)
+
+# Modify Dataset
     foreach(empty!, eachcol(df))
     return df
 end
@@ -1027,6 +1090,8 @@ end
 ##############################################################################
 
 # hcat! for 2 arguments, only a vector or a data set is allowed
+
+# Modify Dataset
 function hcat!(df1::Dataset, df2::AbstractDataset;
                makeunique::Bool=false, copycols::Bool=true)
     u = add_names(index(df1), index(df2), makeunique=makeunique)
@@ -1037,36 +1102,55 @@ function hcat!(df1::Dataset, df2::AbstractDataset;
 end
 
 # definition required to avoid hcat! ambiguity
+
+# Modify Dataset
 hcat!(df1::Dataset, df2::Dataset;
       makeunique::Bool=false, copycols::Bool=true) =
     invoke(hcat!, Tuple{Dataset, AbstractDataset}, df1, df2,
            makeunique=makeunique, copycols=copycols)::Dataset
 
+# Modify Dataset
 hcat!(df::Dataset, x::AbstractVector; makeunique::Bool=false, copycols::Bool=true) =
     hcat!(df, Dataset(AbstractVector[x], [:x1], copycols=copycols),
           makeunique=makeunique, copycols=copycols)
+
+# Modify Dataset
 hcat!(x::AbstractVector, df::Dataset; makeunique::Bool=false, copycols::Bool=true) =
     hcat!(Dataset(AbstractVector[x], [:x1], copycols=copycols), df,
           makeunique=makeunique, copycols=copycols)
+
+# Modify Dataset
 hcat!(x, df::Dataset; makeunique::Bool=false, copycols::Bool=true) =
     throw(ArgumentError("x must be AbstractVector or AbstractDataset"))
+
+# Modify Dataset
 hcat!(df::Dataset, x; makeunique::Bool=false, copycols::Bool=true) =
     throw(ArgumentError("x must be AbstractVector or AbstractDataset"))
 
 # hcat! for 1-n arguments
+
+# Modify Dataset
 hcat!(df::Dataset; makeunique::Bool=false, copycols::Bool=true) = df
+
+# Modify Dataset
 hcat!(a::Dataset, b, c...; makeunique::Bool=false, copycols::Bool=true) =
     hcat!(hcat!(a, b, makeunique=makeunique, copycols=copycols),
           c..., makeunique=makeunique, copycols=copycols)
 
 # hcat
+
+# Create Dataset
 Base.hcat(df::Dataset, x; makeunique::Bool=false, copycols::Bool=true) =
     hcat!(copy(df, copycols=copycols), x,
           makeunique=makeunique, copycols=copycols)
+
+# Create Dataset
 Base.hcat(df1::Dataset, df2::AbstractDataset;
           makeunique::Bool=false, copycols::Bool=true) =
     hcat!(copy(df1, copycols=copycols), df2,
           makeunique=makeunique, copycols=copycols)
+
+# Create Dataset
 Base.hcat(df1::Dataset, df2::AbstractDataset, dfn::AbstractDataset...;
           makeunique::Bool=false, copycols::Bool=true) =
     hcat!(hcat(df1, df2, makeunique=makeunique, copycols=copycols), dfn...,
@@ -1089,11 +1173,13 @@ If `cols` is omitted all columns in the data set are converted.
 """
 function allowmissing! end
 
+# Modify Dataset
 function allowmissing!(df::Dataset, col::ColumnIndex)
     df[!, col] = allowmissing(df[!, col])
     return df
 end
 
+# Modify Dataset
 function allowmissing!(df::Dataset, cols::AbstractVector{<:ColumnIndex})
     for col in cols
         allowmissing!(df, col)
@@ -1101,6 +1187,7 @@ function allowmissing!(df::Dataset, cols::AbstractVector{<:ColumnIndex})
     return df
 end
 
+# Modify Dataset
 function allowmissing!(df::Dataset, cols::AbstractVector{Bool})
     length(cols) == size(df, 2) || throw(BoundsError(df, (!, cols)))
     for (col, cond) in enumerate(cols)
@@ -1109,9 +1196,11 @@ function allowmissing!(df::Dataset, cols::AbstractVector{Bool})
     return df
 end
 
+# Modify Dataset
 allowmissing!(df::Dataset, cols::MultiColumnIndex) =
     allowmissing!(df, index(df)[cols])
 
+# Modify Dataset
 allowmissing!(df::Dataset, cols::Colon=:) =
     allowmissing!(df, axes(df, 2))
 
@@ -1130,6 +1219,7 @@ of throwing an error.
 """
 function disallowmissing! end
 
+# Modify Dataset
 function disallowmissing!(df::Dataset, col::ColumnIndex; error::Bool=true)
     x = df[!, col]
     if !(!error && Missing <: eltype(x) && any(ismissing, x))
@@ -1138,6 +1228,7 @@ function disallowmissing!(df::Dataset, col::ColumnIndex; error::Bool=true)
     return df
 end
 
+# Modify Dataset
 function disallowmissing!(df::Dataset, cols::AbstractVector{<:ColumnIndex};
                           error::Bool=true)
     for col in cols
@@ -1146,6 +1237,7 @@ function disallowmissing!(df::Dataset, cols::AbstractVector{<:ColumnIndex};
     return df
 end
 
+# Modify Dataset
 function disallowmissing!(df::Dataset, cols::AbstractVector{Bool}; error::Bool=true)
     length(cols) == size(df, 2) || throw(BoundsError(df, (!, cols)))
     for (col, cond) in enumerate(cols)
@@ -1154,9 +1246,11 @@ function disallowmissing!(df::Dataset, cols::AbstractVector{Bool}; error::Bool=t
     return df
 end
 
+# Modify Dataset
 disallowmissing!(df::Dataset, cols::MultiColumnIndex; error::Bool=true) =
     disallowmissing!(df, index(df)[cols], error=error)
 
+# Modify Dataset
 disallowmissing!(df::Dataset, cols::Colon=:; error::Bool=true) =
     disallowmissing!(df, axes(df, 2), error=error)
 
@@ -1241,6 +1335,8 @@ julia> df1
 """
 function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal,
                       promote::Bool=(cols in [:union, :subset]))
+
+# Modify Dataset
     if !(cols in (:orderequal, :setequal, :intersect, :subset, :union))
         throw(ArgumentError("`cols` keyword argument must be " *
                             ":orderequal, :setequal, :intersect, :subset or :union)"))
@@ -1355,6 +1451,7 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
     return df1
 end
 
+# Modify Dataset
 function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
                     cols::Symbol=:setequal,
                     promote::Bool=(cols in [:union, :subset]))
@@ -1606,6 +1703,8 @@ julia> push!(df, NamedTuple(), cols=:subset)
 ```
 """
 function Base.push!(df::Dataset, row::Any; promote::Bool=false)
+
+# Modify Dataset
     if !(row isa Union{Tuple, AbstractArray})
         # an explicit error is thrown as this was allowed in the past
         throw(ArgumentError("`push!` does not allow passing collections of type " *
@@ -1690,6 +1789,8 @@ julia> df
 ```
 """
 function repeat!(df::Dataset; inner::Integer = 1, outer::Integer = 1)
+
+# Modify Dataset
     inner < 0 && throw(ArgumentError("inner keyword argument must be non-negative"))
     outer < 0 && throw(ArgumentError("outer keyword argument must be non-negative"))
     return mapcols!(x -> repeat(x, inner = Int(inner), outer = Int(outer)), df)
@@ -1723,11 +1824,15 @@ julia> repeat(df, 2)
 ```
 """
 function repeat!(df::Dataset, count::Integer)
+
+# Modify Dataset
     count < 0 && throw(ArgumentError("count must be non-negative"))
     return mapcols!(x -> repeat(x, Int(count)), df)
 end
 
 # This is not exactly copy! as in general we allow axes to be different
+
+# Modify Dataset
 function _replace_columns!(df::Dataset, newdf::Dataset)
     copy!(_columns(df), _columns(newdf))
     copy!(_names(index(df)), _names(newdf))
