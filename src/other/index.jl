@@ -6,7 +6,7 @@ abstract type AbstractAttributes end
 
 function Base.summary(idx::AbstractIndex)
     l = length(idx)
-    return "data frame with $l column$(l == 1 ? "" : "s")"
+    return "data set with $l column$(l == 1 ? "" : "s")"
 end
 Base.summary(io::IO, idx::AbstractIndex) = print(io, summary(idx))
 
@@ -61,7 +61,7 @@ Base.:(==)(x::AbstractIndex, y::AbstractIndex) = isequal(x, y)
 function rename!(x::Index, nms::AbstractVector{Symbol}; makeunique::Bool=false)
     if !makeunique
         if length(unique(nms)) != length(nms)
-            dup = unique(nms[nonunique(DataFrame(nms=nms))])
+            dup = unique(nms[nonunique(Dataset(nms=nms))])
             dupstr = join(string.(':', dup), ", ", " and ")
             msg = "Duplicate variable names: $dupstr. Pass makeunique=true " *
                   "to make them unique using a suffix automatically."
@@ -317,10 +317,10 @@ end
     if i === nothing
         candidates = fuzzymatch(l, idx)
         if isempty(candidates)
-            throw(ArgumentError("column name :$idx not found in the data frame"))
+            throw(ArgumentError("column name :$idx not found in the data set"))
         end
         candidatesstr = join(string.(':', candidates), ", ", " and ")
-        throw(ArgumentError("column name :$idx not found in the data frame; " *
+        throw(ArgumentError("column name :$idx not found in the data set; " *
                             "existing most similar names are: $candidatesstr"))
     end
     return i
@@ -375,7 +375,7 @@ end
 @inline parentcols(ind::Index) = Base.OneTo(length(ind))
 @inline parentcols(ind::Index, cols) = ind[cols]
 
-### SubIndex of Index. Used by SubDataFrame, DataFrameRow, and DataFrameRows
+### SubIndex of Index. Used by SubDataset, DatasetRow, and DatasetRows
 
 struct SubIndex{I<:AbstractIndex, S<:AbstractVector{Int}, T<:AbstractVector{Int}} <: AbstractIndex
     parent::I
@@ -490,3 +490,54 @@ rename!(x::SubIndex, nms::AbstractVector{Pair{Symbol, Symbol}}) =
 rename!(f::Function, x::SubIndex) =
     throw(ArgumentError("rename! is not supported for views other than created " *
                         "with Colon as a column selector"))
+
+function setformat!(x::Index, idx::Integer, f::Function)
+    !(1 <= idx <= length(x)) && throw(ArgumentError("column index $idx not found in the data set"))
+    x.format[idx] = f
+end
+function setformat!(x::Index, p::Pair{Int64, T}) where T <: Function
+   setformat!(x, p.first, p.second)
+end
+function setformat!(x::Index, p::Pair{Symbol, T}) where T <: Function
+    idx = lookupname(x.lookup, p.first)
+    setformat!(x, idx, p.second)
+end
+function setformat!(x::Index, p::Pair{S, T}) where S <: AbstractString where T <: Function
+    idx = lookupname(x.lookup, Symbol(p.first))
+    setformat!(x, idx, p.second)
+end
+
+function setformat!(x::Index, pv::Vector)
+    for p in pv
+        setformat!(x, p)
+    end
+end
+function removeformat!(x::Index, idx::Integer)
+    if !(1 <= idx <= length(x))
+        throw(ArgumentError("column index $idx not found in the data set"))
+    end
+    delete!(x.format, idx)
+end
+removeformat!(x::Index, y::Symbol) = removeformat!(x, lookupname(x.lookup, y))
+removeformat!(x::Index, y::String) = removeformat!(x, lookupname(x.lookup, Symbol(y)))
+function removeformat!(x::Index, y::Vector)
+    for p in y
+        removeformat!(x, p)
+    end
+end
+
+function removeformat!(x::Index, y::UnitRange)
+    if (1 <= y.start && y.stop <= length(x)) 
+        for p in y
+            removeformat!(x, p)
+        end
+    else
+        throw(ArgumentError("some indices in $y are not valid index for the data set"))
+    end
+end
+
+
+
+ 
+
+
