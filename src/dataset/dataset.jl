@@ -401,7 +401,7 @@ Dataset(column_eltypes::AbstractVector{<:Type}, cnames::AbstractVector{<:Abstrac
 ##############################################################################
 
 index(df::Dataset) = getfield(df, :colindex)
-
+_attributes(ds::Dataset) = getfield(ds, :attributes)
 # this function grants the access to the internal storage of columns of the
 # `Dataset` and its use is unsafe. If the returned vector is mutated then
 # make sure that:
@@ -793,6 +793,7 @@ for T1 in (:AbstractVector, :Not, :Colon, :(typeof(!))),
     end
 end
 
+
 ##############################################################################
 ##
 ## Mutating methods
@@ -980,17 +981,19 @@ function insertcols!(df::Dataset, col::Int=ncol(df)+1; makeunique::Bool=false, n
 end
 
 """
-    copy(df::Dataset; copycols::Bool=true)
+    copy(ds::Dataset; copycols::Bool=true)
 
-Copy data set `df`.
+Copy data set `ds`.
 If `copycols=true` (the default), return a new  `Dataset` holding
-copies of column vectors in `df`.
-If `copycols=false`, return a new `Dataset` sharing column vectors with `df`.
+copies of column vectors in `ds`.
+If `copycols=false`, return a new `Dataset` sharing column vectors with `ds`.
 """
-function Base.copy(df::Dataset; copycols::Bool=true)
+function Base.copy(ds::Dataset; copycols::Bool=true)
 
 # Create Dataset
-    return Dataset(copy(_columns(df)), copy(index(df)), copycols=copycols)
+    newds = Dataset(copy(_columns(ds)), copy(index(ds)), copycols=copycols)
+    setinfo!(newds, _attributes(ds).meta.info[])
+    return newds
 end
 
 """

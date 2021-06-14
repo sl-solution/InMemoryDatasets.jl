@@ -54,6 +54,7 @@ Base.names(x::Index) = string.(x.names)
 _names(x::Index) = x.names
 
 Base.copy(x::Index) = Index(copy(x.lookup), copy(x.names), copy(x.format))
+# TODO should we check the formats?
 Base.isequal(x::AbstractIndex, y::AbstractIndex) = _names(x) == _names(y) # it is enough to check names
 Base.:(==)(x::AbstractIndex, y::AbstractIndex) = isequal(x, y)
 
@@ -491,9 +492,14 @@ rename!(f::Function, x::SubIndex) =
     throw(ArgumentError("rename! is not supported for views other than created " *
                         "with Colon as a column selector"))
 
+# setting and removing formats from Index
 function setformat!(x::Index, idx::Integer, f::Function)
     !(1 <= idx <= length(x)) && throw(ArgumentError("column index $idx not found in the data set"))
     x.format[idx] = f
+    # identity is default, so we should delete it
+    if x.format[idx] == identity
+        delete!(x.format, idx)
+    end
 end
 function setformat!(x::Index, p::Pair{Int64, T}) where T <: Function
    setformat!(x, p.first, p.second)
@@ -527,7 +533,7 @@ function removeformat!(x::Index, y::Vector)
 end
 
 function removeformat!(x::Index, y::UnitRange)
-    if (1 <= y.start && y.stop <= length(x)) 
+    if (1 <= y.start && y.stop <= length(x))
         for p in y
             removeformat!(x, p)
         end
@@ -536,8 +542,25 @@ function removeformat!(x::Index, y::UnitRange)
     end
 end
 
-
-
- 
-
-
+function getformat(x::Index, idx::Integer)
+    if !(1 <= idx <= length(x))
+        throw(ArgumentError("column index $idx not found in the data set"))
+    end
+    get(x.format, idx, identity)
+end
+getformat(x::Index, y::Symbol) = getformat(x, lookupname(x.lookup, y))
+getformat(x::Index, y::String) = getformat(x, lookupname(x.lookup, Symbol(y)))
+function getformat(x::Index, y::Vector)
+    for p in y
+        getformat(x, p)
+    end
+end
+function getformat(x::Index, y::UnitRange)
+    if (1 <= y.start && y.stop <= length(x))
+        for p in y
+            getformat(x, p)
+        end
+    else
+        throw(ArgumentError("some indices in $y are not valid index for the data set"))
+    end
+end

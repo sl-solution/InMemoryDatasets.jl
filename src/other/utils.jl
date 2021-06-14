@@ -1,3 +1,84 @@
+# FIXME don't use it yet, there are some issues to be solved
+function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group)
+    map!(x->hash(f(x)), rhashes, v)
+    n = length(v)
+    # sz = 2 ^ ceil(Int, log2(n)+1)
+    sz = length(gslots)
+    fill!(gslots, 0)
+    szm1 = sz - 1
+    ngroups = 0
+    flag = true
+    @inbounds for i in eachindex(rhashes)
+        slotix = rhashes[i] & szm1 + 1
+        gix = -1
+        probe = 0
+        while true
+            g_row = gslots[slotix]
+            if g_row == 0
+                gslots[slotix] = i
+                gix = ngroups += 1
+                break
+            #check hash collision
+            elseif rhashes[i] == rhashes[g_row]
+                if isequal(f(v[i]), f(v[g_row]))
+                    gix = groups[g_row]
+                    break
+                end
+            end
+            slotix = slotix & szm1 + 1
+            probe += 1
+            @assert probe < sz
+        end
+        groups[i] = gix
+        prev_groups[i] += prev_max_group * gix
+    end
+    if ngroups == n
+        flag = false
+    end
+    (m1, o1) = Core.Intrinsics.checked_umul_int(UInt(ngroups), prev_max_group)
+    if !o1
+        (m2, o2) = Core.Intrinsics.checked_umul_int(m1, UInt(10))
+    end
+    # checking o2 should be enough
+    if !o1 && !o2
+        return (flag, UInt(10) ^ ceil(UInt, log10(ngroups * prev_max_group)), false)
+    else
+        # overflow happens and we return true
+        return (flag, UInt(0), true)
+    end
+end
+
+
+
+function _create_dictionary(ds, cols)
+    colidx = index(ds)[cols]
+    prev_max_group = UInt(1)
+    prev_groups = zeros(UInt, nrow(ds))
+    groups = Vector{Int}(undef, nrow(ds))
+    gslots = zeros(Int, 2 ^ ceil(Int, log2(nrow(ds))+1))
+    rhashes = Vector{UInt}(undef, nrow(ds))
+    prev_groups_cpy = UInt[]
+
+    for j in 1:length(colidx)
+        flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups, groups, gslots, rhashes, InMemoryDatasets.getformat(ds, colidx[j]), ds[!, colidx[j]], prev_max_group)
+        # if overflow will happen we start from the current prev_groups as the starting point
+        if of
+            prev_max_group = UInt(1)
+            resize!(prev_groups_cpy, nrow(ds))
+            fill!(prev_groups_cpy, UInt(0))
+            flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups_cpy, groups, gslots, rhashes, identity, prev_groups, prev_max_group)
+            copy!(prev_groups, prev_groups_cpy)
+        end
+        !flag && break
+    end
+    # the return value is a vector of UInt, which has unique value for each group
+    resize!(prev_groups_cpy, nrow(ds))
+    fill!(prev_groups_cpy, UInt(0))
+    flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups_cpy, groups, gslots, rhashes, identity, prev_groups, prev_max_group)
+    return groups, gslots
+end
+
+
 function make_unique!(names::Vector{Symbol}, src::AbstractVector{Symbol};
                       makeunique::Bool=false)
     if length(names) != length(src)
