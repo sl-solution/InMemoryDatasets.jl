@@ -227,7 +227,7 @@ function content(ds::AbstractDataset)
     for (k, v) in index(ds).format
         push!(f_v, _names(ds)[k]=>v)
     end
-    println("Formats: ")
+    println(" Formats: ")
     f_v
 end
 
@@ -1405,12 +1405,18 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :)
         throw(ArgumentError("finding duplicate rows in data set with no " *
                             "columns is not allowed"))
     end
+
+    # TODO is finding the first values of eachgroup easier????
+    groups, gslots, ngroups = _create_dictionary(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
     res = trues(nrow(ds))
-    groups, gslots = _create_dictionary(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+    seen_groups = falses(ngroups)
     # unique rows are the first encountered group representatives,
     # nonunique are everything else
-    @inbounds for g_row in gslots
-        (g_row > 0) && (res[g_row] = false)
+    # @inbounds for g_row in gslots
+    #     (g_row > 0) && (res[g_row] = false)
+    # end
+    @inbounds for i in 1:length(res)
+        seen_groups[groups[i]] ? nothing : (seen_groups[groups[i]] = true; res[i] = false)
     end
     return res
 end
@@ -1876,7 +1882,7 @@ function Base.reduce(::typeof(vcat),
 end
 
 # Create Dataset
-# TODO how formats are going to be transferred??? 
+# TODO how formats are going to be transferred???
 function _vcat(dss::AbstractVector{AbstractDataset};
                cols::Union{Symbol, AbstractVector{Symbol},
                            AbstractVector{<:AbstractString}}=:setequal)

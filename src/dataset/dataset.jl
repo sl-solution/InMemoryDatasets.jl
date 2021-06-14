@@ -1370,7 +1370,8 @@ julia> ds1
 """
 function Base.append!(ds1::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal,
                       promote::Bool=(cols in [:union, :subset]))
-
+# appending ds2 to ds1 should keep the formats of ds1, and metadata of ds1, if ds1 is
+# empty then formats of ds2 transfer to ds1, but not metadata
 # Modify Dataset
     if !(cols in (:orderequal, :setequal, :intersect, :subset, :union))
         throw(ArgumentError("`cols` keyword argument must be " *
@@ -1431,8 +1432,10 @@ function Base.append!(ds1::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ##### modify the code to take care of meta data
     try
+        current_modified_time = _attributes(ds1).meta.modified[]
         for (j, n) in enumerate(_names(ds1))
             current_col += 1
+            format_of_cur_col = getformat(ds1, n)
             if hasproperty(ds2, n)
                 ds2_c = ds2[!, n]
                 S = eltype(ds2_c)
@@ -1465,6 +1468,8 @@ function Base.append!(ds1::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal
                                         "column does not allow for missing values"))
                 end
             end
+            setformat!(ds1, n => format_of_cur_col)
+            _modified(_attributes(ds1))
         end
         current_col = 0
         for col in _columns(ds1)
@@ -1478,6 +1483,7 @@ function Base.append!(ds1::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal
                 @inbounds newcol[1:nrows] .= missing
                 copyto!(newcol, nrows+1, ds2[!, n], 1, targetrows - nrows)
                 ds1[!, n] = newcol
+                _modified(_attributes(ds1))
             end
         end
     catch err
@@ -1485,16 +1491,20 @@ function Base.append!(ds1::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal
         for col in _columns(ds1)
             resize!(col, nrows)
         end
+        # go back to original modified time
+        _attributes(ds1).meta.modified[] = current_modified_time
         @error "Error adding value to column :$(_names(ds1)[current_col])."
         rethrow(err)
     end
     return ds1
 end
 
+# TODO needs more works on how to handle formats??
 # Modify Dataset
 function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
                     cols::Symbol=:setequal,
                     promote::Bool=(cols in [:union, :subset]))
+    # push keep formats
     possible_cols = (:orderequal, :setequal, :intersect, :subset, :union)
     if !(cols in possible_cols)
         throw(ArgumentError("`cols` keyword argument must be any of :" *
@@ -1503,10 +1513,12 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
 
     nrows, ncols = size(ds)
     targetrows = nrows + 1
-
+    # here the formats should be kept, setproperty! modifies time
     if ncols == 0 && row isa NamedTuple
         for (n, v) in pairs(row)
+            format_of_cur_col = getformat(ds, n)
             setproperty!(ds, n, fill!(Tables.allocatecolumn(typeof(v), 1), v))
+            setformat!(ds, n => format_of_cur_col)
         end
         return ds
     end
@@ -1521,10 +1533,12 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
     # we resize the columns so temporarily the `Dataset` is internally
     # inconsistent and normal data set indexing would error.
     if cols == :union
+        current_modified = _attributes(ds).meta.modified[]
         if row isa AbstractDict && keytype(row) !== Symbol && !all(x -> x isa Symbol, keys(row))
             throw(ArgumentError("when `cols == :union` all keys of row must be Symbol"))
         end
         for (i, colname) in enumerate(_names(ds))
+            format_of_cur_col = getformat(ds, colname)
             col = _columns(ds)[i]
             if haskey(row, colname)
                 val = row[colname]
@@ -1539,9 +1553,11 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
                 try
                     push!(col, val)
                 catch err
+                    setformat!(ds, colname => format_of_cur_col)
                     for col in _columns(ds)
                         resize!(col, nrows)
                     end
+                    _attributes(ds).meta.modified[] = current_modified
                     @error "Error adding value to column :$colname."
                     rethrow(err)
                 end
@@ -1551,6 +1567,8 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
                 newcol[end] = val
                 firstindex(newcol) != 1 && _onebased_check_error()
                 _columns(ds)[i] = newcol
+                setformat!(ds, colname => format_of_cur_col)
+                _modified(_attributes(ds))
             end
         end
         for (colname, col) in zip(_names(ds), _columns(ds))
@@ -1558,6 +1576,7 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
                 for col2 in _columns(ds)
                     resize!(col2, nrows)
                 end
+                _attributes(ds).meta.modified[] = current_modified
                 throw(AssertionError("Error adding value to column :$colname"))
             end
         end
@@ -1597,7 +1616,9 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
     end
     current_col = 0
     try
+        current_modified = _attributes(ds).meta.modified[]
         for (col, nm) in zip(_columns(ds), _names(ds))
+            format_of_cur_col = getformat(ds, nm)
             current_col += 1
             if cols === :subset
                 val = get(row, nm, missing)
@@ -1614,6 +1635,7 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
                 newcol[end] = val
                 firstindex(newcol) != 1 && _onebased_check_error()
                 _columns(ds)[columnindex(ds, nm)] = newcol
+                setformat!(ds, nm => format_of_cur_col)
             end
         end
         current_col = 0
@@ -1625,6 +1647,7 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
         for col in _columns(ds)
             resize!(col, nrows)
         end
+        _attributes(ds).meta.modified[] = current_modified
         @error "Error adding value to column :$(_names(ds)[current_col])."
         rethrow(err)
     end
@@ -1632,45 +1655,45 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
 end
 
 """
-    push!(df::Dataset, row::Union{Tuple, AbstractArray}; promote::Bool=false)
-    push!(df::Dataset, row::Union{DatasetRow, NamedTuple, AbstractDict};
+    push!(ds::Dataset, row::Union{Tuple, AbstractArray}; promote::Bool=false)
+    push!(ds::Dataset, row::Union{DatasetRow, NamedTuple, AbstractDict};
           cols::Symbol=:setequal, promote::Bool=(cols in [:union, :subset]))
 
-Add in-place one row at the end of `df` taking the values from `row`.
+Add in-place one row at the end of `ds` taking the values from `row`.
 
-Column types of `df` are preserved, and new values are converted if necessary.
+Column types of `ds` are preserved, and new values are converted if necessary.
 An error is thrown if conversion fails.
 
 If `row` is neither a `DatasetRow`, `NamedTuple` nor `AbstractDict` then
 it must be a `Tuple` or an `AbstractArray`
 and columns are matched by order of appearance. In this case `row` must contain
-the same number of elements as the number of columns in `df`.
+the same number of elements as the number of columns in `ds`.
 
 If `row` is a `DatasetRow`, `NamedTuple` or `AbstractDict` then
-values in `row` are matched to columns in `df` based on names. The exact behavior
+values in `row` are matched to columns in `ds` based on names. The exact behavior
 depends on the `cols` argument value in the following way:
 * If `cols == :setequal` (this is the default)
-  then `row` must contain exactly the same columns as `df` (but possibly in a
+  then `row` must contain exactly the same columns as `ds` (but possibly in a
   different order).
 * If `cols == :orderequal` then `row` must contain the same columns in the same
   order (for `AbstractDict` this option requires that `keys(row)` matches
-  `propertynames(df)` to allow for support of ordered dicts; however, if `row`
+  `propertynames(ds)` to allow for support of ordered dicts; however, if `row`
   is a `Dict` an error is thrown as it is an unordered collection).
-* If `cols == :intersect` then `row` may contain more columns than `df`,
-  but all column names that are present in `df` must be present in `row` and only
-  they are used to populate a new row in `df`.
+* If `cols == :intersect` then `row` may contain more columns than `ds`,
+  but all column names that are present in `ds` must be present in `row` and only
+  they are used to populate a new row in `ds`.
 * If `cols == :subset` then `push!` behaves like for `:intersect` but if some
-  column is missing in `row` then a `missing` value is pushed to `df`.
-* If `cols == :union` then columns missing in `df` that are present in `row` are
-  added to `df` (using `missing` for existing rows) and a `missing` value is
-  pushed to columns missing in `row` that are present in `df`.
+  column is missing in `row` then a `missing` value is pushed to `ds`.
+* If `cols == :union` then columns missing in `ds` that are present in `row` are
+  added to `ds` (using `missing` for existing rows) and a `missing` value is
+  pushed to columns missing in `row` that are present in `ds`.
 
-If `promote=true` and element type of a column present in `df` does not allow
+If `promote=true` and element type of a column present in `ds` does not allow
 the type of a pushed argument then a new column with a promoted element type
-allowing it is freshly allocated and stored in `df`. If `promote=false` an error
+allowing it is freshly allocated and stored in `ds`. If `promote=false` an error
 is thrown.
 
-As a special case, if `df` has no columns and `row` is a `NamedTuple` or
+As a special case, if `ds` has no columns and `row` is a `NamedTuple` or
 `DatasetRow`, columns are created for all values in `row`, using their names
 and order.
 
@@ -1679,9 +1702,9 @@ that are aliases (equal when compared with `===`).
 
 # Examples
 ```jldoctest
-julia> df = Dataset(A=1:3, B=1:3);
+julia> ds = Dataset(A=1:3, B=1:3);
 
-julia> push!(df, (true, false))
+julia> push!(ds, (true, false))
 4×2 Dataset
  Row │ A      B
      │ Int64  Int64
@@ -1691,7 +1714,7 @@ julia> push!(df, (true, false))
    3 │     3      3
    4 │     1      0
 
-julia> push!(df, df[1, :])
+julia> push!(ds, ds[1, :])
 5×2 Dataset
  Row │ A      B
      │ Int64  Int64
@@ -1702,7 +1725,7 @@ julia> push!(df, df[1, :])
    4 │     1      0
    5 │     1      1
 
-julia> push!(df, (C="something", A=true, B=false), cols=:intersect)
+julia> push!(ds, (C="something", A=true, B=false), cols=:intersect)
 6×2 Dataset
  Row │ A      B
      │ Int64  Int64
@@ -1714,7 +1737,7 @@ julia> push!(df, (C="something", A=true, B=false), cols=:intersect)
    5 │     1      1
    6 │     1      0
 
-julia> push!(df, Dict(:A=>1.0, :C=>1.0), cols=:union)
+julia> push!(ds, Dict(:A=>1.0, :C=>1.0), cols=:union)
 7×3 Dataset
  Row │ A        B        C
      │ Float64  Int64?   Float64?
@@ -1727,7 +1750,7 @@ julia> push!(df, Dict(:A=>1.0, :C=>1.0), cols=:union)
    6 │     1.0        0  missing
    7 │     1.0  missing        1.0
 
-julia> push!(df, NamedTuple(), cols=:subset)
+julia> push!(ds, NamedTuple(), cols=:subset)
 8×3 Dataset
  Row │ A          B        C
      │ Float64?   Int64?   Float64?
@@ -1742,7 +1765,7 @@ julia> push!(df, NamedTuple(), cols=:subset)
    8 │ missing    missing  missing
 ```
 """
-function Base.push!(df::Dataset, row::Any; promote::Bool=false)
+function Base.push!(ds::Dataset, row::Any; promote::Bool=false)
 
 # Modify Dataset
     if !(row isa Union{Tuple, AbstractArray})
@@ -1752,7 +1775,7 @@ function Base.push!(df::Dataset, row::Any; promote::Bool=false)
                             "`Tuple`, `AbstractArray`, `AbstractDict`, `DatasetRow` " *
                             "and `NamedTuple` are allowed."))
     end
-    nrows, ncols = size(df)
+    nrows, ncols = size(ds)
     targetrows = nrows + 1
     if length(row) != ncols
         msg = "Length of `row` does not match `Dataset` column count."
@@ -1760,7 +1783,9 @@ function Base.push!(df::Dataset, row::Any; promote::Bool=false)
     end
     current_col = 0
     try
-        for (i, (col, val)) in enumerate(zip(_columns(df), row))
+        current_modified = _attributes(ds).meta.modified[]
+        for (i, (col, val)) in enumerate(zip(_columns(ds), row))
+            format_of_cur_col = getformat(ds, col)
             current_col += 1
             S = typeof(val)
             T = eltype(col)
@@ -1771,35 +1796,38 @@ function Base.push!(df::Dataset, row::Any; promote::Bool=false)
                 copyto!(newcol, 1, col, 1, nrows)
                 newcol[end] = val
                 firstindex(newcol) != 1 && _onebased_check_error()
-                _columns(df)[i] = newcol
+                _columns(ds)[i] = newcol
+                setformat!(ds, i => format_of_cur_col)
+                _modified(_attributes(ds))
             end
         end
         current_col = 0
-        for col in _columns(df)
+        for col in _columns(ds)
             current_col += 1
             @assert length(col) == targetrows
         end
     catch err
         #clean up partial row
-        for col in _columns(df)
+        for col in _columns(ds)
             resize!(col, nrows)
         end
-        @error "Error adding value to column :$(_names(df)[current_col])."
+        _attributes(ds).meta.modified[] = current_modified
+        @error "Error adding value to column :$(_names(ds)[current_col])."
         rethrow(err)
     end
-    df
+    ds
 end
 
 """
-    repeat!(df::Dataset; inner::Integer = 1, outer::Integer = 1)
+    repeat!(ds::Dataset; inner::Integer = 1, outer::Integer = 1)
 
-Update a data set `df` in-place by repeating its rows. `inner` specifies how many
+Update a data set `ds` in-place by repeating its rows. `inner` specifies how many
 times each row is repeated, and `outer` specifies how many times the full set
-of rows is repeated. Columns of `df` are freshly allocated.
+of rows is repeated. Columns of `ds` are freshly allocated.
 
 # Example
 ```jldoctest
-julia> df = Dataset(a = 1:2, b = 3:4)
+julia> ds = Dataset(a = 1:2, b = 3:4)
 2×2 Dataset
  Row │ a      b
      │ Int64  Int64
@@ -1807,9 +1835,9 @@ julia> df = Dataset(a = 1:2, b = 3:4)
    1 │     1      3
    2 │     2      4
 
-julia> repeat!(df, inner = 2, outer = 3);
+julia> repeat!(ds, inner = 2, outer = 3);
 
-julia> df
+julia> ds
 12×2 Dataset
  Row │ a      b
      │ Int64  Int64
@@ -1828,23 +1856,23 @@ julia> df
   12 │     2      4
 ```
 """
-function repeat!(df::Dataset; inner::Integer = 1, outer::Integer = 1)
+function repeat!(ds::Dataset; inner::Integer = 1, outer::Integer = 1)
 
 # Modify Dataset
     inner < 0 && throw(ArgumentError("inner keyword argument must be non-negative"))
     outer < 0 && throw(ArgumentError("outer keyword argument must be non-negative"))
-    return mapcols!(x -> repeat(x, inner = Int(inner), outer = Int(outer)), df)
+    return mapcols!(x -> repeat(x, inner = Int(inner), outer = Int(outer)), ds)
 end
 
 """
-    repeat!(df::Dataset, count::Integer)
+    repeat!(ds::Dataset, count::Integer)
 
-Update a data set `df` in-place by repeating its rows the number of times
-specified by `count`. Columns of `df` are freshly allocated.
+Update a data set `ds` in-place by repeating its rows the number of times
+specified by `count`. Columns of `ds` are freshly allocated.
 
 # Example
 ```jldoctest
-julia> df = Dataset(a = 1:2, b = 3:4)
+julia> ds = Dataset(a = 1:2, b = 3:4)
 2×2 Dataset
  Row │ a      b
      │ Int64  Int64
@@ -1852,7 +1880,7 @@ julia> df = Dataset(a = 1:2, b = 3:4)
    1 │     1      3
    2 │     2      4
 
-julia> repeat(df, 2)
+julia> repeat(ds, 2)
 4×2 Dataset
  Row │ a      b
      │ Int64  Int64
@@ -1863,19 +1891,22 @@ julia> repeat(df, 2)
    4 │     2      4
 ```
 """
-function repeat!(df::Dataset, count::Integer)
+function repeat!(ds::Dataset, count::Integer)
 
 # Modify Dataset
     count < 0 && throw(ArgumentError("count must be non-negative"))
-    return mapcols!(x -> repeat(x, Int(count)), df)
+    return mapcols!(x -> repeat(x, Int(count)), ds)
 end
 
 # This is not exactly copy! as in general we allow axes to be different
 
 # Modify Dataset
-function _replace_columns!(df::Dataset, newdf::Dataset)
-    copy!(_columns(df), _columns(newdf))
-    copy!(_names(index(df)), _names(newdf))
-    copy!(index(df).lookup, index(newdf).lookup)
-    return df
+function _replace_columns!(ds::Dataset, newds::Dataset)
+    copy!(_columns(ds), _columns(newds))
+    copy!(_names(index(ds)), _names(newds))
+    copy!(index(ds).lookup, index(newds).lookup)
+    copy!(index(ds).format, index(newds).format)
+    # TODO should info also be transferred to ds ???
+    _modified(_attributes(ds))
+    return ds
 end

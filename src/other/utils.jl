@@ -1,4 +1,3 @@
-# FIXME don't use it yet, there are some issues to be solved
 function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group)
     Threads.@threads for i in 1:length(v)
         @inbounds rhashes[i] = hash(f(v[i]), prev_groups[i])
@@ -49,7 +48,7 @@ end
 
 
 
-function _create_dictionary(ds, cols, ::Val{T}) where T
+function _create_dictionary(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]
     prev_max_group = UInt(1)
     prev_groups = zeros(UInt, nrow(ds))
@@ -59,10 +58,15 @@ function _create_dictionary(ds, cols, ::Val{T}) where T
     sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
     @assert 4 * sz >= 5 * length(rhashes)
     gslots = zeros(T, sz)
-    
+
 
     for j in 1:length(colidx)
-        flag, prev_max_group = InMemoryDatasets._create_dictionary!(prev_groups, groups, gslots, rhashes, InMemoryDatasets.getformat(ds, colidx[j]), ds[!, colidx[j]], prev_max_group)
+        _f = identity
+        if mapformats
+            _f = getformat(ds, colidx[j])
+        end
+
+        flag, prev_max_group = InMemoryDatasets._create_dictionary!(prev_groups, groups, gslots, rhashes, _f, ds[!, colidx[j]], prev_max_group)
         # if overflow will happen we start from the current prev_groups as the starting point
         !flag && break
     end
@@ -70,7 +74,7 @@ function _create_dictionary(ds, cols, ::Val{T}) where T
     # resize!(prev_groups_cpy, nrow(ds))
     # fill!(prev_groups_cpy, UInt(0))
     # flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups_cpy, groups, gslots, rhashes, identity, prev_groups, prev_max_group)
-    return groups, gslots
+    return groups, gslots, prev_max_group
 end
 
 
