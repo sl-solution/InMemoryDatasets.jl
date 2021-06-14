@@ -23,7 +23,10 @@ export
       SubDataset,
       Dataset,
       nrow,
-      ncol
+      ncol,
+      getformat,
+      setformat!,
+      removeformat!
 
 include("other/utils.jl")
 include("other/index.jl")

@@ -111,7 +111,18 @@ end
 function getformat(ds::AbstractDataset, y::String)
     getformat(index(ds), y)
 end
-
+# function getformat(ds, cols::MultiColumnIndex = :)
+#     colsidx = index(ds)[cols]
+#     f_v = Dict{Symbol, Function}()
+#     vnm = _names(ds)
+#     for j in 1:length(colsidx)
+#         current_format = getformat(ds, colsidx[j])
+#         if current_format != identity
+#             push!(f_v, vnm[colsidx[j]]=> current_format)
+#         end
+#     end
+#     f_v
+# end
 #Modify Dataset
 function setformat!(ds::AbstractDataset, idx::Integer, f::Function)
     setformat!(index(ds), idx, f)
