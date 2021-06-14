@@ -77,7 +77,7 @@ duplicate).
 If an `AbstractRange` is passed to a `Dataset` constructor as a column it is
 always collected to a `Vector` (even if `copycols=false`). As a general rule
 `AbstractRange` values are always materialized to a `Vector` by all functions in
-Dataset.jl before being stored in a `Dataset`.
+InMemoryDatasets.jl before being stored in a `Dataset`.
 
 `Dataset` can store only columns that use 1-based indexing. Attempting
 to store a vector using non-standard indexing raises an error.
@@ -400,7 +400,7 @@ Dataset(column_eltypes::AbstractVector{<:Type}, cnames::AbstractVector{<:Abstrac
 ##
 ##############################################################################
 
-index(df::Dataset) = getfield(df, :colindex)
+index(ds::Dataset) = getfield(ds, :colindex)
 _attributes(ds::Dataset) = getfield(ds, :attributes)
 # this function grants the access to the internal storage of columns of the
 # `Dataset` and its use is unsafe. If the returned vector is mutated then
@@ -411,19 +411,19 @@ _attributes(ds::Dataset) = getfield(ds, :attributes)
 #    each element (column) has the same length
 # 4. if length of the vector is changed that the index of the `Dataset`
 #    is adjusted appropriately
-_columns(df::Dataset) = getfield(df, :columns)
+_columns(ds::Dataset) = getfield(ds, :columns)
 
 _onebased_check_error() =
-    throw(ArgumentError("Currently Dataset.jl supports only columns " *
+    throw(ArgumentError("Currently InMemoryDatasets.jl supports only columns " *
                         "that use 1-based indexing"))
 _onebased_check_error(i, col) =
-    throw(ArgumentError("Currently Dataset.jl supports only " *
+    throw(ArgumentError("Currently InMemoryDatasets.jl supports only " *
                         "columns that use 1-based indexing, but " *
                         "column $i has starting index equal to $(firstindex(col))"))
 
 # note: these type assertions are required to pass tests
-nrow(df::Dataset) = ncol(df) > 0 ? length(_columns(df)[1])::Int : 0
-ncol(df::Dataset) = length(index(df))
+nrow(ds::Dataset) = ncol(ds) > 0 ? length(_columns(ds)[1])::Int : 0
+ncol(ds::Dataset) = length(index(ds))
 
 ##############################################################################
 ##
@@ -431,15 +431,15 @@ ncol(df::Dataset) = length(index(df))
 ##
 ##############################################################################
 
-corrupt_msg(df::Dataset, i::Integer) =
+corrupt_msg(ds::Dataset, i::Integer) =
     "Data set is corrupt: length of column " *
-    ":$(_names(df)[i]) ($(length(df[!, i]))) " *
-    "does not match length of column 1 ($(length(df[!, 1]))). " *
+    ":$(_names(ds)[i]) ($(length(ds[!, i]))) " *
+    "does not match length of column 1 ($(length(ds[!, 1]))). " *
     "The column vector has likely been resized unintentionally " *
     "(either directly or because it is shared with another data set)."
 
-function _check_consistency(df::Dataset)
-    cols, idx = _columns(df), index(df)
+function _check_consistency(ds::Dataset)
+    cols, idx = _columns(ds), index(ds)
 
     for (i, col) in enumerate(cols)
         firstindex(col) != 1 && _onebased_check_error(i, col)
@@ -450,12 +450,12 @@ function _check_consistency(df::Dataset)
     ncols == 0 && return nothing
     nrows = length(cols[1])
     for i in 2:length(cols)
-        @assert length(cols[i]) == nrows corrupt_msg(df, i)
+        @assert length(cols[i]) == nrows corrupt_msg(ds, i)
     end
     nothing
 end
 
-_check_consistency(df::AbstractDataset) = _check_consistency(parent(df))
+_check_consistency(ds::AbstractDataset) = _check_consistency(parent(ds))
 
 ##############################################################################
 ##
@@ -463,143 +463,170 @@ _check_consistency(df::AbstractDataset) = _check_consistency(parent(df))
 ##
 ##############################################################################
 
-# df[SingleRowIndex, SingleColumnIndex] => Scalar
-@inline function Base.getindex(df::Dataset, row_ind::Integer,
+# ds[SingleRowIndex, SingleColumnIndex] => Scalar
+@inline function Base.getindex(ds::Dataset, row_ind::Integer,
                                col_ind::Union{Signed, Unsigned})
-    cols = _columns(df)
+    cols = _columns(ds)
     @boundscheck begin
         if !checkindex(Bool, axes(cols, 1), col_ind)
-            throw(BoundsError(df, (row_ind, col_ind)))
+            throw(BoundsError(ds, (row_ind, col_ind)))
         end
-        if !checkindex(Bool, axes(df, 1), row_ind)
-            throw(BoundsError(df, (row_ind, col_ind)))
+        if !checkindex(Bool, axes(ds, 1), row_ind)
+            throw(BoundsError(ds, (row_ind, col_ind)))
         end
     end
 
     @inbounds cols[col_ind][row_ind]
 end
 
-@inline function Base.getindex(df::Dataset, row_ind::Integer,
+@inline function Base.getindex(ds::Dataset, row_ind::Integer,
                                col_ind::SymbolOrString)
-    selected_column = index(df)[col_ind]
-    @boundscheck if !checkindex(Bool, axes(df, 1), row_ind)
-        throw(BoundsError(df, (row_ind, col_ind)))
+    selected_column = index(ds)[col_ind]
+    @boundscheck if !checkindex(Bool, axes(ds, 1), row_ind)
+        throw(BoundsError(ds, (row_ind, col_ind)))
     end
-    @inbounds _columns(df)[selected_column][row_ind]
+    @inbounds _columns(ds)[selected_column][row_ind]
 end
 
-# df[MultiRowIndex, SingleColumnIndex] => AbstractVector, copy
-@inline function Base.getindex(df::Dataset, row_inds::AbstractVector, col_ind::ColumnIndex)
-    selected_column = index(df)[col_ind]
-    @boundscheck if !checkindex(Bool, axes(df, 1), row_inds)
-        throw(BoundsError(df, (row_inds, col_ind)))
+# ds[MultiRowIndex, SingleColumnIndex] => AbstractVector, copy
+@inline function Base.getindex(ds::Dataset, row_inds::AbstractVector, col_ind::ColumnIndex)
+    selected_column = index(ds)[col_ind]
+    @boundscheck if !checkindex(Bool, axes(ds, 1), row_inds)
+        throw(BoundsError(ds, (row_inds, col_ind)))
     end
-    @inbounds return _columns(df)[selected_column][row_inds]
+    @inbounds return _columns(ds)[selected_column][row_inds]
 end
 
-@inline Base.getindex(df::Dataset, row_inds::Not, col_ind::ColumnIndex) =
-    df[axes(df, 1)[row_inds], col_ind]
+@inline Base.getindex(ds::Dataset, row_inds::Not, col_ind::ColumnIndex) =
+    ds[axes(ds, 1)[row_inds], col_ind]
 
-# df[:, SingleColumnIndex] => AbstractVector
-function Base.getindex(df::Dataset, row_inds::Colon, col_ind::ColumnIndex)
-    selected_column = index(df)[col_ind]
-    copy(_columns(df)[selected_column])
+# ds[:, SingleColumnIndex] => AbstractVector
+function Base.getindex(ds::Dataset, row_inds::Colon, col_ind::ColumnIndex)
+    selected_column = index(ds)[col_ind]
+    copy(_columns(ds)[selected_column])
 end
 
-# df[!, SingleColumnIndex] => AbstractVector, the same vector
-@inline function Base.getindex(df::Dataset, ::typeof(!), col_ind::Union{Signed, Unsigned})
-    cols = _columns(df)
+# ds[!, SingleColumnIndex] => AbstractVector, the same vector
+@inline function Base.getindex(ds::Dataset, ::typeof(!), col_ind::Union{Signed, Unsigned})
+    cols = _columns(ds)
     @boundscheck if !checkindex(Bool, axes(cols, 1), col_ind)
-        throw(BoundsError(df, (!, col_ind)))
+        throw(BoundsError(ds, (!, col_ind)))
     end
     @inbounds cols[col_ind]
 end
 
-function Base.getindex(df::Dataset, ::typeof(!), col_ind::SymbolOrString)
-    selected_column = index(df)[col_ind]
-    return _columns(df)[selected_column]
+function Base.getindex(ds::Dataset, ::typeof(!), col_ind::SymbolOrString)
+    selected_column = index(ds)[col_ind]
+    return _columns(ds)[selected_column]
 end
 
-# df[MultiRowIndex, MultiColumnIndex] => Dataset
+# ds[MultiRowIndex, MultiColumnIndex] => Dataset
+function _threaded_permute(x, perm)
+  x_cpy = similar(x, length(perm))
+  Threads.@threads for i in 1:length(x_cpy)
+    x_cpy[i] = x[perm[i]]
+  end
+  x_cpy
+end
 
 # Create Dataset
 function _threaded_getindex(selected_rows::AbstractVector,
                             selected_columns::AbstractVector,
-                            df_columns::AbstractVector,
+                            ds_columns::AbstractVector,
                             idx::AbstractIndex)
   # FIXME threading should be done along rows rather than columns
-    @static if VERSION >= v"1.4"
-        if length(selected_rows) >= 1_000_000 && Threads.nthreads() > 1
-            new_columns = Vector{AbstractVector}(undef, length(selected_columns))
-            @sync for i in eachindex(new_columns)
-                Threads.@spawn new_columns[i] = df_columns[selected_columns[i]][selected_rows]
-            end
-            return Dataset(new_columns, idx, copycols=false)
-        else
-            return Dataset(AbstractVector[df_columns[i][selected_rows] for i in selected_columns],
-                             idx, copycols=false)
-        end
+    # @static if VERSION >= v"1.4"
+    #     if length(selected_rows) >= 1_000_000 && Threads.nthreads() > 1
+    #         new_columns = Vector{AbstractVector}(undef, length(selected_columns))
+    #         @sync for i in eachindex(new_columns)
+    #             Threads.@spawn new_columns[i] = ds_columns[selected_columns[i]][selected_rows]
+    #         end
+    #         return Dataset(new_columns, idx, copycols=false)
+    #     else
+    #         return Dataset(AbstractVector[ds_columns[i][selected_rows] for i in selected_columns],
+    #                          idx, copycols=false)
+    #     end
+    # else
+    #     return Dataset(AbstractVector[ds_columns[i][selected_rows] for i in selected_columns],
+    #                      idx, copycols=false)
+    # end
+    new_columns = Vector{AbstractVector}(undef, length(selected_columns))
+    # for many columns threads over columns
+    if length(selected_columns) > 100
+      Threads.@threads for j in 1:length(selected_columns)
+        new_columns[j] = ds_columns[selected_columns[j]][selected_rows]
+      end
     else
-        return Dataset(AbstractVector[df_columns[i][selected_rows] for i in selected_columns],
-                         idx, copycols=false)
+      for j in 1:length(selected_columns)
+        new_columns[j] = _threaded_permute(ds_columns[selected_columns[j]], selected_rows)
+      end
     end
+    return Dataset(new_columns, idx, copycols=false)
 end
 
 # Create Dataset
-@inline function Base.getindex(df::Dataset, row_inds::AbstractVector{T},
+@inline function Base.getindex(ds::Dataset, row_inds::AbstractVector{T},
                                col_inds::MultiColumnIndex) where T
-    @boundscheck if !checkindex(Bool, axes(df, 1), row_inds)
-        throw(BoundsError(df, (row_inds, col_inds)))
+    @boundscheck if !checkindex(Bool, axes(ds, 1), row_inds)
+        throw(BoundsError(ds, (row_inds, col_inds)))
     end
-    selected_columns = index(df)[col_inds]
+    selected_columns = index(ds)[col_inds]
 
-    u = _names(df)[selected_columns]
+    u = _names(ds)[selected_columns]
     lookup = Dict{Symbol, Int}(zip(u, 1:length(u)))
-    dfformat = getfield(df, :colindex).format
+    dsformat = getfield(ds, :colindex).format
     format = Dict{Int, Function}()
     for i in 1:length(selected_columns)
-      if haskey(dfformat, selected_columns[i])
-        push!(format, i => dfformat[selected_columns[i]])
+      if haskey(dsformat, selected_columns[i])
+        push!(format, i => dsformat[selected_columns[i]])
       end
     end
     # use this constructor to avoid checking twice if column names are not
-    # duplicate as index(df)[col_inds] already checks this
+    # duplicate as index(ds)[col_inds] already checks this
     idx = Index(lookup, u, format)
 
     if length(selected_columns) == 1
-        return Dataset(AbstractVector[_columns(df)[selected_columns[1]][row_inds]],
+        newds = Dataset(AbstractVector[_columns(ds)[selected_columns[1]][row_inds]],
                          idx, copycols=false)
+        setinfo!(newds, _attributes(ds).meta.info[])
+        newds
     else
         # Computing integer indices once for all columns is faster
         selected_rows = T === Bool ? _findall(row_inds) : row_inds
-        _threaded_getindex(selected_rows, selected_columns, _columns(df), idx)
+        newds = _threaded_getindex(selected_rows, selected_columns, _columns(ds), idx)
+        setinfo!(newds, _attributes(ds).meta.info[])
+        newds
     end
 end
 
 # Create Dataset
-@inline function Base.getindex(df::Dataset, row_inds::AbstractVector{T}, ::Colon) where T
-    @boundscheck if !checkindex(Bool, axes(df, 1), row_inds)
-        throw(BoundsError(df, (row_inds, :)))
+@inline function Base.getindex(ds::Dataset, row_inds::AbstractVector{T}, ::Colon) where T
+    @boundscheck if !checkindex(Bool, axes(ds, 1), row_inds)
+        throw(BoundsError(ds, (row_inds, :)))
     end
-    idx = copy(index(df))
+    idx = copy(index(ds))
 
-    if ncol(df) == 1
-        return Dataset(AbstractVector[_columns(df)[1][row_inds]], idx, copycols=false)
+    if ncol(ds) == 1
+        newds = Dataset(AbstractVector[_columns(ds)[1][row_inds]], idx, copycols=false)
+        setinfo!(newds, _attributes(ds).meta.info[])
+        newds
     else
         # Computing integer indices once for all columns is faster
         selected_rows = T === Bool ? _findall(row_inds) : row_inds
-        _threaded_getindex(selected_rows, 1:ncol(df), _columns(df), idx)
+        newds = _threaded_getindex(selected_rows, 1:ncol(ds), _columns(ds), idx)
+        setinfo!(newds, _attributes(ds).meta.info[])
+        newds
     end
 end
 
 # Create Dataset
-@inline Base.getindex(df::Dataset, row_inds::Not, col_inds::MultiColumnIndex) =
-    df[axes(df, 1)[row_inds], col_inds]
+@inline Base.getindex(ds::Dataset, row_inds::Not, col_inds::MultiColumnIndex) =
+    ds[axes(ds, 1)[row_inds], col_inds]
 
-# df[:, MultiColumnIndex] => Dataset
+# ds[:, MultiColumnIndex] => Dataset
 # Create Dataset
-Base.getindex(df::Dataset, row_ind::Colon, col_inds::MultiColumnIndex) =
-    select(df, col_inds, copycols=true)
+Base.getindex(ds::Dataset, row_ind::Colon, col_inds::MultiColumnIndex) =
+    select(ds, col_inds, copycols=true)
 
 # df[!, MultiColumnIndex] => Dataset
 # Create Dataset
@@ -615,22 +642,23 @@ Base.getindex(df::Dataset, row_ind::typeof(!), col_inds::MultiColumnIndex) =
 # Will automatically add a new column if needed
 
 # Modify Dataset
-function insert_single_column!(df::Dataset, v::AbstractVector, col_ind::ColumnIndex)
-    if ncol(df) != 0 && nrow(df) != length(v)
+function insert_single_column!(ds::Dataset, v::AbstractVector, col_ind::ColumnIndex)
+    if ncol(ds) != 0 && nrow(ds) != length(v)
         throw(ArgumentError("New columns must have the same length as old columns"))
     end
     dv = isa(v, AbstractRange) ? collect(v) : v
     firstindex(dv) != 1 && _onebased_check_error()
 
-    if haskey(index(df), col_ind)
-        j = index(df)[col_ind]
-        _columns(df)[j] = dv
-        _modified(getfield(df, :attributes))
+    if haskey(index(ds), col_ind)
+        j = index(ds)[col_ind]
+        _columns(ds)[j] = dv
+        removeformat!(ds, j)
+        _modified(_attributes(ds))
     else
         if col_ind isa SymbolOrString
-            push!(index(df), Symbol(col_ind))
-            push!(_columns(df), dv)
-            _modified(getfield(df, :attributes))
+            push!(index(ds), Symbol(col_ind))
+            push!(_columns(ds), dv)
+            _modified(_attributes(ds))
         else
             throw(ArgumentError("Cannot assign to non-existent column: $col_ind"))
         end
@@ -639,157 +667,155 @@ function insert_single_column!(df::Dataset, v::AbstractVector, col_ind::ColumnIn
 end
 
 # Modify Dataset
-function insert_single_entry!(df::Dataset, v::Any, row_ind::Integer, col_ind::ColumnIndex)
-    if haskey(index(df), col_ind)
-        _columns(df)[index(df)[col_ind]][row_ind] = v
-        _modified(getfield(df, :attributes))
+function insert_single_entry!(ds::Dataset, v::Any, row_ind::Integer, col_ind::ColumnIndex)
+    if haskey(index(ds), col_ind)
+      # single entry doesn't remove format
+        _columns(ds)[index(ds)[col_ind]][row_ind] = v
+        _modified(_attributes)
         return v
     else
         throw(ArgumentError("Cannot assign to non-existent column: $col_ind"))
     end
 end
 
-# df[!, SingleColumnIndex] = AbstractVector
+# ds[!, SingleColumnIndex] = AbstractVector
 
 # Modify Dataset
-function Base.setindex!(df::Dataset, v::AbstractVector, ::typeof(!), col_ind::ColumnIndex)
-    insert_single_column!(df, v, col_ind)
-    _modified(getfield(df, :attributes))
-    return df
+function Base.setindex!(ds::Dataset, v::AbstractVector, ::typeof(!), col_ind::ColumnIndex)
+    insert_single_column!(ds, v, col_ind)
+    return ds
 end
 
-# df.col = AbstractVector
+# ds.col = AbstractVector
 # separate methods are needed due to dispatch ambiguity
 
 # Modify Dataset
-function Base.setproperty!(df::Dataset, col_ind::Symbol, v::AbstractVector)
-    df[!, col_ind] = v
-    _modified(getfield(df, :attributes))
+function Base.setproperty!(ds::Dataset, col_ind::Symbol, v::AbstractVector)
+    ds[!, col_ind] = v
     v
 end
 
 # Modify Dataset
-function Base.setproperty!(df::Dataset, col_ind::AbstractString, v::AbstractVector)
-    df[!, col_ind] = v
-    _modified(getfield(df, :attributes))
+function Base.setproperty!(ds::Dataset, col_ind::AbstractString, v::AbstractVector)
+    ds[!, col_ind] = v
     v
 end
 
 # Modify Dataset
 Base.setproperty!(::Dataset, col_ind::Symbol, v::Any) =
     throw(ArgumentError("It is only allowed to pass a vector as a column of a Dataset. " *
-                        "Instead use `df[!, col_ind] .= v` if you want to use broadcasting."))
+                        "Instead use `ds[!, col_ind] .= v` if you want to use broadcasting."))
 
 # Modify Dataset
 Base.setproperty!(::Dataset, col_ind::AbstractString, v::Any) =
     throw(ArgumentError("It is only allowed to pass a vector as a column of a Dataset. " *
-                        "Instead use `df[!, col_ind] .= v` if you want to use broadcasting."))
+                        "Instead use `ds[!, col_ind] .= v` if you want to use broadcasting."))
 
-# df[SingleRowIndex, SingleColumnIndex] = Single Item
+# ds[SingleRowIndex, SingleColumnIndex] = Single Item
 
 # Modify Dataset
-function Base.setindex!(df::Dataset, v::Any, row_ind::Integer, col_ind::ColumnIndex)
-    insert_single_entry!(df, v, row_ind, col_ind)
-    return df
+function Base.setindex!(ds::Dataset, v::Any, row_ind::Integer, col_ind::ColumnIndex)
+    insert_single_entry!(ds, v, row_ind, col_ind)
+    return ds
 end
 
-# df[SingleRowIndex, MultiColumnIndex] = value
+# ds[SingleRowIndex, MultiColumnIndex] = value
 # the method for value of type DatasetRow, AbstractDict and NamedTuple
 # is defined in datasetrow.jl
 
 # Modify Dataset
 for T in MULTICOLUMNINDEX_TUPLE
-    @eval function Base.setindex!(df::Dataset,
+    @eval function Base.setindex!(ds::Dataset,
                                   v::Union{Tuple, AbstractArray},
                                   row_ind::Integer,
                                   col_inds::$T)
-        idxs = index(df)[col_inds]
+        idxs = index(ds)[col_inds]
         if length(v) != length(idxs)
             throw(DimensionMismatch("$(length(idxs)) columns were selected but the assigned " *
                                     "collection contains $(length(v)) elements"))
         end
         for (i, x) in zip(idxs, v)
-            df[row_ind, i] = x
+            ds[row_ind, i] = x
         end
-        return df
+        return ds
     end
 end
 
-# df[MultiRowIndex, SingleColumnIndex] = AbstractVector
+# ds[MultiRowIndex, SingleColumnIndex] = AbstractVector
 
 # Modify Dataset
 for T in (:AbstractVector, :Not, :Colon)
-    @eval function Base.setindex!(df::Dataset,
+    @eval function Base.setindex!(ds::Dataset,
                                   v::AbstractVector,
                                   row_inds::$T,
                                   col_ind::ColumnIndex)
-        if row_inds isa Colon && !haskey(index(df), col_ind)
-            df[!, col_ind] = copy(v)
-            return df
+        if row_inds isa Colon && !haskey(index(ds), col_ind)
+            ds[!, col_ind] = copy(v)
+            return ds
         end
-        x = df[!, col_ind]
+        x = ds[!, col_ind]
         x[row_inds] = v
-        return df
+        return ds
     end
 end
 
-# df[MultiRowIndex, MultiColumnIndex] = AbstractDataset
+# ds[MultiRowIndex, MultiColumnIndex] = AbstractDataset
 
 # Modify Dataset
 for T1 in (:AbstractVector, :Not, :Colon),
     T2 in MULTICOLUMNINDEX_TUPLE
-    @eval function Base.setindex!(df::Dataset,
-                                  new_df::AbstractDataset,
+    @eval function Base.setindex!(ds::Dataset,
+                                  new_ds::AbstractDataset,
                                   row_inds::$T1,
                                   col_inds::$T2)
-        idxs = index(df)[col_inds]
-        if view(_names(df), idxs) != _names(new_df)
+        idxs = index(ds)[col_inds]
+        if view(_names(ds), idxs) != _names(new_ds)
             throw(ArgumentError("column names in source and target do not match"))
         end
         for (j, col) in enumerate(idxs)
-            df[row_inds, col] = new_df[!, j]
+            ds[row_inds, col] = new_ds[!, j]
         end
-        return df
+        return ds
     end
 end
 
 # Modify Dataset
 for T in MULTICOLUMNINDEX_TUPLE
-    @eval function Base.setindex!(df::Dataset,
-                                  new_df::AbstractDataset,
+    @eval function Base.setindex!(ds::Dataset,
+                                  new_ds::AbstractDataset,
                                   row_inds::typeof(!),
                                   col_inds::$T)
-        idxs = index(df)[col_inds]
-        if view(_names(df), idxs) != _names(new_df)
+        idxs = index(ds)[col_inds]
+        if view(_names(ds), idxs) != _names(new_ds)
             throw(ArgumentError("Column names in source and target data sets do not match"))
         end
         for (j, col) in enumerate(idxs)
             # make sure we make a copy on assignment
-            df[!, col] = new_df[:, j]
+            ds[!, col] = new_ds[:, j]
         end
-        return df
+        return ds
     end
 end
 
-# df[MultiRowIndex, MultiColumnIndex] = AbstractMatrix
+# ds[MultiRowIndex, MultiColumnIndex] = AbstractMatrix
 
 # Modify Dataset
 for T1 in (:AbstractVector, :Not, :Colon, :(typeof(!))),
     T2 in MULTICOLUMNINDEX_TUPLE
-    @eval function Base.setindex!(df::Dataset,
+    @eval function Base.setindex!(ds::Dataset,
                                   mx::AbstractMatrix,
                                   row_inds::$T1,
                                   col_inds::$T2)
-        idxs = index(df)[col_inds]
+        idxs = index(ds)[col_inds]
         if size(mx, 2) != length(idxs)
             throw(DimensionMismatch("number of selected columns ($(length(idxs))) " *
                                     "and number of columns in " *
                                     "matrix ($(size(mx, 2))) do not match"))
         end
         for (j, col) in enumerate(idxs)
-            df[row_inds, col] = (row_inds === !) ? mx[:, j] : view(mx, :, j)
+            ds[row_inds, col] = (row_inds === !) ? mx[:, j] : view(mx, :, j)
         end
-        return df
+        return ds
     end
 end
 
@@ -801,24 +827,24 @@ end
 ##############################################################################
 
 """
-    insertcols!(df::Dataset[, col], (name=>val)::Pair...;
+    insertcols!(ds::Dataset[, col], (name=>val)::Pair...;
                 makeunique::Bool=false, copycols::Bool=true)
 
 Insert a column into a data set in place. Return the updated `Dataset`.
-If `col` is omitted it is set to `ncol(df)+1`
+If `col` is omitted it is set to `ncol(ds)+1`
 (the column is inserted as the last column).
 
 # Arguments
-- `df` : the Dataset to which we want to add columns
+- `ds` : the Dataset to which we want to add columns
 - `col` : a position at which we want to insert a column, passed as an integer
   or a column name (a string or a `Symbol`); the column selected with `col`
-  and columns following it are shifted to the right in `df` after the operation
+  and columns following it are shifted to the right in `ds` after the operation
 - `name` : the name of the new column
 - `val` : an `AbstractVector` giving the contents of the new column or a value of any
   type other than `AbstractArray` which will be repeated to fill a new vector;
   As a particular rule a values stored in a `Ref` or a `0`-dimensional `AbstractArray`
   are unwrapped and treated in the same way.
-- `makeunique` : Defines what to do if `name` already exists in `df`;
+- `makeunique` : Defines what to do if `name` already exists in `ds`;
   if it is `false` an error will be thrown; if it is `true` a new unique name will
   be generated by adding a suffix
 - `copycols` : whether vectors passed as columns should be copied
@@ -827,7 +853,7 @@ If `val` is an `AbstractRange` then the result of `collect(val)` is inserted.
 
 # Examples
 ```jldoctest
-julia> df = Dataset(a=1:3)
+julia> ds = Dataset(a=1:3)
 3×1 Dataset
  Row │ a
      │ Int64
@@ -836,7 +862,7 @@ julia> df = Dataset(a=1:3)
    2 │     2
    3 │     3
 
-julia> insertcols!(df, 1, :b => 'a':'c')
+julia> insertcols!(ds, 1, :b => 'a':'c')
 3×2 Dataset
  Row │ b     a
      │ Char  Int64
@@ -845,7 +871,7 @@ julia> insertcols!(df, 1, :b => 'a':'c')
    2 │ b         2
    3 │ c         3
 
-julia> insertcols!(df, 2, :c => 2:4, :c => 3:5, makeunique=true)
+julia> insertcols!(ds, 2, :c => 2:4, :c => 3:5, makeunique=true)
 3×4 Dataset
  Row │ b     c      c_1    a
      │ Char  Int64  Int64  Int64
@@ -855,14 +881,14 @@ julia> insertcols!(df, 2, :c => 2:4, :c => 3:5, makeunique=true)
    3 │ c         4      5      3
 ```
 """
-function insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:Any}...;
+function insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:Any}...;
                      makeunique::Bool=false, copycols::Bool=true)
 
 # Modify Dataset
-    col_ind = Int(col isa SymbolOrString ? columnindex(df, col) : col)
-    if !(0 < col_ind <= ncol(df) + 1)
+    col_ind = Int(col isa SymbolOrString ? columnindex(ds, col) : col)
+    if !(0 < col_ind <= ncol(ds) + 1)
         throw(ArgumentError("attempt to insert a column to a data set with " *
-                            "$(ncol(df)) columns at index $col_ind"))
+                            "$(ncol(ds)) columns at index $col_ind"))
     end
 
     if !makeunique
@@ -871,17 +897,17 @@ function insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
                                 "must be unique when `makeunique=true`"))
         end
         for (n, _) in name_cols
-            if hasproperty(df, n)
+            if hasproperty(ds, n)
                 throw(ArgumentError("Column $n is already present in the data set " *
                                     "which is not allowed when `makeunique=true`"))
             end
         end
     end
 
-    if ncol(df) == 0
+    if ncol(ds) == 0
         target_row_count = -1
     else
-        target_row_count = nrow(df)
+        target_row_count = nrow(ds)
     end
 
     for (n, v) in name_cols
@@ -889,10 +915,10 @@ function insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
             if target_row_count == -1
                 target_row_count = length(v)
             elseif length(v) != target_row_count
-                if target_row_count == nrow(df)
+                if target_row_count == nrow(ds)
                     throw(DimensionMismatch("length of new column $n which is " *
                                             "$(length(v)) must match the number " *
-                                            "of rows in data set ($(nrow(df)))"))
+                                            "of rows in data set ($(nrow(ds)))"))
                 else
                     throw(DimensionMismatch("all vectors passed to be inserted into " *
                                             "a data set must have the same length"))
@@ -926,58 +952,59 @@ function insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
 
         firstindex(item_new) != 1 && _onebased_check_error()
 
-        if ncol(df) == 0
-            df[!, name] = item_new
+        if ncol(ds) == 0
+            ds[!, name] = item_new
         else
-            if hasproperty(df, name)
+            if hasproperty(ds, name)
                 @assert makeunique
                 k = 1
                 while true
                     nn = Symbol("$(name)_$k")
-                    if !hasproperty(df, nn)
+                    if !hasproperty(ds, nn)
                         name = nn
                         break
                     end
                     k += 1
                 end
             end
-            insert!(index(df), col_ind, name)
-            insert!(_columns(df), col_ind, item_new)
+            insert!(index(ds), col_ind, name)
+            insert!(_columns(ds), col_ind, item_new)
+            _modified(_attributes(ds))
         end
         col_ind += 1
     end
-    return df
+    return ds
 end
 
 # Modify Dataset
-insertcols!(df::Dataset, col::ColumnIndex, name_cols::Pair{<:AbstractString, <:Any}...;
+insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{<:AbstractString, <:Any}...;
                      makeunique::Bool=false, copycols::Bool=true) =
-    insertcols!(df, col, (Symbol(n) => v for (n, v) in name_cols)...,
+    insertcols!(ds, col, (Symbol(n) => v for (n, v) in name_cols)...,
                 makeunique=makeunique, copycols=copycols)
 
 # Modify Dataset
-insertcols!(df::Dataset, name_cols::Pair{Symbol, <:Any}...;
+insertcols!(ds::Dataset, name_cols::Pair{Symbol, <:Any}...;
             makeunique::Bool=false, copycols::Bool=true) =
-    insertcols!(df, ncol(df)+1, name_cols..., makeunique=makeunique, copycols=copycols)
+    insertcols!(ds, ncol(ds)+1, name_cols..., makeunique=makeunique, copycols=copycols)
 
 # Modify Dataset
-insertcols!(df::Dataset, name_cols::Pair{<:AbstractString, <:Any}...;
+insertcols!(ds::Dataset, name_cols::Pair{<:AbstractString, <:Any}...;
             makeunique::Bool=false, copycols::Bool=true) =
-    insertcols!(df, (Symbol(n) => v for (n, v) in name_cols)...,
+    insertcols!(ds, (Symbol(n) => v for (n, v) in name_cols)...,
                 makeunique=makeunique, copycols=copycols)
 
 # Modify Dataset
-function insertcols!(df::Dataset, col::Int=ncol(df)+1; makeunique::Bool=false, name_cols...)
-    if !(0 < col <= ncol(df) + 1)
+function insertcols!(ds::Dataset, col::Int=ncol(ds)+1; makeunique::Bool=false, name_cols...)
+    if !(0 < col <= ncol(ds) + 1)
         throw(ArgumentError("attempt to insert a column to a data set with " *
-                            "$(ncol(df)) columns at index $col"))
+                            "$(ncol(ds)) columns at index $col"))
     end
     if !isempty(name_cols)
         # an explicit error is thrown as keyword argument was supported in the past
         throw(ArgumentError("inserting colums using a keyword argument is not supported, " *
                             "pass a Pair as a positional argument instead"))
     end
-    return df
+    return ds
 end
 
 """
@@ -997,16 +1024,16 @@ function Base.copy(ds::Dataset; copycols::Bool=true)
 end
 
 """
-    delete!(df::Dataset, inds)
+    delete!(ds::Dataset, inds)
 
-Delete rows specified by `inds` from a `Dataset` `df` in place and return it.
+Delete rows specified by `inds` from a `Dataset` `ds` in place and return it.
 
 Internally `deleteat!` is called for all columns so `inds` must be:
 a vector of sorted and unique integers, a boolean vector, an integer, or `Not`.
 
 # Examples
 ```jldoctest
-julia> df = Dataset(a=1:3, b=4:6)
+julia> ds = Dataset(a=1:3, b=4:6)
 3×2 Dataset
  Row │ a      b
      │ Int64  Int64
@@ -1015,7 +1042,7 @@ julia> df = Dataset(a=1:3, b=4:6)
    2 │     2      5
    3 │     3      6
 
-julia> delete!(df, 2)
+julia> delete!(ds, 2)
 2×2 Dataset
  Row │ a      b
      │ Int64  Int64
@@ -1025,36 +1052,36 @@ julia> delete!(df, 2)
 ```
 
 """
-function Base.delete!(df::Dataset, inds)
+function Base.delete!(ds::Dataset, inds)
 
 # Modify Dataset
-    if !isempty(inds) && size(df, 2) == 0
-        throw(BoundsError(df, (inds, :)))
+    if !isempty(inds) && size(ds, 2) == 0
+        throw(BoundsError(ds, (inds, :)))
     end
 
     # we require ind to be stored and unique like in Base
     # otherwise an error will be thrown and the data set will get corrupted
-    return _delete!_helper(df, inds)
+    return _delete!_helper(ds, inds)
 end
 
 # Modify Dataset
-function Base.delete!(df::Dataset, inds::AbstractVector{Bool})
-    if length(inds) != size(df, 1)
-        throw(BoundsError(df, (inds, :)))
+function Base.delete!(ds::Dataset, inds::AbstractVector{Bool})
+    if length(inds) != size(ds, 1)
+        throw(BoundsError(ds, (inds, :)))
     end
     drop = _findall(inds)
-    return _delete!_helper(df, drop)
+    return _delete!_helper(ds, drop)
 end
 
 # Modify Dataset
-Base.delete!(df::Dataset, inds::Not) = delete!(df, axes(df, 1)[inds])
+Base.delete!(ds::Dataset, inds::Not) = delete!(ds, axes(ds, 1)[inds])
 
 # Modify Dataset
-function _delete!_helper(df::Dataset, drop)
-    cols = _columns(df)
-    isempty(cols) && return df
+function _delete!_helper(ds::Dataset, drop)
+    cols = _columns(ds)
+    isempty(cols) && return ds
 
-    n = nrow(df)
+    n = nrow(ds)
     col1 = cols[1]
     deleteat!(col1, drop)
     newn = length(col1)
@@ -1068,22 +1095,23 @@ function _delete!_helper(df::Dataset, drop)
 
     for i in 1:length(cols)
         # this should never happen, but we add it for safety
-        @assert length(cols[i]) == newn corrupt_msg(df, i)
+        @assert length(cols[i]) == newn corrupt_msg(ds, i)
     end
-
-    return df
+    _modified(_attributes(ds))
+    return ds
 end
 
 """
-    empty!(df::Dataset)
+    empty!(ds::Dataset)
 
-Remove all rows from `df`, making each of its columns empty.
+Remove all rows from `ds`, making each of its columns empty.
 """
-function Base.empty!(df::Dataset)
+function Base.empty!(ds::Dataset)
 
 # Modify Dataset
-    foreach(empty!, eachcol(df))
-    return df
+    foreach(empty!, eachcol(ds))
+    _modified(_attributes(ds))
+    return ds
 end
 
 ##############################################################################
@@ -1095,45 +1123,45 @@ end
 # hcat! for 2 arguments, only a vector or a data set is allowed
 
 # Modify Dataset
-function hcat!(df1::Dataset, df2::AbstractDataset;
+function hcat!(ds1::Dataset, ds2::AbstractDataset;
                makeunique::Bool=false, copycols::Bool=true)
-    u = add_names(index(df1), index(df2), makeunique=makeunique)
+    u = add_names(index(ds1), index(ds2), makeunique=makeunique)
     for i in 1:length(u)
-        df1[!, u[i]] = copycols ? df2[:, i] : df2[!, i]
+        ds1[!, u[i]] = copycols ? ds2[:, i] : ds2[!, i]
     end
-    return df1
+    return ds1
 end
 
 # definition required to avoid hcat! ambiguity
 
 # Modify Dataset
-hcat!(df1::Dataset, df2::Dataset;
+hcat!(ds1::Dataset, ds2::Dataset;
       makeunique::Bool=false, copycols::Bool=true) =
-    invoke(hcat!, Tuple{Dataset, AbstractDataset}, df1, df2,
+    invoke(hcat!, Tuple{Dataset, AbstractDataset}, ds1, ds2,
            makeunique=makeunique, copycols=copycols)::Dataset
 
 # Modify Dataset
-hcat!(df::Dataset, x::AbstractVector; makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(df, Dataset(AbstractVector[x], [:x1], copycols=copycols),
+hcat!(ds::Dataset, x::AbstractVector; makeunique::Bool=false, copycols::Bool=true) =
+    hcat!(ds, Dataset(AbstractVector[x], [:x1], copycols=copycols),
           makeunique=makeunique, copycols=copycols)
 
 # Modify Dataset
-hcat!(x::AbstractVector, df::Dataset; makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(Dataset(AbstractVector[x], [:x1], copycols=copycols), df,
+hcat!(x::AbstractVector, ds::Dataset; makeunique::Bool=false, copycols::Bool=true) =
+    hcat!(Dataset(AbstractVector[x], [:x1], copycols=copycols), ds,
           makeunique=makeunique, copycols=copycols)
 
 # Modify Dataset
-hcat!(x, df::Dataset; makeunique::Bool=false, copycols::Bool=true) =
+hcat!(x, ds::Dataset; makeunique::Bool=false, copycols::Bool=true) =
     throw(ArgumentError("x must be AbstractVector or AbstractDataset"))
 
 # Modify Dataset
-hcat!(df::Dataset, x; makeunique::Bool=false, copycols::Bool=true) =
+hcat!(ds::Dataset, x; makeunique::Bool=false, copycols::Bool=true) =
     throw(ArgumentError("x must be AbstractVector or AbstractDataset"))
 
 # hcat! for 1-n arguments
 
 # Modify Dataset
-hcat!(df::Dataset; makeunique::Bool=false, copycols::Bool=true) = df
+hcat!(ds::Dataset; makeunique::Bool=false, copycols::Bool=true) = df
 
 # Modify Dataset
 hcat!(a::Dataset, b, c...; makeunique::Bool=false, copycols::Bool=true) =
@@ -1143,20 +1171,20 @@ hcat!(a::Dataset, b, c...; makeunique::Bool=false, copycols::Bool=true) =
 # hcat
 
 # Create Dataset
-Base.hcat(df::Dataset, x; makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(copy(df, copycols=copycols), x,
+Base.hcat(ds::Dataset, x; makeunique::Bool=false, copycols::Bool=true) =
+    hcat!(copy(ds, copycols=copycols), x,
           makeunique=makeunique, copycols=copycols)
 
 # Create Dataset
-Base.hcat(df1::Dataset, df2::AbstractDataset;
+Base.hcat(ds1::Dataset, ds2::AbstractDataset;
           makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(copy(df1, copycols=copycols), df2,
+    hcat!(copy(ds1, copycols=copycols), ds2,
           makeunique=makeunique, copycols=copycols)
 
 # Create Dataset
-Base.hcat(df1::Dataset, df2::AbstractDataset, dfn::AbstractDataset...;
+Base.hcat(ds1::Dataset, ds2::AbstractDataset, dsn::AbstractDataset...;
           makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(hcat(df1, df2, makeunique=makeunique, copycols=copycols), dfn...,
+    hcat!(hcat(ds1, ds2, makeunique=makeunique, copycols=copycols), dsn...,
           makeunique=makeunique, copycols=copycols)
 
 ##############################################################################
@@ -1165,9 +1193,9 @@ Base.hcat(df1::Dataset, df2::AbstractDataset, dfn::AbstractDataset...;
 ##
 ##############################################################################
 """
-    allowmissing!(df::Dataset, cols=:)
+    allowmissing!(ds::Dataset, cols=:)
 
-Convert columns `cols` of data set `df` from element type `T` to
+Convert columns `cols` of data set `ds` from element type `T` to
 `Union{T, Missing}` to support missing values.
 
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
@@ -1177,40 +1205,42 @@ If `cols` is omitted all columns in the data set are converted.
 function allowmissing! end
 
 # Modify Dataset
-function allowmissing!(df::Dataset, col::ColumnIndex)
-    df[!, col] = allowmissing(df[!, col])
-    return df
+function allowmissing!(ds::Dataset, col::ColumnIndex)
+    f_col = getformat(ds, col)
+    ds[!, col] = allowmissing(ds[!, col])
+    setformat!(ds, col, f_col)
+    return ds
 end
 
 # Modify Dataset
-function allowmissing!(df::Dataset, cols::AbstractVector{<:ColumnIndex})
+function allowmissing!(ds::Dataset, cols::AbstractVector{<:ColumnIndex})
     for col in cols
-        allowmissing!(df, col)
+        allowmissing!(ds, col)
     end
-    return df
+    return ds
 end
 
 # Modify Dataset
-function allowmissing!(df::Dataset, cols::AbstractVector{Bool})
-    length(cols) == size(df, 2) || throw(BoundsError(df, (!, cols)))
+function allowmissing!(ds::Dataset, cols::AbstractVector{Bool})
+    length(cols) == size(ds, 2) || throw(BoundsError(ds, (!, cols)))
     for (col, cond) in enumerate(cols)
-        cond && allowmissing!(df, col)
+        cond && allowmissing!(ds, col)
     end
-    return df
+    return ds
 end
 
 # Modify Dataset
-allowmissing!(df::Dataset, cols::MultiColumnIndex) =
-    allowmissing!(df, index(df)[cols])
+allowmissing!(ds::Dataset, cols::MultiColumnIndex) =
+    allowmissing!(ds, index(ds)[cols])
 
 # Modify Dataset
-allowmissing!(df::Dataset, cols::Colon=:) =
-    allowmissing!(df, axes(df, 2))
+allowmissing!(ds::Dataset, cols::Colon=:) =
+    allowmissing!(ds, axes(ds, 2))
 
 """
-    disallowmissing!(df::Dataset, cols=:; error::Bool=true)
+    disallowmissing!(ds::Dataset, cols=:; error::Bool=true)
 
-Convert columns `cols` of data set `df` from element type `Union{T, Missing}` to
+Convert columns `cols` of data set `ds` from element type `Union{T, Missing}` to
 `T` to drop support for missing values.
 
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
@@ -1223,75 +1253,77 @@ of throwing an error.
 function disallowmissing! end
 
 # Modify Dataset
-function disallowmissing!(df::Dataset, col::ColumnIndex; error::Bool=true)
-    x = df[!, col]
+function disallowmissing!(ds::Dataset, col::ColumnIndex; error::Bool=true)
+    x = ds[!, col]
+    f_col = getformat(ds, col)
     if !(!error && Missing <: eltype(x) && any(ismissing, x))
-        df[!, col] = disallowmissing(x)
+        ds[!, col] = disallowmissing(x)
+        setformat!(ds, col, f_col)
     end
-    return df
+    return ds
 end
 
 # Modify Dataset
-function disallowmissing!(df::Dataset, cols::AbstractVector{<:ColumnIndex};
+function disallowmissing!(ds::Dataset, cols::AbstractVector{<:ColumnIndex};
                           error::Bool=true)
     for col in cols
-        disallowmissing!(df, col, error=error)
+        disallowmissing!(ds, col, error=error)
     end
-    return df
+    return ds
 end
 
 # Modify Dataset
-function disallowmissing!(df::Dataset, cols::AbstractVector{Bool}; error::Bool=true)
-    length(cols) == size(df, 2) || throw(BoundsError(df, (!, cols)))
+function disallowmissing!(ds::Dataset, cols::AbstractVector{Bool}; error::Bool=true)
+    length(cols) == size(ds, 2) || throw(BoundsError(ds, (!, cols)))
     for (col, cond) in enumerate(cols)
-        cond && disallowmissing!(df, col, error=error)
+        cond && disallowmissing!(ds, col, error=error)
     end
-    return df
+    return ds
 end
 
 # Modify Dataset
-disallowmissing!(df::Dataset, cols::MultiColumnIndex; error::Bool=true) =
-    disallowmissing!(df, index(df)[cols], error=error)
+disallowmissing!(ds::Dataset, cols::MultiColumnIndex; error::Bool=true) =
+    disallowmissing!(ds, index(ds)[cols], error=error)
 
 # Modify Dataset
-disallowmissing!(df::Dataset, cols::Colon=:; error::Bool=true) =
-    disallowmissing!(df, axes(df, 2), error=error)
+disallowmissing!(ds::Dataset, cols::Colon=:; error::Bool=true) =
+    disallowmissing!(ds, axes(ds, 2), error=error)
 
 """
-    append!(df::Dataset, df2::AbstractDataset; cols::Symbol=:setequal,
+    append!(ds::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal,
             promote::Bool=(cols in [:union, :subset]))
-    append!(df::Dataset, table; cols::Symbol=:setequal,
+    append!(ds::Dataset, table; cols::Symbol=:setequal,
             promote::Bool=(cols in [:union, :subset]))
 
-Add the rows of `df2` to the end of `df`. If the second argument `table` is not an
+Add the rows of `ds2` to the end of `ds`. If the second argument `table` is not an
 `AbstractDataset` then it is converted using `Dataset(table, copycols=false)`
 before being appended.
 
 The exact behavior of `append!` depends on the `cols` argument:
 * If `cols == :setequal` (this is the default)
-  then `df2` must contain exactly the same columns as `df` (but possibly in a
+  then `ds2` must contain exactly the same columns as `ds` (but possibly in a
   different order).
-* If `cols == :orderequal` then `df2` must contain the same columns in the same
+* If `cols == :orderequal` then `ds2` must contain the same columns in the same
   order (for `AbstractDict` this option requires that `keys(row)` matches
-  `propertynames(df)` to allow for support of ordered dicts; however, if `df2`
+  `propertynames(ds)` to allow for support of ordered dicts; however, if `ds2`
   is a `Dict` an error is thrown as it is an unordered collection).
-* If `cols == :intersect` then `df2` may contain more columns than `df`, but all
-  column names that are present in `df` must be present in `df2` and only these
+* If `cols == :intersect` then `ds2` may contain more columns than `ds`, but all
+  column names that are present in `ds` must be present in `ds2` and only these
   are used.
 * If `cols == :subset` then `append!` behaves like for `:intersect` but if some
-  column is missing in `df2` then a `missing` value is pushed to `df`.
-* If `cols == :union` then `append!` adds columns missing in `df` that are present
-  in `df2`, for columns present in `df` but missing in `df2` a `missing` value
+  column is missing in `ds2` then a `missing` value is pushed to `ds`.
+* If `cols == :union` then `append!` adds columns missing in `ds` that are present
+  in `ds2`, for columns present in `ds` but missing in `ds2` a `missing` value
   is pushed.
 
-If `promote=true` and element type of a column present in `df` does not allow
+If `promote=true` and element type of a column present in `ds` does not allow
 the type of a pushed argument then a new column with a promoted element type
-allowing it is freshly allocated and stored in `df`. If `promote=false` an error
+allowing it is freshly allocated and stored in `ds`. If `promote=false` an error
 is thrown.
 
 The above rule has the following exceptions:
-* If `df` has no columns then copies of columns from `df2` are added to it.
-* If `df2` has no columns then calling `append!` leaves `df` unchanged.
+* If `ds` has no columns then copies of columns from `ds2` are added to it.
+* If `ds2` has no columns then calling `append!` leaves `ds` unchanged.
 
 Please note that `append!` must not be used on a `Dataset` that contains
 columns that are aliases (equal when compared with `===`).
@@ -1303,7 +1335,7 @@ to vertically concatenate data sets.
 
 # Examples
 ```jldoctest
-julia> df1 = Dataset(A=1:3, B=1:3)
+julia> ds1 = Dataset(A=1:3, B=1:3)
 3×2 Dataset
  Row │ A      B
      │ Int64  Int64
@@ -1312,7 +1344,7 @@ julia> df1 = Dataset(A=1:3, B=1:3)
    2 │     2      2
    3 │     3      3
 
-julia> df2 = Dataset(A=4.0:6.0, B=4:6)
+julia> ds2 = Dataset(A=4.0:6.0, B=4:6)
 3×2 Dataset
  Row │ A        B
      │ Float64  Int64
@@ -1321,9 +1353,9 @@ julia> df2 = Dataset(A=4.0:6.0, B=4:6)
    2 │     5.0      5
    3 │     6.0      6
 
-julia> append!(df1, df2);
+julia> append!(ds1, ds2);
 
-julia> df1
+julia> ds1
 6×2 Dataset
  Row │ A      B
      │ Int64  Int64
@@ -1336,7 +1368,7 @@ julia> df1
    6 │     6      6
 ```
 """
-function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal,
+function Base.append!(ds1::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal,
                       promote::Bool=(cols in [:union, :subset]))
 
 # Modify Dataset
@@ -1345,18 +1377,20 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
                             ":orderequal, :setequal, :intersect, :subset or :union)"))
     end
 
-    if ncol(df1) == 0
-        for (n, v) in pairs(eachcol(df2))
-            df1[!, n] = copy(v) # make sure df1 does not reuse df2
+    if ncol(ds1) == 0
+        for (n, v) in pairs(eachcol(ds2))
+            f_col = getformat(ds2, n)
+            ds1[!, n] = copy(v) # make sure ds1 does not reuse ds2
+            setformat!(ds1, n => f_col)
         end
-        return df1
+        return ds1
     end
-    ncol(df2) == 0 && return df1
+    ncol(ds2) == 0 && return ds1
 
-    if cols == :orderequal && _names(df1) != _names(df2)
-        wrongnames = symdiff(_names(df1), _names(df2))
+    if cols == :orderequal && _names(ds1) != _names(ds2)
+        wrongnames = symdiff(_names(ds1), _names(ds2))
         if isempty(wrongnames)
-            mismatches = findall(_names(df1) .!= _names(df2))
+            mismatches = findall(_names(ds1) .!= _names(ds2))
             @assert !isempty(mismatches)
             throw(ArgumentError("Columns number " *
                                 join(mismatches, ", ", " and ") *
@@ -1370,7 +1404,7 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
                                 "and `cols == :orderequal`"))
         end
     elseif cols == :setequal
-        wrongnames = symdiff(_names(df1), _names(df2))
+        wrongnames = symdiff(_names(ds1), _names(ds2))
         if !isempty(wrongnames)
             throw(ArgumentError("Column names :" *
                                 join(wrongnames, ", :", " and :") *
@@ -1378,7 +1412,7 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
                                 "and `cols == :setequal`"))
         end
     elseif cols == :intersect
-        wrongnames = setdiff(_names(df1), _names(df2))
+        wrongnames = setdiff(_names(ds1), _names(ds2))
         if !isempty(wrongnames)
             throw(ArgumentError("Column names :" *
                                 join(wrongnames, ", :", " and :") *
@@ -1387,41 +1421,44 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
         end
     end
 
-    nrows, ncols = size(df1)
-    targetrows = nrows + nrow(df2)
+    nrows, ncols = size(ds1)
+    targetrows = nrows + nrow(ds2)
     current_col = 0
     # in the code below we use a direct access to _columns because
     # we resize the columns so temporarily the `Dataset` is internally
     # inconsistent and normal data set indexing would error.
+
+    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ##### modify the code to take care of meta data
     try
-        for (j, n) in enumerate(_names(df1))
+        for (j, n) in enumerate(_names(ds1))
             current_col += 1
-            if hasproperty(df2, n)
-                df2_c = df2[!, n]
-                S = eltype(df2_c)
-                df1_c = df1[!, j]
-                T = eltype(df1_c)
+            if hasproperty(ds2, n)
+                ds2_c = ds2[!, n]
+                S = eltype(ds2_c)
+                ds1_c = ds1[!, j]
+                T = eltype(ds1_c)
                 if S <: T || !promote || promote_type(S, T) <: T
                     # if S <: T || promote_type(S, T) <: T this should never throw an exception
-                    append!(df1_c, df2_c)
+                    append!(ds1_c, ds2_c)
                 else
-                    newcol = similar(df1_c, promote_type(S, T), targetrows)
-                    copyto!(newcol, 1, df1_c, 1, nrows)
-                    copyto!(newcol, nrows+1, df2_c, 1, targetrows - nrows)
+                    newcol = similar(ds1_c, promote_type(S, T), targetrows)
+                    copyto!(newcol, 1, ds1_c, 1, nrows)
+                    copyto!(newcol, nrows+1, ds2_c, 1, targetrows - nrows)
                     firstindex(newcol) != 1 && _onebased_check_error()
-                    _columns(df1)[j] = newcol
+                    _columns(ds1)[j] = newcol
                 end
             else
-                if Missing <: eltype(df1[!, j])
-                    resize!(df1[!, j], targetrows)
-                    df1[nrows+1:targetrows, j] .= missing
+                if Missing <: eltype(ds1[!, j])
+                    resize!(ds1[!, j], targetrows)
+                    ds1[nrows+1:targetrows, j] .= missing
                 elseif promote
-                    newcol = similar(df1[!, j], Union{Missing, eltype(df1[!, j])},
+                    newcol = similar(ds1[!, j], Union{Missing, eltype(ds1[!, j])},
                                      targetrows)
-                    copyto!(newcol, 1, df1[!, j], 1, nrows)
+                    copyto!(newcol, 1, ds1[!, j], 1, nrows)
                     newcol[nrows+1:targetrows] .= missing
                     firstindex(newcol) != 1 && _onebased_check_error()
-                    _columns(df1)[j] = newcol
+                    _columns(ds1)[j] = newcol
                 else
                     throw(ArgumentError("promote=false and source data set does " *
                                         "not contain column :$n, while destination " *
@@ -1430,32 +1467,32 @@ function Base.append!(df1::Dataset, df2::AbstractDataset; cols::Symbol=:setequal
             end
         end
         current_col = 0
-        for col in _columns(df1)
+        for col in _columns(ds1)
             current_col += 1
             @assert length(col) == targetrows
         end
         if cols == :union
-            for n in setdiff(_names(df2), _names(df1))
-                newcol = similar(df2[!, n], Union{Missing, eltype(df2[!, n])},
+            for n in setdiff(_names(ds2), _names(ds1))
+                newcol = similar(ds2[!, n], Union{Missing, eltype(ds2[!, n])},
                                  targetrows)
                 @inbounds newcol[1:nrows] .= missing
-                copyto!(newcol, nrows+1, df2[!, n], 1, targetrows - nrows)
-                df1[!, n] = newcol
+                copyto!(newcol, nrows+1, ds2[!, n], 1, targetrows - nrows)
+                ds1[!, n] = newcol
             end
         end
     catch err
         # Undo changes in case of error
-        for col in _columns(df1)
+        for col in _columns(ds1)
             resize!(col, nrows)
         end
-        @error "Error adding value to column :$(_names(df1)[current_col])."
+        @error "Error adding value to column :$(_names(ds1)[current_col])."
         rethrow(err)
     end
-    return df1
+    return ds1
 end
 
 # Modify Dataset
-function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
+function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
                     cols::Symbol=:setequal,
                     promote::Bool=(cols in [:union, :subset]))
     possible_cols = (:orderequal, :setequal, :intersect, :subset, :union)
@@ -1464,14 +1501,14 @@ function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
                             join(possible_cols, ", :")))
     end
 
-    nrows, ncols = size(df)
+    nrows, ncols = size(ds)
     targetrows = nrows + 1
 
     if ncols == 0 && row isa NamedTuple
         for (n, v) in pairs(row)
-            setproperty!(df, n, fill!(Tables.allocatecolumn(typeof(v), 1), v))
+            setproperty!(ds, n, fill!(Tables.allocatecolumn(typeof(v), 1), v))
         end
-        return df
+        return ds
     end
 
     old_row_type = typeof(row)
@@ -1487,8 +1524,8 @@ function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
         if row isa AbstractDict && keytype(row) !== Symbol && !all(x -> x isa Symbol, keys(row))
             throw(ArgumentError("when `cols == :union` all keys of row must be Symbol"))
         end
-        for (i, colname) in enumerate(_names(df))
-            col = _columns(df)[i]
+        for (i, colname) in enumerate(_names(ds))
+            col = _columns(ds)[i]
             if haskey(row, colname)
                 val = row[colname]
             else
@@ -1502,7 +1539,7 @@ function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
                 try
                     push!(col, val)
                 catch err
-                    for col in _columns(df)
+                    for col in _columns(ds)
                         resize!(col, nrows)
                     end
                     @error "Error adding value to column :$colname."
@@ -1513,18 +1550,18 @@ function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
                 copyto!(newcol, 1, col, 1, nrows)
                 newcol[end] = val
                 firstindex(newcol) != 1 && _onebased_check_error()
-                _columns(df)[i] = newcol
+                _columns(ds)[i] = newcol
             end
         end
-        for (colname, col) in zip(_names(df), _columns(df))
+        for (colname, col) in zip(_names(ds), _columns(ds))
             if length(col) != targetrows
-                for col2 in _columns(df)
+                for col2 in _columns(ds)
                     resize!(col2, nrows)
                 end
                 throw(AssertionError("Error adding value to column :$colname"))
             end
         end
-        for colname in setdiff(keys(row), _names(df))
+        for colname in setdiff(keys(row), _names(ds))
             val = row[colname]
             S = typeof(val)
             if nrows == 0
@@ -1534,16 +1571,16 @@ function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
                 fill!(newcol, missing)
                 newcol[end] = val
             end
-            df[!, colname] = newcol
+            ds[!, colname] = newcol
         end
-        return df
+        return ds
     end
 
     if cols == :orderequal
         if old_row_type <: Dict
             throw(ArgumentError("passing `Dict` as `row` when `cols == :orderequal` " *
                                 "is not allowed as it is unordered"))
-        elseif length(row) != ncol(df) || any(x -> x[1] != x[2], zip(keys(row), _names(df)))
+        elseif length(row) != ncol(ds) || any(x -> x[1] != x[2], zip(keys(row), _names(ds)))
             throw(ArgumentError("when `cols == :orderequal` pushed row must " *
                                 "have the same column names and in the " *
                                 "same order as the target data set"))
@@ -1555,12 +1592,12 @@ function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
             # an explicit error is thrown as this was allowed in the past
             throw(ArgumentError("`push!` with `cols` equal to `:setequal` " *
                                 "requires `row` to have the same number of elements " *
-                                "as the number of columns in `df`."))
+                                "as the number of columns in `ds`."))
         end
     end
     current_col = 0
     try
-        for (col, nm) in zip(_columns(df), _names(df))
+        for (col, nm) in zip(_columns(ds), _names(ds))
             current_col += 1
             if cols === :subset
                 val = get(row, nm, missing)
@@ -1576,22 +1613,22 @@ function Base.push!(df::Dataset, row::Union{AbstractDict, NamedTuple};
                 copyto!(newcol, 1, col, 1, nrows)
                 newcol[end] = val
                 firstindex(newcol) != 1 && _onebased_check_error()
-                _columns(df)[columnindex(df, nm)] = newcol
+                _columns(ds)[columnindex(ds, nm)] = newcol
             end
         end
         current_col = 0
-        for col in _columns(df)
+        for col in _columns(ds)
             current_col += 1
             @assert length(col) == targetrows
         end
     catch err
-        for col in _columns(df)
+        for col in _columns(ds)
             resize!(col, nrows)
         end
-        @error "Error adding value to column :$(_names(df)[current_col])."
+        @error "Error adding value to column :$(_names(ds)[current_col])."
         rethrow(err)
     end
-    return df
+    return ds
 end
 
 """

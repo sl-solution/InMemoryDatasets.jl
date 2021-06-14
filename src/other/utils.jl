@@ -1,10 +1,15 @@
 # FIXME don't use it yet, there are some issues to be solved
 function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group)
-    map!(x->hash(f(x)), rhashes, v)
+    Threads.@threads for i in 1:length(v)
+        @inbounds rhashes[i] = hash(f(v[i]), prev_groups[i])
+    end
     n = length(v)
     # sz = 2 ^ ceil(Int, log2(n)+1)
     sz = length(gslots)
-    fill!(gslots, 0)
+    # fill!(gslots, 0)
+    Threads.@threads for i in 1:sz
+        gslots[i] = 0
+    end
     szm1 = sz - 1
     ngroups = 0
     flag = true
@@ -20,7 +25,7 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
                 break
             #check hash collision
             elseif rhashes[i] == rhashes[g_row]
-                if isequal(f(v[i]), f(v[g_row]))
+                if isequal(prev_groups[i],prev_groups[g_row]) && isequal(f(v[i]), f(v[g_row]))
                     gix = groups[g_row]
                     break
                 end
@@ -30,51 +35,41 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
             @assert probe < sz
         end
         groups[i] = gix
-        prev_groups[i] += prev_max_group * gix
     end
     if ngroups == n
         flag = false
+        return flag, ngroups
     end
-    (m1, o1) = Core.Intrinsics.checked_umul_int(UInt(ngroups), prev_max_group)
-    if !o1
-        (m2, o2) = Core.Intrinsics.checked_umul_int(m1, UInt(10))
+    Threads.@threads for i in 1:length(rhashes)
+        prev_groups[i] = groups[i]
     end
-    # checking o2 should be enough
-    if !o1 && !o2
-        return (flag, UInt(10) ^ ceil(UInt, log10(ngroups * prev_max_group)), false)
-    else
-        # overflow happens and we return true
-        return (flag, UInt(0), true)
-    end
+    # copy!(prev_groups, rhashes)
+    return flag, ngroups
 end
 
 
 
-function _create_dictionary(ds, cols)
+function _create_dictionary(ds, cols, ::Val{T}) where T
     colidx = index(ds)[cols]
     prev_max_group = UInt(1)
     prev_groups = zeros(UInt, nrow(ds))
-    groups = Vector{Int}(undef, nrow(ds))
-    gslots = zeros(Int, 2 ^ ceil(Int, log2(nrow(ds))+1))
+    groups = Vector{T}(undef, nrow(ds))
     rhashes = Vector{UInt}(undef, nrow(ds))
-    prev_groups_cpy = UInt[]
+    sz = max(1 + ((5 * length(rhashes)) >> 2), 16)
+    sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
+    @assert 4 * sz >= 5 * length(rhashes)
+    gslots = zeros(T, sz)
+    
 
     for j in 1:length(colidx)
-        flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups, groups, gslots, rhashes, InMemoryDatasets.getformat(ds, colidx[j]), ds[!, colidx[j]], prev_max_group)
+        flag, prev_max_group = InMemoryDatasets._create_dictionary!(prev_groups, groups, gslots, rhashes, InMemoryDatasets.getformat(ds, colidx[j]), ds[!, colidx[j]], prev_max_group)
         # if overflow will happen we start from the current prev_groups as the starting point
-        if of
-            prev_max_group = UInt(1)
-            resize!(prev_groups_cpy, nrow(ds))
-            fill!(prev_groups_cpy, UInt(0))
-            flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups_cpy, groups, gslots, rhashes, identity, prev_groups, prev_max_group)
-            copy!(prev_groups, prev_groups_cpy)
-        end
         !flag && break
     end
     # the return value is a vector of UInt, which has unique value for each group
-    resize!(prev_groups_cpy, nrow(ds))
-    fill!(prev_groups_cpy, UInt(0))
-    flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups_cpy, groups, gslots, rhashes, identity, prev_groups, prev_max_group)
+    # resize!(prev_groups_cpy, nrow(ds))
+    # fill!(prev_groups_cpy, UInt(0))
+    # flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups_cpy, groups, gslots, rhashes, identity, prev_groups, prev_max_group)
     return groups, gslots
 end
 
