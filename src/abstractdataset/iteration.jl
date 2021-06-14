@@ -6,10 +6,10 @@
 
 # Iteration by rows
 """
-    datasetRows{D<:AbstractDataset} <: AbstractVector{datasetRow}
+    DatasetRows{D<:AbstractDataset} <: AbstractVector{DatasetRow}
 
 Iterator over rows of an `AbstractDataset`,
-with each row represented as a `datasetRow`.
+with each row represented as a `DatasetRow`.
 
 A value of this type is returned by the [`eachrow`](@ref) function.
 """
@@ -18,8 +18,8 @@ struct DatasetRows{D<:AbstractDataset} <: AbstractVector{DatasetRow}
     df::D
 end
 #
-# Base.summary(dfrs::datasetRows) = "$(length(dfrs))-element datasetRows"
-# Base.summary(io::IO, dfrs::datasetRows) = print(io, summary(dfrs))
+# Base.summary(dfrs::DatasetRows) = "$(length(dfrs))-element DatasetRows"
+# Base.summary(io::IO, dfrs::DatasetRows) = print(io, summary(dfrs))
 
 Base.iterate(::AbstractDataset) =
     error("AbstractDataset is not iterable. Use eachrow(df) to get a row iterator " *
@@ -28,11 +28,11 @@ Base.iterate(::AbstractDataset) =
 """
     eachrow(df::AbstractDataset)
 
-Return a `datasetRows` that iterates a data frame row by row,
-with each row represented as a `datasetRow`.
+Return a `DatasetRows` that iterates a data frame row by row,
+with each row represented as a `DatasetRow`.
 
-Because `datasetRow`s have an `eltype` of `Any`, use `copy(dfr::datasetRow)` to obtain
-a named tuple, which supports iteration and property access like a `datasetRow`,
+Because `DatasetRow`s have an `eltype` of `Any`, use `copy(dfr::DatasetRow)` to obtain
+a named tuple, which supports iteration and property access like a `DatasetRow`,
 but also passes information on the `eltypes` of the columns of `df`.
 
 # Examples
@@ -48,7 +48,7 @@ julia> df = Dataset(x=1:4, y=11:14)
    4 │     4     14
 
 julia> eachrow(df)
-4×2 datasetRows
+4×2 DatasetRows
  Row │ x      y
      │ Int64  Int64
 ─────┼──────────────
@@ -65,7 +65,7 @@ julia> copy.(eachrow(df))
  (x = 4, y = 14)
 
 julia> eachrow(view(df, [4, 3], [2, 1]))
-2×2 datasetRows
+2×2 DatasetRows
  Row │ y      x
      │ Int64  Int64
 ─────┼──────────────
@@ -73,23 +73,23 @@ julia> eachrow(view(df, [4, 3], [2, 1]))
    2 │    13      3
 ```
 """
-# eachrow(df::AbstractDataset) = datasetRows(df)
+# eachrow(df::AbstractDataset) = DatasetRows(df)
 
-# Base.IndexStyle(::Type{<:datasetRows}) = Base.IndexLinear()
-# Base.size(itr::datasetRows) = (size(parent(itr), 1), )
+# Base.IndexStyle(::Type{<:DatasetRows}) = Base.IndexLinear()
+# Base.size(itr::DatasetRows) = (size(parent(itr), 1), )
 
-# Base.@propagate_inbounds Base.getindex(itr::datasetRows, i::Int) = parent(itr)[i, :]
+# Base.@propagate_inbounds Base.getindex(itr::DatasetRows, i::Int) = parent(itr)[i, :]
 
 # separate methods are needed due to dispatch ambiguity
-# Base.getproperty(itr::datasetRows, col_ind::Symbol) =
+# Base.getproperty(itr::DatasetRows, col_ind::Symbol) =
 #     getproperty(parent(itr), col_ind)
-# Base.getproperty(itr::datasetRows, col_ind::AbstractString) =
+# Base.getproperty(itr::DatasetRows, col_ind::AbstractString) =
 #     getproperty(parent(itr), col_ind)
-# Compat.hasproperty(itr::datasetRows, s::Symbol) = haskey(index(parent(itr)), s)
-# Compat.hasproperty(itr::datasetRows, s::AbstractString) = haskey(index(parent(itr)), s)
+# Compat.hasproperty(itr::DatasetRows, s::Symbol) = haskey(index(parent(itr)), s)
+# Compat.hasproperty(itr::DatasetRows, s::AbstractString) = haskey(index(parent(itr)), s)
 
 # Private fields are never exposed since they can conflict with column names
-# Base.propertynames(itr::datasetRows, private::Bool=false) = propertynames(parent(itr))
+# Base.propertynames(itr::DatasetRows, private::Bool=false) = propertynames(parent(itr))
 
 # Iteration by columns
 
@@ -262,7 +262,7 @@ Base.parent(itr::DatasetColumns) = getfield(itr, :df)
 Base.names(itr::DatasetColumns) = names(parent(itr))
 Base.names(itr::DatasetColumns, cols) = names(parent(itr), cols)
 
-# function Base.show(io::IO, dfrs::datasetRows;
+# function Base.show(io::IO, dfrs::DatasetRows;
 #                    allrows::Bool = !get(io, :limit, false),
 #                    allcols::Bool = !get(io, :limit, false),
 #                    rowlabel::Symbol = :Row,
@@ -271,13 +271,13 @@ Base.names(itr::DatasetColumns, cols) = names(parent(itr), cols)
 #                    truncate::Int = 32,
 #                    kwargs...)
 #     df = parent(dfrs)
-#     title = summary ? "$(nrow(df))×$(ncol(df)) datasetRows" : ""
+#     title = summary ? "$(nrow(df))×$(ncol(df)) DatasetRows" : ""
 #     _show(io, df; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
 #           summary=false, eltypes=eltypes, truncate=truncate, title=title,
 #           kwargs...)
 # end
 
-# Base.show(io::IO, mime::MIME"text/plain", dfrs::datasetRows;
+# Base.show(io::IO, mime::MIME"text/plain", dfrs::DatasetRows;
 #           allrows::Bool = !get(io, :limit, false),
 #           allcols::Bool = !get(io, :limit, false),
 #           rowlabel::Symbol = :Row,
@@ -288,7 +288,7 @@ Base.names(itr::DatasetColumns, cols) = names(parent(itr), cols)
 #     show(io, dfrs; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
 #          summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
 #
-# Base.show(dfrs::datasetRows;
+# Base.show(dfrs::DatasetRows;
 #           allrows::Bool = !get(stdout, :limit, true),
 #           allcols::Bool = !get(stdout, :limit, true),
 #           rowlabel::Symbol = :Row,
