@@ -18,7 +18,7 @@
 
 # Formats
 
-For each data set, one can assign a named function to a column as its format. The column formated value will be used for displaying, sorting, grouping and joining, however, for any other operation the actual value will be used. The format function doesn't modify the actual values of a column.
+For each data set, one can assign a named function to a column as its format. The column formated values will be used for displaying, sorting, grouping and joining, however, for any other operation the actual values will be used. The format function doesn't modify the actual values of a column.
 
 `setformat!` assigns a format to a column, and `removeformat!` removes a column format.
 
