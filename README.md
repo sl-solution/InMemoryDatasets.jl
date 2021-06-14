@@ -45,7 +45,7 @@ julia> ds = Dataset(randn(10,2), :auto)
 julia> myformat(x) = round(Int, x)
 myformat (generic function with 1 method)
 
-julia>  setformat!(ds, 1=>myformat)
+julia>  setformat!(ds, 1 => myformat)
 10×2 Dataset
  Row │ x1        x2        
      │ myformat  identity  
