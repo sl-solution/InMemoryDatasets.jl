@@ -48,7 +48,7 @@ end
 
 
 
-function _create_dictionary(ds, cols, ::Val{T}; mapformats = false) where T
+function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]
     prev_max_group = UInt(1)
     prev_groups = zeros(UInt, nrow(ds))
@@ -66,7 +66,12 @@ function _create_dictionary(ds, cols, ::Val{T}; mapformats = false) where T
             _f = getformat(ds, colidx[j])
         end
 
-        flag, prev_max_group = InMemoryDatasets._create_dictionary!(prev_groups, groups, gslots, rhashes, _f, ds[!, colidx[j]], prev_max_group)
+        if DataAPI.refpool(ds[!, colidx[j]]) !== nothing
+            v = DataAPI.refarray(v)
+        else
+            v = ds[!, colidx[j]]
+        end
+        flag, prev_max_group = InMemoryDatasets._create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
         # if overflow will happen we start from the current prev_groups as the starting point
         !flag && break
     end

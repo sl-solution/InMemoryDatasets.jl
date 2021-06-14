@@ -1418,7 +1418,7 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :)
     end
 
     # TODO is finding the first values of eachgroup easier????
-    groups, gslots, ngroups = _create_dictionary(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+    groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
     # unique rows are the first encountered group representatives,
