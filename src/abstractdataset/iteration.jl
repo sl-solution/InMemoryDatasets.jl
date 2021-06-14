@@ -337,18 +337,18 @@ Base.show(dfcs::DatasetColumns;
          summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
 
 """
-    mapcols(f::Union{Function, Type}, df::AbstractDataset)
+    mapcols(f::Union{Function, Type}, ds::AbstractDataset)
 
-Return a `Dataset` where each column of `df` is transformed using function `f`.
+Return a `Dataset` where each column of `ds` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
 (all values other than `AbstractVector` are considered to be a scalar).
 
-Note that `mapcols` guarantees not to reuse the columns from `df` in the returned
+Note that `mapcols` guarantees not to reuse the columns from `ds` in the returned
 `Dataset`. If `f` returns its argument then it gets copied before being stored.
 
 # Examples
 ```jldoctest
-julia> df = Dataset(x=1:4, y=11:14)
+julia> ds = Dataset(x=1:4, y=11:14)
 4×2 Dataset
  Row │ x      y
      │ Int64  Int64
@@ -358,7 +358,7 @@ julia> df = Dataset(x=1:4, y=11:14)
    3 │     3     13
    4 │     4     14
 
-julia> mapcols(x -> x.^2, df)
+julia> mapcols(x -> x.^2, ds)
 4×2 Dataset
  Row │ x      y
      │ Int64  Int64
@@ -369,12 +369,13 @@ julia> mapcols(x -> x.^2, df)
    4 │    16    196
 ```
 """
-function mapcols(f::Union{Function, Type}, df::AbstractDataset)
+function mapcols(f::Union{Function, Type}, ds::AbstractDataset)
     # note: `f` must return a consistent length
+    # Create Dataset
     vs = AbstractVector[]
     seenscalar = false
     seenvector = false
-    for v in eachcol(df)
+    for v in eachcol(ds)
         fv = f(v)
         if fv isa AbstractVector
             if seenscalar
@@ -390,21 +391,22 @@ function mapcols(f::Union{Function, Type}, df::AbstractDataset)
             push!(vs, [fv])
         end
     end
-    return Dataset(vs, _names(df), copycols=false)
+    # formats don't need to be transferred
+    return Dataset(vs, _names(ds), copycols=false)
 end
 
 """
-    mapcols!(f::Union{Function, Type}, df::Dataset)
+    mapcols!(f::Union{Function, Type}, ds::Dataset)
 
-Update a `Dataset` in-place where each column of `df` is transformed using function `f`.
+Update a `Dataset` in-place where each column of `ds` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
 (all values other than `AbstractVector` are considered to be a scalar).
 
-Note that `mapcols!` reuses the columns from `df` if they are returned by `f`.
+Note that `mapcols!` reuses the columns from `ds` if they are returned by `f`.
 
 # Examples
 ```jldoctest
-julia> df = Dataset(x=1:4, y=11:14)
+julia> ds = Dataset(x=1:4, y=11:14)
 4×2 Dataset
  Row │ x      y
      │ Int64  Int64
@@ -414,9 +416,9 @@ julia> df = Dataset(x=1:4, y=11:14)
    3 │     3     13
    4 │     4     14
 
-julia> mapcols!(x -> x.^2, df);
+julia> mapcols!(x -> x.^2, ds);
 
-julia> df
+julia> ds
 4×2 Dataset
  Row │ x      y
      │ Int64  Int64
@@ -427,14 +429,15 @@ julia> df
    4 │    16    196
 ```
 """
-function mapcols!(f::Union{Function, Type}, df::Dataset)
+function mapcols!(f::Union{Function, Type}, ds::Dataset)
     # note: `f` must return a consistent length
-    ncol(df) == 0 && return df # skip if no columns
+    # Modify Dataset
+    ncol(ds) == 0 && return ds # skip if no columns
 
     vs = AbstractVector[]
     seenscalar = false
     seenvector = false
-    for v in eachcol(df)
+    for v in eachcol(ds)
         fv = f(v)
         if fv isa AbstractVector
             if seenscalar
@@ -460,11 +463,13 @@ function mapcols!(f::Union{Function, Type}, df::Dataset)
         firstindex(col) != 1 && _onebased_check_error(i, col)
     end
 
-    @assert length(vs) == ncol(df)
-    raw_columns = _columns(df)
-    for i in 1:ncol(df)
+    @assert length(vs) == ncol(ds)
+    raw_columns = _columns(ds)
+    for i in 1:ncol(ds)
         raw_columns[i] = vs[i]
     end
+    removeformat!(ds)
+    _modified(_attributes(ds))
 
-    return df
+    return ds
 end
