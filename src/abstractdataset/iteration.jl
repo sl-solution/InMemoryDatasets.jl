@@ -28,7 +28,7 @@ Base.iterate(::AbstractDataset) =
 """
     eachrow(df::AbstractDataset)
 
-Return a `DatasetRows` that iterates a data frame row by row,
+Return a `DatasetRows` that iterates a data set row by row,
 with each row represented as a `DatasetRow`.
 
 Because `DatasetRow`s have an `eltype` of `Any`, use `copy(dfr::DatasetRow)` to obtain
