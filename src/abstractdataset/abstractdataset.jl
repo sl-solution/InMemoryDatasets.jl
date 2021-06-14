@@ -1411,14 +1411,14 @@ julia> nonunique(ds, 2)
  1
 ```
 """
-function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :)
+function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false)
     if ncol(ds) == 0
         throw(ArgumentError("finding duplicate rows in data set with no " *
                             "columns is not allowed"))
     end
 
     # TODO is finding the first values of eachgroup easier????
-    groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+    groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
     # unique rows are the first encountered group representatives,
@@ -1431,7 +1431,7 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :)
     end
     return res
 end
-nonunique(ds::AbstractDataset, col::ColumnIndex) = nonunique(ds, [col])
+nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false) = nonunique(ds, [col]; mapformats = mapformats)
 
 # nonunique(df::AbstractDataset, cols) = nonunique(select(df, cols, copycols=false))
 
