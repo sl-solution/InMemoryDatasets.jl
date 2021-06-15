@@ -7,7 +7,7 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
     sz = length(gslots)
     # fill!(gslots, 0)
     Threads.@threads for i in 1:sz
-        gslots[i] = 0
+        @inbounds gslots[i] = 0
     end
     szm1 = sz - 1
     ngroups = 0
@@ -40,7 +40,7 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
         return flag, ngroups
     end
     Threads.@threads for i in 1:length(rhashes)
-        prev_groups[i] = groups[i]
+        @inbounds prev_groups[i] = groups[i]
     end
     # copy!(prev_groups, rhashes)
     return flag, ngroups
@@ -57,7 +57,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     sz = max(1 + ((5 * length(rhashes)) >> 2), 16)
     sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
     @assert 4 * sz >= 5 * length(rhashes)
-    gslots = zeros(T, sz)
+    gslots = Vector{T}(undef, sz)
 
 
     for j in 1:length(colidx)
@@ -67,7 +67,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
         end
 
         if DataAPI.refpool(ds[!, colidx[j]]) !== nothing
-            v = DataAPI.refarray(v)
+            v = DataAPI.refarray(ds[!, colidx[j]])
         else
             v = ds[!, colidx[j]]
         end
