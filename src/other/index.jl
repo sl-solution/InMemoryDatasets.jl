@@ -23,6 +23,12 @@ struct Index <: AbstractIndex   # an OrderedDict would be nice here...
     lookup::Dict{Symbol, Int}      # name => names array position
     names::Vector{Symbol}
     format::Dict{Int, Function} # assign a function as a formater to colsidx
+    sortedcols::Vector{Int} # it is better to have the sortedcols as part of Index
+    rev::Vector{Bool} # is the sortedcols sorted in reverse order?
+    grouped::Ref{Bool}
+    perm::Vector{Int}
+    starts::Vector{Int}
+    ngroups::Ref{Int}
 end
 
 struct DatasetMeta
@@ -35,25 +41,51 @@ struct Attributes <: AbstractAttributes
     meta::DatasetMeta
 end
 
+# struct GroupAttribute <: AbstractAttributes
+   
+# end
+
 Attributes() = Attributes(DatasetMeta(now(), now(), ""))
-
+# GroupAttribute() = GroupAttribute(false,[],[],1)
 _modified(x::Attributes) = x.meta.modified[] = now()
-
+# function Base.empty!(x::GroupAttribute)
+#     x.grouped[] = false
+#     empty!(x.perm)
+#     empty!(x.starts)
+#     x.ngroups[] = 1
+# end
 
 function Index(names::AbstractVector{Symbol}; makeunique::Bool=false)
     u = make_unique(names, makeunique=makeunique)
     lookup = Dict{Symbol, Int}(zip(u, 1:length(u)))
-    return Index(lookup, u, Dict{Int, Function}())
+    return Index(lookup, u, Dict{Int, Function}(), Int[], Int[], false, Int[], Int[], 1)
 end
 
-Index() = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
+Index() = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Int[], false, Int[], Int[], 1)
 Base.length(x::Index) = length(x.names)
 Base.names(x::Index) = string.(x.names)
 
 # _names returns Vector{Symbol}
 _names(x::Index) = x.names
 
-Base.copy(x::Index) = Index(copy(x.lookup), copy(x.names), copy(x.format))
+Base.copy(x::Index) = Index(copy(x.lookup), copy(x.names), copy(x.format), copy(x.sortedcols), copy(x.rev), x.grouped[], copy(x.perm), copy(x.starts), x.ngroups)
+function _copy_grouping_info!(x::Index, y::AbstractIndex; yoffset = 0)
+    append!(x.sortedcols, y.sortedcols .+ yoffset)
+    append!(x.rev, y.rev)
+    x.grouped[] = y.grouped[]
+    append!(x.perm, y.perm)
+    append!(x.starts, y.starts)
+    x.ngroups[] = y.ngroups[]
+end
+function _reset_grouping_info!(x::Index)
+    empty!(x.sortedcols)
+    empty!(x.rev)
+    x.grouped[] = false
+    empty!(x.perm)
+    empty!(x.starts)
+    x.ngroups[] = 1
+end
+
 # TODO should we check the formats?
 Base.isequal(x::AbstractIndex, y::AbstractIndex) = _names(x) == _names(y) # it is enough to check names
 Base.:(==)(x::AbstractIndex, y::AbstractIndex) = isequal(x, y)
@@ -141,6 +173,10 @@ end
 
 function Base.merge!(x::Index, y::AbstractIndex; makeunique::Bool=false)
     adds = add_names(x, y, makeunique=makeunique)
+    # if x is sorted, keep it, else, if y is sorted copy the information into x
+    if isempty(x.sortedcols) && !isempty(y.sortedcols)
+        _copy_grouping_info!(x, y; yoffset = length(x) + 1)
+    end
     i = length(x)
     for add in adds
         i += 1
@@ -158,6 +194,9 @@ Base.merge(x::Index, y::AbstractIndex; makeunique::Bool=false) =
 
 function Base.delete!(x::Index, idx::Integer)
     # reset the lookup's beyond the deleted item
+    if idx ∈ x.sortedcols
+        _reset_grouping_info!(x)
+    end
     delete!(x.format, idx)
     for i in (idx + 1):length(x.names)
         x.lookup[x.names[i]] = i - 1
@@ -185,13 +224,24 @@ function Base.empty!(x::Index)
     empty!(x.lookup)
     empty!(x.names)
     empty!(x.format)
+    empty!(x.sortedcols)
+    empty!(x.rev)
+    x.grouped = false
+    empty!(x.perm)
+    empty!(x.starts)
+    x.ngroups[] = 1
     return x
 end
 
 function Base.insert!(x::Index, idx::Integer, nm::Symbol)
     if !(1 <= idx <= length(x.names)+1)
         throw(BoundsError(x, idx))
-     end
+    end
+    for i in 1:length(x.sortedcols)
+        if x.sortedcols[i] >= idx
+            x.sortedcols += 1
+        end
+    end
     for i = idx:length(x.names)
         x.lookup[x.names[i]] = i + 1
     end

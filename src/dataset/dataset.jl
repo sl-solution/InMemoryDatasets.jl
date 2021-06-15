@@ -574,7 +574,7 @@ end
 
     u = _names(ds)[selected_columns]
     lookup = Dict{Symbol, Int}(zip(u, 1:length(u)))
-    dsformat = getfield(ds, :colindex).format
+    dsformat = index(ds).format
     format = Dict{Int, Function}()
     for i in 1:length(selected_columns)
       if haskey(dsformat, selected_columns[i])
@@ -625,13 +625,15 @@ end
 
 # ds[:, MultiColumnIndex] => Dataset
 # Create Dataset
+# In select we should check if the attributes can be passed and also check how to set info
 Base.getindex(ds::Dataset, row_ind::Colon, col_inds::MultiColumnIndex) =
     select(ds, col_inds, copycols=true)
 
-# df[!, MultiColumnIndex] => Dataset
+# ds[!, MultiColumnIndex] => Dataset
 # Create Dataset
-Base.getindex(df::Dataset, row_ind::typeof(!), col_inds::MultiColumnIndex) =
-    select(df, col_inds, copycols=false)
+# the same as : we should check about attributes which can be passed
+Base.getindex(ds::Dataset, row_ind::typeof(!), col_inds::MultiColumnIndex) =
+    select(ds, col_inds, copycols=false)
 
 ##############################################################################
 ##
@@ -651,6 +653,11 @@ function insert_single_column!(ds::Dataset, v::AbstractVector, col_ind::ColumnIn
 
     if haskey(index(ds), col_ind)
         j = index(ds)[col_ind]
+        # if the modified column is with in sorting columns empty the gattributes
+        # TODO we can be more clever about this
+        if j ∈ index(ds).sortedcols
+          _reset_grouping_info!(index(ds))
+        end
         _columns(ds)[j] = dv
         removeformat!(ds, j)
         _modified(_attributes(ds))
@@ -670,7 +677,12 @@ end
 function insert_single_entry!(ds::Dataset, v::Any, row_ind::Integer, col_ind::ColumnIndex)
     if haskey(index(ds), col_ind)
       # single entry doesn't remove format
-        _columns(ds)[index(ds)[col_ind]][row_ind] = v
+        colidx = index(ds)[col_ind]
+        _columns(ds)[colidx][row_ind] = v
+        # if the modified column is with in sorting columns empty the gattributes
+       if colidx ∈ index(ds).sortedcols
+          _reset_grouping_info!(index(ds))
+        end
         _modified(_attributes(ds))
         return v
     else
@@ -967,6 +979,7 @@ function insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
                     k += 1
                 end
             end
+            # insert! modifies index, thus it should modifies gattributes
             insert!(index(ds), col_ind, name)
             insert!(_columns(ds), col_ind, item_new)
             _modified(_attributes(ds))
