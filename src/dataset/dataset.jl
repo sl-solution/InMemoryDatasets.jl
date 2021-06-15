@@ -671,7 +671,7 @@ function insert_single_entry!(ds::Dataset, v::Any, row_ind::Integer, col_ind::Co
     if haskey(index(ds), col_ind)
       # single entry doesn't remove format
         _columns(ds)[index(ds)[col_ind]][row_ind] = v
-        _modified(_attributes)
+        _modified(_attributes(ds))
         return v
     else
         throw(ArgumentError("Cannot assign to non-existent column: $col_ind"))
@@ -1069,8 +1069,8 @@ function Base.delete!(ds::Dataset, inds::AbstractVector{Bool})
     if length(inds) != size(ds, 1)
         throw(BoundsError(ds, (inds, :)))
     end
-    drop = _findall(inds)
-    return _delete!_helper(ds, drop)
+    # drop = _findall(inds)
+    return _delete!_helper(ds, inds)
 end
 
 # Modify Dataset
@@ -1861,7 +1861,10 @@ function repeat!(ds::Dataset; inner::Integer = 1, outer::Integer = 1)
 # Modify Dataset
     inner < 0 && throw(ArgumentError("inner keyword argument must be non-negative"))
     outer < 0 && throw(ArgumentError("outer keyword argument must be non-negative"))
-    return mapcols!(x -> repeat(x, inner = Int(inner), outer = Int(outer)), ds)
+    current_format = copy(index(ds).format)
+    mapcols!(x -> repeat(x, inner = Int(inner), outer = Int(outer)), ds)
+    copy!(index(ds).format, current_format)
+    ds
 end
 
 """
@@ -1895,7 +1898,10 @@ function repeat!(ds::Dataset, count::Integer)
 
 # Modify Dataset
     count < 0 && throw(ArgumentError("count must be non-negative"))
-    return mapcols!(x -> repeat(x, Int(count)), ds)
+    current_format = copy(index(ds).format)
+    mapcols!(x -> repeat(x, Int(count)), ds)
+    copy!(index(ds).format, current_format)
+    ds
 end
 
 # This is not exactly copy! as in general we allow axes to be different
@@ -1906,7 +1912,8 @@ function _replace_columns!(ds::Dataset, newds::Dataset)
     copy!(_names(index(ds)), _names(newds))
     copy!(index(ds).lookup, index(newds).lookup)
     copy!(index(ds).format, index(newds).format)
-    # TODO should info also be transferred to ds ???
     _modified(_attributes(ds))
+    _attributes(ds).meta.info[] = _attributes(newds).meta.info[]
+    # created date cannot be modified
     return ds
 end

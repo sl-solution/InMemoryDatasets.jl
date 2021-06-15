@@ -82,6 +82,45 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     return groups, gslots, prev_max_group
 end
 
+# ds assumes is grouped based on cols and groups are gathered togther
+function  _find_starts_of_groups(ds, cols::Vector, ::Val{T}) where T
+    colsidx = index(ds)[cols]
+
+    ranges = Vector{T}(undef, nrow(ds))
+    ranges_cpy = copy(ranges)
+    ranges[1] = 1
+    ranges_cpy[1] = 1
+    last_valid_index = 1
+
+    for j in 1:length(colsidx)
+        last_valid_index = _find_starts_of_groups!(ds[!, colsidx[j]], getformat(ds, colsidx[j]), ranges, ranges_cpy, last_valid_index)
+    end
+    return colsidx, ranges, last_valid_index
+end
+
+_find_starts_of_groups(ds, col::ColumnIndex, ::Val{T}) where T = _find_starts_of_groups(ds, [col], Val(T))
+_find_starts_of_groups(ds, cols::UnitRange, ::Val{T}) where T = _find_starts_of_groups(ds, collect(cols), Val(T))
+
+
+function _find_starts_of_groups!(x, format, ranges, ranges_cpy, last_valid_index)
+    cnt = 1
+    @inbounds for j in 1:last_valid_index
+        lo = ranges_cpy[j]
+        j == last_valid_index ? hi = length(x) : hi = ranges_cpy[j + 1] - 1
+        ranges[cnt] = lo
+        cnt += 1
+        @inbounds for i in lo:(hi - 1)
+            if !isequal(format(x[i]), format(x[i+1]))
+                ranges[cnt] = i + 1
+                cnt += 1
+            end
+        end
+    end
+    @inbounds for j in 1:(cnt - 1)
+        ranges_cpy[j] = ranges[j]
+    end
+    return cnt - 1
+end
 
 function make_unique!(names::Vector{Symbol}, src::AbstractVector{Symbol};
                       makeunique::Bool=false)
