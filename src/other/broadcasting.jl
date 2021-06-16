@@ -87,7 +87,8 @@ end
 
 Base.axes(x::LazyNewColDataset) = (Base.OneTo(nrow(x.ds)),)
 Base.ndims(::Type{<:LazyNewColDataset}) = 1
-
+Base.materialize!(::DatasetColumn{<:Any}, ::Base.Broadcast.Broadcasted) =
+        throw(ArgumentError("syntax ds.column .= val is not supported, use ds[!, column] .= val instead"))
 struct ColReplaceDataset
     ds::Dataset
     cols::Vector{Int}
@@ -143,6 +144,7 @@ if isdefined(Base, :dotgetproperty)
     end
 end
 
+# TODO we shouldn't allocate a vector here
 function Base.copyto!(lazyds::LazyNewColDataset, bc::Base.Broadcast.Broadcasted{T}) where T
     if bc isa Base.Broadcast.Broadcasted{<:Base.Broadcast.AbstractArrayStyle{0}}
         bc_tmp = Base.Broadcast.Broadcasted{T}(bc.f, bc.args, ())

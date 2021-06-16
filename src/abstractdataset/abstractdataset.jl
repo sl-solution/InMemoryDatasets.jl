@@ -52,8 +52,8 @@ A detailed description of `getindex`, `setindex!`, `getproperty`, `setproperty!`
 abstract type AbstractDataset end
 
 # DatasetColumn is a representation of a column of data set
-struct DatasetColumn
-    x
+struct DatasetColumn{T}
+    x::Vector{T}
 end
 Base.show(io::IO, col::DatasetColumn) = display(col.x)
 ##############################################################################
@@ -515,10 +515,9 @@ Base.ndims(::AbstractDataset) = 2
 Base.ndims(::Type{<:AbstractDataset}) = 2
 
 # separate methods are needed due to dispatch ambiguity
-Base.getproperty(ds::AbstractDataset, col_ind::Symbol) =
-    throw(ArgumentError("syntax ds.column is not supported use ds[!, column] instead"))
-Base.getproperty(ds::AbstractDataset, col_ind::AbstractString) =
-    throw(ArgumentError("syntax ds.column is not supported use ds[!, column] instead"))
+Base.getproperty(ds::AbstractDataset, col_ind::Symbol) = ds[!, col_ind]
+
+Base.getproperty(ds::AbstractDataset, col_ind::AbstractString) = ds[!, col_ind]
 
 # Private fields are never exposed since they can conflict with column names
 """
@@ -570,6 +569,10 @@ Base.size(col::DatasetColumn) = size(col.x)
 Base.isapprox(col1::DatasetColumn, col2::DatasetColumn) = isapprox(col1.x, col2.x)
 Base.first(col1::DatasetColumn) = first(col1.x)
 Base.last(col1::DatasetColumn) = last(col1.x)
+Base.eltype(col::DatasetColumn) = eltype(col.x)
+Base.ndims(col::DatasetColumn) = ndims(col.x)
+Base.identity(col::DatasetColumn) = identity(col.x)
+
 
 function Base.:(==)(ds1::AbstractDataset, ds2::AbstractDataset)
     size(ds1, 2) == size(ds2, 2) || return false

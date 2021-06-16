@@ -234,16 +234,15 @@ function Base.append!(ds1::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal
     # inconsistent and normal data set indexing would error.
 
     # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    ##### modify the code to take care of meta data
+    current_modified_time = _attributes(ds1).meta.modified[]
     try
-        current_modified_time = _attributes(ds1).meta.modified[]
         for (j, n) in enumerate(_names(ds1))
             current_col += 1
             format_of_cur_col = getformat(ds1, n)
             if hasproperty(ds2, n)
-                ds2_c = ds2[!, n]
+                ds2_c = _columns(ds2)[index(ds2)[n]]
                 S = eltype(ds2_c)
-                ds1_c = ds1[!, j]
+                ds1_c = _columns(ds1)[j]
                 T = eltype(ds1_c)
                 if S <: T || !promote || promote_type(S, T) <: T
                     # if S <: T || promote_type(S, T) <: T this should never throw an exception
@@ -257,12 +256,12 @@ function Base.append!(ds1::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal
                 end
             else
                 if Missing <: eltype(ds1[!, j])
-                    resize!(ds1[!, j], targetrows)
+                    resize!(_columns(ds1)[j], targetrows)
                     ds1[nrows+1:targetrows, j] .= missing
                 elseif promote
-                    newcol = similar(ds1[!, j], Union{Missing, eltype(ds1[!, j])},
+                    newcol = similar(_columns(ds1)[j], Union{Missing, eltype(ds1[!, j])},
                                      targetrows)
-                    copyto!(newcol, 1, ds1[!, j], 1, nrows)
+                    copyto!(newcol, 1, _columns(ds1)[j], 1, nrows)
                     newcol[nrows+1:targetrows] .= missing
                     firstindex(newcol) != 1 && _onebased_check_error()
                     _columns(ds1)[j] = newcol
@@ -283,10 +282,10 @@ function Base.append!(ds1::Dataset, ds2::AbstractDataset; cols::Symbol=:setequal
         end
         if cols == :union
             for n in setdiff(_names(ds2), _names(ds1))
-                newcol = similar(ds2[!, n], Union{Missing, eltype(ds2[!, n])},
+                newcol = similar(_columns(ds2)[index(ds2)[n]], Union{Missing, eltype(ds2[!, n])},
                                  targetrows)
                 @inbounds newcol[1:nrows] .= missing
-                copyto!(newcol, nrows+1, ds2[!, n], 1, targetrows - nrows)
+                copyto!(newcol, nrows+1, _columns(ds2)[index(ds2)[n]], 1, targetrows - nrows)
                 ds1[!, n] = newcol
                 _modified(_attributes(ds1))
                 _reset_grouping_info!(ds1)

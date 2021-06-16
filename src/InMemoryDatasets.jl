@@ -28,7 +28,8 @@ export
       ncol,
       getformat,
       setformat!,
-      removeformat!
+      removeformat!,
+      content
 
 include("other/index.jl")
 include("other/utils.jl")

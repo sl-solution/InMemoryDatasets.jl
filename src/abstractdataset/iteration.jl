@@ -199,7 +199,7 @@ Base.axes(itr::DatasetColumns, i::Integer) = Base.OneTo(size(itr, i))
 Base.iterate(itr::DatasetColumns, i::Integer=1) =
     i <= length(itr) ? (itr[i], i + 1) : nothing
 Base.@propagate_inbounds Base.getindex(itr::DatasetColumns, idx::ColumnIndex) =
-    parent(itr)[!, idx]
+    parent(itr)[!, idx].x
 Base.@propagate_inbounds Base.getindex(itr::DatasetColumns, idx::MultiColumnIndex) =
     eachcol(parent(itr)[!, idx])
 Base.:(==)(itr1::DatasetColumns, itr2::DatasetColumns) =

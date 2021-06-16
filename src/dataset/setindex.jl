@@ -21,6 +21,7 @@ function insert_single_column!(ds::Dataset, v::AbstractVector, col_ind::ColumnIn
         if j ∈ index(ds).sortedcols
           _reset_grouping_info!(index(ds))
         end
+        # change the type of column j
         _columns(ds)[j] = dv
         removeformat!(ds, j)
         _modified(_attributes(ds))
@@ -33,7 +34,7 @@ function insert_single_column!(ds::Dataset, v::AbstractVector, col_ind::ColumnIn
             throw(ArgumentError("Cannot assign to non-existent column: $col_ind"))
         end
     end
-    return dv
+    return ds
 end
 
 # Modify Dataset
@@ -65,15 +66,16 @@ end
 # separate methods are needed due to dispatch ambiguity
 
 # Modify Dataset
+# v must be promotable to ds[!, col_ind], thus, we can keep the format but sorting based on it should be revised
 function Base.setproperty!(ds::Dataset, col_ind::Symbol, v::AbstractVector)
-    ds[!, col_ind] = v
-    v
+    insert_single_column!(ds, v, col_ind)
+    return ds
 end
 
 # Modify Dataset
 function Base.setproperty!(ds::Dataset, col_ind::AbstractString, v::AbstractVector)
-    ds[!, col_ind] = v
-    v
+    insert_single_column!(ds, v, col_ind)
+    return ds
 end
 
 # Modify Dataset
@@ -128,7 +130,7 @@ for T in (:AbstractVector, :Not, :Colon)
             ds[!, col_ind] = copy(v)
             return ds
         end
-        x = ds[!, col_ind]
+        x = ds[!, col_ind].x
         x[row_inds] = v
         return ds
     end
@@ -148,7 +150,7 @@ for T1 in (:AbstractVector, :Not, :Colon),
             throw(ArgumentError("column names in source and target do not match"))
         end
         for (j, col) in enumerate(idxs)
-            ds[row_inds, col] = new_ds[!, j]
+            ds[row_inds, col] = new_ds[!, j].x
         end
         return ds
     end

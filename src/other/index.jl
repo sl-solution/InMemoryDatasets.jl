@@ -580,6 +580,12 @@ function setformat!(x::Index, idx::Integer, f::Function)
         delete!(x.format, idx)
     end
 end
+function setformat!(x::Index, col::Symbol, f::Function)
+    setformat!(x, lookupname(x.lookup, col), f)
+end
+function setformat!(x::Index, col::String, f::Function)
+    setformat!(x, lookupname(x.lookup, col), f)
+end
 function setformat!(x::Index, p::Pair{Int64, T}) where T <: Function
    setformat!(x, p.first, p.second)
 end
