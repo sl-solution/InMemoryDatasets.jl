@@ -1,6 +1,12 @@
-Base.summary(df::AbstractDataset) =
-    @sprintf("%d×%d %s", size(df)..., nameof(typeof(df)))
-Base.summary(io::IO, df::AbstractDataset) = print(io, summary(df))
+Base.summary(ds::AbstractDataset) =
+    if !isempty(index(ds).sortedcols) && index(ds).grouped[]
+        @sprintf("%d×%d Grouped Dataset\nGrouped by: %s\n", size(ds)...,join(_names(ds)[index(ds).sortedcols],", "))
+    elseif !isempty(index(ds).sortedcols)
+        @sprintf("%d×%d Sorted Dataset\nSorted by: %s\n", size(ds)...,join(_names(ds)[index(ds).sortedcols],", "))
+    else
+        @sprintf("%d×%d Dataset\n", size(ds)...)
+    end
+Base.summary(io::IO, ds::AbstractDataset) = print(io, summary(ds))
 
 """
     DataFrames.ourstrwidth(io::IO, x::Any, buffer::IOBuffer, truncstring::Int)
@@ -164,7 +170,7 @@ function _show(io::IO,
     column_formats = _getformats(df)
     names_format = fill("identity", length(names_str))
     _pt_formmatters_ = Function[]
-    push!(_pt_formmatters_, _pretty_tables_general_formatter)
+    # push!(_pt_formmatters_, _pretty_tables_general_formatter)
     for (k,v) in column_formats
         names_format[k] = string(v)
         push!(_pt_formmatters_, (vv, i, j) -> j == k ? v(vv) : vv)

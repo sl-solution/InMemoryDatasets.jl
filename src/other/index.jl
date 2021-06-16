@@ -42,7 +42,7 @@ struct Attributes <: AbstractAttributes
 end
 
 # struct GroupAttribute <: AbstractAttributes
-   
+
 # end
 
 Attributes() = Attributes(DatasetMeta(now(), now(), ""))
@@ -62,6 +62,7 @@ function Index(names::AbstractVector{Symbol}; makeunique::Bool=false)
 end
 
 Index() = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Int[], false, Int[], Int[], 1)
+Index(lookup::Dict{Symbol, Int}, names::Vector{Symbol}, format::Dict{Int, Function}) = Index(lookup, names, format, Int[], Int[], false, Int[], Int[], 1)
 Base.length(x::Index) = length(x.names)
 Base.names(x::Index) = string.(x.names)
 
@@ -163,6 +164,31 @@ Base.haskey(x::Index, key::AbstractString) = haskey(x.lookup, Symbol(key))
 Base.haskey(x::Index, key::Integer) = 1 <= key <= length(x.names)
 Base.haskey(x::Index, key::Bool) =
     throw(ArgumentError("invalid key: $key of type Bool"))
+
+function subset_and_rearrange(x::Index, y::AbstractVector{<:Integer})
+    @assert minimum(y)>0 && maximum(y)<=length(x) "The some of the indices doesn't appear in the index"
+    transfer_group = all(x.sortedcols .∈ Ref(y))
+    lookup = Dict{Symbol, Int}(zip(_names(x)[y], 1:length(x)))
+    format = Dict{Int, Function}()
+    newidx = Index(lookup, _names(x)[y], format)
+    for i in 1:length(y)
+        setformat!(newidx, i , getformat(x, y[i]))
+    end
+    if transfer_group
+        new_sortedcols = Int[]
+        for scol in x.sortedcols
+            push!(new_sortedcols, findfirst(isequal(scol), y))
+        end
+        append!(newidx.sortedcols, new_sortedcols)
+        append!(newidx.rev , x.rev)
+        newidx.grouped[] = x.grouped[]
+        append!(newidx.perm, x.perm)
+        append!(newidx.starts, x.starts)
+        newidx.ngroups[] = x.ngroups[]
+    end
+    newidx
+end
+
 
 function Base.push!(x::Index, nm::Symbol)
     haskey(x.lookup, nm) && throw(ArgumentError(":$nm already exists in Index"))
@@ -546,6 +572,9 @@ rename!(f::Function, x::SubIndex) =
 function setformat!(x::Index, idx::Integer, f::Function)
     !(1 <= idx <= length(x)) && throw(ArgumentError("column index $idx not found in the data set"))
     x.format[idx] = f
+    if idx ∈ x.sortedcols
+        _reset_grouping_info!(x)
+    end
     # identity is default, so we should delete it
     if x.format[idx] == identity
         delete!(x.format, idx)
@@ -573,6 +602,9 @@ function removeformat!(x::Index, idx::Integer)
         throw(ArgumentError("column index $idx not found in the data set"))
     end
     delete!(x.format, idx)
+    if idx ∈ x.sortedcols
+        _reset_grouping_info!(x)
+    end
 end
 removeformat!(x::Index, y::Symbol) = removeformat!(x, lookupname(x.lookup, y))
 removeformat!(x::Index, y::String) = removeformat!(x, lookupname(x.lookup, Symbol(y)))

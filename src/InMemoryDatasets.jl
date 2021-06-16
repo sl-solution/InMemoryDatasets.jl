@@ -20,6 +20,7 @@ import DataAPI,
 export
       AbstractDataset,
       DatasetColumns,
+      DatasetColumn,
       SubDataset,
       Dataset,
       SortedDataset,
@@ -33,11 +34,22 @@ include("other/index.jl")
 include("other/utils.jl")
 
 include("abstractdataset/abstractdataset.jl")
-include("dataset/dataset.jl")
+# create dataset
+include("dataset/constructor.jl")
+# get elements
+include("dataset/getindex.jl")
+# set elements
+include("dataset/setindex.jl")
+# delete and append observations
+include("dataset/del_and_append.jl")
+# concatenate
+include("dataset/cat.jl")
+# other functions
+include("dataset/other.jl")
 include("subdataset/subdataset.jl")
 include("sorteddataset/sorteddataset.jl")
 include("datasetrow/datasetrow.jl")
-
+# TODO needs correction for formats and other metadata
 include("other/broadcasting.jl")
 
 include("abstractdataset/selection.jl")

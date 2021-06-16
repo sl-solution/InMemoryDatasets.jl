@@ -41,10 +41,10 @@ function _pretty_tables_general_formatter(v, i::Integer, j::Integer)
         # `_pretty_table` to render the current table leading to a stack
         # overflow.
         return sprint(summary, v)
-    elseif ismissing(v)
-        return "missing"
-    elseif v === nothing
-        return ""
+    # elseif ismissing(v)
+    #     return "missing"
+    # elseif v === nothing
+    #     return ""
     else
         return v
     end

@@ -51,6 +51,11 @@ A detailed description of `getindex`, `setindex!`, `getproperty`, `setproperty!`
 """
 abstract type AbstractDataset end
 
+# DatasetColumn is a representation of a column of data set
+struct DatasetColumn
+    x
+end
+Base.show(io::IO, col::DatasetColumn) = display(col.x)
 ##############################################################################
 ##
 ## Basic properties of a Dataset
@@ -510,8 +515,10 @@ Base.ndims(::AbstractDataset) = 2
 Base.ndims(::Type{<:AbstractDataset}) = 2
 
 # separate methods are needed due to dispatch ambiguity
-Base.getproperty(ds::AbstractDataset, col_ind::Symbol) = ds[!, col_ind]
-Base.getproperty(ds::AbstractDataset, col_ind::AbstractString) = ds[!, col_ind]
+Base.getproperty(ds::AbstractDataset, col_ind::Symbol) =
+    throw(ArgumentError("syntax ds.column is not supported use ds[!, column] instead"))
+Base.getproperty(ds::AbstractDataset, col_ind::AbstractString) =
+    throw(ArgumentError("syntax ds.column is not supported use ds[!, column] instead"))
 
 # Private fields are never exposed since they can conflict with column names
 """
@@ -556,6 +563,13 @@ Base.empty(ds::AbstractDataset) = similar(ds, 0)
 ## Equality
 ##
 ##############################################################################
+Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = col1.x == col2.x
+Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = col1.x == col2.x
+Base.length(col::DatasetColumn) = length(col.x)
+Base.size(col::DatasetColumn) = size(col.x)
+Base.isapprox(col1::DatasetColumn, col2::DatasetColumn) = isapprox(col1.x, col2.x)
+Base.first(col1::DatasetColumn) = first(col1.x)
+Base.last(col1::DatasetColumn) = last(col1.x)
 
 function Base.:(==)(ds1::AbstractDataset, ds2::AbstractDataset)
     size(ds1, 2) == size(ds2, 2) || return false
@@ -1417,7 +1431,6 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
                             "columns is not allowed"))
     end
 
-    # TODO is finding the first values of eachgroup easier????
     groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
@@ -1433,14 +1446,15 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
 end
 nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false) = nonunique(ds, [col]; mapformats = mapformats)
 
+
 # nonunique(df::AbstractDataset, cols) = nonunique(select(df, cols, copycols=false))
 
 # Modify Dataset
-Base.unique!(ds::AbstractDataset) = delete!(ds, _findall(nonunique(ds)))
+Base.unique!(ds::AbstractDataset) = delete!(ds, nonunique(ds))
 Base.unique!(ds::AbstractDataset, cols::AbstractVector) =
-    delete!(ds, _findall(nonunique(ds, cols)))
+    delete!(ds, nonunique(ds, cols))
 Base.unique!(ds::AbstractDataset, cols) =
-    delete!(ds, _findall(nonunique(ds, cols)))
+    delete!(ds, nonunique(ds, cols))
 
 # Unique rows of an AbstractDataset.
 @inline function Base.unique(ds::AbstractDataset; view::Bool=false)
@@ -2172,6 +2186,7 @@ function Missings.disallowmissing(ds::AbstractDataset,
     newds = Dataset(newcols, _names(ds), copycols=false)
     setformat!(newds, _getformats(ds))
     setinfo!(newds, _attributes(ds).meta.info[])
+    _copy_grouping_info!(newds, ds)
     newds
 end
 
@@ -2222,6 +2237,7 @@ function Missings.allowmissing(ds::AbstractDataset,
     newds = Dataset(newcols, _names(ds), copycols=false)
     setformat!(newds, _getformats(ds))
     setinfo!(newds, _attributes(ds).meta.info[])
+    _copy_grouping_info!(newds, ds)
     newds
 end
 
@@ -2333,8 +2349,14 @@ function flatten(ds::AbstractDataset,
 
         insertcols!(new_ds, col, _names(ds)[col] => flattened_col)
     end
-
-    return new_ds
+    setformat!(new_ds, index(ds).format)
+    setinfo!(new_ds, _attributes(ds).meta.info[])
+    if idxcols ∈ Ref(index(ds).sortedcols)
+        return new_ds
+    else
+        _copy_grouping_info!(new_ds, ds)
+        return new_ds
+    end
 end
 
 function repeat_lengths!(longnew::AbstractVector, shortold::AbstractVector,

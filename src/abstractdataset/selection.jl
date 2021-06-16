@@ -1309,7 +1309,7 @@ combine(@nospecialize(f::Pair), gd::AbstractDataset; renamecols::Bool=true) =
                         "You can pass a `Pair` as the second argument of the transformation. If you want the return " *
                         "value to be processed as having multiple columns add `=> AsTable` suffix to the pair."))
 
-function manipulate(df::Dataset, @nospecialize(cs...); copycols::Bool, keeprows::Bool, renamecols::Bool)
+function manipulate(ds::Dataset, @nospecialize(cs...); copycols::Bool, keeprows::Bool, renamecols::Bool)
     cs_vec = []
     for v in cs
         if v isa AbstractVecOrMat{<:Pair}
@@ -1318,17 +1318,18 @@ function manipulate(df::Dataset, @nospecialize(cs...); copycols::Bool, keeprows:
             push!(cs_vec, v)
         end
     end
-    return _manipulate(df, Any[normalize_selection(index(df), c, renamecols) for c in cs_vec],
+    return _manipulate(ds, Any[normalize_selection(index(ds), c, renamecols) for c in cs_vec],
                     copycols, keeprows)
 end
 
-function _manipulate(df::AbstractDataset, normalized_cs::Vector{Any}, copycols::Bool, keeprows::Bool)
-    @assert !(df isa SubDataset && copycols==false)
-    newdf = Dataset()
+function _manipulate(ds::AbstractDataset, normalized_cs::Vector{Any}, copycols::Bool, keeprows::Bool)
+    @assert !(ds isa SubDataset && copycols==false)
+    dsidx = index(ds)
+    newds = Dataset()
     # the role of transformed_cols is the following
     # * make sure that we do not use the same target column name twice in transformations;
     #   note though that it can appear in no-transformation selection like
-    #   `select(df, :, :a => ByRow(sin) => :a), where :a is produced both by `:`
+    #   `select(ds, :, :a => ByRow(sin) => :a), where :a is produced both by `:`
     #   and by `:a => ByRow(sin) => :a`
     # * make sure that if some column is produced by transformation like
     #   `:a => ByRow(sin) => :a` and it appears earlier or later in non-transforming
@@ -1338,7 +1339,7 @@ function _manipulate(df::AbstractDataset, normalized_cs::Vector{Any}, copycols::
     #
     # For example in:
     #
-    # julia> df = Dataset(a=1:2, b=3:4)
+    # julia> ds = Dataset(a=1:2, b=3:4)
     # 2×2 Dataset
     #  Row │ a      b
     #      │ Int64  Int64
@@ -1346,7 +1347,7 @@ function _manipulate(df::AbstractDataset, normalized_cs::Vector{Any}, copycols::
     #    1 │     1      3
     #    2 │     2      4
     #
-    # julia> select(df, :, :a => ByRow(sin) => :a)
+    # julia> select(ds, :, :a => ByRow(sin) => :a)
     # 2×2 Dataset
     #  Row │ a         b
     #      │ Float64   Int64
@@ -1354,47 +1355,50 @@ function _manipulate(df::AbstractDataset, normalized_cs::Vector{Any}, copycols::
     #    1 │ 0.841471      3
     #    2 │ 0.909297      4
     #
-    # julia> select(df, :, :a => ByRow(sin) => :a, :a)
+    # julia> select(ds, :, :a => ByRow(sin) => :a, :a)
     # ERROR: ArgumentError: duplicate output column name: :a
     #
     # transformed_cols keeps a set of columns that were generated via a transformation
     # up till the point. Note that single column selection and column renaming is
     # considered to be a transformation
     transformed_cols = Set{Symbol}()
-    # we allow resizing newdf only if up to some point only scalars were put
-    # in it. The moment we put any vector into newdf its number of rows becomes fixed
-    # Also if keeprows is true then we make sure to produce nrow(df) rows so resizing
+    # we allow resizing newds only if up to some point only scalars were put
+    # in it. The moment we put any vector into newds its number of rows becomes fixed
+    # Also if keeprows is true then we make sure to produce nrow(ds) rows so resizing
     # is not allowed
-    allow_resizing_newdf = Ref(!keeprows)
+    allow_resizing_newds = Ref(!keeprows)
     for nc in normalized_cs
         if nc isa AbstractVector{Int} # only this case is NOT considered to be a transformation
             allunique(nc) || throw(ArgumentError("duplicate column names selected"))
             for i in nc
-                newname = _names(df)[i]
+                newname = _names(ds)[i]
                 # as nc is a multiple column selection without transformations
                 # we allow duplicate column names with selections applied earlier
-                # and ignore them for convinience, to allow for e.g. select(df, :x1, :)
-                if !hasproperty(newdf, newname)
+                # and ignore them for convinience, to allow for e.g. select(ds, :x1, :)
+                if !hasproperty(newds, newname)
                     # allow shortening to 0 rows
-                    if allow_resizing_newdf[] && nrow(newdf) == 1
-                        newdfcols = _columns(newdf)
-                        for (i, col) in enumerate(newdfcols)
-                            newcol = fill!(similar(col, nrow(df)), first(col))
+                    if allow_resizing_newds[] && nrow(newds) == 1
+                        newdscols = _columns(newds)
+                        for (i, col) in enumerate(newdscols)
+                            newcol = fill!(similar(col, nrow(ds)), first(col))
                             firstindex(newcol) != 1 && _onebased_check_error()
-                            newdfcols[i] = newcol
+                            newdscols[i] = newcol
                         end
                     end
                     # here even if keeprows is true all is OK
-                    newdf[!, newname] = copycols ? df[:, i] : df[!, i]
-                    allow_resizing_newdf[] = false
+                    newds[!, newname] = copycols ? ds[:, i] : ds[!, i]
+                    cnt += 1
+                    allow_resizing_newds[] = false
                 end
             end
+            setinfo!(newds, _attributes(ds).meta.info[])
+            subset_and_rearrange(index(newds), nc)
         else
-            select_transform!(Ref{Any}(nc), df, newdf, transformed_cols, copycols,
-                              allow_resizing_newdf)
+            select_transform!(Ref{Any}(nc), ds, newds, transformed_cols, copycols,
+                              allow_resizing_newds)
         end
     end
-    return newdf
+    return newds
 end
 
 function manipulate(dfv::SubDataset, @nospecialize(args...); copycols::Bool, keeprows::Bool,
@@ -1438,9 +1442,12 @@ function manipulate(dfv::SubDataset, @nospecialize(args...); copycols::Bool, kee
     end
 end
 
-manipulate(df::Dataset, args::AbstractVector{Int}; copycols::Bool, keeprows::Bool,
-           renamecols::Bool) =
-    Dataset(_columns(df)[args], Index(_names(df)[args]), copycols=copycols)
+function manipulate(ds::Dataset, args::AbstractVector{Int}; copycols::Bool, keeprows::Bool,
+           renamecols::Bool)
+    newds = Dataset(_columns(ds)[args], subset_and_rearrange(index(ds), args), copycols=copycols)
+    setinfo!(newds, _attributes(ds).meta.info[])
+    newds
+end
 
 function manipulate(df::Dataset, c::MultiColumnIndex; copycols::Bool, keeprows::Bool,
                     renamecols::Bool)
