@@ -99,6 +99,26 @@ function Base.copy!(col1::DatasetColumn{Dataset}, src)
     end
     col1
 end
+
+function Base.map!(f, col1::DatasetColumn{Dataset}, args...)
+    map!(f, __!(col1), args...)
+    _modified(_attributes(col1.ds))
+    removeformat!(col1.ds, col1.col)
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    col1
+end
+function Base.map!(f, col1::DatasetColumn{Dataset}, col2::DatasetColumn{Dataset})
+    map!(f, __!(col1), __!(col2))
+    _modified(_attributes(col1.ds))
+    removeformat!(col1.ds, col1.col)
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    col1
+end
+
 ##############################################################################
 ##
 ## Basic properties of a Dataset
