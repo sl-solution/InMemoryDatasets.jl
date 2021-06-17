@@ -130,7 +130,7 @@ for T in (:AbstractVector, :Not, :Colon)
             ds[!, col_ind] = copy(v)
             return ds
         end
-        x = ds[!, col_ind].x
+        x = ds[!, col_ind]
         x[row_inds] = v
         return ds
     end
@@ -150,7 +150,7 @@ for T1 in (:AbstractVector, :Not, :Colon),
             throw(ArgumentError("column names in source and target do not match"))
         end
         for (j, col) in enumerate(idxs)
-            ds[row_inds, col] = new_ds[!, j].x
+            ds[row_inds, col] = new_ds[!, j]
         end
         return ds
     end
