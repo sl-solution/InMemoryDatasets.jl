@@ -24,12 +24,9 @@ Tables.columnindex(df::Union{AbstractDataset, DatasetRow}, idx::AbstractString) 
 Tables.schema(df::AbstractDataset) = Tables.Schema{Tuple(_names(df)), Tuple{[eltype(col) for col in eachcol(df)]...}}()
 Tables.materializer(df::AbstractDataset) = Dataset
 
-Tables.getcolumn(ds::Dataset, i::Int) = _columns(ds)[i]
+Tables.getcolumn(ds::Dataset, i::Int) = ds[!, i]
 Tables.getcolumn(sds::SubDataset, i::Int) = view(_columns(parent(sds))[i], rows(sds))
-function Tables.getcolumn(ds::Dataset, nm::Symbol)
-    colidx = index(ds)[nm]
-    _columns(ds)[colidx]
-end
+Tables.getcolumn(ds::Dataset, nm::Symbol) = ds[!, nm]
 
 function Tables.getcolumn(sds::SubDataset, nm::Symbol)
     i = lookupname(parent(index(sds)).lookup, nm)

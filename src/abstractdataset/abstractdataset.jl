@@ -60,6 +60,45 @@ struct DatasetColumn{T <: AbstractDataset}
 end
 _columns(ds::AbstractDataset) = getfield(parent(ds), :columns)
 Base.show(io::IO, col::DatasetColumn) = display(_columns(col.ds)[col.col])
+
+# internal function for easy accessing a view of a column
+__!(col1::DatasetColumn) =  _columns(col1.ds)[col1.col]
+# we treat DatasetColumn as a one-column data set. and we need to manage every thing ourself
+Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = __!(col1) == __!(col2)
+Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))
+Base.length(col1::DatasetColumn) = length(__!(col1))
+Base.size(col1::DatasetColumn) = size(__!(col1))
+Base.isapprox(col1::DatasetColumn, col2::DatasetColumn) = isapprox(__!(col1), __!(col2))
+Base.first(col1::DatasetColumn) = first(__!(col1))
+Base.last(col1::DatasetColumn) = last(__!(col1))
+Base.eltype(col1::DatasetColumn) = eltype(__!(col1))
+Base.ndims(col1::DatasetColumn) = ndims(__!(col1))
+Base.isassigned(col1::DatasetColumn, i) = isassigned(__!(col1), i)
+Base.identity(col1::DatasetColumn) = identity(__!(col1))
+Base.similar(col1::DatasetColumn) = similar(__!(col1))
+Base.copy(col1::DatasetColumn) = copy(__!(col1))
+Base.iterate(col1::DatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
+Base.getindex(col1::DatasetColumn{Dataset}, i::Integer) = getindex(__!(col1), i)
+Base.getindex(col1::DatasetColumn{Dataset}, row_inds::AbstractVector) = getindex(__!(col1), row_inds)
+# changing one observation reserves format but if the column belongs to sorting columns reset all sorting info
+function Base.setindex!(col1::DatasetColumn{Dataset}, v, i::Integer)
+    __!(col1)[i] = v
+    _modified(_attributes(col1.ds))
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    col1
+end
+# changing all values should reset the formatting
+function Base.copy!(col1::DatasetColumn{Dataset}, src)
+    copy!(__!(col1), src)
+    _modified(_attributes(col1.ds))
+    removeformat!(col1.ds, col1.col)
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    col1
+end
 ##############################################################################
 ##
 ## Basic properties of a Dataset
@@ -242,14 +281,14 @@ end
 # TODO needs better printing
 function content(ds::AbstractDataset)
     println(summary(ds))
-    println(" Created: ", _attributes(ds).meta.created)
-    println("Modified: ", _attributes(ds).meta.modified[])
-    println("    Info: ", _attributes(ds).meta.info[])
+    println("   Created: ", _attributes(ds).meta.created)
+    println("  Modified: ", _attributes(ds).meta.modified[])
+    println("      Info: ", _attributes(ds).meta.info[])
     f_v = Dict{Symbol, Function}()
     for (k, v) in index(ds).format
         push!(f_v, _names(ds)[k]=>v)
     end
-    println(" Formats: ")
+    println("   Formats: ")
     f_v
 end
 
@@ -568,18 +607,6 @@ Base.empty(ds::AbstractDataset) = similar(ds, 0)
 ## Equality
 ##
 ##############################################################################
-Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = _columns(col1.ds)[col1.col] == _columns(col2.ds)[col2.col]
-Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = isequal(_columns(col1.ds)[col1.col], _columns(col2.ds)[col2.col])
-Base.length(col1::DatasetColumn) = length(_columns(col1.ds)[col1.col])
-Base.size(col1::DatasetColumn) = size(_columns(col1.ds)[col1.col])
-Base.isapprox(col1::DatasetColumn, col2::DatasetColumn) = isapprox(_columns(col1.ds)[col1.col], _columns(col2.ds)[col2.col])
-Base.first(col1::DatasetColumn) = first(_columns(col1.ds)[col1.col])
-Base.last(col1::DatasetColumn) = last(_columns(col1.ds)[col1.col])
-Base.eltype(col1::DatasetColumn) = eltype(_columns(col1.ds)[col1.col])
-Base.ndims(col1::DatasetColumn) = ndims(_columns(col1.ds)[col1.col])
-Base.identity(col1::DatasetColumn) = identity(_columns(col1.ds)[col1.col])
-
-
 function Base.:(==)(ds1::AbstractDataset, ds2::AbstractDataset)
     size(ds1, 2) == size(ds2, 2) || return false
     isequal(index(ds1), index(ds2)) || return false

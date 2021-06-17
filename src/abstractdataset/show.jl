@@ -2,7 +2,7 @@ Base.summary(ds::AbstractDataset) =
     if !isempty(index(ds).sortedcols) && index(ds).grouped[]
         @sprintf("%d×%d Grouped Dataset\nGrouped by: %s", size(ds)...,join(_names(ds)[index(ds).sortedcols],", "))
     elseif !isempty(index(ds).sortedcols)
-        @sprintf("%d×%d Sorted Dataset\nSorted by: %s", size(ds)...,join(_names(ds)[index(ds).sortedcols],", "))
+        @sprintf("%d×%d Sorted Dataset\n Sorted by: %s", size(ds)...,join(_names(ds)[index(ds).sortedcols],", "))
     else
         @sprintf("%d×%d Dataset", size(ds)...)
     end
