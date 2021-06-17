@@ -167,7 +167,11 @@ function _show(io::IO,
     _check_consistency(df)
 
     names_str = names(df)
-    column_formats = _getformats(df)
+    if typeof(df) <: SubDataset
+        column_formats = _getformats_for_show(df)
+    else
+        column_formats = _getformats(df)
+    end
     names_format = fill("identity", length(names_str))
     _pt_formmatters_ = Function[]
     # push!(_pt_formmatters_, _pretty_tables_general_formatter)

@@ -17,7 +17,6 @@ _attributes(ds::Dataset) = getfield(ds, :attributes)
 #    each element (column) has the same length
 # 4. if length of the vector is changed that the index of the `Dataset`
 #    is adjusted appropriately
-_columns(ds::Dataset) = getfield(ds, :columns)
 
 _onebased_check_error() =
     throw(ArgumentError("Currently InMemoryDatasets.jl supports only columns " *
@@ -118,7 +117,7 @@ end
     @boundscheck if !checkindex(Bool, axes(cols, 1), col_ind)
         throw(BoundsError(ds, (!, col_ind)))
     end
-    @inbounds DatasetColumn(cols[col_ind])
+    @inbounds DatasetColumn(col_ind, ds)
 end
 
 function Base.getindex(ds::Dataset, ::typeof(!), col_ind::SymbolOrString)

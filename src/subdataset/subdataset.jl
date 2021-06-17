@@ -106,39 +106,62 @@ Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVect
     return SubDataset(parent, convert(Vector{Int}, rows), cols)
 end
 
-Base.@propagate_inbounds SubDataset(sdf::SubDataset, rowind, cols) =
-    SubDataset(parent(sdf), rows(sdf)[rowind], parentcols(index(sdf), cols))
-Base.@propagate_inbounds SubDataset(sdf::SubDataset, rowind::Bool, cols) =
+Base.@propagate_inbounds SubDataset(sds::SubDataset, rowind, cols) =
+    SubDataset(parent(sds), rows(sds)[rowind], parentcols(index(sds), cols))
+Base.@propagate_inbounds SubDataset(sds::SubDataset, rowind::Bool, cols) =
     throw(ArgumentError("invalid row index of type Bool"))
-Base.@propagate_inbounds SubDataset(sdf::SubDataset, rowind, ::Colon) =
-    if index(sdf) isa Index # sdf was created using : as row selector
-        SubDataset(parent(sdf), rows(sdf)[rowind], :)
-    else
-        SubDataset(parent(sdf), rows(sdf)[rowind], parentcols(index(sdf), :))
+
+# TODO needs some extra work
+# Base.@propagate_inbounds SubDataset(sds::SubDataset, rowind, ::Colon) =
+    # if index(sds) isa Index # sds was created using : as row selector
+    #     SubDataset(parent(sds), rows(sds)[rowind], :)
+    # else
+    #     SubDataset(parent(sds), rows(sds)[rowind], parentcols(index(sds), :))
+    # end
+Base.@propagate_inbounds SubDataset(sds::SubDataset, rowind::Bool, ::Colon) =
+    throw(ArgumentError("invalid row index of type Bool"))
+Base.@propagate_inbounds SubDataset(sds::SubDataset, ::Colon, cols) =
+    SubDataset(parent(sds), rows(sds), parentcols(index(sds), cols))
+@inline SubDataset(sds::SubDataset, ::Colon, ::Colon) = sds
+
+# just for showing SubDataset
+function _getformats_for_show(ds::SubDataset)
+    res = Dict{Int, Function}()
+    idx = index(ds)
+    for i in 1:length(idx.cols)
+        if haskey(idx.parent.format, idx.cols[i])
+            push!(res, i => idx.parent.format[idx.cols[i]])
+        end
     end
-Base.@propagate_inbounds SubDataset(sdf::SubDataset, rowind::Bool, ::Colon) =
-    throw(ArgumentError("invalid row index of type Bool"))
-Base.@propagate_inbounds SubDataset(sdf::SubDataset, ::Colon, cols) =
-    SubDataset(parent(sdf), rows(sdf), parentcols(index(sdf), cols))
-@inline SubDataset(sdf::SubDataset, ::Colon, ::Colon) = sdf
+    res
+end
+
 
 rows(sdf::SubDataset) = getfield(sdf, :rows)
 Base.parent(sdf::SubDataset) = getfield(sdf, :parent)
 Base.parentindices(sdf::SubDataset) = (rows(sdf), parentcols(index(sdf)))
 
-Base.@propagate_inbounds Base.view(adf::AbstractDataset, rowinds, colind::ColumnIndex) =
-    view(adf[!, colind], rowinds)
-Base.@propagate_inbounds Base.view(adf::AbstractDataset, ::typeof(!), colind::ColumnIndex) =
-    view(adf[!, colind], :)
+function Base.view(ads::Dataset, rowinds, colind::ColumnIndex)
+    idx = index(ads)[colind]
+    view(_columns(ads)[idx], rowinds)
+end
+
+function Base.view(ads::Dataset, ::typeof(!), colind::ColumnIndex)
+    idx = index(ads)[colind]
+    view(_columns(ads)[idx], :)
+end
+
+
+
 @inline Base.view(adf::AbstractDataset, rowinds, colind::Bool) =
     throw(ArgumentError("invalid column index $colind of type `Bool`"))
-Base.@propagate_inbounds Base.view(adf::AbstractDataset, rowinds,
+Base.@propagate_inbounds Base.view(adf::Dataset, rowinds,
                                    colinds::MultiColumnIndex) =
     SubDataset(adf, rowinds, colinds)
-Base.@propagate_inbounds Base.view(adf::AbstractDataset, rowinds::typeof(!),
+Base.@propagate_inbounds Base.view(adf::Dataset, rowinds::typeof(!),
                                    colinds::MultiColumnIndex) =
     SubDataset(adf, :, colinds)
-Base.@propagate_inbounds Base.view(adf::AbstractDataset, rowinds::Not,
+Base.@propagate_inbounds Base.view(adf::Dataset, rowinds::Not,
                                    colinds::MultiColumnIndex) =
     SubDataset(adf, axes(adf, 1)[rowinds], colinds)
 
@@ -153,9 +176,9 @@ index(sdf::SubDataset) = getfield(sdf, :colindex)
 nrow(sdf::SubDataset) = ncol(sdf) > 0 ? length(rows(sdf))::Int : 0
 ncol(sdf::SubDataset) = length(index(sdf))
 
-Base.@propagate_inbounds Base.getindex(sdf::SubDataset, rowind::Integer, colind::ColumnIndex) =
-    parent(sdf)[rows(sdf)[rowind], parentcols(index(sdf), colind)]
-Base.@propagate_inbounds Base.getindex(sdf::SubDataset, rowind::Bool, colind::ColumnIndex) =
+Base.@propagate_inbounds Base.getindex(sds::SubDataset, rowind::Integer, colind::ColumnIndex) =
+    parent(sds)[rows(sds)[rowind], parentcols(index(sds), colind)]
+Base.@propagate_inbounds Base.getindex(sds::SubDataset, rowind::Bool, colind::ColumnIndex) =
     throw(ArgumentError("invalid row index of type Bool"))
 
 Base.@propagate_inbounds Base.getindex(sdf::SubDataset, rowinds::Union{AbstractVector, Not},

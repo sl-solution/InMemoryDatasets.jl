@@ -52,10 +52,14 @@ A detailed description of `getindex`, `setindex!`, `getproperty`, `setproperty!`
 abstract type AbstractDataset end
 
 # DatasetColumn is a representation of a column of data set
-struct DatasetColumn{T}
-    x::Vector{T}
+# it is wrapped into a new type to make sure that when ever a column is
+# selected, the data set is attached to it
+struct DatasetColumn{T <: AbstractDataset}
+    col::Int
+    ds::T
 end
-Base.show(io::IO, col::DatasetColumn) = display(col.x)
+_columns(ds::AbstractDataset) = getfield(parent(ds), :columns)
+Base.show(io::IO, col::DatasetColumn) = display(_columns(col.ds)[col.col])
 ##############################################################################
 ##
 ## Basic properties of a Dataset
@@ -79,23 +83,25 @@ selector (this is useful in particular with regular expressions, `Cols`, `Not`, 
 
 See also [`propertynames`](@ref) which returns a `Vector{Symbol}`.
 """
-Base.names(df::AbstractDataset, cols::Colon=:) = names(index(df))
+Base.names(ds::AbstractDataset, cols::Colon=:) = names(index(ds))
 
-function Base.names(df::AbstractDataset, cols)
-    nms = _names(index(df))
-    idx = index(df)[cols]
+function Base.names(ds::AbstractDataset, cols)
+    nms = _names(index(ds))
+    idx = index(ds)[cols]
     idxs = idx isa Int ? (idx:idx) : idx
     return [String(nms[i]) for i in idxs]
 end
 
-Base.names(df::AbstractDataset, T::Type) =
-    [String(n) for (n, c) in pairs(eachcol(df)) if eltype(c) <: T]
-Base.names(df::AbstractDataset, fun::Function) = filter!(fun, names(df))
+Base.names(ds::AbstractDataset, T::Type) =
+    [String(n) for (n, c) in pairs(eachcol(ds)) if eltype(c) <: T]
+Base.names(ds::AbstractDataset, fun::Function) = filter!(fun, names(ds))
 
 # _names returns Vector{Symbol} without copying
-_names(df::AbstractDataset) = _names(index(df))
+_names(ds::AbstractDataset) = _names(index(ds))
 
 _getformats(ds::AbstractDataset) = index(ds).format
+
+rows(ds::AbstractDataset) = 1:nrow(ds)
 
 # separate methods are needed due to dispatch ambiguity
 Compat.hasproperty(df::AbstractDataset, s::Symbol) = haskey(index(df), s)
@@ -562,16 +568,16 @@ Base.empty(ds::AbstractDataset) = similar(ds, 0)
 ## Equality
 ##
 ##############################################################################
-Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = col1.x == col2.x
-Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = col1.x == col2.x
-Base.length(col::DatasetColumn) = length(col.x)
-Base.size(col::DatasetColumn) = size(col.x)
-Base.isapprox(col1::DatasetColumn, col2::DatasetColumn) = isapprox(col1.x, col2.x)
-Base.first(col1::DatasetColumn) = first(col1.x)
-Base.last(col1::DatasetColumn) = last(col1.x)
-Base.eltype(col::DatasetColumn) = eltype(col.x)
-Base.ndims(col::DatasetColumn) = ndims(col.x)
-Base.identity(col::DatasetColumn) = identity(col.x)
+Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = _columns(col1.ds)[col1.col] == _columns(col2.ds)[col2.col]
+Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = isequal(_columns(col1.ds)[col1.col], _columns(col2.ds)[col2.col])
+Base.length(col1::DatasetColumn) = length(_columns(col1.ds)[col1.col])
+Base.size(col1::DatasetColumn) = size(_columns(col1.ds)[col1.col])
+Base.isapprox(col1::DatasetColumn, col2::DatasetColumn) = isapprox(_columns(col1.ds)[col1.col], _columns(col2.ds)[col2.col])
+Base.first(col1::DatasetColumn) = first(_columns(col1.ds)[col1.col])
+Base.last(col1::DatasetColumn) = last(_columns(col1.ds)[col1.col])
+Base.eltype(col1::DatasetColumn) = eltype(_columns(col1.ds)[col1.col])
+Base.ndims(col1::DatasetColumn) = ndims(_columns(col1.ds)[col1.col])
+Base.identity(col1::DatasetColumn) = identity(_columns(col1.ds)[col1.col])
 
 
 function Base.:(==)(ds1::AbstractDataset, ds2::AbstractDataset)

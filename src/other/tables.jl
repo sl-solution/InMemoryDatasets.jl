@@ -24,8 +24,17 @@ Tables.columnindex(df::Union{AbstractDataset, DatasetRow}, idx::AbstractString) 
 Tables.schema(df::AbstractDataset) = Tables.Schema{Tuple(_names(df)), Tuple{[eltype(col) for col in eachcol(df)]...}}()
 Tables.materializer(df::AbstractDataset) = Dataset
 
-Tables.getcolumn(df::AbstractDataset, i::Int) = df[!, i].x
-Tables.getcolumn(df::AbstractDataset, nm::Symbol) = df[!, nm].x
+Tables.getcolumn(ds::Dataset, i::Int) = _columns(ds)[i]
+Tables.getcolumn(sds::SubDataset, i::Int) = view(_columns(parent(sds))[i], rows(sds))
+function Tables.getcolumn(ds::Dataset, nm::Symbol)
+    colidx = index(ds)[nm]
+    _columns(ds)[colidx]
+end
+
+function Tables.getcolumn(sds::SubDataset, nm::Symbol)
+    i = lookupname(parent(index(sds)).lookup, nm)
+    view(_columns(parent(sds))[i], rows(sds))
+end
 
 Tables.getcolumn(dfr::DatasetRow, i::Int) = dfr[i]
 Tables.getcolumn(dfr::DatasetRow, nm::Symbol) = dfr[nm]

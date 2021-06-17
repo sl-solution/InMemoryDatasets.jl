@@ -87,7 +87,7 @@ end
 
 Base.axes(x::LazyNewColDataset) = (Base.OneTo(nrow(x.ds)),)
 Base.ndims(::Type{<:LazyNewColDataset}) = 1
-Base.materialize!(::DatasetColumn{<:Any}, ::Base.Broadcast.Broadcasted) =
+Base.materialize!(::DatasetColumn, ::Base.Broadcast.Broadcasted) =
         throw(ArgumentError("syntax ds.column .= val is not supported, use ds[!, column] .= val instead"))
 struct ColReplaceDataset
     ds::Dataset

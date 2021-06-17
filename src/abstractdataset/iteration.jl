@@ -171,7 +171,7 @@ julia> sum.(eachcol(df))
  50
 ```
 """
-Base.eachcol(df::AbstractDataset) = DatasetColumns(df)
+Base.eachcol(ds::AbstractDataset) = DatasetColumns(ds)
 
 Base.IteratorSize(::Type{<:DatasetColumns}) = Base.HasShape{1}()
 Base.size(itr::DatasetColumns) = (size(parent(itr), 2),)
@@ -198,8 +198,11 @@ Base.axes(itr::DatasetColumns, i::Integer) = Base.OneTo(size(itr, i))
 
 Base.iterate(itr::DatasetColumns, i::Integer=1) =
     i <= length(itr) ? (itr[i], i + 1) : nothing
-Base.@propagate_inbounds Base.getindex(itr::DatasetColumns, idx::ColumnIndex) =
-    parent(itr)[!, idx].x
+
+# FIXME this needs fixing for SubDataset, because part of ds is out there for modifying without tracking
+function Base.getindex(itr::DatasetColumns, idx::ColumnIndex)
+    parent(itr)[!, idx]
+end
 Base.@propagate_inbounds Base.getindex(itr::DatasetColumns, idx::MultiColumnIndex) =
     eachcol(parent(itr)[!, idx])
 Base.:(==)(itr1::DatasetColumns, itr2::DatasetColumns) =

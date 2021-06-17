@@ -65,6 +65,7 @@ Index() = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Int
 Index(lookup::Dict{Symbol, Int}, names::Vector{Symbol}, format::Dict{Int, Function}) = Index(lookup, names, format, Int[], Int[], false, Int[], Int[], 1)
 Base.length(x::Index) = length(x.names)
 Base.names(x::Index) = string.(x.names)
+Base.parent(x::Index) = x
 
 # _names returns Vector{Symbol}
 _names(x::Index) = x.names
@@ -460,10 +461,10 @@ struct SubIndex{I<:AbstractIndex, S<:AbstractVector{Int}, T<:AbstractVector{Int}
     remap::T # reverse mapping from cols to their position in the SubIndex
 end
 
-SubIndex(parent::AbstractIndex, ::Colon) = parent
+# SubIndex(parent::AbstractIndex, ::Colon) = parent
 
 Base.copy(x::SubIndex) = Index(_names(x))
-
+Base.parent(x::SubIndex) = x.parent
 @inline parentcols(ind::SubIndex) = ind.cols
 
 Base.@propagate_inbounds parentcols(ind::SubIndex, idx::Union{Integer, AbstractVector{<:Integer}}) =
@@ -549,6 +550,7 @@ Base.haskey(x::SubIndex, key::Bool) =
 
 Base.getindex(x::SubIndex, idx::Symbol) = x.remap[x.parent[idx]]
 Base.getindex(x::SubIndex, idx::AbstractString) = x[Symbol(idx)]
+
 
 function Base.getindex(x::SubIndex, idx::Union{AbstractVector{Symbol},
                                                AbstractVector{AbstractString}})
@@ -651,4 +653,7 @@ function getformat(x::Index, y::UnitRange)
     else
         throw(ArgumentError("some indices in $y are not valid index for the data set"))
     end
+end
+function getformat(x::SubIndex, idx::Integer)
+    throw(ArgumentError("setting format for sub index is not allowed"))
 end
