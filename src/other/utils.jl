@@ -93,7 +93,7 @@ function  _find_starts_of_groups(ds, cols::Vector, ::Val{T}) where T
     last_valid_index = 1
 
     for j in 1:length(colsidx)
-        last_valid_index = _find_starts_of_groups!(ds[!, colsidx[j]], getformat(ds, colsidx[j]), ranges, ranges_cpy, last_valid_index)
+        last_valid_index = _find_starts_of_groups!(_columns(ds)[colsidx[j]], getformat(ds, colsidx[j]), ranges, ranges_cpy, last_valid_index)
     end
     return colsidx, ranges, last_valid_index
 end
