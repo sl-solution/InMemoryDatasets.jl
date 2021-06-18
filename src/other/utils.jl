@@ -46,17 +46,17 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
     return flag, ngroups
 end
 
-
-
 function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]
+    # _max_level = _the_max_levels(ds, cols)
+    _max_level = nrow(ds)
     prev_max_group = UInt(1)
     prev_groups = zeros(UInt, nrow(ds))
     groups = Vector{T}(undef, nrow(ds))
     rhashes = Vector{UInt}(undef, nrow(ds))
-    sz = max(1 + ((5 * length(rhashes)) >> 2), 16)
+    sz = max(1 + ((5 * _max_level) >> 2), 16)
     sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
-    @assert 4 * sz >= 5 * length(rhashes)
+    @assert 4 * sz >= 5 * _max_level
     gslots = Vector{T}(undef, sz)
 
 
@@ -66,10 +66,10 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
             _f = getformat(ds, colidx[j])
         end
 
-        if DataAPI.refpool(ds[!, colidx[j]]) !== nothing
-            v = DataAPI.refarray(ds[!, colidx[j]])
+        if DataAPI.refpool(_columns(ds)[colidx[j]]) !== nothing
+            v = DataAPI.refarray(_columns(ds)[colidx[j]])
         else
-            v = ds[!, colidx[j]]
+            v = _columns(ds)[colidx[j]]
         end
         flag, prev_max_group = InMemoryDatasets._create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
         # if overflow will happen we start from the current prev_groups as the starting point

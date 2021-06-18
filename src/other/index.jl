@@ -266,7 +266,7 @@ function Base.insert!(x::Index, idx::Integer, nm::Symbol)
     end
     for i in 1:length(x.sortedcols)
         if x.sortedcols[i] >= idx
-            x.sortedcols += 1
+            x.sortedcols[i] += 1
         end
     end
     for i = idx:length(x.names)
