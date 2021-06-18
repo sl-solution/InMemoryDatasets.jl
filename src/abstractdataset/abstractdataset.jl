@@ -60,7 +60,7 @@ struct DatasetColumn{T <: AbstractDataset, E}
     val::E
 end
 _columns(ds::AbstractDataset) = getfield(parent(ds), :columns)
-Base.show(io::IO, col::DatasetColumn) = show(col.val)
+Base.show(io::IO, ::MIME"text/plain", col::DatasetColumn) = show(IOContext(io, :limit => true), "text/plain", col.val)
 
 # internal function for easy accessing a view of a column
 __!(col1::DatasetColumn) =  col1.val
