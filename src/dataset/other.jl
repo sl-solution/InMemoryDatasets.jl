@@ -323,10 +323,17 @@ function mapcols!(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
                 counter = 2
                 while ismissing(first_nonmissing) && counter <= length(_columns(ds)[j])
                     first_nonmissing = _columns(ds)[j][counter]
+                    counter += 1
                 end
                 if ismissing(first_nonmissing)
-                    @warn "cannot map `f` on `ds[!, :$(_names(ds)[j])]`"
+                  if ismissing(f(missing))
                     continue
+                  else
+                    _columns(ds)[j] = f.(_columns(ds)[j])
+                    removeformat!(ds, j)
+                    _modified(_attributes(ds))
+                    continue
+                  end
                 end
                 # zeros to take care of Date
                 S = typeof(f(first_nonmissing))
