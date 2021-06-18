@@ -273,94 +273,167 @@ function mapcols(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
 end
 mapcols(f::Union{Function, Type}, ds::AbstractDataset, col::ColumnIndex) = mapcols(f, ds, [col])
 
+function mapcols(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnIndex)
+    # Create Dataset
+    ncol(ds) == 0 && return ds # skip if no columns
+    colsidx = index(ds)[cols]
+    @assert length(f) ==length(colsidx) "The number of functions and the number of columns must match"
+    transfer_grouping_info = !any(colsidx .∈ Ref(index(ds).sortedcols))
+    sorted_colsidx = sort(colsidx)
+    counter_f = 1
+    vs = AbstractVector[]
+    for j in 1:ncol(ds)
+        if insorted(j, sorted_colsidx)
+            _f = f[counter_f]
+            counter_f += 1
+        else
+            _f = identity
+        end
+        v = _columns(ds)[j]
+        fv = _f.(v)
+        push!(vs, fv === v ? copy(fv) : fv)
+    end
+    if transfer_grouping_info
+        newds_index = copy(index(ds))
+    else
+        newds_index = copy(index(ds))
+        _reset_grouping_info!(newds_index)
+    end
+    # formats don't need to be transferred
+    newds = Dataset(vs, newds_index, copycols=false)
+    removeformat!(newds, cols)
+    setinfo!(newds, _attributes(ds).meta.info[])
+    return newds
+
+end
 
 """
     mapcols!(f::Function, ds::Dataset, cols)
 
-Update each `col` in `ds[!, cols]` in-place for the columns that `map!(f, col, col)` works fine, update a copy of `col` by mapping `f` on ds[!, col], or just throw warnnings when `f` cannot be map on the elements of `ds[!, col]`. The order of columns for `ds` wouldn't change.
+Update each `col` in `ds[!, cols]` in-place when `map!` return a result, and skip when it is not possible.
 
-Note that `mapcols!` reuses the columns from `ds` if they are returned by `f`.
+If `f` cannot be applied in place, use `mapcol` for creating a copy of `ds`.
 
 # Examples
 ```jldoctest
 julia> ds = Dataset(x=1:4, y=11:14)
 4×2 Dataset
- Row │ x      y
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1     11
-   2 │     2     12
-   3 │     3     13
-   4 │     4     14
+ Row │ x         y
+     │ identity  identity
+     │ Int64     Int64
+─────┼────────────────────
+   1 │        1        11
+   2 │        2        12
+   3 │        3        13
+   4 │        4        14
 
-julia> mapcols!(x -> x.^2, ds, :);
+julia> mapcols!(x -> x^2, ds, :);
 
 julia> ds
 4×2 Dataset
- Row │ x      y
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1    121
-   2 │     4    144
-   3 │     9    169
-   4 │    16    196
+ Row │ x         y
+     │ identity  identity
+     │ Int64     Int64
+─────┼────────────────────
+   1 │        1       121
+   2 │        4       144
+   3 │        9       169
+   4 │       16       196
 ```
 """
 function mapcols!(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
-    transfer_grouping_info = !any(colsidx .∈ Ref(index(ds).sortedcols))
-    if !transfer_grouping_info
-        _reset_grouping_info!(ds)
-    end
-    sorted_colsidx = sort(colsidx)
+    _reset_group = false
     # TODO needs function barrier
-    for j in 1:ncol(ds)
-        T = eltype(_columns(ds)[j])
-        if insorted(j, sorted_colsidx)
-            try
-                first_nonmissing = _columns(ds)[j][1]
-                counter = 2
-                while ismissing(first_nonmissing) && counter <= length(_columns(ds)[j])
-                    first_nonmissing = _columns(ds)[j][counter]
-                    counter += 1
-                end
-                if ismissing(first_nonmissing)
-                  if ismissing(f(missing))
-                    continue
-                  else
-                    if T >: Missing
-                      _columns(ds)[j] = allowmissing(f.(_columns(ds)[j]))
-                    else
-                      _columns(ds)[j] = f.(_columns(ds)[j])
-                    end
-                    removeformat!(ds, j)
-                    _modified(_attributes(ds))
-                    continue
-                  end
-                end
-                # zeros to take care of Date
-                S = typeof(f(first_nonmissing))
-            catch
-                @warn "cannot map `f` on `ds[!, :$(_names(ds)[j])]`"
-                continue
-            end
-            if T >: Missing
-                S = Union{S, Missing}
-            end
-            if promote_type(T, S) <: T
-                map!(f, _columns(ds)[j],  _columns(ds)[j])
-                removeformat!(ds, j)
-                _modified(_attributes(ds))
-            else
-                _columns(ds)[j] = f.(_columns(ds)[j])
-                removeformat!(ds, j)
-                _modified(_attributes(ds))
-            end
+    number_of_warnnings = 0
+    for j in 1:length(colsidx)
+      try
+        map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
+        removeformat!(ds, colsidx[j])
+        _modified(_attributes(ds))
+        if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
+          _reset_grouping_info!(ds)
+          _reset_group = true
         end
+      catch
+        if number_of_warnnings < 10
+          @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place"
+          number_of_warnnings += 1
+        elseif number_of_warnnings == 10
+          @warn "more than 10 columns can not be replaced ...."
+          number_of_warnnings += 1
+        end
+        continue
+      end
     end
     return ds
 end
 
 mapcols!(f::Union{Function, Type}, ds::AbstractDataset, col::ColumnIndex) = mapcols!(f, ds, [col])
+
+"""
+    mapcols!(f::Vector{Function}, ds::Dataset, cols)
+
+Update jth `col` in `ds[!, cols]` in-place by mapping `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped. 
+
+Use `mapcol` if the in-place operation is not possible.
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x=1:4, y=11:14)
+4×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Int64     Int64
+─────┼────────────────────
+   1 │        1        11
+   2 │        2        12
+   3 │        3        13
+   4 │        4        14
+
+julia> mapcols!([x -> x^2, x -> x-1], ds, :);
+
+julia> ds
+4×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Int64     Int64
+─────┼────────────────────
+   1 │        1        10
+   2 │        4        11
+   3 │        9        12
+   4 │       16        13
+```
+"""
+function mapcols!(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnIndex)
+    # Create Dataset
+    ncol(ds) == 0 && return ds # skip if no columns
+    colsidx = index(ds)[cols]
+    @assert length(f) == length(colsidx) "The number of functions and the number of columns must match"
+    _reset_group = false
+    # TODO needs function barrier
+    number_of_warnnings = 0
+    for j in 1:length(colsidx)
+      try
+        map!(f[j], _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
+        removeformat!(ds, colsidx[j])
+        _modified(_attributes(ds))
+        if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
+          _reset_grouping_info!(ds)
+          _reset_group = true
+        end
+      catch
+        if number_of_warnnings < 10
+          @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place"
+          number_of_warnnings += 1
+        elseif number_of_warnnings == 10
+          @warn "more than 10 columns can not be replaced ...."
+          number_of_warnnings += 1
+        end
+        continue
+      end
+    end
+    return ds
+end
