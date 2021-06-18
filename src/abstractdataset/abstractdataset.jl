@@ -54,15 +54,16 @@ abstract type AbstractDataset end
 # DatasetColumn is a representation of a column of data set
 # it is wrapped into a new type to make sure that when ever a column is
 # selected, the data set is attached to it
-struct DatasetColumn{T <: AbstractDataset}
+struct DatasetColumn{T <: AbstractDataset, E}
     col::Int
     ds::T
+    val::E
 end
 _columns(ds::AbstractDataset) = getfield(parent(ds), :columns)
-Base.show(io::IO, col::DatasetColumn) = display(_columns(col.ds)[col.col])
+Base.show(io::IO, col::DatasetColumn) = show(col.val)
 
 # internal function for easy accessing a view of a column
-__!(col1::DatasetColumn) =  _columns(col1.ds)[col1.col]
+__!(col1::DatasetColumn) =  col1.val
 # we treat DatasetColumn as a one-column data set. and we need to manage every thing ourself
 Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = __!(col1) == __!(col2)
 Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))

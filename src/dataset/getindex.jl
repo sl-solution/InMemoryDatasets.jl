@@ -117,7 +117,7 @@ end
     @boundscheck if !checkindex(Bool, axes(cols, 1), col_ind)
         throw(BoundsError(ds, (!, col_ind)))
     end
-    @inbounds DatasetColumn(col_ind, ds)
+    @inbounds DatasetColumn(col_ind, ds, _columns(ds)[col_ind])
 end
 
 function Base.getindex(ds::Dataset, ::typeof(!), col_ind::SymbolOrString)
