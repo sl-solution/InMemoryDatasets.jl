@@ -315,6 +315,7 @@ function mapcols!(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
         _reset_grouping_info!(ds)
     end
     sorted_colsidx = sort(colsidx)
+    # TODO needs function barrier
     for j in 1:ncol(ds)
         T = eltype(_columns(ds)[j])
         if insorted(j, sorted_colsidx)
@@ -329,7 +330,11 @@ function mapcols!(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
                   if ismissing(f(missing))
                     continue
                   else
-                    _columns(ds)[j] = f.(_columns(ds)[j])
+                    if T >: Missing
+                      _columns(ds)[j] = allowmissing(f.(_columns(ds)[j]))
+                    else
+                      _columns(ds)[j] = f.(_columns(ds)[j])
+                    end
                     removeformat!(ds, j)
                     _modified(_attributes(ds))
                     continue
