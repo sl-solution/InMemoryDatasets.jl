@@ -508,8 +508,8 @@ function mask(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex
     @assert length(f) == length(colsidx) "the number of functions and number of cols must match"
     vs = AbstractVector[]
     for j in 1:length(colsidx)
-        v = _columns(ds)[j]
-        _col_f = getformat(ds, j)
+        v = _columns(ds)[colsidx[j]]
+        _col_f = getformat(ds, colsidx[j])
         fv = Vector{Bool}(undef, nrow(ds))
         if mapformats
           _fill_mask!(fv, v, _col_f, f[j], threads)
