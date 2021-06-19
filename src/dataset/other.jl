@@ -51,7 +51,7 @@ allowmissing!(ds::Dataset, cols::Colon=:) =
     allowmissing!(ds, axes(ds, 2))
 
 """
-    disallowmissing!(ds::Dataset, cols=:; error::Bool=true)
+    disallowmissing!(ds::Dataset, cols=:; error::Bool=false)
 
 Convert columns `cols` of data set `ds` from element type `Union{T, Missing}` to
 `T` to drop support for missing values.
@@ -66,7 +66,7 @@ of throwing an error.
 function disallowmissing! end
 
 # Modify Dataset
-function disallowmissing!(ds::Dataset, col::ColumnIndex; error::Bool=true)
+function disallowmissing!(ds::Dataset, col::ColumnIndex; error::Bool=false)
     x = ds[!, col]
     colidx = index(ds)[col]
     if !(!error && Missing <: eltype(x) && any(ismissing, x))
@@ -79,7 +79,7 @@ end
 
 # Modify Dataset
 function disallowmissing!(ds::Dataset, cols::AbstractVector{<:ColumnIndex};
-                          error::Bool=true)
+                          error::Bool=false)
     for col in cols
         disallowmissing!(ds, col, error=error)
     end
@@ -87,7 +87,7 @@ function disallowmissing!(ds::Dataset, cols::AbstractVector{<:ColumnIndex};
 end
 
 # Modify Dataset
-function disallowmissing!(ds::Dataset, cols::AbstractVector{Bool}; error::Bool=true)
+function disallowmissing!(ds::Dataset, cols::AbstractVector{Bool}; error::Bool=false)
     length(cols) == size(ds, 2) || throw(BoundsError(ds, (!, cols)))
     for (col, cond) in enumerate(cols)
         cond && disallowmissing!(ds, col, error=error)
@@ -96,11 +96,11 @@ function disallowmissing!(ds::Dataset, cols::AbstractVector{Bool}; error::Bool=t
 end
 
 # Modify Dataset
-disallowmissing!(ds::Dataset, cols::MultiColumnIndex; error::Bool=true) =
+disallowmissing!(ds::Dataset, cols::MultiColumnIndex; error::Bool=false) =
     disallowmissing!(ds, index(ds)[cols], error=error)
 
 # Modify Dataset
-disallowmissing!(ds::Dataset, cols::Colon=:; error::Bool=true) =
+disallowmissing!(ds::Dataset, cols::Colon=:; error::Bool=false) =
     disallowmissing!(ds, axes(ds, 2), error=error)
 
 """
@@ -212,8 +212,8 @@ end
 
 
 """
-    map(f::Function, ds::AbstractDataset, cols)
-    map(f::Vector{Function}, ds::Dataset, cols)
+    map(ds::AbstractDataset, f::Function, cols)
+    map(ds::AbstractDataset, f::Vector{Function}, cols)
 
 Return a copy of `ds` where cols of the new `Dataset` is the result of calling `f` on each observation. The order of columns for the new data set is the same as `ds`.
 Note that `map` guarantees not to reuse the columns from `ds` in the returned
@@ -233,7 +233,7 @@ julia> ds = Dataset(x=1:4, y=11:14)
    3 │        3        13
    4 │        4        14
 
-julia> map(x -> x^2, ds, :)
+julia> map(ds, x -> x^2, :)
 4×2 Dataset
  Row │ x         y
      │ identity  identity
@@ -243,43 +243,9 @@ julia> map(x -> x^2, ds, :)
    2 │        4       144
    3 │        9       169
    4 │       16       196
-
-julia> ds = Dataset(x = 1:10, y = repeat([1,2], inner = 5), c = 1:10)
-10×3 Dataset
- Row │ x         y         c
-     │ identity  identity  identity
-     │ Int64     Int64     Int64
-─────┼──────────────────────────────
-   1 │        1         1         1
-   2 │        2         1         2
-   3 │        3         1         3
-   4 │        4         1         4
-   5 │        5         1         5
-   6 │        6         2         6
-   7 │        7         2         7
-   8 │        8         2         8
-   9 │        9         2         9
-  10 │       10         2        10
-
-julia> map([x -> x in (1,2,5), isequal(1)], ds[!, 1:2], :)
-10×2 Dataset
- Row │ x         y
-     │ identity  identity
-     │ Bool      Bool
-─────┼────────────────────
-   1 │     true      true
-   2 │     true      true
-   3 │    false      true
-   4 │    false      true
-   5 │     true      true
-   6 │    false     false
-   7 │    false     false
-   8 │    false     false
-   9 │    false     false
-  10 │    false     false
 ```
 """
-function Base.map(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
+function Base.map(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -309,9 +275,12 @@ function Base.map(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
     return newds
 
 end
-Base.map(f::Union{Function, Type}, ds::AbstractDataset, col::ColumnIndex) = map(f, ds, [col])
+Base.map(ds::AbstractDataset, f::Union{Function}, col::ColumnIndex) = map(ds, f, [col])
+Base.map(ds::AbstractDataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
+Base.map(ds::AbstractDataset, f::Vector{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
-function Base.map(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnIndex)
+
+function Base.map(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -346,13 +315,14 @@ function Base.map(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnInd
 end
 
 """
-    map!(f::Function, ds::Dataset, cols)
+    map!(ds::AbstractDataset, f::Function, cols)
 
 Update each `col` in `ds[!, cols]` in-place when `map!` return a result, and skip when it is not possible.
 
 If `f` cannot be applied in place, use `map` for creating a copy of `ds`.
 
 # Examples
+
 ```jldoctest
 julia> ds = Dataset(x=1:4, y=11:14)
 4×2 Dataset
@@ -365,7 +335,7 @@ julia> ds = Dataset(x=1:4, y=11:14)
    3 │        3        13
    4 │        4        14
 
-julia> map!(x -> x^2, ds, :);
+julia> map!(ds, x -> x^2, :);
 
 julia> ds
 4×2 Dataset
@@ -379,7 +349,7 @@ julia> ds
    4 │       16       196
 ```
 """
-function Base.map!(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
+function Base.map!(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -409,10 +379,11 @@ function Base.map!(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
     return ds
 end
 
-Base.map!(f::Union{Function, Type}, ds::AbstractDataset, col::ColumnIndex) = map!(f, ds, [col])
+Base.map!(ds::AbstractDataset, f::Union{Function}, col::ColumnIndex) = map!(ds, f, [col])
+Base.map!(ds::AbstractDataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
 
 """
-    map!(f::Vector{Function}, ds::Dataset, cols)
+    map!(ds::AbstractDataset, f::Vector{Function}, cols)
 
 Update jth `col` in `ds[!, cols]` in-place by mapping `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped.
 
@@ -431,7 +402,7 @@ julia> ds = Dataset(x=1:4, y=11:14)
    3 │        3        13
    4 │        4        14
 
-julia> map!([x -> x^2, x -> x-1], ds, :);
+julia> map!(ds, [x -> x^2, x -> x-1], :);
 
 julia> ds
 4×2 Dataset
@@ -445,7 +416,7 @@ julia> ds
    4 │       16        13
 ```
 """
-function Base.map!(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnIndex)
+function Base.map!(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -475,3 +446,73 @@ function Base.map!(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnIn
     end
     return ds
 end
+Base.map!(ds::AbstractDataset, f::Vector{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+
+
+# the order of argument in `mask` is based on map, should we make it mask(ds, cols, fun)
+
+"""
+    mask(ds::AbstractDataset, f::Function, cols)
+    mask(ds::AbstractDataset, f::Vector{Function}, cols)
+
+Map `f` on each observation and return a `Bool` data set. When multiple `f` is provided, each one map to its corresponding column.
+
+# Examples
+
+```jldoctest
+julia> ds = Dataset(x = [1, -1, -1], 
+                    y = [2, 4, 1],
+                    z = [1, 2, 3])
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64     Int64     Int64
+─────┼──────────────────────────────
+   1 │        1         2         1
+   2 │       -1         4         2
+   3 │       -1         1         3
+
+julia> mask(ds, [>(0), iseven], 1:2)
+3×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Bool      Bool
+─────┼────────────────────
+   1 │     true      true
+   2 │    false      true
+   3 │    false     false
+
+julia> mask(ds, isodd, 1:3)
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Bool      Bool      Bool
+─────┼──────────────────────────────
+   1 │     true     false      true
+   2 │     true     false     false
+   3 │     true      true      true
+```
+"""
+mask(ds::AbstractDataset, f::Function, col::ColumnIndex) = mask(ds, f, [col])
+function mask(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
+  colsidx = index(ds)[cols]
+  v_f = Vector{Function}(undef, length(colsidx))
+  fill!(v_f, f)
+  mask(ds, v_f, cols)
+end
+
+function mask(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIndex)
+    # Create Dataset
+    ncol(ds) == 0 && return ds # skip if no columns
+    colsidx = index(ds)[cols]
+    @assert length(f) == length(colsidx) "the number of functions and number of cols must match"
+    vs = AbstractVector[]
+    for j in 1:length(colsidx)
+        v = _columns(ds)[j]
+        fv = _bool_mask(f[j]).(v)
+        push!(vs, fv === v ? copy(fv) : fv)
+    end
+    Dataset(vs, _names(ds)[colsidx], copycols=false)
+end
+_bool_mask(f) = x->f(x)::Bool
+
