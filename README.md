@@ -141,7 +141,7 @@ julia> mask(ds, iseven, 2:3)
    9 │    false     false
   10 │    false      true
 
-julia> mask(ds, x->rem(x, 2) == 0, 2:3, mapformats = true)
+julia> mask(ds, [x -> rem(x, 2) == 0, iseven], 2:3, mapformats = true)
 10×2 Dataset
  Row │ y         z
      │ identity  identity
