@@ -65,6 +65,7 @@ Base.show(io::IO, ::MIME"text/plain", col::DatasetColumn) = show(IOContext(io, :
 # internal function for easy accessing a view of a column
 __!(col1::DatasetColumn) =  col1.val
 # we treat DatasetColumn as a one-column data set. and we need to manage every thing ourself
+# isequal also use for == , since we don't want missing be treated differently
 Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))
 Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))
 Base.length(col1::DatasetColumn) = length(__!(col1))
@@ -222,6 +223,7 @@ function setformat!(ds::AbstractDataset, @nospecialize(args...))
     end
     ds
 end
+setformat!(ds::AbstractDataset) = throw(ArgumentError("the columns and the format must be specified"))
 # removing formats
 function removeformat!(ds::AbstractDataset, idx::Integer)
     removeformat!(index(ds), idx)
@@ -251,8 +253,8 @@ function removeformat!(ds::AbstractDataset, cols::MultiColumnIndex)
     end
     ds
 end
-# removeformat!(ds::AbstractDataset) = removeformat!(ds, :)
-function removeformat!(ds::AbstractDataset, args...)
+removeformat!(ds::AbstractDataset) = throw(ArgumentError("the `cols` argument must be specified"))
+function removeformat!(ds::AbstractDataset, @nospecialize(args...))
     for i in 1:length(args)
         removeformat!(ds, args[i])
     end
@@ -600,18 +602,7 @@ Base.empty(ds::AbstractDataset) = similar(ds, 0)
 ## Equality
 ##
 ##############################################################################
-function Base.:(==)(ds1::AbstractDataset, ds2::AbstractDataset)
-    size(ds1, 2) == size(ds2, 2) || return false
-    isequal(index(ds1), index(ds2)) || return false
-    eq = true
-    for idx in 1:size(ds1, 2)
-        coleq = ds1[!, idx] == ds2[!, idx]
-        # coleq could be missing
-        isequal(coleq, false) && return false
-        eq &= coleq
-    end
-    return eq
-end
+Base.:(==)(ds1::AbstractDataset, ds2::AbstractDataset) = isequal(ds1, ds2)
 
 function Base.isequal(ds1::AbstractDataset, ds2::AbstractDataset)
     size(ds1, 2) == size(ds2, 2) || return false
@@ -1215,36 +1206,36 @@ julia> filter(AsTable(:) => nt -> nt.x == 1 || nt.y == "b", df)
    2 │     1  c
    3 │     1  b
 ```
-"""
-@inline function Base.filter(f, ds::AbstractDataset; view::Bool=false)
-    rowidxs = _filter_helper(f, eachrow(ds))
-    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
-end
+# """
+# @inline function Base.filter(f, ds::AbstractDataset; view::Bool=false)
+#     rowidxs = _filter_helper(f, eachrow(ds))
+#     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
+# end
 
-@inline function Base.filter((cols, f)::Pair, ds::AbstractDataset; view::Bool=false)
-    int_cols = index(ds)[cols] # it will be AbstractVector{Int} or Int
-    if length(int_cols) == 0
-        rowidxs = [f() for _ in axes(ds, 1)]
-    else
-        rowidxs = _filter_helper(f, (ds[!, i] for i in int_cols)...)
-    end
-    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
-end
+# @inline function Base.filter((cols, f)::Pair, ds::AbstractDataset; view::Bool=false)
+#     int_cols = index(ds)[cols] # it will be AbstractVector{Int} or Int
+#     if length(int_cols) == 0
+#         rowidxs = [f() for _ in axes(ds, 1)]
+#     else
+#         rowidxs = _filter_helper(f, (ds[!, i] for i in int_cols)...)
+#     end
+#     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
+# end
 
-# this method is needed to allow for passing duplicate columns
-@inline function Base.filter((cols, f)::Pair{<:Union{AbstractVector{<:Integer},
-                                                     AbstractVector{<:AbstractString},
-                                                     AbstractVector{<:Symbol}}},
-                             ds::AbstractDataset; view::Bool=false)
-    if length(cols) == 0
-        rowidxs = [f() for _ in axes(ds, 1)]
-    else
-        rowidxs = _filter_helper(f, (ds[!, i] for i in cols)...)
-    end
-    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
-end
+# # this method is needed to allow for passing duplicate columns
+# @inline function Base.filter((cols, f)::Pair{<:Union{AbstractVector{<:Integer},
+#                                                      AbstractVector{<:AbstractString},
+#                                                      AbstractVector{<:Symbol}}},
+#                              ds::AbstractDataset; view::Bool=false)
+#     if length(cols) == 0
+#         rowidxs = [f() for _ in axes(ds, 1)]
+#     else
+#         rowidxs = _filter_helper(f, (ds[!, i] for i in cols)...)
+#     end
+#     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
+# end
 
-_filter_helper(f, cols...)::BitVector = ((x...) -> f(x...)::Bool).(cols...)
+# _filter_helper(f, cols...)::BitVector = ((x...) -> f(x...)::Bool).(cols...)
 
 # @inline function Base.filter((cols, f)::Pair{AsTable}, df::AbstractDataset;
 #                              view::Bool=false)
@@ -1257,7 +1248,7 @@ _filter_helper(f, cols...)::BitVector = ((x...) -> f(x...)::Bool).(cols...)
 #     return view ? Base.view(df, rowidxs, :) : df[rowidxs, :]
 # end
 
-_filter_helper_astable(f, nti::Tables.NamedTupleIterator)::BitVector = (x -> f(x)::Bool).(nti)
+# _filter_helper_astable(f, nti::Tables.NamedTupleIterator)::BitVector = (x -> f(x)::Bool).(nti)
 
 """
     filter!(fun, ds::AbstractDataset)
@@ -1328,26 +1319,26 @@ julia> filter!(AsTable(:) => nt -> nt.x == 1 || nt.y == "b", ds)
    3 │     1  b
 ```
 """
-Base.filter!(f, ds::AbstractDataset) = delete!(ds, findall(!f, eachrow(ds)))
-Base.filter!((col, f)::Pair{<:ColumnIndex}, ds::AbstractDataset) =
-    _filter!_helper(ds, f, ds[!, col])
-Base.filter!((cols, f)::Pair{<:AbstractVector{Symbol}}, ds::AbstractDataset) =
-    filter!([index(ds)[col] for col in cols] => f, ds)
-Base.filter!((cols, f)::Pair{<:AbstractVector{<:AbstractString}}, ds::AbstractDataset) =
-    filter!([index(ds)[col] for col in cols] => f, ds)
-Base.filter!((cols, f)::Pair, ds::AbstractDataset) =
-    filter!(index(ds)[cols] => f, ds)
-Base.filter!((cols, f)::Pair{<:AbstractVector{Int}}, ds::AbstractDataset) =
-    _filter!_helper(ds, f, (ds[!, i] for i in cols)...)
+# Base.filter!(f, ds::AbstractDataset) = delete!(ds, findall(!f, eachrow(ds)))
+# Base.filter!((col, f)::Pair{<:ColumnIndex}, ds::AbstractDataset) =
+#     _filter!_helper(ds, f, ds[!, col])
+# Base.filter!((cols, f)::Pair{<:AbstractVector{Symbol}}, ds::AbstractDataset) =
+#     filter!([index(ds)[col] for col in cols] => f, ds)
+# Base.filter!((cols, f)::Pair{<:AbstractVector{<:AbstractString}}, ds::AbstractDataset) =
+#     filter!([index(ds)[col] for col in cols] => f, ds)
+# Base.filter!((cols, f)::Pair, ds::AbstractDataset) =
+#     filter!(index(ds)[cols] => f, ds)
+# Base.filter!((cols, f)::Pair{<:AbstractVector{Int}}, ds::AbstractDataset) =
+#     _filter!_helper(ds, f, (ds[!, i] for i in cols)...)
 
-function _filter!_helper(ds::AbstractDataset, f, cols...)
-    if length(cols) == 0
-        rowidxs = findall(x -> !f(), axes(ds, 1))
-    else
-        rowidxs = findall(((x...) -> !(f(x...)::Bool)).(cols...))
-    end
-    return delete!(ds, rowidxs)
-end
+# function _filter!_helper(ds::AbstractDataset, f, cols...)
+#     if length(cols) == 0
+#         rowidxs = findall(x -> !f(), axes(ds, 1))
+#     else
+#         rowidxs = findall(((x...) -> !(f(x...)::Bool)).(cols...))
+#     end
+#     return delete!(ds, rowidxs)
+# end
 
 # function Base.filter!((cols, f)::Pair{<:AsTable}, df::AbstractDataset)
 #     dff = select(df, cols.cols, copycols=false)
@@ -1358,8 +1349,8 @@ end
 #     end
 # end
 
-_filter!_helper_astable(ds::AbstractDataset, nti::Tables.NamedTupleIterator, f) =
-    delete!(ds, _findall((x -> !(f(x)::Bool)).(nti)))
+# _filter!_helper_astable(ds::AbstractDataset, nti::Tables.NamedTupleIterator, f) =
+    # delete!(ds, _findall((x -> !(f(x)::Bool)).(nti)))
 
 function Base.Matrix(ds::AbstractDataset)
     T = reduce(promote_type, (eltype(v) for v in eachcol(ds)))
@@ -2055,11 +2046,11 @@ julia> repeat(ds, inner = 2, outer = 3)
   12 │     2      4
 ```
 """
-function Base.repeat(ds::AbstractDataset; inner::Integer=1, outer::Integer=1)
-    inner < 0 && throw(ArgumentError("inner keyword argument must be non-negative"))
-    outer < 0 && throw(ArgumentError("outer keyword argument must be non-negative"))
-    return mapcols(x -> repeat(x, inner = Int(inner), outer = Int(outer)), ds)
-end
+# function Base.repeat(ds::AbstractDataset; inner::Integer=1, outer::Integer=1)
+    # inner < 0 && throw(ArgumentError("inner keyword argument must be non-negative"))
+#     outer < 0 && throw(ArgumentError("outer keyword argument must be non-negative"))
+#     return mapcols(x -> repeat(x, inner = Int(inner), outer = Int(outer)), ds)
+# end
 
 """
     repeat(ds::AbstractDataset, count::Integer)
@@ -2088,10 +2079,10 @@ julia> repeat(ds, 2)
    4 │     2      4
 ```
 """
-function Base.repeat(ds::AbstractDataset, count::Integer)
-    count < 0 && throw(ArgumentError("count must be non-negative"))
-    return mapcols(x -> repeat(x, Int(count)), ds)
-end
+# function Base.repeat(ds::AbstractDataset, count::Integer)
+#     count < 0 && throw(ArgumentError("count must be non-negative"))
+#     return mapcols(x -> repeat(x, Int(count)), ds)
+# end
 
 ##############################################################################
 ##
@@ -2145,7 +2136,7 @@ julia> ncol(ds)
 (nrow, ncol)
 
 """
-    disallowmissing(ds::AbstractDataset, cols=:; error::Bool=true)
+    disallowmissing(ds::AbstractDataset, cols=:; error::Bool=false)
 
 Return a copy of data set `ds` with columns `cols` converted
 from element type `Union{T, Missing}` to `T` to drop support for missing values.
@@ -2195,7 +2186,7 @@ julia> disallowmissing(ds, error=false)
 """
 function Missings.disallowmissing(ds::AbstractDataset,
                                   cols::Union{ColumnIndex, MultiColumnIndex}=:;
-                                  error::Bool=true)
+                                  error::Bool=false)
     # Create Dataset
     idxcols = Set(index(ds)[cols])
     newcols = AbstractVector[]
