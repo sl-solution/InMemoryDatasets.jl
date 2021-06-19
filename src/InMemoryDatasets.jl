@@ -23,13 +23,13 @@ export
       DatasetColumn,
       SubDataset,
       Dataset,
-      SortedDataset,
       nrow,
       ncol,
       getformat,
       setformat!,
       removeformat!,
-      content
+      content,
+      mask
 
 include("other/index.jl")
 include("other/utils.jl")
