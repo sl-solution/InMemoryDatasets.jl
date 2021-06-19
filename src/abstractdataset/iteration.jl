@@ -22,8 +22,7 @@ end
 # Base.summary(io::IO, dfrs::DatasetRows) = print(io, summary(dfrs))
 
 Base.iterate(::AbstractDataset) =
-    error("AbstractDataset is not iterable. Use eachrow(df) to get a row iterator " *
-          "or eachcol(df) to get a column iterator")
+    error("AbstractDataset is not iterable.")
 
 """
     eachrow(df::AbstractDataset)

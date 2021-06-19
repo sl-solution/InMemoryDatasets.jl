@@ -573,6 +573,7 @@ rename!(f::Function, x::SubIndex) =
 # setting and removing formats from Index
 function setformat!(x::Index, idx::Integer, f::Function)
     !(1 <= idx <= length(x)) && throw(ArgumentError("column index $idx not found in the data set"))
+    string(nameof(f))[1] == '#' && return
     x.format[idx] = f
     if idx ∈ x.sortedcols
         _reset_grouping_info!(x)

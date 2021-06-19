@@ -212,36 +212,74 @@ end
 
 
 """
-    mapcols(f::Function, ds::AbstractDataset, cols)
+    map(f::Function, ds::AbstractDataset, cols)
+    map(f::Vector{Function}, ds::Dataset, cols)
 
 Return a copy of `ds` where cols of the new `Dataset` is the result of calling `f` on each observation. The order of columns for the new data set is the same as `ds`.
-Note that `mapcols` guarantees not to reuse the columns from `ds` in the returned
+Note that `map` guarantees not to reuse the columns from `ds` in the returned
 `Dataset`. If `f` returns its argument then it gets copied before being stored.
+The number of functions and the number of cols must match when multiple functions is used.
 
 # Examples
 ```jldoctest
 julia> ds = Dataset(x=1:4, y=11:14)
 4×2 Dataset
- Row │ x      y
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1     11
-   2 │     2     12
-   3 │     3     13
-   4 │     4     14
+ Row │ x         y
+     │ identity  identity
+     │ Int64     Int64
+─────┼────────────────────
+   1 │        1        11
+   2 │        2        12
+   3 │        3        13
+   4 │        4        14
 
-julia> mapcols(x -> x.^2, ds, :)
+julia> map(x -> x^2, ds, :)
 4×2 Dataset
- Row │ x      y
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1    121
-   2 │     4    144
-   3 │     9    169
-   4 │    16    196
+ Row │ x         y
+     │ identity  identity
+     │ Int64     Int64
+─────┼────────────────────
+   1 │        1       121
+   2 │        4       144
+   3 │        9       169
+   4 │       16       196
+
+julia> ds = Dataset(x = 1:10, y = repeat([1,2], inner = 5), c = 1:10)
+10×3 Dataset
+ Row │ x         y         c
+     │ identity  identity  identity
+     │ Int64     Int64     Int64
+─────┼──────────────────────────────
+   1 │        1         1         1
+   2 │        2         1         2
+   3 │        3         1         3
+   4 │        4         1         4
+   5 │        5         1         5
+   6 │        6         2         6
+   7 │        7         2         7
+   8 │        8         2         8
+   9 │        9         2         9
+  10 │       10         2        10
+
+julia> map([x -> x in (1,2,5), isequal(1)], ds[!, 1:2], :)
+10×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Bool      Bool
+─────┼────────────────────
+   1 │     true      true
+   2 │     true      true
+   3 │    false      true
+   4 │    false      true
+   5 │     true      true
+   6 │    false     false
+   7 │    false     false
+   8 │    false     false
+   9 │    false     false
+  10 │    false     false
 ```
 """
-function mapcols(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
+function Base.map(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -271,9 +309,9 @@ function mapcols(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
     return newds
 
 end
-mapcols(f::Union{Function, Type}, ds::AbstractDataset, col::ColumnIndex) = mapcols(f, ds, [col])
+Base.map(f::Union{Function, Type}, ds::AbstractDataset, col::ColumnIndex) = map(f, ds, [col])
 
-function mapcols(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnIndex)
+function Base.map(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -308,11 +346,11 @@ function mapcols(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnInde
 end
 
 """
-    mapcols!(f::Function, ds::Dataset, cols)
+    map!(f::Function, ds::Dataset, cols)
 
 Update each `col` in `ds[!, cols]` in-place when `map!` return a result, and skip when it is not possible.
 
-If `f` cannot be applied in place, use `mapcol` for creating a copy of `ds`.
+If `f` cannot be applied in place, use `map` for creating a copy of `ds`.
 
 # Examples
 ```jldoctest
@@ -327,7 +365,7 @@ julia> ds = Dataset(x=1:4, y=11:14)
    3 │        3        13
    4 │        4        14
 
-julia> mapcols!(x -> x^2, ds, :);
+julia> map!(x -> x^2, ds, :);
 
 julia> ds
 4×2 Dataset
@@ -341,7 +379,7 @@ julia> ds
    4 │       16       196
 ```
 """
-function mapcols!(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
+function Base.map!(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -371,14 +409,14 @@ function mapcols!(f::Function, ds::AbstractDataset, cols::MultiColumnIndex)
     return ds
 end
 
-mapcols!(f::Union{Function, Type}, ds::AbstractDataset, col::ColumnIndex) = mapcols!(f, ds, [col])
+Base.map!(f::Union{Function, Type}, ds::AbstractDataset, col::ColumnIndex) = map!(f, ds, [col])
 
 """
-    mapcols!(f::Vector{Function}, ds::Dataset, cols)
+    map!(f::Vector{Function}, ds::Dataset, cols)
 
-Update jth `col` in `ds[!, cols]` in-place by mapping `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped. 
+Update jth `col` in `ds[!, cols]` in-place by mapping `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped.
 
-Use `mapcol` if the in-place operation is not possible.
+Use `map` if the in-place operation is not possible.
 
 # Examples
 ```jldoctest
@@ -393,7 +431,7 @@ julia> ds = Dataset(x=1:4, y=11:14)
    3 │        3        13
    4 │        4        14
 
-julia> mapcols!([x -> x^2, x -> x-1], ds, :);
+julia> map!([x -> x^2, x -> x-1], ds, :);
 
 julia> ds
 4×2 Dataset
@@ -407,7 +445,7 @@ julia> ds
    4 │       16        13
 ```
 """
-function mapcols!(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnIndex)
+function Base.map!(f::Vector{Function}, ds::AbstractDataset, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]

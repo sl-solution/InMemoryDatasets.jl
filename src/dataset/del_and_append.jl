@@ -85,7 +85,7 @@ Remove all rows from `ds`, making each of its columns empty.
 function Base.empty!(ds::Dataset)
 
 # Modify Dataset
-    foreach(empty!, eachcol(ds))
+    foreach(empty!, _columns(ds))
     _reset_grouping_info!(ds)
     _modified(_attributes(ds))
     return ds
@@ -375,7 +375,6 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
                 firstindex(newcol) != 1 && _onebased_check_error()
                 _columns(ds)[i] = newcol
                 setformat!(ds, colname => format_of_cur_col)
-                _modified(_attributes(ds))
             end
         end
         for (colname, col) in zip(_names(ds), _columns(ds))
@@ -399,6 +398,7 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
             end
             ds[!, colname] = newcol
         end
+        _modified(_attributes(ds))
         _reset_grouping_info!(ds)
         return ds
     end
@@ -459,6 +459,7 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
         @error "Error adding value to column :$(_names(ds)[current_col])."
         rethrow(err)
     end
+    _modified(_attributes(ds))
     _reset_grouping_info!(ds)
     return ds
 end
@@ -607,7 +608,6 @@ function Base.push!(ds::Dataset, row::Any; promote::Bool=false)
                 firstindex(newcol) != 1 && _onebased_check_error()
                 _columns(ds)[i] = newcol
                 setformat!(ds, i => format_of_cur_col)
-                _modified(_attributes(ds))
             end
         end
         current_col = 0
@@ -624,6 +624,7 @@ function Base.push!(ds::Dataset, row::Any; promote::Bool=false)
         @error "Error adding value to column :$(_names(ds)[current_col])."
         rethrow(err)
     end
+    _modified(_attributes(ds))
     _reset_grouping_info!(ds)
     ds
 end

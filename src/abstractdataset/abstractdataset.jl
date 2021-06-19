@@ -65,7 +65,7 @@ Base.show(io::IO, ::MIME"text/plain", col::DatasetColumn) = show(IOContext(io, :
 # internal function for easy accessing a view of a column
 __!(col1::DatasetColumn) =  col1.val
 # we treat DatasetColumn as a one-column data set. and we need to manage every thing ourself
-Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = __!(col1) == __!(col2)
+Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))
 Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))
 Base.length(col1::DatasetColumn) = length(__!(col1))
 Base.size(col1::DatasetColumn) = size(__!(col1))
@@ -155,31 +155,37 @@ end
 # end
 #Modify Dataset
 function setformat!(ds::AbstractDataset, idx::Integer, f::Function)
+    string(nameof(f))[1] == '#' && return ds
     setformat!(index(ds), idx, f)
     _modified(_attributes(ds))
     ds
 end
 function setformat!(ds::AbstractDataset, idx::Symbol, f::Function)
+    string(nameof(f))[1] == '#' && return ds
     setformat!(index(ds), idx, f)
     _modified(_attributes(ds))
     ds
 end
 function setformat!(ds::AbstractDataset, idx::T, f::Function) where T <: AbstractString
+    string(nameof(f))[1] == '#' && return ds
     setformat!(index(ds), idx, f)
     _modified(_attributes(ds))
     ds
 end
 function setformat!(ds::AbstractDataset, p::Pair{Int64, T}) where T <: Function
-   setformat!(index(ds), p)
+    string(nameof(p.second))[1] == '#' && return ds
+    setformat!(index(ds), p)
    _modified(_attributes(ds))
    ds
 end
 function setformat!(ds::AbstractDataset, p::Pair{Symbol, T}) where T <: Function
+    string(nameof(p.second))[1] == '#' && return ds
     setformat!(index(ds), p)
     _modified(_attributes(ds))
     ds
 end
 function setformat!(ds::AbstractDataset, p::Pair{S, T}) where S <: AbstractString where T <: Function
+    string(nameof(p.second))[1] == '#' && return ds
     setformat!(index(ds), p)
     _modified(_attributes(ds))
     ds
@@ -187,6 +193,7 @@ end
 function setformat!(ds::AbstractDataset, p::Pair{MC, T}) where T <: Function where MC <: MultiColumnIndex
     idx = index(ds)[p.first]
     for i in 1:length(idx)
+        string(nameof(p.second))[1] == '#' && continue
         setformat!(index(ds), idx[i], p.second)
         # if for any reason one of the formatting is not working, we make sure the modified is correct
         _modified(_attributes(ds))
@@ -199,18 +206,19 @@ function setformat!(ds::AbstractDataset, dict::Dict)
     end
     ds
 end
-# TODO should we allowed arbitarary combination of Pair
+# TODO should we allow arbitarary combination of Pair
 function setformat!(ds::AbstractDataset, pv::Vector)
     for p in pv
+        string(nameof(p.second))[1] == '#' && continue
         setformat!(index(ds), p)
         # if for any reason one of the formatting is not working, we make sure the modified is correct
         _modified(_attributes(ds))
     end
     ds
 end
-function setformat!(ds::AbstractDataset, args...)
+function setformat!(ds::AbstractDataset, @nospecialize(args...))
     for i in 1:length(args)
-        setformat!(index(ds), args[i])
+        setformat!(ds, args[i])
     end
     ds
 end
@@ -243,7 +251,7 @@ function removeformat!(ds::AbstractDataset, cols::MultiColumnIndex)
     end
     ds
 end
-removeformat!(ds::AbstractDataset) = removeformat!(ds, :)
+# removeformat!(ds::AbstractDataset) = removeformat!(ds, :)
 function removeformat!(ds::AbstractDataset, args...)
     for i in 1:length(args)
         removeformat!(ds, args[i])
@@ -255,7 +263,7 @@ end
 function setinfo!(ds::AbstractDataset, s::String)
     _attributes(ds).meta.info[] = s
     _modified(_attributes(ds))
-    nothing
+    s
 end
 
 # TODO needs better printing
@@ -264,12 +272,17 @@ function content(ds::AbstractDataset)
     println("   Created: ", _attributes(ds).meta.created)
     println("  Modified: ", _attributes(ds).meta.modified[])
     println("      Info: ", _attributes(ds).meta.info[])
-    f_v = Dict{Symbol, Function}()
-    for (k, v) in index(ds).format
-        push!(f_v, _names(ds)[k]=>v)
+    f_v = [[], [], []]
+    all_names = names(ds)
+    for i in 1:ncol(ds)
+        push!(f_v[1], all_names[i])
+        push!(f_v[2], getformat(ds, i))
+        push!(f_v[3], eltype(ds[!, i]))
     end
-    println("   Formats: ")
-    display(f_v)
+
+    format_ds = Dataset(f_v, [:variable, :format, :eltype], copycols = false)
+    println(" Variables: ")
+    pretty_table(format_ds, header = (["var", "format", "eltype"]), alignment =:l)
 end
 
 """
@@ -798,7 +811,7 @@ function _describe(ds::AbstractDataset, stats::AbstractVector)
     data.variable = propertynames(ds)
 
     # An array of Dicts for summary statistics
-    col_stats_dicts = map(eachcol(ds)) do col
+    col_stats_dicts = map(_columns(ds)) do col
         if eltype(col) >: Missing
             t = skipmissing(col)
             d = get_stats(t, predefined_funs)
