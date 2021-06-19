@@ -452,8 +452,8 @@ Base.map!(ds::AbstractDataset, f::Vector{Function}) = throw(ArgumentError("the `
 # the order of argument in `mask` is based on map, should we make it mask(ds, cols, fun)
 
 """
-    mask(ds::AbstractDataset, f::Function, cols)
-    mask(ds::AbstractDataset, f::Vector{Function}, cols)
+    mask(ds::AbstractDataset, f::Function, cols; mapformats = false, threads = true)
+    mask(ds::AbstractDataset, f::Vector{Function}, cols; mapformats = false, threads = true)
 
 Map `f` on each observation and return a `Bool` data set. When multiple `f` is provided, each one map to its corresponding column.
 
@@ -493,15 +493,15 @@ julia> mask(ds, isodd, 1:3)
    3 │     true      true      true
 ```
 """
-mask(ds::AbstractDataset, f::Function, col::ColumnIndex) = mask(ds, f, [col])
-function mask(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
+mask(ds::AbstractDataset, f::Function, col::ColumnIndex; mapformats = false, threads = true) = mask(ds, f, [col]; mapformats = mapformats, threads = threads)
+function mask(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; mapformats = false, threads = true)
   colsidx = index(ds)[cols]
   v_f = Vector{Function}(undef, length(colsidx))
   fill!(v_f, f)
-  mask(ds, v_f, cols)
+  mask(ds, v_f, cols; mapformats = mapformats, threads = threads)
 end
 
-function mask(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIndex)
+function mask(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIndex; mapformats = false, threads = true)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -509,10 +509,38 @@ function mask(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIndex)
     vs = AbstractVector[]
     for j in 1:length(colsidx)
         v = _columns(ds)[j]
-        fv = _bool_mask(f[j]).(v)
-        push!(vs, fv === v ? copy(fv) : fv)
+        _col_f = getformat(ds, j)
+        fv = Vector{Bool}(undef, nrow(ds))
+        if mapformats
+          _fill_mask!(fv, v, _col_f, f[j], threads)
+        else
+          _fill_mask!(fv, v, f[j], threads)
+        end
+        push!(vs, fv)
     end
     Dataset(vs, _names(ds)[colsidx], copycols=false)
+end
+
+function _fill_mask!(fv, v, format, fj, threads)
+  if threads
+    Threads.@threads for i in 1:length(fv)
+      fv[i] = _bool_mask(fj)(format(v[i]))
+    end
+  else
+    for i in 1:length(fv)
+      fv[i] = _bool_mask(fj)(format(v[i]))
+    end
+  end
+end
+# not using formats
+function _fill_mask!(fv, v, fj, threads)
+  if threads
+    Threads.@threads for i in 1:length(fv)
+      fv[i] = _bool_mask(fj)(v[i])
+    end
+  else
+    fv .= _bool_mask(fj).(v)
+  end
 end
 _bool_mask(f) = x->f(x)::Bool
 
