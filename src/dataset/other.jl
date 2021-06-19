@@ -280,7 +280,7 @@ Base.map(ds::AbstractDataset, f::Union{Function}) = throw(ArgumentError("the `co
 Base.map(ds::AbstractDataset, f::Vector{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
 
-function Base.map(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIndex)
+function Base.map(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -416,7 +416,7 @@ julia> ds
    4 │       16        13
 ```
 """
-function Base.map!(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIndex)
+function Base.map!(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -446,7 +446,7 @@ function Base.map!(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIn
     end
     return ds
 end
-Base.map!(ds::AbstractDataset, f::Vector{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+Base.map!(ds::AbstractDataset, f::Vector{<:Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
 
 # the order of argument in `mask` is based on map, should we make it mask(ds, cols, fun)
@@ -501,7 +501,7 @@ function mask(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; mapforma
   mask(ds, v_f, cols; mapformats = mapformats, threads = threads)
 end
 
-function mask(ds::AbstractDataset, f::Vector{Function}, cols::MultiColumnIndex; mapformats = false, threads = true)
+function mask(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex; mapformats = false, threads = true)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -527,9 +527,7 @@ function _fill_mask!(fv, v, format, fj, threads)
       fv[i] = _bool_mask(fj)(format(v[i]))
     end
   else
-    for i in 1:length(fv)
-      fv[i] = _bool_mask(fj)(format(v[i]))
-    end
+    fv .= _bool_mask(fj∘format).(v)
   end
 end
 # not using formats
