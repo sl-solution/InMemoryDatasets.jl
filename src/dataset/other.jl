@@ -527,7 +527,7 @@ function _fill_mask!(fv, v, format, fj, threads)
       fv[i] = _bool_mask(fj)(format(v[i]))
     end
   else
-    fv .= _bool_mask(fj∘format).(v)
+    map!(_bool_mask(fj∘format), fv, v)
   end
 end
 # not using formats
@@ -537,7 +537,7 @@ function _fill_mask!(fv, v, fj, threads)
       fv[i] = _bool_mask(fj)(v[i])
     end
   else
-    fv .= _bool_mask(fj).(v)
+    map!(_bool_mask(fj), fv, v)
   end
 end
 _bool_mask(f) = x->f(x)::Bool

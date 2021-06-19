@@ -80,6 +80,7 @@ Base.identity(col1::DatasetColumn) = identity(__!(col1))
 Base.similar(col1::DatasetColumn) = similar(__!(col1))
 Base.copy(col1::DatasetColumn) = copy(__!(col1))
 Base.iterate(col1::DatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
+PooledArrays.PooledArray(col1::DatasetColumn) = PooledArray(col1.val)
 ##############################################################################
 ##
 ## Basic properties of a Dataset
