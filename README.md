@@ -108,9 +108,8 @@ julia> ds = Dataset(x = 1:10, y = repeat(1:5, inner = 2), z = repeat(1:2, 5))
   10 │       10         5         2
 
 julia> function gender(x)
-            dict = Dict(1 => "Male", 2 => "Female")
-            get(dict, x, x)
-        end
+          x == 1 ? "Male" : x == 2 ? "Female" : missing
+       end
 julia> setformat!(ds, 2 => sqrt, 3 => gender)
 10×3 Dataset
  Row │ x         y        z
