@@ -18,7 +18,7 @@
 
 # Formats
 
-For each data set, one can assign a named function to a column as its format. The column formated values will be used for displaying, sorting, grouping and joining, however, for any other operation the actual values will be used. The format function doesn't modify the actual values of a column.
+For each data set, one can assign a named function to a column as its format. The column formatted values will be used for displaying, sorting, grouping and joining, however, for any other operation the actual values will be used. The format function doesn't modify the actual values of a column.
 
 `setformat!` assigns a format to a column, and `removeformat!` removes a column format.
 
@@ -85,7 +85,7 @@ julia> removeformat!(ds, :x1)
 
 # Masking observations
 
-The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j]` is true, otherwise it is false. The `fun` is mapped on the actual values by default, however, using the option `mapformats = true` causes `fun` to map on the formatted values.
+The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j]` is true, otherwise it is false. The `fun` is called on actual values by default, however, using the option `mapformats = true` causes `fun` to be called on the formatted values.
 
 ## Examples
 

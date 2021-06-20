@@ -385,7 +385,7 @@ Base.map!(ds::AbstractDataset, f::Union{Function}) = throw(ArgumentError("the `c
 """
     map!(ds::AbstractDataset, f::Vector{Function}, cols)
 
-Update jth `col` in `ds[!, cols]` in-place by mapping `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped.
+Update jth `col` in `ds[!, cols]` in-place by calling `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped.
 
 Use `map` if the in-place operation is not possible.
 
