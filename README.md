@@ -41,7 +41,7 @@ julia> ds = Dataset(randn(10,2), :auto)
    8 │  0.0723834   1.47378
    9 │  0.338568    1.08032
   10 │ -1.07939     1.24903
-  
+
 julia> myformat(x) = round(Int, x)
 myformat (generic function with 1 method)
 
@@ -61,7 +61,7 @@ julia>  setformat!(ds, 1 => myformat)
    8 │        0   1.47378
    9 │        0   1.08032
   10 │       -1   1.24903
-  
+
 julia> getformat(ds, :x1)
 myformat (generic function with 1 method)
 
@@ -85,7 +85,7 @@ julia> removeformat!(ds, :x1)
 
 # Masking observations
 
-The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j]` is true, otherwise it is false. The `fun` is map on the actual values by default, however, using the option `mapformats = true` causes `fun` to map on the formatted value.
+The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j]` is true, otherwise it is false. The `fun` is mapped on the actual values by default, however, using the option `mapformats = true` causes `fun` to map on the formatted values.
 
 ## Examples
 
@@ -107,54 +107,58 @@ julia> ds = Dataset(x = 1:10, y = repeat(1:5, inner = 2), z = repeat(1:2, 5))
    9 │        9         5         1
   10 │       10         5         2
 
-julia> setformat!(ds, 2 => sqrt)
+julia> function gender(x)
+            dict = Dict(1 => "Male", 2 => "Female")
+            get(dict, x, x)
+        end
+julia> setformat!(ds, 2 => sqrt, 3 => gender)
 10×3 Dataset
  Row │ x         y        z
-     │ identity  sqrt     identity
+     │ identity  sqrt     gender
      │ Int64     Int64    Int64
-─────┼─────────────────────────────
-   1 │        1  1.0             1
-   2 │        2  1.0             2
-   3 │        3  1.41421         1
-   4 │        4  1.41421         2
-   5 │        5  1.73205         1
-   6 │        6  1.73205         2
-   7 │        7  2.0             1
-   8 │        8  2.0             2
-   9 │        9  2.23607         1
-  10 │       10  2.23607         2
+─────┼───────────────────────────
+   1 │        1  1.0        Male
+   2 │        2  1.0      Female
+   3 │        3  1.41421    Male
+   4 │        4  1.41421  Female
+   5 │        5  1.73205    Male
+   6 │        6  1.73205  Female
+   7 │        7  2.0        Male
+   8 │        8  2.0      Female
+   9 │        9  2.23607    Male
+  10 │       10  2.23607  Female
 
-julia> mask(ds, iseven, 2:3)
+julia> mask(ds, [iseven, isequal("Male")], 2:3)
 10×2 Dataset
  Row │ y         z
      │ identity  identity
      │ Bool      Bool
 ─────┼────────────────────
    1 │    false     false
-   2 │    false      true
+   2 │    false     false
    3 │     true     false
-   4 │     true      true
+   4 │     true     false
    5 │    false     false
-   6 │    false      true
+   6 │    false     false
    7 │     true     false
-   8 │     true      true
+   8 │     true     false
    9 │    false     false
-  10 │    false      true
+  10 │    false     false
 
-julia> mask(ds, [x -> rem(x, 2) == 0, iseven], 2:3, mapformats = true)
+julia> mask(ds, [val -> rem(val, 2) == 0, isequal("Male")], 2:3, mapformats = true)
 10×2 Dataset
  Row │ y         z
      │ identity  identity
      │ Bool      Bool
 ─────┼────────────────────
-   1 │    false     false
-   2 │    false      true
-   3 │    false     false
-   4 │    false      true
-   5 │    false     false
-   6 │    false      true
-   7 │     true     false
-   8 │     true      true
-   9 │    false     false
-  10 │    false      true
- ```
+   1 │    false      true
+   2 │    false     false
+   3 │    false      true
+   4 │    false     false
+   5 │    false      true
+   6 │    false     false
+   7 │     true      true
+   8 │     true     false
+   9 │    false      true
+  10 │    false     false
+```
