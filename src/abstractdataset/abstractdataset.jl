@@ -54,7 +54,7 @@ abstract type AbstractDataset end
 # DatasetColumn is a representation of a column of data set
 # it is wrapped into a new type to make sure that when ever a column is
 # selected, the data set is attached to it
-struct DatasetColumn{T <: AbstractDataset, E}
+struct DatasetColumn{T <: AbstractDataset, E} <: AbstractVector{DatasetColumn}
     col::Int
     ds::T
     val::E
