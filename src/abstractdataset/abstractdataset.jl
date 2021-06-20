@@ -2192,7 +2192,7 @@ function Missings.disallowmissing(ds::AbstractDataset,
     idxcols = Set(index(ds)[cols])
     newcols = AbstractVector[]
     for i in axes(ds, 2)
-        x = ds[!, i]
+        x = _columns(ds)[i]
         if i in idxcols
             if !error && Missing <: eltype(x) && any(ismissing, x)
                 y = x
@@ -2247,7 +2247,7 @@ function Missings.allowmissing(ds::AbstractDataset,
     idxcols = Set(index(ds)[cols])
     newcols = AbstractVector[]
     for i in axes(ds, 2)
-        x = ds[!, i]
+        x = _columns(ds)[i]
         if i in idxcols
             y = allowmissing(x)
             push!(newcols, y === x ? copy(y) : y)

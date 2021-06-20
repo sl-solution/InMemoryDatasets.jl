@@ -67,7 +67,7 @@ function disallowmissing! end
 
 # Modify Dataset
 function disallowmissing!(ds::Dataset, col::ColumnIndex; error::Bool=false)
-    x = ds[!, col]
+    x = _columns(ds)[col]
     colidx = index(ds)[col]
     if !(!error && Missing <: eltype(x) && any(ismissing, x))
         # use _columns to avoid reseting attributes
@@ -276,7 +276,7 @@ function Base.map(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
 
 end
 Base.map(ds::AbstractDataset, f::Union{Function}, col::ColumnIndex) = map(ds, f, [col])
-Base.map(ds::AbstractDataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
+Base.map(ds::AbstractDataset, f::Union{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 Base.map(ds::AbstractDataset, f::Vector{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
 
