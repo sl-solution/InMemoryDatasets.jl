@@ -59,13 +59,23 @@ struct DatasetColumn{T <: AbstractDataset, E}
     ds::T
     val::E
 end
+
+struct SubDatasetColumn{T <: AbstractDataset, E}
+    col::Int
+    ds::T
+    val::E
+    selected_index
+end
 _columns(ds::AbstractDataset) = getfield(parent(ds), :columns)
 Base.show(io::IO, ::MIME"text/plain", col::DatasetColumn) = show(IOContext(io, :limit => true), "text/plain", col.val)
+Base.show(io::IO, ::MIME"text/plain", col::SubDatasetColumn) = show(IOContext(io, :limit => true), "text/plain", view(col.val, col.selected_index))
+
 
 # internal function for easy accessing a view of a column
 __!(col1::DatasetColumn) =  col1.val
 # we treat DatasetColumn as a one-column data set. and we need to manage every thing ourself
 # isequal also use for == , since we don't want missing be treated differently
+Base.parent(col1::DatasetColumn) = col1.ds
 Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))
 Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))
 Base.length(col1::DatasetColumn) = length(__!(col1))
@@ -79,9 +89,27 @@ Base.isassigned(col1::DatasetColumn, i) = isassigned(__!(col1), i)
 Base.identity(col1::DatasetColumn) = identity(__!(col1))
 Base.similar(col1::DatasetColumn) = similar(__!(col1))
 Base.copy(col1::DatasetColumn) = copy(__!(col1))
-Base.pairs(col1::DatasetColumn) = pairs(IndexLinear(), col1.val)
+Base.pairs(col1::DatasetColumn) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::DatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
 PooledArrays.PooledArray(col1::DatasetColumn) = PooledArray(col1.val)
+
+__!(col1::SubDatasetColumn) =  view(col1.val, col1.selected_index)
+Base.:(==)(col1::SubDatasetColumn, col2::SubDatasetColumn) = isequal(__!(col1), __!(col2))
+Base.isequal(col1::SubDatasetColumn, col2::SubDatasetColumn) = isequal(__!(col1), __!(col2))
+Base.length(col1::SubDatasetColumn) = length(__!(col1))
+Base.size(col1::SubDatasetColumn) = size(__!(col1))
+Base.isapprox(col1::SubDatasetColumn, col2::SubDatasetColumn) = isapprox(__!(col1), __!(col2))
+Base.first(col1::SubDatasetColumn) = first(__!(col1))
+Base.last(col1::SubDatasetColumn) = last(__!(col1))
+Base.eltype(col1::SubDatasetColumn) = eltype(__!(col1))
+Base.ndims(col1::SubDatasetColumn) = ndims(__!(col1))
+Base.ndims(::Type{<:SubDatasetColumn}) = 1
+Base.isassigned(col1::SubDatasetColumn, i) = isassigned(__!(col1), i)
+Base.identity(col1::SubDatasetColumn) = identity(__!(col1))
+Base.similar(col1::SubDatasetColumn) = similar(__!(col1))
+Base.copy(col1::SubDatasetColumn) = copy(__!(col1))
+Base.pairs(col1::SubDatasetColumn) = pairs(IndexLinear(), __!(col1))
+Base.iterate(col1::SubDatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
 ##############################################################################
 ##
 ## Basic properties of a Dataset
@@ -273,6 +301,10 @@ end
 # TODO needs better printing
 function content(ds::AbstractDataset)
     println(summary(ds))
+    if typeof(ds) <: SubDataset
+        println("-----------------------------------")
+        println("The parent's Meta information")
+    end
     println("   Created: ", _attributes(ds).meta.created)
     println("  Modified: ", _attributes(ds).meta.modified[])
     println("      Info: ", _attributes(ds).meta.info[])
@@ -285,7 +317,8 @@ function content(ds::AbstractDataset)
     end
 
     format_ds = Dataset(f_v, [:variable, :format, :eltype], copycols = false)
-    println(" Variables: ")
+    println("-----------------------------------")
+    println("Variables information ")
     pretty_table(format_ds, header = (["var", "format", "eltype"]), alignment =:l)
 end
 
@@ -1633,25 +1666,25 @@ julia> ds3.A === ds1.A
 true
 ```
 """
-Base.hcat(ds::AbstractDataset; makeunique::Bool=false, copycols::Bool=true) =
-    Dataset(ds, copycols=copycols)
-Base.hcat(ds::AbstractDataset, x; makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(Dataset(ds, copycols=copycols), x,
-          makeunique=makeunique, copycols=copycols)
-Base.hcat(x, ds::AbstractDataset; makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(x, ds, makeunique=makeunique, copycols=copycols)
-Base.hcat(ds1::AbstractDataset, ds2::AbstractDataset;
-          makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(Dataset(ds1, copycols=copycols), ds2,
-          makeunique=makeunique, copycols=copycols)
-Base.hcat(ds::AbstractDataset, x, y...;
-          makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(hcat(ds, x, makeunique=makeunique, copycols=copycols), y...,
-          makeunique=makeunique, copycols=copycols)
-Base.hcat(ds1::AbstractDataset, ds2::AbstractDataset, dsn::AbstractDataset...;
-          makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(hcat(ds1, ds2, makeunique=makeunique, copycols=copycols), dsn...,
-          makeunique=makeunique, copycols=copycols)
+# Base.hcat(ds::AbstractDataset; makeunique::Bool=false, copycols::Bool=true) =
+#     Dataset(ds, copycols=copycols)
+# Base.hcat(ds::AbstractDataset, x; makeunique::Bool=false, copycols::Bool=true) =
+#     hcat!(Dataset(ds, copycols=copycols), x,
+#           makeunique=makeunique, copycols=copycols)
+# Base.hcat(x, ds::AbstractDataset; makeunique::Bool=false, copycols::Bool=true) =
+#     hcat!(x, ds, makeunique=makeunique, copycols=copycols)
+# Base.hcat(ds1::AbstractDataset, ds2::AbstractDataset;
+#           makeunique::Bool=false, copycols::Bool=true) =
+#     hcat!(Dataset(ds1, copycols=copycols), ds2,
+#           makeunique=makeunique, copycols=copycols)
+# Base.hcat(ds::AbstractDataset, x, y...;
+#           makeunique::Bool=false, copycols::Bool=true) =
+#     hcat!(hcat(ds, x, makeunique=makeunique, copycols=copycols), y...,
+#           makeunique=makeunique, copycols=copycols)
+# Base.hcat(ds1::AbstractDataset, ds2::AbstractDataset, dsn::AbstractDataset...;
+#           makeunique::Bool=false, copycols::Bool=true) =
+#     hcat!(hcat(ds1, ds2, makeunique=makeunique, copycols=copycols), dsn...,
+#           makeunique=makeunique, copycols=copycols)
 
 """
     vcat(dss::AbstractDataset...;

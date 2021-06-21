@@ -73,6 +73,9 @@ struct SubDataset{D<:AbstractDataset, S<:AbstractIndex, T<:AbstractVector{Int}} 
     rows::T # maps from subdf row indexes to parent row indexes
 end
 
+_attributes(sds::SubDataset) = getfield(parent(sds), :attributes)
+
+
 Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVector{Int}, cols)
     @boundscheck if !checkindex(Bool, axes(parent, 1), rows)
         throw(BoundsError(parent, (rows, cols)))
@@ -141,29 +144,39 @@ rows(sdf::SubDataset) = getfield(sdf, :rows)
 Base.parent(sdf::SubDataset) = getfield(sdf, :parent)
 Base.parentindices(sdf::SubDataset) = (rows(sdf), parentcols(index(sdf)))
 
-function Base.view(ads::Dataset, rowinds, colind::ColumnIndex)
-    idx = index(ads)[colind]
-    view(_columns(ads)[idx], rowinds)
+function Base.view(ds::Dataset, rowinds, colind::ColumnIndex)
+    idx = index(ds)[colind]
+    SubDatasetColumn(idx, ds, _columns(ds)[idx], rowinds)
 end
 
-function Base.view(ads::Dataset, ::typeof(!), colind::ColumnIndex)
-    idx = index(ads)[colind]
-    view(_columns(ads)[idx], :)
+function Base.view(ds::Dataset, ::typeof(!), colind::ColumnIndex)
+    idx = index(ds)[colind]
+    SubDatasetColumn(idx, ds, _columns(ds)[idx], :)
+end
+function Base.view(dc::DatasetColumn, rowinds)
+    SubDatasetColumn(dc.col, dc.ds, dc.val, rowinds)
+end
+function Base.view(sdc::SubDatasetColumn, rowinds)
+    SubDatasetColumn(sdc.col, sdc.ds, sdc.val, sdc.selected_index[rowinds])
 end
 
 
+Base.@propagate_inbounds Base.view(ads::AbstractDataset, rowinds, colind::ColumnIndex) =
+    view(ads[!, colind], rowinds)
+Base.@propagate_inbounds Base.view(ads::AbstractDataset, ::typeof(!), colind::ColumnIndex) =
+    view(ads[!, colind], :)
 
-@inline Base.view(adf::AbstractDataset, rowinds, colind::Bool) =
+@inline Base.view(ads::AbstractDataset, rowinds, colind::Bool) =
     throw(ArgumentError("invalid column index $colind of type `Bool`"))
-Base.@propagate_inbounds Base.view(adf::Dataset, rowinds,
+Base.@propagate_inbounds Base.view(ads::AbstractDataset, rowinds,
                                    colinds::MultiColumnIndex) =
-    SubDataset(adf, rowinds, colinds)
-Base.@propagate_inbounds Base.view(adf::Dataset, rowinds::typeof(!),
+    SubDataset(ads, rowinds, colinds)
+Base.@propagate_inbounds Base.view(ads::AbstractDataset, rowinds::typeof(!),
                                    colinds::MultiColumnIndex) =
-    SubDataset(adf, :, colinds)
-Base.@propagate_inbounds Base.view(adf::Dataset, rowinds::Not,
+    SubDataset(ads, :, colinds)
+Base.@propagate_inbounds Base.view(ads::AbstractDataset, rowinds::Not,
                                    colinds::MultiColumnIndex) =
-    SubDataset(adf, axes(adf, 1)[rowinds], colinds)
+    SubDataset(ads, axes(adf, 1)[rowinds], colinds)
 
 ##############################################################################
 ##
@@ -171,50 +184,50 @@ Base.@propagate_inbounds Base.view(adf::Dataset, rowinds::Not,
 ##
 ##############################################################################
 
-index(sdf::SubDataset) = getfield(sdf, :colindex)
+index(sds::SubDataset) = getfield(sds, :colindex)
 
-nrow(sdf::SubDataset) = ncol(sdf) > 0 ? length(rows(sdf))::Int : 0
-ncol(sdf::SubDataset) = length(index(sdf))
+nrow(sds::SubDataset) = ncol(sds) > 0 ? length(rows(sds))::Int : 0
+ncol(sds::SubDataset) = length(index(sds))
 
 Base.@propagate_inbounds Base.getindex(sds::SubDataset, rowind::Integer, colind::ColumnIndex) =
     parent(sds)[rows(sds)[rowind], parentcols(index(sds), colind)]
 Base.@propagate_inbounds Base.getindex(sds::SubDataset, rowind::Bool, colind::ColumnIndex) =
     throw(ArgumentError("invalid row index of type Bool"))
 
-Base.@propagate_inbounds Base.getindex(sdf::SubDataset, rowinds::Union{AbstractVector, Not},
+Base.@propagate_inbounds Base.getindex(sds::SubDataset, rowinds::Union{AbstractVector, Not},
                                        colind::ColumnIndex) =
-    parent(sdf)[rows(sdf)[rowinds], parentcols(index(sdf), colind)]
-Base.@propagate_inbounds Base.getindex(sdf::SubDataset, ::Colon, colind::ColumnIndex) =
-    parent(sdf)[rows(sdf), parentcols(index(sdf), colind)]
-Base.@propagate_inbounds Base.getindex(sdf::SubDataset, ::typeof(!), colind::ColumnIndex) =
-    view(parent(sdf), rows(sdf), parentcols(index(sdf), colind))
+    parent(sds)[rows(sds)[rowinds], parentcols(index(sds), colind)]
+Base.@propagate_inbounds Base.getindex(sds::SubDataset, ::Colon, colind::ColumnIndex) =
+    parent(sds)[rows(sds), parentcols(index(sds), colind)]
+Base.@propagate_inbounds Base.getindex(sds::SubDataset, ::typeof(!), colind::ColumnIndex) =
+    view(parent(sds), rows(sds), parentcols(index(sds), colind))
 
-Base.@propagate_inbounds Base.getindex(sdf::SubDataset, rowinds::Union{AbstractVector, Not},
+Base.@propagate_inbounds Base.getindex(sds::SubDataset, rowinds::Union{AbstractVector, Not},
                                        colinds::MultiColumnIndex) =
-    parent(sdf)[rows(sdf)[rowinds], parentcols(index(sdf), colinds)]
-Base.@propagate_inbounds Base.getindex(sdf::SubDataset, ::Colon,
+    parent(sds)[rows(sds)[rowinds], parentcols(index(sds), colinds)]
+Base.@propagate_inbounds Base.getindex(sds::SubDataset, ::Colon,
                                        colinds::MultiColumnIndex) =
-    parent(sdf)[rows(sdf), parentcols(index(sdf), colinds)]
+    parent(sds)[rows(sds), parentcols(index(sds), colinds)]
 Base.@propagate_inbounds Base.getindex(df::SubDataset, row_ind::typeof(!),
                                        col_inds::MultiColumnIndex) =
     select(df, col_inds, copycols=false)
 
 
-Base.@propagate_inbounds function Base.setindex!(sdf::SubDataset, val::Any, idx::CartesianIndex{2})
-    setindex!(sdf, val, idx[1], idx[2])
+Base.@propagate_inbounds function Base.setindex!(sds::SubDataset, val::Any, idx::CartesianIndex{2})
+    setindex!(sds, val, idx[1], idx[2])
 end
-Base.@propagate_inbounds function Base.setindex!(sdf::SubDataset, val::Any, ::Colon, colinds::Any)
-    parent(sdf)[rows(sdf), parentcols(index(sdf), colinds)] = val
-    return sdf
+Base.@propagate_inbounds function Base.setindex!(sds::SubDataset, val::Any, ::Colon, colinds::Any)
+    parent(sds)[rows(sds), parentcols(index(sds), colinds)] = val
+    return sds
 end
-Base.@propagate_inbounds function Base.setindex!(sdf::SubDataset, val::Any, ::typeof(!), colinds::Any)
+Base.@propagate_inbounds function Base.setindex!(sds::SubDataset, val::Any, ::typeof(!), colinds::Any)
     throw(ArgumentError("setting index of SubDataset using ! as row selector is not allowed"))
 end
-Base.@propagate_inbounds function Base.setindex!(sdf::SubDataset, val::Any, rowinds::Any, colinds::Any)
-    parent(sdf)[rows(sdf)[rowinds], parentcols(index(sdf), colinds)] = val
-    return sdf
+Base.@propagate_inbounds function Base.setindex!(sds::SubDataset, val::Any, rowinds::Any, colinds::Any)
+    parent(sds)[rows(sds)[rowinds], parentcols(index(sds), colinds)] = val
+    return sds
 end
-Base.@propagate_inbounds Base.setindex!(sdf::SubDataset, val::Any, rowinds::Bool, colinds::Any) =
+Base.@propagate_inbounds Base.setindex!(sds::SubDataset, val::Any, rowinds::Bool, colinds::Any) =
     throw(ArgumentError("invalid row index of type Bool"))
 
 Base.setproperty!(::SubDataset, ::Symbol, ::Any) =
@@ -232,17 +245,18 @@ Base.setproperty!(::SubDataset, ::AbstractString, ::Any) =
 ##
 ##############################################################################
 
-Base.copy(sdf::SubDataset) = parent(sdf)[rows(sdf), parentcols(index(sdf), :)]
+Base.copy(sds::SubDataset) = parent(sds)[rows(sds), parentcols(index(sds), :)]
 
-Base.delete!(df::SubDataset, ind) =
+Base.delete!(ds::SubDataset, ind) =
     throw(ArgumentError("SubDataset does not support deleting rows"))
 
-function Dataset(sdf::SubDataset; copycols::Bool=true)
+function Dataset(sds::SubDataset; copycols::Bool=true)
     if copycols
-        sdf[:, :]
+        sds[:, :]
     else
-        Dataset(collect(eachcol(sdf)), _names(sdf), copycols=false)
+        newds = Dataset(collect(eachcol(sds)), Index(index(sds).lookup, index(sds).names, index(sds).format), copycols=false)
+        setinfo!(newds, _attributes(sds).meta.info[])
     end
 end
 
-Base.convert(::Type{Dataset}, sdf::SubDataset) = Dataset(sdf)
+Base.convert(::Type{Dataset}, sds::SubDataset) = Dataset(sds)

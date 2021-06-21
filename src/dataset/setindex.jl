@@ -130,8 +130,12 @@ for T in (:AbstractVector, :Not, :Colon)
             ds[!, col_ind] = copy(v)
             return ds
         end
-        x = ds[!, col_ind]
-        x[row_inds] = v
+        colidx = index(ds)[col_ind]
+        _columns(ds)[colidx][row_inds] = v
+        if col_ind ∈ index(ds).sortedcols
+            _reset_grouping_info!(ds)
+        end
+        _modified(_attributes(ds))
         return ds
     end
 end
@@ -392,10 +396,21 @@ end
 
 Base.getindex(col1::DatasetColumn{Dataset,<:AbstractVector}, i::Integer) = getindex(__!(col1), i)
 Base.getindex(col1::DatasetColumn{Dataset,<:AbstractVector}, row_inds::AbstractVector) = getindex(__!(col1), row_inds)
+Base.getindex(col1::DatasetColumn{Dataset,<:AbstractVector}, row_inds::Colon) = getindex(__!(col1), row_inds)
+
 # changing one observation reserves format but if the column belongs to sorting columns reset all sorting info
-function Base.setindex!(col1::DatasetColumn{Dataset,<:AbstractVector}, v, i::Integer)
+function Base.setindex!(col1::DatasetColumn{Dataset,<:AbstractVector}, v, i)
     __!(col1)[i] = v
     _modified(_attributes(col1.ds))
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    col1
+end
+function Base.setindex!(col1::DatasetColumn{Dataset,<:AbstractVector}, v, i::Colon)
+    __!(col1)[i] = v
+    _modified(_attributes(col1.ds))
+    removeformat!(col1.ds, col1.col)
     if col1.col ∈ index(col1.ds).sortedcols
         _reset_grouping_info!(col1.ds)
     end
@@ -412,6 +427,7 @@ function Base.copy!(col1::DatasetColumn{Dataset,<:AbstractVector}, src)
     col1
 end
 
+
 function Base.map!(f, col1::DatasetColumn{Dataset,<:AbstractVector}, args...)
     map!(f, __!(col1), args...)
     _modified(_attributes(col1.ds))
@@ -425,6 +441,54 @@ function Base.map!(f, col1::DatasetColumn{Dataset,<:AbstractVector}, col2::Datas
     map!(f, __!(col1), __!(col2))
     _modified(_attributes(col1.ds))
     removeformat!(col1.ds, col1.col)
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    col1
+end
+
+
+# ################
+# SubDatasetColumn
+# #################
+
+Base.getindex(col1::SubDatasetColumn{Dataset,<:AbstractVector}, i::Integer) = getindex(__!(col1), i)
+Base.getindex(col1::SubDatasetColumn{Dataset,<:AbstractVector}, row_inds::AbstractVector) = getindex(__!(col1), row_inds)
+Base.getindex(col1::SubDatasetColumn{Dataset,<:AbstractVector}, row_inds::Colon) = getindex(__!(col1), row_inds)
+
+# changing one observation reserves format but if the column belongs to sorting columns reset all sorting info
+function Base.setindex!(col1::SubDatasetColumn{Dataset,<:AbstractVector}, v, i)
+    __!(col1)[i] = v
+    _modified(_attributes(col1.ds))
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    col1
+end
+# changing all values should reset the formatting
+function Base.copy!(col1::SubDatasetColumn{Dataset,<:AbstractVector}, src)
+    copy!(__!(col1), src)
+    _modified(_attributes(col1.ds))
+    # removeformat!(col1.ds, col1.col)
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    col1
+end
+
+function Base.map!(f, col1::SubDatasetColumn{Dataset,<:AbstractVector}, args...)
+    map!(f, __!(col1), args...)
+    _modified(_attributes(col1.ds))
+    # removeformat!(col1.ds, col1.col)
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    col1
+end
+function Base.map!(f, col1::SubDatasetColumn{Dataset,<:AbstractVector}, col2::SubDatasetColumn{Dataset,<:AbstractVector})
+    map!(f, __!(col1), __!(col2))
+    _modified(_attributes(col1.ds))
+    # removeformat!(col1.ds, col1.col)
     if col1.col ∈ index(col1.ds).sortedcols
         _reset_grouping_info!(col1.ds)
     end

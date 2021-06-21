@@ -1387,7 +1387,7 @@ function _manipulate(ds::AbstractDataset, normalized_cs::Vector{Any}, copycols::
                     end
                     # here even if keeprows is true all is OK
                     newds[!, newname] = copycols ? ds[:, i] : ds[!, i]
-                    cnt += 1
+                    # cnt += 1
                     allow_resizing_newds[] = false
                 end
             end

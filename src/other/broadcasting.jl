@@ -100,6 +100,9 @@ Base.ndims(::Type{ColReplaceDataset}) = 2
 Base.maybeview(ds::AbstractDataset, idx::CartesianIndex{2}) = ds[idx]
 Base.maybeview(ds::AbstractDataset, row::Integer, col::ColumnIndex) = ds[row, col]
 Base.maybeview(ds::AbstractDataset, rows, cols) = view(ds, rows, cols)
+Base.maybeview(col1::DatasetColumn, rows) = view(col1, rows)
+Base.maybeview(col1::SubDatasetColumn, rows) = view(col1, rows)
+
 
 function Base.dotview(ds::Dataset, ::Colon, cols::ColumnIndex)
     haskey(index(ds), cols) && return view(ds, :, cols)
@@ -156,6 +159,25 @@ function Base.copyto!(lazyds::LazyNewColDataset, bc::Base.Broadcast.Broadcasted{
     end
     lazyds.ds[!, lazyds.col] = col
 end
+
+function Base.copyto!(col1::SubDatasetColumn, bc::Base.Broadcast.Broadcasted{T}) where T
+    if bc isa Base.Broadcast.Broadcasted{<:Base.Broadcast.AbstractArrayStyle{0}}
+        bc_tmp = Base.Broadcast.Broadcasted{T}(bc.f, bc.args, ())
+        v = Base.Broadcast.materialize(bc_tmp)
+        col = similar(Vector{typeof(v)}, length(col1.selected_index))
+        copyto!(col, bc)
+    else
+        col = Base.Broadcast.materialize(bc)
+    end
+    col1.val[col1.selected_index] = col
+    if col1.col ∈ index(col1.ds).sortedcols
+        _reset_grouping_info!(col1.ds)
+    end
+    _modified(_attributes(col1.ds))
+    col
+end
+
+
 
 function _copyto_helper!(dscol::AbstractVector, bc::Base.Broadcast.Broadcasted, col::Int)
     if axes(dscol, 1) != axes(bc)[1]

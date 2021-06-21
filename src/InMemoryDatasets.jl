@@ -22,6 +22,7 @@ export
       DatasetColumns,
       DatasetColumn,
       SubDataset,
+      SubDatasetColumn,
       Dataset,
       nrow,
       ncol,
@@ -29,7 +30,9 @@ export
       setformat!,
       removeformat!,
       content,
-      mask
+      mask,
+      groupby!,
+      ungroup!
 
 include("other/index.jl")
 include("other/utils.jl")
@@ -48,18 +51,18 @@ include("dataset/cat.jl")
 # other functions
 include("dataset/other.jl")
 include("subdataset/subdataset.jl")
-include("sorteddataset/sorteddataset.jl")
 include("datasetrow/datasetrow.jl")
-# TODO needs correction for formats and other metadata
 include("other/broadcasting.jl")
 
 include("abstractdataset/selection.jl")
-include("dataset/sort.jl")
+include("sort/sort.jl")
+include("sort/groupby.jl")
 
 include("abstractdataset/iteration.jl")
 include("abstractdataset/prettytables.jl")
 include("abstractdataset/show.jl")
-include("sorteddataset/show.jl")
+include("datasetrow/show.jl")
+
 include("abstractdataset/io.jl")
 
 include("other/tables.jl")

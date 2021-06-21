@@ -656,5 +656,5 @@ function getformat(x::Index, y::UnitRange)
     end
 end
 function getformat(x::SubIndex, idx::Integer)
-    throw(ArgumentError("setting format for sub index is not allowed"))
+    getformat(parent(x), idx)
 end

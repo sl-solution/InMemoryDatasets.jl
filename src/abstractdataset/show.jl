@@ -1,4 +1,4 @@
-Base.summary(ds::AbstractDataset) =
+Base.summary(ds::Dataset) =
     if !isempty(index(ds).sortedcols) && index(ds).grouped[]
         @sprintf("%d×%d Grouped Dataset\nGrouped by: %s", size(ds)...,join(_names(ds)[index(ds).sortedcols],", "))
     elseif !isempty(index(ds).sortedcols)
@@ -7,6 +7,9 @@ Base.summary(ds::AbstractDataset) =
         @sprintf("%d×%d Dataset", size(ds)...)
     end
 Base.summary(io::IO, ds::AbstractDataset) = print(io, summary(ds))
+Base.summary(ds::SubDataset) =
+    @sprintf("%d×%d SubDataset", size(ds)...)
+
 
 """
     DataFrames.ourstrwidth(io::IO, x::Any, buffer::IOBuffer, truncstring::Int)
@@ -268,12 +271,17 @@ function _show(io::IO,
 
         show_row_number = false
     end
-
+    if isgrouped(df) 
+        extrahlines = index(df).starts[1:index(df).ngroups[]] .- 1
+    else
+        extrahlines = [0]
+    end
     # Print the table with the selected options.
     pretty_table(io, df;
                  alignment                   = alignment,
                  alignment_anchor_fallback   = :r,
                  alignment_anchor_regex      = alignment_anchor_regex,
+                 body_hlines                 = extrahlines,
                  compact_printing            = compact_printing,
                  crop                        = crop,
                  crop_num_lines_at_beginning = 2,
