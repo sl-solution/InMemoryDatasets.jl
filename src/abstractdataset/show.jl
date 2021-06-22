@@ -1,6 +1,6 @@
 Base.summary(ds::Dataset) =
     if !isempty(index(ds).sortedcols) && index(ds).grouped[]
-        @sprintf("%d×%d Grouped Dataset\nGrouped by: %s", size(ds)...,join(_names(ds)[index(ds).sortedcols],", "))
+        @sprintf("%d×%d Grouped Dataset with %d groups\nGrouped by: %s", size(ds)..., index(ds).ngroups[],join(_names(ds)[index(ds).sortedcols],", "))
     elseif !isempty(index(ds).sortedcols)
         @sprintf("%d×%d Sorted Dataset\n Sorted by: %s", size(ds)...,join(_names(ds)[index(ds).sortedcols],", "))
     else
