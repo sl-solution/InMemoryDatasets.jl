@@ -1391,7 +1391,7 @@ julia> filter!(AsTable(:) => nt -> nt.x == 1 || nt.y == "b", ds)
     # delete!(ds, _findall((x -> !(f(x)::Bool)).(nti)))
 
 function Base.Matrix(ds::AbstractDataset)
-    T = reduce(promote_type, (eltype(v) for v in eachcol(ds)))
+    T = mapreduce(eltype, promote_type, _columns(ds))
     return Matrix{T}(ds)
 end
 
