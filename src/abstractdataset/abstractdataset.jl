@@ -92,7 +92,7 @@ Base.copy(col1::DatasetColumn) = copy(__!(col1))
 Base.pairs(col1::DatasetColumn) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::DatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
 PooledArrays.PooledArray(col1::DatasetColumn) = PooledArray(col1.val)
-Base.convert(::AbstractVector, col1::DatasetColumn) = convert(AbstractVector, __!(col1))
+Base.convert(T, col1::DatasetColumn) = convert(T, __!(col1))
 
 
 __!(col1::SubDatasetColumn) =  view(col1.val, col1.selected_index)
@@ -112,7 +112,7 @@ Base.similar(col1::SubDatasetColumn) = similar(__!(col1))
 Base.copy(col1::SubDatasetColumn) = copy(__!(col1))
 Base.pairs(col1::SubDatasetColumn) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::SubDatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
-Base.convert(::AbstractVector, col1::SubDatasetColumn) = convert(AbstractVector, __!(col1))
+Base.convert(T, col1::SubDatasetColumn) = convert(T, __!(col1))
 ##############################################################################
 ##
 ## Basic properties of a Dataset
