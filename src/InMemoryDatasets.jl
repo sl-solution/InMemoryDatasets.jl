@@ -1,6 +1,7 @@
 module InMemoryDatasets
 
 using Dates
+using Statistics
 # using TableTraits,IteratorInterfaceExtensions
 using Reexport
 using Compat
@@ -32,7 +33,9 @@ export
       content,
       mask,
       groupby!,
-      ungroup!
+      ungroup!,
+      modify,
+      byrow
 
 include("other/index.jl")
 include("other/utils.jl")
@@ -48,12 +51,19 @@ include("dataset/setindex.jl")
 include("dataset/del_and_append.jl")
 # concatenate
 include("dataset/cat.jl")
+
+# byrow operations
+include("byrow/row_functions.jl")
+include("byrow/hp_row_functions.jl")
+include("byrow/byrow.jl")
 # other functions
 include("dataset/other.jl")
 include("subdataset/subdataset.jl")
 include("datasetrow/datasetrow.jl")
 include("other/broadcasting.jl")
 
+# modifying dataset
+include("dataset/modify.jl")
 include("abstractdataset/selection.jl")
 include("sort/sort.jl")
 include("sort/groupby.jl")
