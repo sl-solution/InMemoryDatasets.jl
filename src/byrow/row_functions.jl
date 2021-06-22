@@ -309,13 +309,14 @@ function _row_generic(ds::AbstractDataset, f::Function, colsidx)
     if !(res_temp isa VecOrMat)
         throw(ArgumentError("The output of the `f` must be a vector"))
     end
-    if length(res_temp[1]) > 1
-        throw(ArgumentError("The matrix output is not supported"))
-        res = similar(res_temp, nrow(ds), size(res_temp,2))
-    elseif length(res_temp[1]) == 1
+    
+    # if length(res_temp[1]) > 1
+    #     throw(ArgumentError("The matrix output is not supported"))
+    #     res = similar(res_temp, nrow(ds), size(res_temp,2))
+    # elseif length(res_temp[1]) == 1
         res = similar(res_temp, nrow(ds))
-    else
-        throw(ArgumentError("the result cannot be with zero dimension"))
+    # else
+        # throw(ArgumentError("the result cannot be with zero dimension"))
     end
 
     if nrow(ds)>1000
