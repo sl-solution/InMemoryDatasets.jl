@@ -299,7 +299,15 @@ row_hash(ds::AbstractDataset, cols = :) = row_hash(ds, identity, cols)
 function row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
     colsidx = index(ds)[cols]
     if length(colsidx) == 2
-        f.(_columns(ds)[colsidx[1]], _columns(ds)[colsidx[2]])
+        try
+            f.(_columns(ds)[colsidx[1]], _columns(ds)[colsidx[2]])
+        catch e
+            if e isa MethodError
+                _row_generic(ds, f, cols)
+            else
+                rethrow(e)
+            end
+        end
     else
         _row_generic(ds, f, cols)
     end
@@ -309,15 +317,14 @@ function _row_generic(ds::AbstractDataset, f::Function, colsidx)
     if !(res_temp isa VecOrMat)
         throw(ArgumentError("The output of the `f` must be a vector"))
     end
-    
+
     # if length(res_temp[1]) > 1
     #     throw(ArgumentError("The matrix output is not supported"))
     #     res = similar(res_temp, nrow(ds), size(res_temp,2))
     # elseif length(res_temp[1]) == 1
-        res = similar(res_temp, nrow(ds))
+    res = similar(res_temp, nrow(ds))
     # else
         # throw(ArgumentError("the result cannot be with zero dimension"))
-    end
 
     if nrow(ds)>1000
         if size(res, 2) == 1
@@ -344,7 +351,3 @@ function _row_generic_vec!(res, ds, f, colsidx)
     end
     res
 end
-
-
-
-

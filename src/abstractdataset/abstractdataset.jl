@@ -93,7 +93,7 @@ Base.pairs(col1::DatasetColumn) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::DatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
 PooledArrays.PooledArray(col1::DatasetColumn) = PooledArray(col1.val)
 Base.convert(T, col1::DatasetColumn) = convert(T, __!(col1))
-
+Base.convert(::Type{Any}, col1::DatasetColumn) = convert(Any, __!(col1))
 
 __!(col1::SubDatasetColumn) =  view(col1.val, col1.selected_index)
 Base.:(==)(col1::SubDatasetColumn, col2::SubDatasetColumn) = isequal(__!(col1), __!(col2))
@@ -113,6 +113,25 @@ Base.copy(col1::SubDatasetColumn) = copy(__!(col1))
 Base.pairs(col1::SubDatasetColumn) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::SubDatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
 Base.convert(T, col1::SubDatasetColumn) = convert(T, __!(col1))
+Base.convert(::Type{Any}, col1::SubDatasetColumn) = convert(Any, __!(col1))
+
+# Basic operation should work fine
+const SubOrDSCol = Union{SubDatasetColumn, DatasetColumn}
+
+Base.:(*)(col1::SubOrDSCol, x::Any) = *(__!(col1), x)
+Base.:(+)(col1::SubOrDSCol, x::Any) = +(__!(col1), x)
+Base.:(/)(col1::SubOrDSCol, x::Any) = /(__!(col1), x)
+Base.:(-)(col1::SubOrDSCol, x::Any) = -(__!(col1), x)
+Base.:(*)(x::Any, col1::SubOrDSCol) = *(x, __!(col1))
+Base.:(+)(x::Any, col1::SubOrDSCol) = +(x, __!(col1))
+Base.:(/)(x::Any, col1::SubOrDSCol) = /(x, __!(col1))
+Base.:(-)(x::Any, col1::SubOrDSCol) = -(x, __!(col1))
+Base.:(*)(col2::SubOrDSCol, col1::SubOrDSCol) = *(__!(col2), __!(col1))
+Base.:(+)(col2::SubOrDSCol, col1::SubOrDSCol) = +(__!(col2), __!(col1))
+Base.:(/)(col2::SubOrDSCol, col1::SubOrDSCol) = /(__!(col2), __!(col1))
+Base.:(-)(col2::SubOrDSCol, col1::SubOrDSCol) = -(__!(col2), __!(col1))
+
+
 ##############################################################################
 ##
 ## Basic properties of a Dataset
