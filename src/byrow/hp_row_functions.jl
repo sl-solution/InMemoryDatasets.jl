@@ -6,7 +6,7 @@ function hp_hash!(x, y ; f)
 end
 
 function row_hash_hp(ds::AbstractDataset, f::Function, cols = :)
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
     _hp_op!(x, y; f = f) = x .= hp_hash!(x, y; f = f)
     mapreduce(identity, _hp_op!, view(getfield(ds, :columns),colsidx), init = zeros(UInt64, size(ds,1)))
 end
@@ -20,7 +20,7 @@ function hp_sum!(x, y; f)
 end
 
 function hp_row_sum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
     T = typeof(f(zero(CT)))
     if CT >: Missing
@@ -39,7 +39,7 @@ function hp_mult!(x, y; f)
     x
 end
 function hp_row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
     T = typeof(f(zero(CT)))
     if CT >: Missing
@@ -59,7 +59,7 @@ function hp_count!(x, y; f)
 end
 
 function hp_row_count(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
     _hp_op_for_count!(x, y; f = f) = x .= hp_count!(x, y; f = f)
     mapreduce(identity, _hp_op_for_count!, view(getfield(ds, :columns),colsidx), init = zeros(Int32, size(ds,1)))
 end
@@ -74,7 +74,7 @@ function hp_bool_add!(x, y; f)
 end
 
 function hp_row_any(ds::AbstractDataset, f::Function, cols = :)
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
 
     _hp_op_for_any!(x, y; f = f) = x .= hp_bool_add!(x, y; f = f)
     # mapreduce(identity, op_for_anymissing!, eachcol(ds)[colsidx[sel_colsidx]], init = zeros(Bool, size(ds,1)))
@@ -92,7 +92,7 @@ function hp_bool_mult!(x, y; f)
 end
 
 function hp_row_all(ds::AbstractDataset, f::Function, cols = :)
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
     _hp_op_for_all!(x, y; f = f) = x .= hp_bool_mult!(x, y; f = f)
     # mapreduce(identity, op_for_anymissing!, eachcol(ds)[colsidx[sel_colsidx]], init = zeros(Bool, size(ds,1)))
     mapreduce(identity, _hp_op_for_all!, view(getfield(ds, :columns),colsidx), init = ones(Bool, size(ds,1)))
@@ -113,7 +113,7 @@ function hp_min!(x, y; f = f)
 end
 
 function hp_row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
     # since zero(Date) is Day(0)
     T = typeof(f(zeros(CT)[1]))
@@ -136,7 +136,7 @@ end
 
 
 function hp_row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
     T = typeof(f(zeros(CT)[1]))
     if CT >: Missing
@@ -150,7 +150,7 @@ end
 hp_row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = hp_row_maximum(ds, identity, cols)
 
 function hp_row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
     T = typeof(f(zero(CT)))
     if CT >: Missing
@@ -178,7 +178,7 @@ hp_row_std(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); dof = 
 
 
 function hp_row_sort!(ds::Dataset, cols = names(ds, Union{Missing, Number}); kwargs...)
-    colsidx = col_index(ds)[cols]
+    colsidx = index(ds)[cols]
     T = mapreduce(eltype, promote_type, eachcol(ds)[colsidx])
     m = Matrix{T}(ds[!, colsidx])
     Threads.@threads for i in 1:size(m, 1)
