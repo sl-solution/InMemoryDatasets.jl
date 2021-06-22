@@ -295,3 +295,55 @@ function row_hash(ds::AbstractDataset, f::Function, cols = :)
     mapreduce(identity, _op_hash, view(getfield(ds, :columns),colsidx), init = zeros(UInt64, size(ds,1)))
 end
 row_hash(ds::AbstractDataset, cols = :) = row_hash(ds, identity, cols)
+
+function row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
+    colsidx = index(ds)[cols]
+    if length(colsidx) == 2
+        f.(_columns(ds)[colsidx[1]], _columns(ds)[colsidx[2]])
+    else
+        _row_generic(ds, f, cols)
+    end
+end
+function _row_generic(ds::AbstractDataset, f::Function, colsidx)
+    res_temp = f.(eachrow(Matrix(ds[1:min(1000, nrow(ds)), colsidx])))
+    if !(res_temp isa VecOrMat)
+        throw(ArgumentError("The output of the `f` must be a vector"))
+    end
+    if length(res_temp[1]) > 1
+        throw(ArgumentError("The matrix output is not supported"))
+        res = similar(res_temp, nrow(ds), size(res_temp,2))
+    elseif length(res_temp[1]) == 1
+        res = similar(res_temp, nrow(ds))
+    else
+        throw(ArgumentError("the result cannot be with zero dimension"))
+    end
+
+    if nrow(ds)>1000
+        if size(res, 2) == 1
+            view(res, 1:1000) .= res_temp
+            _row_generic_vec!(res, ds, f, colsidx)
+        else
+            view(res, 1:1000, :) .= res_temp
+            _row_generic_mat!(res, ds, f, colsidx)
+        end
+    else
+        return res_temp
+    end
+    return res
+end
+
+function _row_generic_vec!(res, ds, f, colsidx)
+    cnt = 1
+    while true
+        st = 1000*cnt + 1
+        en = min(1000*(cnt + 1), nrow(ds))
+        view(res, st:en) .= f.(eachrow(Matrix(view(ds, st:en, colsidx))))
+        en == nrow(ds) && break
+        cnt += 1
+    end
+    res
+end
+
+
+
+

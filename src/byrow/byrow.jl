@@ -52,6 +52,8 @@ byrow(ds::AbstractDataset, ::typeof(hash), cols = :; by = identity, threads = tr
 byrow(ds::AbstractDataset, ::typeof(mapreduce), cols = names(ds, Union{Missing, Number}); op = .+, kwargs...) = mapreduce(identity, op, eachcol(ds[!, cols]); kwargs...)
 
 byrow(ds::AbstractDataset, ::typeof(reduce), cols = names(ds, Union{Missing, Number}); op = .+, kwargs...) = reduce(op, eachcol(ds[!, cols]); kwargs...)
+
+byrow(ds::AbstractDataset, f::Function, cols) = row_generic(ds, f, cols)
 #
 # function byrow(f::Function, ds::AbstractDataset, col::DataFrames.ColumnIndex; kwargs...)
 #     _temp_fun(x) = f(x; kwargs...)
