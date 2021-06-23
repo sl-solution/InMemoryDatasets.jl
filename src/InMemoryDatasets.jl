@@ -36,7 +36,8 @@ export
       ungroup!,
       modify,
       modify!,
-      byrow
+      byrow,
+      setinfo!
 
 include("other/index.jl")
 include("other/utils.jl")
