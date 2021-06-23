@@ -1,3 +1,12 @@
+
+function _first_nonmiss(x)
+    for i in 1:length(x)
+        res = x[i]
+        !ismissing(res) && return res
+    end
+    res
+end
+
 function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group)
     Threads.@threads for i in 1:length(v)
         @inbounds rhashes[i] = hash(f(v[i]), prev_groups[i])

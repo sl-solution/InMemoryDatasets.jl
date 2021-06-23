@@ -142,14 +142,18 @@ function normalize_modify_multiple!(outidx::Index, idx::Index, @nospecialize(arg
     res
 end
 
-
-
 modify(ds::Dataset) = copy(ds)
 function modify(origninal_ds::Dataset, @nospecialize(args...))
     ds = copy(origninal_ds)
     idx_cpy = copy(index(ds))
     if isgrouped(ds)
-        _modify_grouped(ds, normalize_modify_multiple!(idx_cpy, index(ds), args...))
+        norm_var = normalize_modify_multiple!(idx_cpy, index(ds), args...)
+        all_new_var = map(x -> x.second.second, norm_var)
+        var_index = idx_cpy[unique(all_new_var)]
+        if any(index(ds).sortedcols .∈ Ref(var_index))
+            throw(ArgumentError("the grouping variables cannot be modified, first use `ungroup!(ds)` to ungroup the data set"))
+        end
+        _modify_grouped(ds, norm_var)
     else
         _modify(ds, normalize_modify_multiple!(idx_cpy, index(ds), args...))
     end
@@ -158,6 +162,10 @@ modify!(ds::Dataset) = ds
 function modify!(ds::Dataset, @nospecialize(args...))
     idx_cpy = copy(index(ds))
     if isgrouped(ds)
+        norm_var = normalize_modify_multiple!(idx_cpy, index(ds), args...)
+        all_new_var = map(x -> x.second.second, norm_var)
+        var_index = idx_cpy[unique(all_new_var)]
+        index(ds).sortedcols .∈ Ref(var_index) && throw(ArgumentError("the grouping variables cannot be modified, first use `ungroup!(ds)` to ungroup the data set"))
         _modify_grouped(ds, normalize_modify_multiple!(idx_cpy, index(ds), args...))
     else
         _modify(ds, normalize_modify_multiple!(idx_cpy, index(ds), args...))
@@ -218,14 +226,6 @@ function _modify(ds, ms)
         end
     end
     return ds
-end
-
-function _first_nonmiss(x)
-    for i in 1:length(x)
-        res = x[i]
-        !ismissing(res) && return res
-    end
-    res
 end
 
 
