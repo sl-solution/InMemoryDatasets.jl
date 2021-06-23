@@ -62,10 +62,10 @@ function normalize_modify!(outidx::Index, idx::Index,
                                         <:Pair{<:Expr,
                                             <:Union{Symbol, AbstractString}}}))
     colsidx = outidx[sel.first]
-    if sel.second.head == :BYROW
+    if sel.second.first.head == :BYROW
         # TODO needs a better name for destination
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
-        return outidx[colsidx] => sel.second => Symbol(sel.second.second)
+        return outidx[colsidx] => sel.second.first => Symbol(sel.second.second)
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
@@ -112,12 +112,14 @@ function normalize_modify!(outidx::Index, idx::Index,
     if !(length(colsidx) == length(sel.second.second))
         throw(ArgumentError("The input number of columns and the length of the output names should match"))
     end
-    @show typeof(sel.second.first) isa Expr
-    if typeof(sel.second.first) == Expr
-        if sel.second.first.head == :BYROW
-            throw(ArgumentError("in byrow operation the destination name cannot be more than one"))
-        end
-    end
+    # if typeof(sel.second.first) == Expr
+    #     if sel.second.first.head == :BYROWbyrow(sel.second.first
+    #         res = [normalize_modify!(outidx, idx, colsidx[1] => ) => sel.second.second[1])]
+    #         for i in 2:length(colsidx)
+    #             push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second.first => sel.second.second[i]))
+    #         end
+    #     end
+    # end
     res = [normalize_modify!(outidx, idx, colsidx[1] => sel.second.first => sel.second.second[1])]
     for i in 2:length(colsidx)
         push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second.first => sel.second.second[i]))
