@@ -162,11 +162,11 @@ function modify!(ds::Dataset, @nospecialize(args...))
     end
 end
 
-function _resize_result!(ds, _res, newcol)
-    resize_col = false
+function _is_scalar(_res, sz)
+     resize_col = false
     try
         size(_res)
-        if size(_res) == () || size(_res,1) != nrow(ds)
+        if size(_res) == () || size(_res,1) != sz
             # fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)),
             #                           _res)
             # _res = repeat([_res], nrow(ds))
@@ -178,8 +178,14 @@ function _resize_result!(ds, _res, newcol)
                                       # _res)
             # _res = repeat([_res], nrow(ds))
             resize_col = true
-        end
+       end
+
     end
+    return resize_col
+end
+
+function _resize_result!(ds, _res, newcol)
+    resize_col = _is_scalar(_res, nrow(ds))
     if resize_col
         ds[!, newcol] = fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)), _res)
     else
@@ -221,44 +227,65 @@ function _first_nonmiss(x)
 end
 
 
-
-function _allocate_for_groups(f, v, t, sz)
-    T = typeof(invoke(f, Tuple{t}, v))
-    if t >: Missing
-        T = Union{Missing, T}
-    end
-    _res = Tables.allocatecolumn(T, sz)
-    return _res
-end
-
 # FIXME notyet complete
 function _modify_grouped(ds, ms)
     needs_reset_grouping = false
     for i in 1:length(ms)
             if (ms[i].second.first isa Base.Callable) && !(ms[i].second.second isa MultiCol)
-                _res = _allocate_for_groups(ms[i].second.first, _first_nonmiss(_columns(ds)[ms[i].first]), eltype(ds[!, ms[i].first]), nrow(ds))
+                # Checking the output type
+                mingsize = 2
+                _tmpval = similar(_columns(ds)[ms[i].first], mingsize)
+                _first_nonmiss_val = _first_nonmiss(_columns(ds)[ms[i].first])
+                for i in 1:mingsize
+                    _tmpval[i] = _first_nonmiss_val
+                end
+                _tmpval_fun = ms[i].second.first(_tmpval)
+                notvector = _is_scalar(_tmpval_fun, 2)
+                if notvector
+                    T = typeof(_tmpval_fun)
+                else
+                    T = eltype(_tmpval_fun)
+                end
+                if eltype(ds[!, ms[i].first]) >: Missing
+                    for i in 1:mingsize
+                        _tmpval[i] = missing
+                    end
+                    if notvector
+                        T = Union{T, typeof(ms[i].second.first(_tmpval))}
+                    else
+                        T = Union{T, eltype(ms[i].second.first(_tmpval))}
+                    end
+                end
+                 _res = Tables.allocatecolumn(T, nrow(ds))
                 Threads.@threads for g in 1:index(ds).ngroups[]
                     lo = index(ds).starts[g]
                     g == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[g + 1] - 1
-                    _res[lo:hi] .= ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
+                    _tmp_res = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
+                    resize_col = _is_scalar(_tmp_res, length(lo:hi))
+                    if resize_col
+                        fill!(view(_res, lo:hi), _tmp_res)
+                    else
+                        copy!(view(_res, lo:hi), _tmp_res)
+                    end
                 end
                 ds[!, ms[i].second.second] = _res
             elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
                 ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first, ms[i].second.first.args[2]...)
             elseif (ms[i].second.first isa Base.Callable) && (ms[i].second.second isa MultiCol)
-                _res = _allocate_for_groups(ms[i].second.first, coalesce(_columns(ds)[ms[i].first]), eltype(ds[!, ms[i].first]), nrow(ds))
-                if _res isa Tuple
-                    for g in 1:index(ds).ngroups[]
-                        lo = index(ds).starts[g]
-                        g == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[g + 1] - 1
-                        for j in 1:length(ms[i].second.second.x)
-                            copy!(view(_res, lo:hi), ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi)))
-                        end
-                            # _resize_result!(ds, _res[j], ms[i].second.second.x[j])
-                    end
-                else
-                    throw(ArgumentError("the function must return results as a tuple which each element of it corresponds to a new column"))
-                end
+                # _res = _allocate_for_groups(ms[i].second.first, coalesce(_columns(ds)[ms[i].first]), eltype(ds[!, ms[i].first]), nrow(ds))
+                # if _res isa Tuple
+                #     for g in 1:index(ds).ngroups[]
+                #         lo = index(ds).starts[g]
+                #         g == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[g + 1] - 1
+                #         for j in 1:length(ms[i].second.second.x)
+                #             copy!(view(_res, lo:hi), ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi)))
+                #         end
+                #             # _resize_result!(ds, _res[j], ms[i].second.second.x[j])
+                #     end
+                # else
+                #     throw(ArgumentError("the function must return results as a tuple which each element of it corresponds to a new column"))
+                # end
+                throw(ArgumentError("multi column output is not supported for grouped data set"))
             else
                 @error "not yet know how to handle the situation $(ms[i])"
             end
