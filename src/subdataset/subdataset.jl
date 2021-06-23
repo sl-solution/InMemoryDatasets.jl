@@ -75,6 +75,14 @@ end
 
 _attributes(sds::SubDataset) = getfield(parent(sds), :attributes)
 
+# Experimental
+function _columns(sds::SubDataset)
+    allcols = AbstractArray[]
+    for j in 1:ncol(parent(sds))
+        push!(allcols, view(_columns(parent(sds))[j], rows(sds)))
+    end
+    allcols
+end
 
 Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVector{Int}, cols)
     @boundscheck if !checkindex(Bool, axes(parent, 1), rows)

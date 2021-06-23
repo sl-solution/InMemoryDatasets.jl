@@ -24,28 +24,28 @@ Base.hash(x::_Prehashed) = x.hash
 
 function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = typeof(f(zero(CT)))
     if CT >: Missing
         T = Union{Missing, T}
     end
     _op_for_sum!(x, y) = x .= _add_sum.(x, f.(y))
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
-    mapreduce(identity, _op_for_sum!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _op_for_sum!, view(_columns(ds),colsidx), init = init0)
 end
 row_sum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_sum(ds, identity, cols)
 
 
 function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = typeof(f(zero(CT)))
     if CT >: Missing
         T = Union{Missing, T}
     end
     _op_for_prod!(x, y) = x .= _mul_prod.(x, f.(y))
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
-    mapreduce(identity, _op_for_prod!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _op_for_prod!, view(_columns(ds),colsidx), init = init0)
 end
 row_prod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_prod(ds, identity, cols)
 
@@ -53,7 +53,7 @@ row_prod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_pr
 function row_count(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     _op_for_count!(x, y) = x .+= (_bool(f).(y))
-    mapreduce(identity, _op_for_count!, view(getfield(ds, :columns),colsidx), init = zeros(Int32, size(ds,1)))
+    mapreduce(identity, _op_for_count!, view(_columns(ds),colsidx), init = zeros(Int32, size(ds,1)))
 end
 row_count(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_count(ds, x->true, cols)
 
@@ -62,7 +62,7 @@ function row_any(ds::AbstractDataset, f::Function, cols = :)
     _op_bool_add(x::Bool,y::Bool) = x | y ? true : false
     op_for_any!(x,y) = x .= _op_bool_add.(x, _bool(f).(y))
     # mapreduce(identity, op_for_anymissing!, eachcol(ds)[colsidx[sel_colsidx]], init = zeros(Bool, size(ds,1)))
-    mapreduce(identity, op_for_any!, view(getfield(ds, :columns),colsidx), init = zeros(Bool, size(ds,1)))
+    mapreduce(identity, op_for_any!, view(_columns(ds),colsidx), init = zeros(Bool, size(ds,1)))
 end
 row_any(ds::AbstractDataset, cols = :) = row_any(ds, isequal(true), cols)
 
@@ -71,7 +71,7 @@ function row_all(ds::AbstractDataset, f::Function, cols = :)
     _op_bool_mult(x::Bool,y::Bool) = x & y ? true : false
     op_for_all!(x,y) = x .= _op_bool_mult.(x, _bool(f).(y))
     # mapreduce(identity, op_for_anymissing!, eachcol(ds)[colsidx[sel_colsidx]], init = zeros(Bool, size(ds,1)))
-    mapreduce(identity, op_for_all!, view(getfield(ds, :columns),colsidx), init = ones(Bool, size(ds,1)))
+    mapreduce(identity, op_for_all!, view(_columns(ds),colsidx), init = ones(Bool, size(ds,1)))
 end
 row_all(ds::AbstractDataset, cols = :) = row_all(ds, isequal(true), cols)
 
@@ -85,7 +85,7 @@ row_mean(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_me
 
 function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     # since zero(Date) is Day(0)
     T = typeof(f(zeros(CT)[1]))
     if CT >: Missing
@@ -93,7 +93,7 @@ function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mi
     end
     _op_for_min!(x, y) = x .= _min_fun.(x, f.(y))
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemax(T))
-    mapreduce(identity, _op_for_min!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _op_for_min!, view(_columns(ds),colsidx), init = init0)
 end
 row_minimum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_minimum(ds, identity, cols)
 
@@ -101,7 +101,7 @@ row_minimum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row
 
 function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = typeof(f(zeros(CT)[1]))
     if CT >: Missing
         T = Union{Missing, T}
@@ -109,7 +109,7 @@ function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mi
     _op_for_max!(x, y) = x .= _max_fun.(x, f.(y))
     # TODO the type of zeros after applying f???
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemin(T))
-    mapreduce(identity, _op_for_max!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _op_for_max!, view(_columns(ds),colsidx), init = init0)
 end
 row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_maximum(ds, identity, cols)
 
@@ -135,7 +135,7 @@ end
 
 function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = typeof(f(zero(CT)))
     if CT >: Missing
         T = Union{Missing, T}
@@ -161,7 +161,7 @@ row_std(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); dof = tru
 
 function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    T = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     for i in colsidx
         if eltype(ds[!, i]) >: Missing
             _columns(ds)[i] = convert(Vector{Union{Missing, T}}, _columns(ds)[i])
@@ -171,7 +171,7 @@ function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}))
     end
     _op_for_cumsum!(x, y) = y .= _add_sum.(x, y)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
-    mapreduce(identity, _op_for_cumsum!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _op_for_cumsum!, view(_columns(ds),colsidx), init = init0)
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
@@ -188,7 +188,7 @@ end
 
 function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    T = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     for i in colsidx
         if eltype(ds[!, i]) >: Missing
             _columns(ds)[i] = convert(Vector{Union{Missing, T}}, _columns(ds)[i])
@@ -198,7 +198,7 @@ function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}))
     end
     _op_for_cumprod!(x, y) = y .= _mul_prod.(x, y)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
-    mapreduce(identity, _op_for_cumprod!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _op_for_cumprod!, view(_columns(ds),colsidx), init = init0)
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
@@ -239,7 +239,7 @@ function row_sort!(ds::Dataset, cols = names(ds, Union{Missing, Number}); kwargs
     m = Matrix{T}(ds[!, colsidx])
     sort!(m; dims = 2, kwargs...)
     for i in 1:length(colsidx)
-        getfield(ds, :columns)[colsidx[i]] = m[:, i]
+        _columns(ds)[colsidx[i]] = m[:, i]
     end
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
@@ -272,7 +272,7 @@ end
 function row_nunique(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); count_missing = true)
     colsidx = index(ds)[cols]
     prehashed = Matrix{_Prehashed}(undef, size(ds,1), length(colsidx))
-    allcols = view(getfield(ds, :columns),colsidx)
+    allcols = view(_columns(ds),colsidx)
 
     for j in 1:size(prehashed,2)
         _fill_prehashed!(prehashed, allcols[j], f, size(ds,1), j)
@@ -292,7 +292,7 @@ row_nunique(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); count
 function row_hash(ds::AbstractDataset, f::Function, cols = :)
     colsidx = index(ds)[cols]
     _op_hash(x, y) = x .= hash.(f.(y), x)
-    mapreduce(identity, _op_hash, view(getfield(ds, :columns),colsidx), init = zeros(UInt64, size(ds,1)))
+    mapreduce(identity, _op_hash, view(_columns(ds),colsidx), init = zeros(UInt64, size(ds,1)))
 end
 row_hash(ds::AbstractDataset, cols = :) = row_hash(ds, identity, cols)
 

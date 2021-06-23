@@ -8,7 +8,7 @@ end
 function row_hash_hp(ds::AbstractDataset, f::Function, cols = :)
     colsidx = index(ds)[cols]
     _hp_op!(x, y; f = f) = x .= hp_hash!(x, y; f = f)
-    mapreduce(identity, _hp_op!, view(getfield(ds, :columns),colsidx), init = zeros(UInt64, size(ds,1)))
+    mapreduce(identity, _hp_op!, view(_columns(ds),colsidx), init = zeros(UInt64, size(ds,1)))
 end
 row_hash_hp(ds::AbstractDataset, cols = :) = row_hash_hp(ds, f, cols)
 
@@ -21,14 +21,14 @@ end
 
 function hp_row_sum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = typeof(f(zero(CT)))
     if CT >: Missing
         T = Union{Missing, T}
     end
     _hp_op_for_sum!(x, y; f = f) = x .= hp_sum!(x, y; f = f)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
-    mapreduce(identity, _hp_op_for_sum!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _hp_op_for_sum!, view(_columns(ds),colsidx), init = init0)
 end
 hp_row_sum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = hp_row_sum(ds, identity, cols)
 
@@ -40,14 +40,14 @@ function hp_mult!(x, y; f)
 end
 function hp_row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = typeof(f(zero(CT)))
     if CT >: Missing
         T = Union{Missing, T}
     end
     _hp_op_for_prod!(x, y; f = f) = x .= hp_mult!(x, y; f = f)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
-    mapreduce(identity, _hp_op_for_prod!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _hp_op_for_prod!, view(_columns(ds),colsidx), init = init0)
 end
 hp_row_prod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = hp_row_prod(ds, identity, cols)
 
@@ -61,7 +61,7 @@ end
 function hp_row_count(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     _hp_op_for_count!(x, y; f = f) = x .= hp_count!(x, y; f = f)
-    mapreduce(identity, _hp_op_for_count!, view(getfield(ds, :columns),colsidx), init = zeros(Int32, size(ds,1)))
+    mapreduce(identity, _hp_op_for_count!, view(_columns(ds),colsidx), init = zeros(Int32, size(ds,1)))
 end
 hp_row_count(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = hp_row_count(ds, x->true, cols)
 
@@ -78,7 +78,7 @@ function hp_row_any(ds::AbstractDataset, f::Function, cols = :)
 
     _hp_op_for_any!(x, y; f = f) = x .= hp_bool_add!(x, y; f = f)
     # mapreduce(identity, op_for_anymissing!, eachcol(ds)[colsidx[sel_colsidx]], init = zeros(Bool, size(ds,1)))
-    mapreduce(identity, _hp_op_for_any!, view(getfield(ds, :columns),colsidx), init = zeros(Bool, size(ds,1)))
+    mapreduce(identity, _hp_op_for_any!, view(_columns(ds),colsidx), init = zeros(Bool, size(ds,1)))
 end
 hp_row_any(ds::AbstractDataset, cols = :) = hp_row_any(ds, isequal(true), cols)
 
@@ -95,7 +95,7 @@ function hp_row_all(ds::AbstractDataset, f::Function, cols = :)
     colsidx = index(ds)[cols]
     _hp_op_for_all!(x, y; f = f) = x .= hp_bool_mult!(x, y; f = f)
     # mapreduce(identity, op_for_anymissing!, eachcol(ds)[colsidx[sel_colsidx]], init = zeros(Bool, size(ds,1)))
-    mapreduce(identity, _hp_op_for_all!, view(getfield(ds, :columns),colsidx), init = ones(Bool, size(ds,1)))
+    mapreduce(identity, _hp_op_for_all!, view(_columns(ds),colsidx), init = ones(Bool, size(ds,1)))
 end
 hp_row_all(ds::AbstractDataset, cols = :) = hp_row_all(ds, isequal(true), cols)
 
@@ -114,7 +114,7 @@ end
 
 function hp_row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     # since zero(Date) is Day(0)
     T = typeof(f(zeros(CT)[1]))
     if CT >: Missing
@@ -122,7 +122,7 @@ function hp_row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union
     end
     _hp_op_for_min!(x, y; f = f) = x .= hp_min!(x, y; f = f)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemax(T))
-    mapreduce(identity, _hp_op_for_min!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _hp_op_for_min!, view(_columns(ds),colsidx), init = init0)
 end
 hp_row_minimum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = hp_row_minimum(ds, identity, cols)
 
@@ -137,7 +137,7 @@ end
 
 function hp_row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = typeof(f(zeros(CT)[1]))
     if CT >: Missing
         T = Union{Missing, T}
@@ -145,13 +145,13 @@ function hp_row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union
     _hp_op_for_max!(x, y; f = f) = x .= hp_max!(x, y; f = f)
     # TODO the type of zeros after applying f???
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemin(T))
-    mapreduce(identity, _hp_op_for_max!, view(getfield(ds, :columns),colsidx), init = init0)
+    mapreduce(identity, _hp_op_for_max!, view(_columns(ds),colsidx), init = init0)
 end
 hp_row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = hp_row_maximum(ds, identity, cols)
 
 function hp_row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
     colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(getfield(ds, :columns),colsidx))
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = typeof(f(zero(CT)))
     if CT >: Missing
         T = Union{Missing, T}
@@ -186,7 +186,7 @@ function hp_row_sort!(ds::Dataset, cols = names(ds, Union{Missing, Number}); kwa
     end
     # TODO no parallel is needed here to minimise memory
     for i in 1:length(colsidx)
-        getfield(ds, :columns)[colsidx[i]] = m[:, i]
+        _columns(ds)[colsidx[i]] = m[:, i]
     end
 end
 

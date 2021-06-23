@@ -66,7 +66,7 @@ struct SubDatasetColumn{T <: AbstractDataset, E}
     val::E
     selected_index
 end
-_columns(ds::AbstractDataset) = getfield(parent(ds), :columns)
+_columns(ds::Dataset) = getfield(ds, :columns)
 Base.show(io::IO, ::MIME"text/plain", col::DatasetColumn) = show(IOContext(io, :limit => true), "text/plain", col.val)
 Base.show(io::IO, ::MIME"text/plain", col::SubDatasetColumn) = show(IOContext(io, :limit => true), "text/plain", view(col.val, col.selected_index))
 
@@ -1006,49 +1006,48 @@ julia> completecases(ds, [:x, :y])
  1
 ```
 """
-# byrow(any, ...) or byrow(all, ...) can handle the job
-# function completecases(ds::AbstractDataset, col::Colon=:)
-#     if ncol(ds) == 0
-#         throw(ArgumentError("Unable to compute complete cases of a " *
-#                             "data set with no columns"))
-#     end
-#     res = trues(size(ds, 1))
-#     aux = BitVector(undef, size(ds, 1))
-#     for i in 1:size(ds, 2)
-#         v = ds[!, i]
-#         if Missing <: eltype(v)
-#             # Disable fused broadcasting as it happens to be much slower
-#             aux .= .!ismissing.(v)
-#             res .&= aux
-#         end
-#     end
-#     return res
-# end
-#
-# function completecases(df::AbstractDataset, col::ColumnIndex)
-#     v = df[!, col]
-#     if Missing <: eltype(v)
-#         res = BitVector(undef, size(df, 1))
-#         res .= .!ismissing.(v)
-#         return res
-#     else
-#         return trues(size(df, 1))
-#     end
-# end
-#
-# completecases(df::AbstractDataset, cols::MultiColumnIndex) =
-#     completecases(df[!, cols])
-#
-"""
-    dropmissing(df::AbstractDataset, cols=:; view::Bool=false, disallowmissing::Bool=!view)
+function completecases(ds::AbstractDataset, col::Colon=:)
+    if ncol(ds) == 0
+        throw(ArgumentError("Unable to compute complete cases of a " *
+                            "data set with no columns"))
+    end
+    res = trues(size(ds, 1))
+    aux = BitVector(undef, size(ds, 1))
+    for i in 1:size(ds, 2)
+        v = ds[!, i]
+        if Missing <: eltype(v)
+            # Disable fused broadcasting as it happens to be much slower
+            aux .= .!ismissing.(v)
+            res .&= aux
+        end
+    end
+    return res
+end
 
-Return a data set excluding rows with missing values in `df`.
+function completecases(ds::AbstractDataset, col::ColumnIndex)
+    v = ds[!, col]
+    if Missing <: eltype(v)
+        res = BitVector(undef, size(ds, 1))
+        res .= .!ismissing.(v)
+        return res
+    else
+        return trues(size(ds, 1))
+    end
+end
+
+completecases(ds::AbstractDataset, cols::MultiColumnIndex) =
+    completecases(ds[!, cols])
+
+"""
+    dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, disallowmissing::Bool=!view)
+
+Return a data set excluding rows with missing values in `ds`.
 
 If `cols` is provided, only missing values in the corresponding columns are considered.
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
 If `view=false` a freshly allocated `Dataset` is returned.
-If `view=true` then a `SubDataset` view into `df` is returned. In this case
+If `view=true` then a `SubDataset` view into `ds` is returned. In this case
 `disallowmissing` must be `false`.
 
 If `disallowmissing` is `true` (the default when `view` is `false`)
@@ -1060,7 +1059,7 @@ See also: [`completecases`](@ref) and [`dropmissing!`](@ref).
 # Examples
 
 ```jldoctest
-julia> df = Dataset(i = 1:5,
+julia> ds = Dataset(i = 1:5,
                       x = [missing, 4, missing, 2, 1],
                       y = [missing, missing, "c", "d", "e"])
 5×3 Dataset
@@ -1073,7 +1072,7 @@ julia> df = Dataset(i = 1:5,
    4 │     4        2  d
    5 │     5        1  e
 
-julia> dropmissing(df)
+julia> dropmissing(ds)
 2×3 Dataset
  Row │ i      x      y
      │ Int64  Int64  String
@@ -1081,7 +1080,7 @@ julia> dropmissing(df)
    1 │     4      2  d
    2 │     5      1  e
 
-julia> dropmissing(df, disallowmissing=false)
+julia> dropmissing(ds, disallowmissing=false)
 2×3 Dataset
  Row │ i      x       y
      │ Int64  Int64?  String?
@@ -1089,7 +1088,7 @@ julia> dropmissing(df, disallowmissing=false)
    1 │     4       2  d
    2 │     5       1  e
 
-julia> dropmissing(df, :x)
+julia> dropmissing(ds, :x)
 3×3 Dataset
  Row │ i      x      y
      │ Int64  Int64  String?
@@ -1098,7 +1097,7 @@ julia> dropmissing(df, :x)
    2 │     4      2  d
    3 │     5      1  e
 
-julia> dropmissing(df, [:x, :y])
+julia> dropmissing(ds, [:x, :y])
 2×3 Dataset
  Row │ i      x      y
      │ Int64  Int64  String
@@ -1107,26 +1106,26 @@ julia> dropmissing(df, [:x, :y])
    2 │     5      1  e
 ```
 """
-# @inline function dropmissing(df::AbstractDataset,
-#                              cols::Union{ColumnIndex, MultiColumnIndex}=:;
-#                              view::Bool=false, disallowmissing::Bool=!view)
-#     rowidxs = completecases(df, cols)
-#     if view
-#         if disallowmissing
-#             throw(ArgumentError("disallowmissing=true is incompatible with view=true"))
-#         end
-#         return Base.view(df, rowidxs, :)
-#     else
-#         newdf = df[rowidxs, :]
-#         disallowmissing && disallowmissing!(newdf, cols)
-#         return newdf
-#     end
-# end
+@inline function dropmissing(ds::AbstractDataset,
+                             cols::Union{ColumnIndex, MultiColumnIndex}=:;
+                             view::Bool=false, disallowmissing::Bool=!view)
+    rowidxs = completecases(ds, cols)
+    if view
+        if disallowmissing
+            throw(ArgumentError("disallowmissing=true is incompatible with view=true"))
+        end
+        return Base.view(ds, rowidxs, :)
+    else
+        newds = ds[rowidxs, :]
+        disallowmissing && disallowmissing!(newds, cols)
+        return newds
+    end
+end
 
 """
-    dropmissing!(df::AbstractDataset, cols=:; disallowmissing::Bool=true)
+    dropmissing!(ds::AbstractDataset, cols=:; disallowmissing::Bool=true)
 
-Remove rows with missing values from data set `df` and return it.
+Remove rows with missing values from data set `ds` and return it.
 
 If `cols` is provided, only missing values in the corresponding columns are considered.
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
@@ -1137,7 +1136,7 @@ get converted using [`disallowmissing!`](@ref).
 See also: [`dropmissing`](@ref) and [`completecases`](@ref).
 
 ```jldoctest
-julia> df = Dataset(i = 1:5,
+julia> ds = Dataset(i = 1:5,
                       x = [missing, 4, missing, 2, 1],
                       y = [missing, missing, "c", "d", "e"])
 5×3 Dataset
@@ -1150,7 +1149,7 @@ julia> df = Dataset(i = 1:5,
    4 │     4        2  d
    5 │     5        1  e
 
-julia> dropmissing!(copy(df))
+julia> dropmissing!(copy(ds))
 2×3 Dataset
  Row │ i      x      y
      │ Int64  Int64  String
@@ -1158,7 +1157,7 @@ julia> dropmissing!(copy(df))
    1 │     4      2  d
    2 │     5      1  e
 
-julia> dropmissing!(copy(df), disallowmissing=false)
+julia> dropmissing!(copy(ds), disallowmissing=false)
 2×3 Dataset
  Row │ i      x       y
      │ Int64  Int64?  String?
@@ -1166,7 +1165,7 @@ julia> dropmissing!(copy(df), disallowmissing=false)
    1 │     4       2  d
    2 │     5       1  e
 
-julia> dropmissing!(copy(df), :x)
+julia> dropmissing!(copy(ds), :x)
 3×3 Dataset
  Row │ i      x      y
      │ Int64  Int64  String?
@@ -1175,7 +1174,7 @@ julia> dropmissing!(copy(df), :x)
    2 │     4      2  d
    3 │     5      1  e
 
-julia> dropmissing!(df, [:x, :y])
+julia> dropmissing!(ds, [:x, :y])
 2×3 Dataset
  Row │ i      x      y
      │ Int64  Int64  String
@@ -1184,15 +1183,15 @@ julia> dropmissing!(df, [:x, :y])
    2 │     5      1  e
 ```
 """
-# function dropmissing!(df::AbstractDataset,
-#                       cols::Union{ColumnIndex, MultiColumnIndex}=:;
-#                       disallowmissing::Bool=true)
-#     inds = completecases(df, cols)
-#     inds .= .!(inds)
-#     delete!(df, inds)
-#     disallowmissing && disallowmissing!(df, cols)
-#     df
-# end
+function dropmissing!(ds::AbstractDataset,
+                      cols::Union{ColumnIndex, MultiColumnIndex}=:;
+                      disallowmissing::Bool=true)
+    inds = completecases(ds, cols)
+    inds .= .!(inds)
+    delete!(ds, inds)
+    disallowmissing && disallowmissing!(ds, cols)
+    ds
+end
 
 """
     filter(fun, df::AbstractDataset; view::Bool=false)
@@ -1522,172 +1521,72 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
     return res
 end
 nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false) = nonunique(ds, [col]; mapformats = mapformats)
-
-
 # nonunique(df::AbstractDataset, cols) = nonunique(select(df, cols, copycols=false))
 
-# Modify Dataset
-Base.unique!(ds::AbstractDataset) = delete!(ds, nonunique(ds))
-Base.unique!(ds::AbstractDataset, cols::AbstractVector) =
-    delete!(ds, nonunique(ds, cols))
-Base.unique!(ds::AbstractDataset, cols) =
-    delete!(ds, nonunique(ds, cols))
-
-# Unique rows of an AbstractDataset.
-@inline function Base.unique(ds::AbstractDataset; view::Bool=false)
-    rowidxs = (!).(nonunique(ds))
-    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
-end
-
-@inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false)
-    rowidxs = (!).(nonunique(ds, cols))
-    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
-end
-
-"""
-    unique(ds::AbstractDataset; view::Bool=false)
-    unique(ds::AbstractDataset, cols; view::Bool=false)
-    unique!(ds::AbstractDataset)
-    unique!(ds::AbstractDataset, cols)
-
-Return a data set containing only the first occurrence of unique rows in `ds`.
-When `cols` is specified, the returned `Dataset` contains complete rows,
-retaining in each case the first occurrence of a given combination of values
-in selected columns or their transformations. `cols` can be any column
-selector or transformation accepted by [`select`](@ref).
-
-
-For `unique`, if `view=false` a freshly allocated `Dataset` is returned,
-and if `view=true` then a `SubDataset` view into `ds` is returned.
-
-`unique!` updates `ds` in-place and does not support the `view` keyword argument.
-
-See also [`nonunique`](@ref).
-
-# Arguments
-- `ds` : the AbstractDataset
-- `cols` :  column indicator (Symbol, Int, Vector{Symbol}, Regex, etc.)
-specifying the column(s) to compare.
-
-# Examples
-```jldoctest
-julia> ds = Dataset(i = 1:4, x = [1, 2, 1, 2])
-4×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
-
-julia> ds = vcat(ds, ds)
-8×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
-   5 │     1      1
-   6 │     2      2
-   7 │     3      1
-   8 │     4      2
-
-julia> unique(ds)   # doesn't modify ds
-4×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
-
-julia> unique(ds, 2)
-2×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-
-julia> unique!(ds)  # modifies ds
-4×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
-```
-"""
-(unique, unique!)
-
-"""
-    hcat(ds::AbstractDataset...;
-         makeunique::Bool=false, copycols::Bool=true)
-    hcat(ds::AbstractDataset..., vs::AbstractVector;
-         makeunique::Bool=false, copycols::Bool=true)
-    hcat(vs::AbstractVector, ds::AbstractDataset;
-         makeunique::Bool=false, copycols::Bool=true)
-
-Horizontally concatenate `AbstractDatasets` and optionally `AbstractVector`s.
-
-If `AbstractVector` is passed then a column name for it is automatically generated
-as `:x1` by default.
-
-If `makeunique=false` (the default) column names of passed objects must be unique.
-If `makeunique=true` then duplicate column names will be suffixed
-with `_i` (`i` starting at 1 for the first duplicate).
-
-If `copycols=true` (the default) then the `Dataset` returned by `hcat` will
-contain copied columns from the source data sets.
-If `copycols=false` then it will contain columns as they are stored in the
-source (without copying). This option should be used with caution as mutating
-either the columns in sources or in the returned `Dataset` might lead to
-the corruption of the other object.
-
-# Example
-```jldoctest
-julia> ds1 = Dataset(A=1:3, B=1:3)
-3×2 Dataset
- Row │ A      B
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      3
-
-julia> ds2 = Dataset(A=4:6, B=4:6)
-3×2 Dataset
- Row │ A      B
-     │ Int64  Int64
-─────┼──────────────
-   1 │     4      4
-   2 │     5      5
-   3 │     6      6
-
-julia> ds3 = hcat(ds1, ds2, makeunique=true)
-3×4 Dataset
- Row │ A      B      A_1    B_1
-     │ Int64  Int64  Int64  Int64
-─────┼────────────────────────────
-   1 │     1      1      4      4
-   2 │     2      2      5      5
-   3 │     3      3      6      6
-
-julia> ds3.A === ds1.A
-false
-
-julia> ds3 = hcat(ds1, ds2, makeunique=true, copycols=false);
-
-julia> ds3.A === ds1.A
-true
-```
-"""
+#
+#
+# """
+#     hcat(ds::AbstractDataset...;
+#          makeunique::Bool=false, copycols::Bool=true)
+#     hcat(ds::AbstractDataset..., vs::AbstractVector;
+#          makeunique::Bool=false, copycols::Bool=true)
+#     hcat(vs::AbstractVector, ds::AbstractDataset;
+#          makeunique::Bool=false, copycols::Bool=true)
+#
+# Horizontally concatenate `AbstractDatasets` and optionally `AbstractVector`s.
+#
+# If `AbstractVector` is passed then a column name for it is automatically generated
+# as `:x1` by default.
+#
+# If `makeunique=false` (the default) column names of passed objects must be unique.
+# If `makeunique=true` then duplicate column names will be suffixed
+# with `_i` (`i` starting at 1 for the first duplicate).
+#
+# If `copycols=true` (the default) then the `Dataset` returned by `hcat` will
+# contain copied columns from the source data sets.
+# If `copycols=false` then it will contain columns as they are stored in the
+# source (without copying). This option should be used with caution as mutating
+# either the columns in sources or in the returned `Dataset` might lead to
+# the corruption of the other object.
+#
+# # Example
+# ```jldoctest
+# julia> ds1 = Dataset(A=1:3, B=1:3)
+# 3×2 Dataset
+#  Row │ A      B
+#      │ Int64  Int64
+# ─────┼──────────────
+#    1 │     1      1
+#    2 │     2      2
+#    3 │     3      3
+#
+# julia> ds2 = Dataset(A=4:6, B=4:6)
+# 3×2 Dataset
+#  Row │ A      B
+#      │ Int64  Int64
+# ─────┼──────────────
+#    1 │     4      4
+#    2 │     5      5
+#    3 │     6      6
+#
+# julia> ds3 = hcat(ds1, ds2, makeunique=true)
+# 3×4 Dataset
+#  Row │ A      B      A_1    B_1
+#      │ Int64  Int64  Int64  Int64
+# ─────┼────────────────────────────
+#    1 │     1      1      4      4
+#    2 │     2      2      5      5
+#    3 │     3      3      6      6
+#
+# julia> ds3.A === ds1.A
+# false
+#
+# julia> ds3 = hcat(ds1, ds2, makeunique=true, copycols=false);
+#
+# julia> ds3.A === ds1.A
+# true
+# ```
+# """
 # Base.hcat(ds::AbstractDataset; makeunique::Bool=false, copycols::Bool=true) =
 #     Dataset(ds, copycols=copycols)
 # Base.hcat(ds::AbstractDataset, x; makeunique::Bool=false, copycols::Bool=true) =
