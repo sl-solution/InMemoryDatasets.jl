@@ -87,7 +87,7 @@ Base.eltype(col1::DatasetColumn) = eltype(__!(col1))
 Base.ndims(col1::DatasetColumn) = ndims(__!(col1))
 Base.isassigned(col1::DatasetColumn, i) = isassigned(__!(col1), i)
 Base.identity(col1::DatasetColumn) = identity(__!(col1))
-Base.similar(col1::DatasetColumn) = similar(__!(col1))
+Base.similar(col1::DatasetColumn, args...) = similar(__!(col1), args...)
 Base.copy(col1::DatasetColumn) = copy(__!(col1))
 Base.pairs(col1::DatasetColumn) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::DatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
@@ -108,7 +108,7 @@ Base.ndims(col1::SubDatasetColumn) = ndims(__!(col1))
 Base.ndims(::Type{<:SubDatasetColumn}) = 1
 Base.isassigned(col1::SubDatasetColumn, i) = isassigned(__!(col1), i)
 Base.identity(col1::SubDatasetColumn) = identity(__!(col1))
-Base.similar(col1::SubDatasetColumn) = similar(__!(col1))
+Base.similar(col1::SubDatasetColumn, args...) = similar(__!(col1), args...)
 Base.copy(col1::SubDatasetColumn) = copy(__!(col1))
 Base.pairs(col1::SubDatasetColumn) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::SubDatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
@@ -2402,9 +2402,9 @@ function flatten(ds::AbstractDataset,
     idxcols = index(ds)[cols]
     isempty(idxcols) && return copy(ds)
     col1 = first(idxcols)
-    lengths = length.(ds[!, col1])
+    lengths = length.(_columns(ds)[col1])
     for col in idxcols
-        v = ds[!, col]
+        v = _columns(ds)[col]
         if any(x -> length(x[1]) != x[2], zip(v, lengths))
             r = findfirst(x -> x != 0, length.(v) .- lengths)
             colnames = _names(ds)
@@ -2415,11 +2415,11 @@ function flatten(ds::AbstractDataset,
 
     new_ds = similar(ds[!, Not(cols)], sum(lengths))
     for name in _names(new_ds)
-        repeat_lengths!(new_ds[!, name], ds[!, name], lengths)
+        repeat_lengths!(new_ds[!, name].val, ds[!, name].val, lengths)
     end
     length(idxcols) > 1 && sort!(idxcols)
     for col in idxcols
-        col_to_flatten = ds[!, col]
+        col_to_flatten = _columns(ds)[col]
         flattened_col = col_to_flatten isa AbstractVector{<:AbstractVector} ?
             reduce(vcat, col_to_flatten) :
             collect(Iterators.flatten(col_to_flatten))

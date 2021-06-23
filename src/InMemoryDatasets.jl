@@ -35,6 +35,7 @@ export
       groupby!,
       ungroup!,
       modify,
+      modify!,
       byrow
 
 include("other/index.jl")
