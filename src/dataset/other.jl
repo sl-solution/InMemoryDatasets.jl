@@ -245,7 +245,7 @@ julia> map(ds, x -> x^2, :)
    4 │       16       196
 ```
 """
-function Base.map(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
+function Base.map(ds::Dataset, f::Function, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -275,12 +275,12 @@ function Base.map(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
     return newds
 
 end
-Base.map(ds::AbstractDataset, f::Union{Function}, col::ColumnIndex) = map(ds, f, [col])
-Base.map(ds::AbstractDataset, f::Union{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
-Base.map(ds::AbstractDataset, f::Vector{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+Base.map(ds::Dataset, f::Union{Function}, col::ColumnIndex) = map(ds, f, [col])
+Base.map(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+Base.map(ds::Dataset, f::Vector{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
 
-function Base.map(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex)
+function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -315,7 +315,7 @@ function Base.map(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnI
 end
 
 """
-    map!(ds::AbstractDataset, f::Function, cols)
+    map!(ds::Dataset, f::Function, cols)
 
 Update each `col` in `ds[!, cols]` in-place when `map!` return a result, and skip when it is not possible.
 
@@ -349,7 +349,7 @@ julia> ds
    4 │       16       196
 ```
 """
-function Base.map!(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
+function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -379,11 +379,11 @@ function Base.map!(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
     return ds
 end
 
-Base.map!(ds::AbstractDataset, f::Union{Function}, col::ColumnIndex) = map!(ds, f, [col])
-Base.map!(ds::AbstractDataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
+Base.map!(ds::Dataset, f::Union{Function}, col::ColumnIndex) = map!(ds, f, [col])
+Base.map!(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
 
 """
-    map!(ds::AbstractDataset, f::Vector{Function}, cols)
+    map!(ds::Dataset, f::Vector{Function}, cols)
 
 Update jth `col` in `ds[!, cols]` in-place by calling `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped.
 
@@ -416,7 +416,7 @@ julia> ds
    4 │       16        13
 ```
 """
-function Base.map!(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex)
+function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -446,7 +446,7 @@ function Base.map!(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumn
     end
     return ds
 end
-Base.map!(ds::AbstractDataset, f::Vector{<:Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+Base.map!(ds::Dataset, f::Vector{<:Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
 
 # the order of argument in `mask` is based on map, should we make it mask(ds, cols, fun)
@@ -460,7 +460,7 @@ Map `f` on each observation and return a `Bool` data set. When multiple `f` is p
 # Examples
 
 ```jldoctest
-julia> ds = Dataset(x = [1, -1, -1], 
+julia> ds = Dataset(x = [1, -1, -1],
                     y = [2, 4, 1],
                     z = [1, 2, 3])
 3×3 Dataset
@@ -542,3 +542,106 @@ function _fill_mask!(fv, v, fj, threads)
 end
 _bool_mask(f) = x->f(x)::Bool
 
+
+# Unique cases
+
+# Modify Dataset
+Base.unique!(ds::Dataset) = delete!(ds, nonunique(ds))
+Base.unique!(ds::Dataset, cols::AbstractVector) =
+    delete!(ds, nonunique(ds, cols))
+Base.unique!(ds::Dataset, cols) =
+    delete!(ds, nonunique(ds, cols))
+
+# Unique rows of an Dataset.
+@inline function Base.unique(ds::Dataset; view::Bool=false)
+    rowidxs = (!).(nonunique(ds))
+    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
+end
+
+@inline function Base.unique(ds::Dataset, cols; view::Bool=false)
+    rowidxs = (!).(nonunique(ds, cols))
+    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
+end
+
+
+"""
+    unique(ds::AbstractDataset; view::Bool=false)
+    unique(ds::AbstractDataset, cols; view::Bool=false)
+    unique!(ds::AbstractDataset)
+    unique!(ds::AbstractDataset, cols)
+
+Return a data set containing only the first occurrence of unique rows in `ds`.
+When `cols` is specified, the returned `Dataset` contains complete rows,
+retaining in each case the first occurrence of a given combination of values
+in selected columns or their transformations. `cols` can be any column
+selector or transformation accepted by [`select`](@ref).
+
+
+For `unique`, if `view=false` a freshly allocated `Dataset` is returned,
+and if `view=true` then a `SubDataset` view into `ds` is returned.
+
+`unique!` updates `ds` in-place and does not support the `view` keyword argument.
+
+See also [`nonunique`](@ref).
+
+# Arguments
+- `ds` : the AbstractDataset
+- `cols` :  column indicator (Symbol, Int, Vector{Symbol}, Regex, etc.)
+specifying the column(s) to compare.
+
+# Examples
+```jldoctest
+julia> ds = Dataset(i = 1:4, x = [1, 2, 1, 2])
+4×2 Dataset
+ Row │ i      x
+     │ Int64  Int64
+─────┼──────────────
+   1 │     1      1
+   2 │     2      2
+   3 │     3      1
+   4 │     4      2
+
+julia> ds = vcat(ds, ds)
+8×2 Dataset
+ Row │ i      x
+     │ Int64  Int64
+─────┼──────────────
+   1 │     1      1
+   2 │     2      2
+   3 │     3      1
+   4 │     4      2
+   5 │     1      1
+   6 │     2      2
+   7 │     3      1
+   8 │     4      2
+
+julia> unique(ds)   # doesn't modify ds
+4×2 Dataset
+ Row │ i      x
+     │ Int64  Int64
+─────┼──────────────
+   1 │     1      1
+   2 │     2      2
+   3 │     3      1
+   4 │     4      2
+
+julia> unique(ds, 2)
+2×2 Dataset
+ Row │ i      x
+     │ Int64  Int64
+─────┼──────────────
+   1 │     1      1
+   2 │     2      2
+
+julia> unique!(ds)  # modifies ds
+4×2 Dataset
+ Row │ i      x
+     │ Int64  Int64
+─────┼──────────────
+   1 │     1      1
+   2 │     2      2
+   3 │     3      1
+   4 │     4      2
+```
+"""
+(unique, unique!)
