@@ -223,10 +223,6 @@ end
 
 
 function _allocate_for_groups(f, v, t, sz)
-    @show Tuple{t}
-    @show f
-    @show v
-    @show Tuple{t}
     T = typeof(invoke(f, Tuple{t}, v))
     if t >: Missing
         T = Union{Missing, T}
