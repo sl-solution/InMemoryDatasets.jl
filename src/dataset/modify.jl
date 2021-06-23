@@ -205,7 +205,7 @@ function _modify(ds, ms)
             _res = ms[i].second.first(_columns(ds)[ms[i].first])
             _resize_result!(ds, _res, ms[i].second.second)
         elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-            ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first, ms[i].second.first.args[2]...)
+            ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first; ms[i].second.first.args[2]...)
         elseif (ms[i].second.first isa Base.Callable) && (ms[i].second.second isa MultiCol)
             _res = ms[i].second.first(_columns(ds)[ms[i].first])
             if _res isa Tuple
@@ -276,7 +276,7 @@ function _modify_grouped(ds, ms)
                 end
                 ds[!, ms[i].second.second] = _res
             elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-                ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first, ms[i].second.first.args[2]...)
+                ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first; ms[i].second.first.args[2]...)
             elseif (ms[i].second.first isa Base.Callable) && (ms[i].second.second isa MultiCol)
                 # _res = _allocate_for_groups(ms[i].second.first, coalesce(_columns(ds)[ms[i].first]), eltype(ds[!, ms[i].first]), nrow(ds))
                 # if _res isa Tuple
