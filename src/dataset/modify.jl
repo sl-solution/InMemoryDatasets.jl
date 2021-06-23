@@ -112,14 +112,6 @@ function normalize_modify!(outidx::Index, idx::Index,
     if !(length(colsidx) == length(sel.second.second))
         throw(ArgumentError("The input number of columns and the length of the output names should match"))
     end
-    # if typeof(sel.second.first) == Expr
-    #     if sel.second.first.head == :BYROWbyrow(sel.second.first
-    #         res = [normalize_modify!(outidx, idx, colsidx[1] => ) => sel.second.second[1])]
-    #         for i in 2:length(colsidx)
-    #             push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second.first => sel.second.second[i]))
-    #         end
-    #     end
-    # end
     res = [normalize_modify!(outidx, idx, colsidx[1] => sel.second.first => sel.second.second[1])]
     for i in 2:length(colsidx)
         push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second.first => sel.second.second[i]))
@@ -172,6 +164,8 @@ function modify!(ds::Dataset, @nospecialize(args...))
     end
 end
 
+# size() is better option for checking if the result is scalar,
+# it works for numbers and it won't work for strings and symbols
 function _is_scalar(_res, sz)
      resize_col = false
     try
@@ -228,36 +222,46 @@ function _modify(ds, ms)
     return ds
 end
 
+# Checking the output type
+# it uses two observations to determine the output type
+# if the data structure is complicated or the function in ms ref to index beyond 2 it won't work
+function _check_the_output_type(ds, ms)
+    try
+        mingsize = 2
+        _tmpval = similar(_columns(ds)[ms.first], mingsize)
+        _first_nonmiss_val = _first_nonmiss(_columns(ds)[ms.first])
+        for i in 1:mingsize
+            _tmpval[i] = _first_nonmiss_val
+        end
+        _tmpval_fun = ms.second.first(_tmpval)
+        notvector = _is_scalar(_tmpval_fun, 2)
+        if notvector
+            T = typeof(_tmpval_fun)
+        else
+            T = eltype(_tmpval_fun)
+        end
+        if eltype(ds[!, ms.first]) >: Missing
+            for i in 1:mingsize
+                _tmpval[i] = missing
+            end
+            if notvector
+                T = Union{T, typeof(ms.second.first(_tmpval))}
+            else
+                T = Union{T, eltype(ms.second.first(_tmpval))}
+            end
+        end
+        return T
+    catch
+        throw(ArgumentError("modify only uses two observations to assess the output type, if your modification function uses index beyond 2, modify it to be more generic, otherwise the output type is not predictable for the input data type"))
+    end
+end
 
 # FIXME notyet complete
 function _modify_grouped(ds, ms)
     needs_reset_grouping = false
     for i in 1:length(ms)
             if (ms[i].second.first isa Base.Callable) && !(ms[i].second.second isa MultiCol)
-                # Checking the output type
-                mingsize = 2
-                _tmpval = similar(_columns(ds)[ms[i].first], mingsize)
-                _first_nonmiss_val = _first_nonmiss(_columns(ds)[ms[i].first])
-                for i in 1:mingsize
-                    _tmpval[i] = _first_nonmiss_val
-                end
-                _tmpval_fun = ms[i].second.first(_tmpval)
-                notvector = _is_scalar(_tmpval_fun, 2)
-                if notvector
-                    T = typeof(_tmpval_fun)
-                else
-                    T = eltype(_tmpval_fun)
-                end
-                if eltype(ds[!, ms[i].first]) >: Missing
-                    for i in 1:mingsize
-                        _tmpval[i] = missing
-                    end
-                    if notvector
-                        T = Union{T, typeof(ms[i].second.first(_tmpval))}
-                    else
-                        T = Union{T, eltype(ms[i].second.first(_tmpval))}
-                    end
-                end
+                T = _check_the_output_type(ds, ms[i])
                  _res = Tables.allocatecolumn(T, nrow(ds))
                 Threads.@threads for g in 1:index(ds).ngroups[]
                     lo = index(ds).starts[g]
@@ -289,6 +293,7 @@ function _modify_grouped(ds, ms)
                 # end
                 throw(ArgumentError("multi column output is not supported for grouped data set"))
             else
+                # if something ends here, we should implement new functionality for it
                 @error "not yet know how to handle the situation $(ms[i])"
             end
     end

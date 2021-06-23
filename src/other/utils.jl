@@ -1,4 +1,3 @@
-
 function _first_nonmiss(x)
     for i in 1:length(x)
         res = x[i]
