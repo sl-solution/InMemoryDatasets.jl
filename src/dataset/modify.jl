@@ -252,7 +252,7 @@ function _check_the_output_type(ds, ms)
         end
         return T
     catch
-        throw(ArgumentError("modify only uses two observations to assess the output type, if your modification function uses index beyond 2, modify it to be more generic, otherwise the output type is not predictable for the input data type"))
+        throw(ArgumentError("modify only uses two observations to assess the output type, if your modification function uses index beyond 2, modify it to be more generic, or try to apply the function row-wise, otherwise the output type is not predictable for the input data type"))
     end
 end
 
