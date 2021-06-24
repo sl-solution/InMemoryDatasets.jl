@@ -21,7 +21,7 @@ end
 Tables.columnindex(df::Union{AbstractDataset, DatasetRow}, idx::AbstractString) =
     columnindex(df, Symbol(idx))
 
-Tables.schema(df::AbstractDataset) = Tables.Schema{Tuple(_names(df)), Tuple{[eltype(col) for col in eachcol(df)]...}}()
+Tables.schema(df::AbstractDataset) = Tables.Schema(_names(df), [eltype(col) for col in eachcol(df)])
 Tables.materializer(df::AbstractDataset) = Dataset
 
 Tables.getcolumn(ds::Dataset, i::Int) = ds[!, i]

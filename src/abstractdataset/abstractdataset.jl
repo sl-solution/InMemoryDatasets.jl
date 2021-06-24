@@ -66,7 +66,7 @@ struct SubDatasetColumn{T <: AbstractDataset, E}
     val::E
     selected_index
 end
-_columns(ds::Dataset) = getfield(ds, :columns)
+_columns(ds::AbstractDataset) = getfield(ds, :columns)
 Base.show(io::IO, ::MIME"text/plain", col::DatasetColumn) = show(IOContext(io, :limit => true), "text/plain", col.val)
 Base.show(io::IO, ::MIME"text/plain", col::SubDatasetColumn) = show(IOContext(io, :limit => true), "text/plain", view(col.val, col.selected_index))
 

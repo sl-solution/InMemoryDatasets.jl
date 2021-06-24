@@ -19,12 +19,16 @@ import DataAPI,
        Tables.columnindex
 
 export
+      # experimental inner module to redefine statistical calculation
+      imd,
+      # types
       AbstractDataset,
       DatasetColumns,
       DatasetColumn,
       SubDataset,
       SubDatasetColumn,
       Dataset,
+      # functions
       nrow,
       ncol,
       getformat,
@@ -41,7 +45,8 @@ export
 
 include("other/index.jl")
 include("other/utils.jl")
-
+# imd is the inner module to redefine statistical functions
+include("imd/imd.jl")
 include("abstractdataset/abstractdataset.jl")
 # create dataset
 include("dataset/constructor.jl")
