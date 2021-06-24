@@ -553,12 +553,12 @@ Base.unique!(ds::Dataset, cols) =
     delete!(ds, nonunique(ds, cols))
 
 # Unique rows of an Dataset.
-@inline function Base.unique(ds::Dataset; view::Bool=false)
+@inline function Base.unique(ds::AbstractDataset; view::Bool=false)
     rowidxs = (!).(nonunique(ds))
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
 
-@inline function Base.unique(ds::Dataset, cols; view::Bool=false)
+@inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false)
     rowidxs = (!).(nonunique(ds, cols))
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
