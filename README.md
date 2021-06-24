@@ -162,7 +162,7 @@ julia> mask(ds, [val -> rem(val, 2) == 0, isequal("Male")], 2:3, mapformats = tr
   10 │    false     false
 ```
 
-# Updating a Dataset
+# Modifying a Dataset
 
 The `modify()` function can be used to modify columns or add a transformation of columns to a data set. The syntax of `modify` is 
 
