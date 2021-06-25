@@ -29,3 +29,15 @@ end
 
 isgrouped(ds::Dataset) = index(ds).grouped[]
 isgrouped(ds::SubDataset) = false
+
+function group_starts(ds::Dataset)
+    index(ds).starts[1:index(ds).ngroups[]]
+end
+function getindex_group(ds::Dataset, i::Integer)
+    if !(1 <= i <= index(ds).ngroups[])
+        throw(BoundsError(ds, i))
+    end
+    lo = index(ds).starts[i]
+    i == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[i+1] - 1
+    lo:hi
+end

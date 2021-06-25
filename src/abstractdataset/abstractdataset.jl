@@ -73,8 +73,8 @@ Base.show(io::IO, ::MIME"text/plain", col::SubDatasetColumn) = show(IOContext(io
 
 # internal function for easy accessing a view of a column
 __!(col1::DatasetColumn) =  col1.val
-# we treat DatasetColumn as a one-column data set. and we need to manage every thing ourself
-# isequal also use for == , since we don't want missing be treated differently
+# we treat DatasetColumn as a one-column data set. and we need to manage every thing ourselves
+# isequal also use for == , since we don't want missing be annoying
 Base.parent(col1::DatasetColumn) = col1.ds
 Base.:(==)(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))
 Base.isequal(col1::DatasetColumn, col2::DatasetColumn) = isequal(__!(col1), __!(col2))
@@ -206,39 +206,47 @@ end
 #     end
 #     f_v
 # end
+# using Core.Compiler.return_type to check if f make sense for selected column
+# this cannot take care of situations like setting sqrt for negative numbers
+function _check_format_validity(ds, col, f)
+    flag = false
+    string(nameof(f))[1] == '#' && return flag
+    return_type(f, (eltype(ds[!, col]),)) == Union{} && return flag
+    flag = true
+end
 #Modify Dataset
 function setformat!(ds::AbstractDataset, idx::Integer, f::Function)
-    string(nameof(f))[1] == '#' && return ds
+    !_check_format_validity(ds, idx, f) && return ds
     setformat!(index(ds), idx, f)
     _modified(_attributes(ds))
     ds
 end
 function setformat!(ds::AbstractDataset, idx::Symbol, f::Function)
-    string(nameof(f))[1] == '#' && return ds
+    !_check_format_validity(ds, idx, f) && return ds
     setformat!(index(ds), idx, f)
     _modified(_attributes(ds))
     ds
 end
 function setformat!(ds::AbstractDataset, idx::T, f::Function) where T <: AbstractString
-    string(nameof(f))[1] == '#' && return ds
+    !_check_format_validity(ds, idx, f) && return ds
     setformat!(index(ds), idx, f)
     _modified(_attributes(ds))
     ds
 end
 function setformat!(ds::AbstractDataset, p::Pair{Int64, T}) where T <: Function
-    string(nameof(p.second))[1] == '#' && return ds
+    !_check_format_validity(ds, p.first, p.second) && return ds
     setformat!(index(ds), p)
    _modified(_attributes(ds))
    ds
 end
 function setformat!(ds::AbstractDataset, p::Pair{Symbol, T}) where T <: Function
-    string(nameof(p.second))[1] == '#' && return ds
+    !_check_format_validity(ds, p.first, p.second) && return ds
     setformat!(index(ds), p)
     _modified(_attributes(ds))
     ds
 end
 function setformat!(ds::AbstractDataset, p::Pair{S, T}) where S <: AbstractString where T <: Function
-    string(nameof(p.second))[1] == '#' && return ds
+    !_check_format_validity(ds, p.first, p.second) && return ds
     setformat!(index(ds), p)
     _modified(_attributes(ds))
     ds
@@ -246,7 +254,7 @@ end
 function setformat!(ds::AbstractDataset, p::Pair{MC, T}) where T <: Function where MC <: MultiColumnIndex
     idx = index(ds)[p.first]
     for i in 1:length(idx)
-        string(nameof(p.second))[1] == '#' && continue
+        !_check_format_validity(ds, idx[i], p.second) && continue
         setformat!(index(ds), idx[i], p.second)
         # if for any reason one of the formatting is not working, we make sure the modified is correct
         _modified(_attributes(ds))
@@ -255,6 +263,7 @@ function setformat!(ds::AbstractDataset, p::Pair{MC, T}) where T <: Function whe
 end
 function setformat!(ds::AbstractDataset, dict::Dict)
     for (k, v) in dict
+        !_check_format_validity(ds, k, v) && continue
         setformat!(ds, k, v)
     end
     ds
@@ -262,7 +271,7 @@ end
 # TODO should we allow arbitarary combination of Pair
 function setformat!(ds::AbstractDataset, pv::Vector)
     for p in pv
-        string(nameof(p.second))[1] == '#' && continue
+        !_check_format_validity(ds, p.first, p.second) && continue
         setformat!(index(ds), p)
         # if for any reason one of the formatting is not working, we make sure the modified is correct
         _modified(_attributes(ds))
@@ -271,6 +280,7 @@ function setformat!(ds::AbstractDataset, pv::Vector)
 end
 function setformat!(ds::AbstractDataset, @nospecialize(args...))
     for i in 1:length(args)
+        !_check_format_validity(ds, args[i].first, args[i].second) && continue
         setformat!(ds, args[i])
     end
     ds
@@ -2327,12 +2337,15 @@ function flatten(ds::AbstractDataset,
     end
     setformat!(new_ds, index(ds).format)
     setinfo!(new_ds, _attributes(ds).meta.info[])
-    if idxcols ∈ Ref(index(ds).sortedcols)
-        return new_ds
-    else
-        _copy_grouping_info!(new_ds, ds)
-        return new_ds
-    end
+    _reset_grouping_info!(new_ds)
+    new_ds
+    # TODO actually the grouping info can be kept but needs more work, since the starts would change
+    # if idxcols ∈ Ref(index(ds).sortedcols)
+    #     return new_ds
+    # else
+    #     _copy_grouping_info!(new_ds, ds)
+    #     return new_ds
+    # end
 end
 
 function repeat_lengths!(longnew::AbstractVector, shortold::AbstractVector,
@@ -2347,8 +2360,8 @@ end
 
 # Disallowed operations that are a common mistake
 
-Base.getindex(::AbstractDataset, ::Union{Symbol, Integer, AbstractString}) =
-    throw(ArgumentError("syntax ds[column] is not supported use ds[!, column] instead"))
+Base.getindex(::AbstractDataset, ::Union{Symbol, AbstractString}) =
+        throw(ArgumentError("syntax ds[column] is not supported use ds[!, column] instead"))
 
 Base.setindex!(::AbstractDataset, ::Any, ::Union{Symbol, Integer, AbstractString}) =
     throw(ArgumentError("syntax ds[column] is not supported use ds[!, column] instead"))

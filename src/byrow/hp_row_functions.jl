@@ -22,10 +22,7 @@ end
 function hp_row_sum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = typeof(f(zero(CT)))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _hp_op_for_sum!(x, y; f = f) = x .= hp_sum!(x, y; f = f)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
     mapreduce(identity, _hp_op_for_sum!, view(_columns(ds),colsidx), init = init0)
@@ -41,10 +38,7 @@ end
 function hp_row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = typeof(f(zero(CT)))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _hp_op_for_prod!(x, y; f = f) = x .= hp_mult!(x, y; f = f)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
     mapreduce(identity, _hp_op_for_prod!, view(_columns(ds),colsidx), init = init0)
@@ -115,11 +109,7 @@ end
 function hp_row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    # since zero(Date) is Day(0)
-    T = typeof(f(zeros(CT)[1]))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _hp_op_for_min!(x, y; f = f) = x .= hp_min!(x, y; f = f)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemax(T))
     mapreduce(identity, _hp_op_for_min!, view(_columns(ds),colsidx), init = init0)
@@ -138,10 +128,7 @@ end
 function hp_row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = typeof(f(zeros(CT)[1]))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _hp_op_for_max!(x, y; f = f) = x .= hp_max!(x, y; f = f)
     # TODO the type of zeros after applying f???
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemin(T))
@@ -152,10 +139,7 @@ hp_row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = 
 function hp_row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = typeof(f(zero(CT)))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _sq_(x) = x^2
     ss = hp_row_sum(ds, _sq_ ∘ f, cols)
     sval = hp_row_sum(ds, f, cols)
@@ -198,4 +182,82 @@ function hp_row_sort(ds::AbstractDataset, cols = names(ds, Union{Missing, Number
     dscopy = copy(ds)
     hp_row_sort!(dscopy, cols; kwargs...)
     dscopy
+end
+
+
+function hp_row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
+    colsidx = index(ds)[cols]
+    if length(colsidx) == 2
+        try
+            f.(_columns(ds)[colsidx[1]], _columns(ds)[colsidx[2]])
+        catch e
+            if e isa MethodError
+                _row_generic(ds, f, cols)
+            else
+                rethrow(e)
+            end
+        end
+    else
+        _hp_row_generic(ds, f, colsidx)
+    end
+end
+
+
+function _hp_row_generic(ds::AbstractDataset, f::Function, colsidx)
+    T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
+    inmat = Matrix{T}(undef, min(1000, nrow(ds)), length(colsidx))
+
+    all_data = view(_columns(ds), colsidx)
+    _fill_matrix!(inmat, all_data, 1:min(1000, nrow(ds)), colsidx)
+    res_temp = f.(eachrow(inmat))
+    if !(typeof(res_temp) <:  AbstractVector)
+        throw(ArgumentError("output of `f` must be a vector"))
+    end
+
+    # if length(res_temp[1]) > 1
+    #     throw(ArgumentError("The matrix output is not supported"))
+    #     res = similar(res_temp, nrow(ds), size(res_temp,2))
+    # elseif length(res_temp[1]) == 1
+    res = similar(res_temp, nrow(ds))
+    # else
+        # throw(ArgumentError("the result cannot be with zero dimension"))
+
+    if nrow(ds)>1000
+        if size(res, 2) == 1
+            view(res, 1:1000) .= res_temp
+            _hp_row_generic_vec!(res, ds, f, colsidx, Val(T))
+        else
+            view(res, 1:1000, :) .= res_temp
+            # not implemented yet
+            _hp_row_generic_mat!(res, ds, f, colsidx)
+        end
+    else
+        return res_temp
+    end
+    return res
+end
+
+function _hp_row_generic_vec!(res, ds, f, colsidx, ::Val{T}) where T
+    nt = Threads.nthreads()
+    loopsize = div(length(res) - 1000, 1000)
+    all_data = view(_columns(ds), colsidx)
+    if loopsize == 0
+        st = 1001
+        en = length(res)
+        inmat = Matrix{T}(undef, en - st + 1, length(colsidx))
+        _fill_matrix!(inmat, all_data, st:en, colsidx)
+        view(res, st:en) .= f.(eachrow(inmat))
+        return
+    end
+    max_cz = length(res) - 1000 - (loopsize - 1)*1000
+    inmat_all = [Matrix{T}(undef, max_cz, length(colsidx)) for i in 1:nt]
+    # make sure that the variable inside the loop are not the same as the out of scope one
+    Threads.@threads for i in 1:loopsize
+        t_st = i*1000 + 1
+        i == loopsize ? t_en = length(res) : t_en = (i+1)*1000
+        _fill_matrix!(inmat_all[Threads.threadid()], all_data, t_st:t_en, colsidx)
+        for k in t_st:t_en
+            res[k] = f(view(inmat_all[Threads.threadid()], k - t_st + 1, :))
+        end
+    end
 end

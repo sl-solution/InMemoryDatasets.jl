@@ -150,6 +150,16 @@ function repeat!(ds::Dataset; inner::Integer = 1, outer::Integer = 1)
         for j in 1:ncol(ds)
             _columns(ds)[j] = repeat(_columns(ds)[j], inner = Int(inner), outer = 1)
         end
+        _reset_grouping_info!(ds)
+        # ngroups = index(ds).ngroups[]
+        # diffs = diff(index(ds).starts[1:ngroups]) .* inner
+        # @show diffs
+        # cumsum!(diffs, diffs)
+        # @show diffs
+        # for j in 2:ngroups
+        #     index(ds).starts[j] = diffs[j-1]
+        # end
+        # @show index(ds).starts
     elseif outer > 1
         for j in 1:ncol(ds)
             _columns(ds)[j] = repeat(_columns(ds)[j], inner = Int(inner), outer = Int(outer))
@@ -357,24 +367,29 @@ function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
     # TODO needs function barrier
     number_of_warnnings = 0
     for j in 1:length(colsidx)
-      try
-        map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
-        removeformat!(ds, colsidx[j])
-        _modified(_attributes(ds))
-        if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
-          _reset_grouping_info!(ds)
-          _reset_group = true
+        CT = eltype(_columns(ds)[colsidx[j]])
+        # return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of return_type is Union{Missing, Float64, Int64}
+        # we remove missing and then check the result,
+        # TODO is there any problem with this?
+        T = return_type(f, (nonmissingtype(CT),))
+        if promote_type(T, CT) <: CT
+            map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
+            removeformat!(ds, colsidx[j])
+            _modified(_attributes(ds))
+            if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
+                _reset_grouping_info!(ds)
+                _reset_group = true
+            end
+        else
+            if number_of_warnnings < 5
+                @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place,"
+                number_of_warnnings += 1
+            elseif number_of_warnnings == 5
+                @warn "more than 10 columns can not be replaced ...."
+                number_of_warnnings += 1
+            end
+            continue
         end
-      catch
-        if number_of_warnnings < 10
-          @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place"
-          number_of_warnnings += 1
-        elseif number_of_warnnings == 10
-          @warn "more than 10 columns can not be replaced ...."
-          number_of_warnnings += 1
-        end
-        continue
-      end
     end
     return ds
 end
@@ -425,24 +440,29 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
     # TODO needs function barrier
     number_of_warnnings = 0
     for j in 1:length(colsidx)
-      try
-        map!(f[j], _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
-        removeformat!(ds, colsidx[j])
-        _modified(_attributes(ds))
-        if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
-          _reset_grouping_info!(ds)
-          _reset_group = true
+        CT = eltype(_columns(ds)[colsidx[j]])
+        # return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of return_type is Union{Missing, Float64, Int64}
+        # we remove missing and then check the result,
+        # TODO is there any problem with this?
+        T = return_type(f[j], (nonmissingtype(CT),))
+        if promote_type(T, CT) <: CT
+            map!(f[j], _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
+            removeformat!(ds, colsidx[j])
+            _modified(_attributes(ds))
+            if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
+                _reset_grouping_info!(ds)
+                _reset_group = true
+            end
+        else
+            if number_of_warnnings < 10
+                @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place"
+                number_of_warnnings += 1
+            elseif number_of_warnnings == 10
+                @warn "more than 10 columns can not be replaced ...."
+                number_of_warnnings += 1
+            end
+            continue
         end
-      catch
-        if number_of_warnnings < 10
-          @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place"
-          number_of_warnnings += 1
-        elseif number_of_warnnings == 10
-          @warn "more than 10 columns can not be replaced ...."
-          number_of_warnnings += 1
-        end
-        continue
-      end
     end
     return ds
 end

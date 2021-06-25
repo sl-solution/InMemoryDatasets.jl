@@ -1,5 +1,6 @@
 module InMemoryDatasets
 
+import Core.Compiler.return_type
 using Dates
 using Statistics
 # using TableTraits,IteratorInterfaceExtensions
@@ -40,8 +41,14 @@ export
       ungroup!,
       modify,
       modify!,
+      combine,
+      setinfo!,
+      # from byrow operations
       byrow,
-      setinfo!
+      nunique,
+      stdze
+
+
 
 include("other/index.jl")
 include("other/utils.jl")
@@ -71,6 +78,7 @@ include("other/broadcasting.jl")
 
 # modifying dataset
 include("dataset/modify.jl")
+include("dataset/combine.jl")
 include("abstractdataset/selection.jl")
 include("sort/sort.jl")
 include("sort/groupby.jl")

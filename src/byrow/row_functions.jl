@@ -25,10 +25,7 @@ Base.hash(x::_Prehashed) = x.hash
 function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = typeof(f(zero(CT)))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _op_for_sum!(x, y) = x .= _add_sum.(x, f.(y))
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
     mapreduce(identity, _op_for_sum!, view(_columns(ds),colsidx), init = init0)
@@ -39,10 +36,7 @@ row_sum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_sum
 function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = typeof(f(zero(CT)))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _op_for_prod!(x, y) = x .= _mul_prod.(x, f.(y))
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
     mapreduce(identity, _op_for_prod!, view(_columns(ds),colsidx), init = init0)
@@ -86,11 +80,7 @@ row_mean(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_me
 function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    # since zero(Date) is Day(0)
-    T = typeof(f(zeros(CT)[1]))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _op_for_min!(x, y) = x .= _min_fun.(x, f.(y))
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemax(T))
     mapreduce(identity, _op_for_min!, view(_columns(ds),colsidx), init = init0)
@@ -102,10 +92,7 @@ row_minimum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row
 function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = typeof(f(zeros(CT)[1]))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _op_for_max!(x, y) = x .= _max_fun.(x, f.(y))
     # TODO the type of zeros after applying f???
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemin(T))
@@ -136,10 +123,7 @@ end
 function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = typeof(f(zero(CT)))
-    if CT >: Missing
-        T = Union{Missing, T}
-    end
+    T = return_type(f, (CT,))
     _sq_(x) = x^2
     ss = row_sum(ds, _sq_ ∘ f, cols)
     sval = row_sum(ds, f, cols)
@@ -296,6 +280,17 @@ function row_hash(ds::AbstractDataset, f::Function, cols = :)
 end
 row_hash(ds::AbstractDataset, cols = :) = row_hash(ds, identity, cols)
 
+function _fill_col!(inmat, column, rows, j)
+    for i in 1:length(rows)
+        inmat[i, j] = column[rows[i]]
+    end
+end
+function _fill_matrix!(inmat, all_data, rows, cols)
+    for j in 1:length(cols)
+        _fill_col!(inmat, all_data[j], rows, j)
+    end
+end
+
 function row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
     colsidx = index(ds)[cols]
     if length(colsidx) == 2
@@ -309,13 +304,18 @@ function row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
             end
         end
     else
-        _row_generic(ds, f, cols)
+        _row_generic(ds, f, colsidx)
     end
 end
 function _row_generic(ds::AbstractDataset, f::Function, colsidx)
-    res_temp = f.(eachrow(Matrix(ds[1:min(1000, nrow(ds)), colsidx])))
-    if !(res_temp isa VecOrMat)
-        throw(ArgumentError("The output of the `f` must be a vector"))
+    T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
+    inmat = Matrix{T}(undef, min(1000, nrow(ds)), length(colsidx))
+
+    all_data = view(_columns(ds), colsidx)
+    _fill_matrix!(inmat, all_data, 1:min(1000, nrow(ds)), colsidx)
+    res_temp = f.(eachrow(inmat))
+    if !(typeof(res_temp) <:  AbstractVector)
+        throw(ArgumentError("output of `f` must be a vector"))
     end
 
     # if length(res_temp[1]) > 1
@@ -329,7 +329,7 @@ function _row_generic(ds::AbstractDataset, f::Function, colsidx)
     if nrow(ds)>1000
         if size(res, 2) == 1
             view(res, 1:1000) .= res_temp
-            _row_generic_vec!(res, ds, f, colsidx)
+            _row_generic_vec!(res, ds, f, colsidx, Val(T))
         else
             view(res, 1:1000, :) .= res_temp
             _row_generic_mat!(res, ds, f, colsidx)
@@ -340,14 +340,18 @@ function _row_generic(ds::AbstractDataset, f::Function, colsidx)
     return res
 end
 
-function _row_generic_vec!(res, ds, f, colsidx)
-    cnt = 1
-    while true
-        st = 1000*cnt + 1
-        en = min(1000*(cnt + 1), nrow(ds))
-        view(res, st:en) .= f.(eachrow(Matrix(view(ds, st:en, colsidx))))
-        en == nrow(ds) && break
-        cnt += 1
+function _row_generic_vec!(res, ds, f, colsidx, ::Val{T}) where T
+    all_data = view(_columns(ds), colsidx)
+    chunck = div(length(res) - 1000, 1000)
+    max_cz = length(res) - 1000 - (chunck - 1)* 1000
+    inmat = Matrix{T}(undef, max_cz, length(colsidx))
+    # make sure that the variable inside the loop are not the same as the out of scope one
+    for i in 1:chunck
+        t_st = i*1000 + 1
+        i == chunck ? t_en = length(res) : t_en = (i+1)*1000
+        _fill_matrix!(inmat, all_data, t_st:t_en, colsidx)
+        for k in t_st:t_en
+            res[k] = f(view(inmat, k - t_st + 1, :))
+        end
     end
-    res
 end

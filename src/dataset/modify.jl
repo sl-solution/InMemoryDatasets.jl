@@ -205,7 +205,14 @@ function _modify(ds, ms)
             _res = ms[i].second.first(_columns(ds)[ms[i].first])
             _resize_result!(ds, _res, ms[i].second.second)
         elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-            ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first; ms[i].second.first.args[2]...)
+            try
+                ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first; ms[i].second.first.args[2]...)
+            catch e
+                if e isa MethodError
+                    throw(ArgumentError("output of `byrow` operation must be a vector"))
+                end
+                rethrow(e)
+            end
         elseif (ms[i].second.first isa Base.Callable) && (ms[i].second.second isa MultiCol)
             _res = ms[i].second.first(_columns(ds)[ms[i].first])
             if _res isa Tuple
@@ -225,35 +232,55 @@ end
 # Checking the output type
 # it uses two observations to determine the output type
 # if the data structure is complicated or the function in ms ref to index beyond 2 it won't work
+# function _check_the_output_type(ds, ms)
+#     try
+#         mingsize = 2
+#         _tmpval = similar(_columns(ds)[ms.first], mingsize)
+#         _first_nonmiss_val = _first_nonmiss(_columns(ds)[ms.first])
+#         for i in 1:mingsize
+#             _tmpval[i] = _first_nonmiss_val
+#         end
+#         _tmpval_fun = ms.second.first(_tmpval)
+#         notvector = _is_scalar(_tmpval_fun, 2)
+#         if notvector
+#             T = typeof(_tmpval_fun)
+#         else
+#             T = eltype(_tmpval_fun)
+#         end
+#         if eltype(ds[!, ms.first]) >: Missing
+#             for i in 1:mingsize
+#                 _tmpval[i] = missing
+#             end
+#             if notvector
+#                 T = Union{T, typeof(ms.second.first(_tmpval))}
+#             else
+#                 T = Union{T, eltype(ms.second.first(_tmpval))}
+#             end
+#         end
+#         return T
+#     catch
+#         throw(ArgumentError("modify only uses two observations to assess the output type, if your modification function uses index beyond 2, modify it to be more generic, or try to apply the function row-wise, otherwise the output type is not predictable for the input data type"))
+#     end
+# end
+
 function _check_the_output_type(ds, ms)
-    try
-        mingsize = 2
-        _tmpval = similar(_columns(ds)[ms.first], mingsize)
-        _first_nonmiss_val = _first_nonmiss(_columns(ds)[ms.first])
-        for i in 1:mingsize
-            _tmpval[i] = _first_nonmiss_val
-        end
-        _tmpval_fun = ms.second.first(_tmpval)
-        notvector = _is_scalar(_tmpval_fun, 2)
-        if notvector
-            T = typeof(_tmpval_fun)
+    CT = return_type(ms.second.first, (typeof(ds[!, ms.first].val),))
+    # TODO check other possibilities:
+    # the result can be
+    # * AbstractVector{T} where T
+    # * Vector{T}
+    # * not a Vector
+    CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(ms.second.first)` on `:$(_names(ds)[ms.first])`, you may want to try using `byrow`"))
+    if CT <: AbstractVector
+        if hasproperty(CT, :var)
+            T = CT.var.ub
         else
-            T = eltype(_tmpval_fun)
+            T = eltype(CT)
         end
-        if eltype(ds[!, ms.first]) >: Missing
-            for i in 1:mingsize
-                _tmpval[i] = missing
-            end
-            if notvector
-                T = Union{T, typeof(ms.second.first(_tmpval))}
-            else
-                T = Union{T, eltype(ms.second.first(_tmpval))}
-            end
-        end
-        return T
-    catch
-        throw(ArgumentError("modify only uses two observations to assess the output type, if your modification function uses index beyond 2, modify it to be more generic, or try to apply the function row-wise, otherwise the output type is not predictable for the input data type"))
+    else
+        T = CT
     end
+    T
 end
 
 # FIXME notyet complete
