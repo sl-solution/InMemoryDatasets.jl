@@ -208,10 +208,12 @@ function combine(ds::Dataset, @nospecialize(args...))
             T = _check_the_output_type(ds, ms[i])
             _fill_res_with_special_res!(res, special_res, ngroups, new_lengths, total_lengths, Val(T))
         elseif !(ms[i].second.first isa Expr) && haskey(newlookup, all_names[ms[i].first])
+            # it exists in new ds
             if length(res) >= newlookup[all_names[ms[i].first]]
                 T = _check_the_output_type(res[newlookup[all_names[ms[i].first]]], ms[i]) 
                 _update_one_col_combine!(res, res[newlookup[all_names[ms[i].first]]], ms[i], ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]], Val(T))
-            else
+            elses
+                # go back to the input ds
                 T = _check_the_output_type(ds, ms[i])
                  _add_one_col_combine!(res, ds, ms[i], starts, ngroups, new_lengths, total_lengths, Val(T))
             end
