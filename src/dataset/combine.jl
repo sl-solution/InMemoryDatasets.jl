@@ -212,7 +212,7 @@ function combine(ds::Dataset, @nospecialize(args...))
             if length(res) >= newlookup[all_names[ms[i].first]]
                 T = _check_the_output_type(res[newlookup[all_names[ms[i].first]]], ms[i]) 
                 _update_one_col_combine!(res, res[newlookup[all_names[ms[i].first]]], ms[i], ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]], Val(T))
-            elses
+            else
                 # go back to the input ds
                 T = _check_the_output_type(ds, ms[i])
                  _add_one_col_combine!(res, ds, ms[i], starts, ngroups, new_lengths, total_lengths, Val(T))
