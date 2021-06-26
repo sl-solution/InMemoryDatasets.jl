@@ -137,7 +137,7 @@ end
 modify(ds::Dataset) = copy(ds)
 function modify(origninal_ds::Dataset, @nospecialize(args...))
     ds = copy(origninal_ds)
-    idx_cpy = copy(index(ds))
+    idx_cpy::Index = Index(copy(index(ds).lookup), copy(index(ds).names), Dict{Int, Function}())
     if isgrouped(ds)
         norm_var = normalize_modify_multiple!(idx_cpy, index(ds), args...)
         all_new_var = map(x -> x.second.second, norm_var)
@@ -263,7 +263,7 @@ end
 #     end
 # end
 
-function _check_the_output_type(ds, ms)
+function _check_the_output_type(ds::Dataset, ms)
     CT = return_type(ms.second.first, (typeof(ds[!, ms.first].val),))
     # TODO check other possibilities:
     # the result can be

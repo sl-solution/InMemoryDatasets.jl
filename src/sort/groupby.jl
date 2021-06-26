@@ -27,8 +27,8 @@ function ungroup!(ds::Dataset)
     ds
 end
 
-isgrouped(ds::Dataset) = index(ds).grouped[]
-isgrouped(ds::SubDataset) = false
+isgrouped(ds::Dataset)::Bool = index(ds).grouped[]
+isgrouped(ds::SubDataset)::Bool = false
 
 function group_starts(ds::Dataset)
     index(ds).starts[1:index(ds).ngroups[]]

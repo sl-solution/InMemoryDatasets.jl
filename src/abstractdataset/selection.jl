@@ -1294,20 +1294,20 @@ julia> combine(gd, :, AsTable(Not(:a)) => sum, renamecols=false)
    8 │     4      1      8      9
 ```
 """
-combine(df::AbstractDataset, @nospecialize(args...); renamecols::Bool=true) =
-    manipulate(df, args..., copycols=true, keeprows=false, renamecols=renamecols)
+# combine(df::AbstractDataset, @nospecialize(args...); renamecols::Bool=true) =
+#     manipulate(df, args..., copycols=true, keeprows=false, renamecols=renamecols)
 
-function combine(@nospecialize(arg::Base.Callable), df::AbstractDataset; renamecols::Bool=true)
-    if arg isa Colon
-        throw(ArgumentError("First argument to select! must be a transformation if the second argument is a data set"))
-    end
-    return combine(df, arg)
-end
+# function combine(@nospecialize(arg::Base.Callable), df::AbstractDataset; renamecols::Bool=true)
+#     if arg isa Colon
+#         throw(ArgumentError("First argument to select! must be a transformation if the second argument is a data set"))
+#     end
+#     return combine(df, arg)
+# end
 
-combine(@nospecialize(f::Pair), gd::AbstractDataset; renamecols::Bool=true) =
-    throw(ArgumentError("First argument must be a transformation if the second argument is a data set. " *
-                        "You can pass a `Pair` as the second argument of the transformation. If you want the return " *
-                        "value to be processed as having multiple columns add `=> AsTable` suffix to the pair."))
+# combine(@nospecialize(f::Pair), gd::AbstractDataset; renamecols::Bool=true) =
+#     throw(ArgumentError("First argument must be a transformation if the second argument is a data set. " *
+#                         "You can pass a `Pair` as the second argument of the transformation. If you want the return " *
+#                         "value to be processed as having multiple columns add `=> AsTable` suffix to the pair."))
 
 function manipulate(ds::Dataset, @nospecialize(cs...); copycols::Bool, keeprows::Bool, renamecols::Bool)
     cs_vec = []
