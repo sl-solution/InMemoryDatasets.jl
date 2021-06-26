@@ -121,9 +121,9 @@ function _update_one_col_combine!(res, x, ms, ngroups, new_lengths, total_length
     _res = Tables.allocatecolumn(T, total_lengths)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
-        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
-        _res[(g-1)*length(counter)+1:g*length(counter)] .= ms[i].second.first(view(x, counter))
-        # _res[g] = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
+        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
+        _res[(g-1)*length(counter)+1:g*length(counter)] .= ms.second.first(view(x, counter))
+        # _res[g] = ms.second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     res[col] = _res
     return _res
