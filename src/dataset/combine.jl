@@ -169,7 +169,7 @@ function combine(ds::Dataset, @nospecialize(args...))
     # rows or 0 if all transformations return scalar for each group
     # the transformation returning multiple rows must not be based on the previous columns in combine
     # result (which seems reasonable ??)
-    _first_vector_res = _check_mutliple_rows_for_each_group(ds, ms, )
+    _first_vector_res = _check_mutliple_rows_for_each_group(ds, ms)
 
     _is_groupingcols_modifed(ds, ms) && throw(ArgumentError("`combine` cannot modify the grouping columns"))
 
@@ -195,10 +195,12 @@ function combine(ds::Dataset, @nospecialize(args...))
     all_names = _names(ds)
 
     # this is the columns for the output ds
-    res = AbstractArray[]
-    
+    newds = Dataset()
+    var_cnt = 1
     for j in 1:length(groupcols)
-        _push_groups_to_res!(res, ds, starts, new_lengths, total_lengths, j)
+        _push_groups_to_res!(_columns(newds), ds, starts, new_lengths, total_lengths, j)
+        push!(index(newds), new_nm[var_cnt])
+        var_cnt += 1
     end
     for i in 1:length(ms)
         # if newlookup has the name and has been created then use it otherwise use the
@@ -206,27 +208,30 @@ function combine(ds::Dataset, @nospecialize(args...))
     
         if i == _first_vector_res
             T = _check_the_output_type(ds, ms[i])
-            _fill_res_with_special_res!(res, special_res, ngroups, new_lengths, total_lengths, Val(T))
+            _fill_res_with_special_res!(_columns(newds), special_res, ngroups, new_lengths, total_lengths, Val(T))
         elseif !(ms[i].second.first isa Expr) && haskey(newlookup, all_names[ms[i].first])
             # it exists in new ds
-            if length(res) >= newlookup[all_names[ms[i].first]]
-                T = _check_the_output_type(res[newlookup[all_names[ms[i].first]]], ms[i]) 
-                _update_one_col_combine!(res, res[newlookup[all_names[ms[i].first]]], ms[i], ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]], Val(T))
+            if length(_columns(newds)) >= newlookup[all_names[ms[i].first]]
+                T = _check_the_output_type(_columns(newds)[newlookup[all_names[ms[i].first]]], ms[i]) 
+                _update_one_col_combine!(_columns(newds), _columns(newds)[newlookup[all_names[ms[i].first]]], ms[i], ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]], Val(T))
             else
                 # go back to the input ds
                 T = _check_the_output_type(ds, ms[i])
-                 _add_one_col_combine!(res, ds, ms[i], starts, ngroups, new_lengths, total_lengths, Val(T))
+                 _add_one_col_combine!(_columns(newds), ds, ms[i], starts, ngroups, new_lengths, total_lengths, Val(T))
             end
         elseif !(ms[i].second.first isa Expr) && !haskey(newlookup, all_names[ms[i].first])
             T = _check_the_output_type(ds, ms[i])
-            _add_one_col_combine!(res, ds, ms[i], starts, ngroups, new_lengths, total_lengths, Val(T))
+            _add_one_col_combine!(_columns(newds), ds, ms[i], starts, ngroups, new_lengths, total_lengths, Val(T))
         elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-            @error "not yet implemented"
+            push!(_columns(newds), byrow(newds, ms[i].second.first.args[1], ms[i].first; ms[i].second.first.args[2]...))
+
         end
+        push!(index(newds), new_nm[var_cnt])
+        var_cnt += 1
     end
     # newds_index = Index(newlookup, new_nm, Dict{Int, Function}(), copy(index(ds).sortedcols),
     #     copy(index(ds).rev), true, [],[], ngroups)
-    newds = Dataset(res, new_nm)
+    # newds = Dataset(res, new_nm)
     newds
 end
 
