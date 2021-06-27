@@ -152,7 +152,7 @@ function modify(origninal_ds::Dataset, @nospecialize(args...))
 end
 modify!(ds::Dataset) = ds
 function modify!(ds::Dataset, @nospecialize(args...))
-    idx_cpy = Inde(copy(index(ds).lookup), copy(index(ds).names), copy(index(ds).format))
+    idx_cpy = Index(copy(index(ds).lookup), copy(index(ds).names), copy(index(ds).format))
     if isgrouped(ds)
         norm_var = normalize_modify_multiple!(idx_cpy, index(ds), args...)
         all_new_var = map(x -> x.second.second, norm_var)
