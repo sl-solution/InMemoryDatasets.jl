@@ -198,70 +198,48 @@ function _resize_result!(ds, _res, newcol)
 end
 
 
+function _modify_single_var!(ds, _f, x, dst)
+    _res = _f(x)
+    _resize_result!(ds, _res, dst)
+end
+
+function _modify_multiple_out!(ds, _f, x, dst)
+    _res = _f(x)
+    if _res isa Tuple
+        for j in 1:length(dst)
+            _resize_result!(ds, _res[j], dst[j])
+        end
+    else
+        throw(ArgumentError("the function must return results as a tuple which each element of it corresponds to a new column"))
+    end
+end
+
+function _modify_f_barrier(ds, msfirst, mssecond, mslast)
+    if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
+        _modify_single_var!(ds, mssecond, _columns(ds)[msfirst], mslast)
+    elseif (mssecond isa Expr) && mssecond.head == :BYROW
+        try
+            ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
+        catch e
+            if e isa MethodError
+                throw(ArgumentError("output of `byrow` operation must be a vector"))
+            end
+            rethrow(e)
+        end
+    elseif  (mssecond isa Base.Callable) && (mslast isa MultiCol)
+        _modify_multiple_out!(ds, mssecond, _columns(ds)[msfirst], mslast.x)
+    else
+        @error "not yet know how to handle this situation $(msfirst => mssecond => mslast)"
+    end
+end
+
 function _modify(ds, ms)
     needs_reset_grouping = false
     for i in 1:length(ms)
-        if (ms[i].second.first isa Base.Callable) && !(ms[i].second.second isa MultiCol)
-            _res = ms[i].second.first(_columns(ds)[ms[i].first])
-            _resize_result!(ds, _res, ms[i].second.second)
-        elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-            try
-                ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first; ms[i].second.first.args[2]...)
-            catch e
-                if e isa MethodError
-                    throw(ArgumentError("output of `byrow` operation must be a vector"))
-                end
-                rethrow(e)
-            end
-        elseif (ms[i].second.first isa Base.Callable) && (ms[i].second.second isa MultiCol)
-            _res = ms[i].second.first(_columns(ds)[ms[i].first])
-            if _res isa Tuple
-                for j in 1:length(ms[i].second.second.x)
-                    _resize_result!(ds, _res[j], ms[i].second.second.x[j])
-                end
-            else
-                throw(ArgumentError("the function must return results as a tuple which each element of it corresponds to a new column"))
-            end
-        else
-            @error "not yet know how to handle this situation $(ms[i])"
-        end
+        _modify_f_barrier(ds, ms[i].first, ms[i].second.first, ms[i].second.second)
     end
     return ds
 end
-
-# Checking the output type
-# it uses two observations to determine the output type
-# if the data structure is complicated or the function in ms ref to index beyond 2 it won't work
-# function _check_the_output_type(ds, ms)
-#     try
-#         mingsize = 2
-#         _tmpval = similar(_columns(ds)[ms.first], mingsize)
-#         _first_nonmiss_val = _first_nonmiss(_columns(ds)[ms.first])
-#         for i in 1:mingsize
-#             _tmpval[i] = _first_nonmiss_val
-#         end
-#         _tmpval_fun = ms.second.first(_tmpval)
-#         notvector = _is_scalar(_tmpval_fun, 2)
-#         if notvector
-#             T = typeof(_tmpval_fun)
-#         else
-#             T = eltype(_tmpval_fun)
-#         end
-#         if eltype(ds[!, ms.first]) >: Missing
-#             for i in 1:mingsize
-#                 _tmpval[i] = missing
-#             end
-#             if notvector
-#                 T = Union{T, typeof(ms.second.first(_tmpval))}
-#             else
-#                 T = Union{T, eltype(ms.second.first(_tmpval))}
-#             end
-#         end
-#         return T
-#     catch
-#         throw(ArgumentError("modify only uses two observations to assess the output type, if your modification function uses index beyond 2, modify it to be more generic, or try to apply the function row-wise, otherwise the output type is not predictable for the input data type"))
-#     end
-# end
 
 function _check_the_output_type(ds::Dataset, ms)
     CT = return_type(ms.second.first, (typeof(ds[!, ms.first].val),))
@@ -285,11 +263,11 @@ end
 
 # FIXME notyet complete
 # fill _res for grouped data: col => f => :newcol
-function _modify_grouped_fill_one_col!(_res, x, ms, starts, ngroups, nrows)
+function _modify_grouped_fill_one_col!(_res, x, _f, starts, ngroups, nrows)
     Threads.@threads for g in 1:ngroups
         lo = starts[g]
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
-        _tmp_res = ms.second.first(view(x, lo:hi))
+        _tmp_res = _f(view(x, lo:hi))
         resize_col = _is_scalar(_tmp_res, length(lo:hi))
         if resize_col
             fill!(view(_res, lo:hi), _tmp_res)
@@ -301,46 +279,27 @@ function _modify_grouped_fill_one_col!(_res, x, ms, starts, ngroups, nrows)
 end
 
 
+function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast)
+    if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
+        T = _check_the_output_type(ds, msfirst=>mssecond=>mslast)
+        _res = Tables.allocatecolumn(T, nrow(ds))
+        _modify_grouped_fill_one_col!(_res, _columns(ds)[msfirst], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
+        ds[!, mslast] = _res
+    elseif (mssecond isa Expr) && mssecond.head == :BYROW
+                ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
+    elseif (mssecond isa Base.Callable) && (mslast isa MultiCol)
+                
+        throw(ArgumentError("multi column output is not supported for grouped data set"))
+    else
+                # if something ends here, we should implement new functionality for it
+        @error "not yet know how to handle the situation $(msfirst => mssecond => mslast)"
+    end
+end
+
 function _modify_grouped(ds, ms)
     needs_reset_grouping = false
     for i in 1:length(ms)
-            if (ms[i].second.first isa Base.Callable) && !(ms[i].second.second isa MultiCol)
-                T = _check_the_output_type(ds, ms[i])
-                _res = Tables.allocatecolumn(T, nrow(ds))
-                _modify_grouped_fill_one_col!(_res, _columns(ds)[ms[i].first], ms[i], index(ds).starts, index(ds).ngroups[], nrow(ds))
-                # Threads.@threads for g in 1:index(ds).ngroups[]
-                #     lo = index(ds).starts[g]
-                #     g == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[g + 1] - 1
-                #     _tmp_res = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
-                #     resize_col = _is_scalar(_tmp_res, length(lo:hi))
-                #     if resize_col
-                #         fill!(view(_res, lo:hi), _tmp_res)
-                #     else
-                #         copy!(view(_res, lo:hi), _tmp_res)
-                #     end
-                # end
-                ds[!, ms[i].second.second] = _res
-            elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-                ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first; ms[i].second.first.args[2]...)
-            elseif (ms[i].second.first isa Base.Callable) && (ms[i].second.second isa MultiCol)
-                # _res = _allocate_for_groups(ms[i].second.first, coalesce(_columns(ds)[ms[i].first]), eltype(ds[!, ms[i].first]), nrow(ds))
-                # if _res isa Tuple
-                #     for g in 1:index(ds).ngroups[]
-                #         lo = index(ds).starts[g]
-                #         g == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[g + 1] - 1
-                #         for j in 1:length(ms[i].second.second.x)
-                #             copy!(view(_res, lo:hi), ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi)))
-                #         end
-                #             # _resize_result!(ds, _res[j], ms[i].second.second.x[j])
-                #     end
-                # else
-                #     throw(ArgumentError("the function must return results as a tuple which each element of it corresponds to a new column"))
-                # end
-                throw(ArgumentError("multi column output is not supported for grouped data set"))
-            else
-                # if something ends here, we should implement new functionality for it
-                @error "not yet know how to handle the situation $(ms[i])"
-            end
+        _modify_grouped_f_barrier(ds, ms[i].first, ms[i].second.first, ms[i].second.second)
     end
     return ds
 end
