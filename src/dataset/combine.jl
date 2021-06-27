@@ -84,7 +84,7 @@ function _push_groups_to_res!(res, _tmpres, x, ds, starts, new_lengths, total_le
     for i in 1:ngroups
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
         for k in 1:length(counter)
-            _tmpres[(i-1)*length(counter) + k] = x[starts[i]]
+            _tmpres[new_lengths[i] - length(counter) + k] = x[starts[i]]
         end
     end
     push!(res, _tmpres)
@@ -118,7 +118,9 @@ function _update_one_col_combine!(res, x, ms, ngroups, new_lengths, total_length
     Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
-        _res[(g-1)*length(counter)+1:g*length(counter)] .= ms.second.first(view(x, counter))
+        lo = new_lengths[g] - length(counter) + 1
+        hi = new_lengths[g]
+        _res[lo:hi] .= ms.second.first(view(x, counter))
         # _res[g] = ms.second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     res[col] = _res
@@ -130,7 +132,9 @@ function _add_one_col_combine_from_combine!(res, _res, x, ms, ngroups, new_lengt
     Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
-        _res[(g-1)*length(counter)+1:g*length(counter)] .= ms.second.first(view(x, counter))
+        lo = new_lengths[g] - length(counter) + 1
+        hi = new_lengths[g]
+        _res[lo:hi] .= ms.second.first(view(x, counter))
         # _res[g] = ms.second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     push!(res, _res)
@@ -145,7 +149,9 @@ function _add_one_col_combine!(res, _res, in_x, ds, ms, starts, ngroups, new_len
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = starts[g]
         g == ngroups ? hi = nrow(ds) : hi = starts[g + 1] - 1
-        _res[(g-1)*length(counter)+1:g*length(counter)] .= ms.second.first(view(in_x, lo:hi))
+        l1 = new_lengths[g] - length(counter) + 1
+        h1 = new_lengths[g]
+        _res[l1:h1] .= ms.second.first(view(in_x, lo:hi))
         # _res[g] = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     push!(res, _res)
@@ -158,7 +164,7 @@ function _fill_res_with_special_res!(res, _res, special_res, ngroups, new_length
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         for k in 1:length(counter)
-            _res[(g-1)*length(counter) + k] = special_res[g][k]
+            _res[new_lengths[g] - length(counter) + k] = special_res[g][k]
         end
     end
     push!(res, _res)
@@ -169,7 +175,7 @@ function _update_res_with_special_res!(res, _res, special_res, ngroups, new_leng
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         for k in 1:length(counter)
-            _res[(g-1)*length(counter) + k] = special_res[g][k]
+            _res[new_lengths[g] - length(counter) + k] = special_res[g][k]
         end
     end
     res[col] = _res
