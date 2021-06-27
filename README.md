@@ -172,7 +172,7 @@ modify(ds, op...)
 
 where `op` can be of the form `col => fun`, `cols=>fun`, `col=>fun=>:new_name`, `cols=>fun=>:new_names`. Here `fun` is a function which can be applied to one column, i.e. `fun` accepts one column of `ds` and return values by calling `fun` on the selected `col`. When no new names is given the `col` is replaced by the new values. The  feature of `modify` is that from left to right when ever a column is updated or created, the next operation has access to its value (either new or updated values). 
 
-When a row operation is needed to be done, `byrow ` can be used instead of `fun`, i.e. `cols => byrow(f, kwargs...)` or `cols => byrow(f, kwargs...)=>:new_name`. In this case `f` is applied to each row of `ds`.
+When a row operation is needed to be done, `byrow` can be used instead of `fun`, i.e. `cols => byrow(f, kwargs...)` or `cols => byrow(f, kwargs...)=>:new_name`. In this case `f` is applied to each row of `cols`.
 
 ## Examples
 
