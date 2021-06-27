@@ -41,19 +41,14 @@ function _is_groupingcols_modifed(ds, ms)
     return false
 end
 
-function _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
+function _compute_the_mutli_row_trans!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts, ngroups)
     # _first_vector_var = ms[_first_vector_res].second.second
-    CT = return_type(ms[_first_vector_res].second.first,
-             (typeof(ds[!, ms[_first_vector_res].first].val),))
-    special_res = Vector{CT}(undef, ngroups)
-    new_lengths = Vector{Int}(undef, ngroups)
     Threads.@threads for g in 1:ngroups
         lo = starts[g]
-        g == ngroups ? hi = nrow(ds) : hi = starts[g + 1] - 1
-        special_res[g] = ms[_first_vector_res].second.first(view(_columns(ds)[ms[_first_vector_res].first], lo:hi))
+        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
+        special_res[g] = _f(view(x, lo:hi))
         new_lengths[g] = length(special_res[g])
     end
-    (special_res, new_lengths)
 end
 
 # this returns lookup dictionary and names for the new ds
@@ -82,14 +77,14 @@ function _create_index_for_newds(ds, ms)
 end
 
 
-function _push_groups_to_res!(res, ds, starts, new_lengths, total_lengths, j)
+function _push_groups_to_res!(res, _tmpres, x, ds, starts, new_lengths, total_lengths, j)
     groupcols = index(ds).sortedcols
-    ngroups = index(ds).ngroups[]
-    _tmpres = similar(ds[!, groupcols[j]], total_lengths)
+    ngroups::Int = index(ds).ngroups[]
+    counter::UnitRange{Int} = 1:1
     for i in 1:ngroups
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
         for k in 1:length(counter)
-            _tmpres[(i-1)*length(counter) + k] = _columns(ds)[groupcols[j]][starts[i]]
+            _tmpres[(i-1)*length(counter) + k] = x[starts[i]]
         end
     end
     push!(res, _tmpres)
@@ -97,7 +92,7 @@ function _push_groups_to_res!(res, ds, starts, new_lengths, total_lengths, j)
 end
 
 
-function _check_the_output_type(x, ms)::DataType
+function _check_the_output_type(x, ms)
     CT = return_type(ms.second.first, (typeof(x),))
     # TODO check other possibilities:
     # the result can be
@@ -121,6 +116,7 @@ function _update_one_col_combine!(res, x, ms, ngroups, new_lengths, total_length
     _res = Tables.allocatecolumn(T, total_lengths)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
+        counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         _res[(g-1)*length(counter)+1:g*length(counter)] .= ms.second.first(view(x, counter))
         # _res[g] = ms.second.first(view(_columns(ds)[ms[i].first], lo:hi))
@@ -129,14 +125,27 @@ function _update_one_col_combine!(res, x, ms, ngroups, new_lengths, total_length
     return _res
 end
 
-function _add_one_col_combine!(res, ds, ms, starts, ngroups, new_lengths, total_lengths, ::Val{T}) where T
-    _res = Tables.allocatecolumn(T, total_lengths)
+function _add_one_col_combine_from_combine!(res, _res, x, ms, ngroups, new_lengths, total_lengths)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
+        counter::UnitRange{Int} = 1:1
+        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
+        _res[(g-1)*length(counter)+1:g*length(counter)] .= ms.second.first(view(x, counter))
+        # _res[g] = ms.second.first(view(_columns(ds)[ms[i].first], lo:hi))
+    end
+    push!(res, _res)
+    return _res
+end
+
+
+function _add_one_col_combine!(res, _res, in_x, ds, ms, starts, ngroups, new_lengths, total_lengths)
+    # make sure lo and hi are not defined any where outside the following loop
+    Threads.@threads for g in 1:ngroups
+        counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = starts[g]
         g == ngroups ? hi = nrow(ds) : hi = starts[g + 1] - 1
-        _res[(g-1)*length(counter)+1:g*length(counter)] .= ms.second.first(view(_columns(ds)[ms.first], lo:hi))
+        _res[(g-1)*length(counter)+1:g*length(counter)] .= ms.second.first(view(in_x, lo:hi))
         # _res[g] = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     push!(res, _res)
@@ -144,15 +153,27 @@ function _add_one_col_combine!(res, ds, ms, starts, ngroups, new_lengths, total_
 end
 
 # special_res cannot be based on previous columns of the combined data set
-function _fill_res_with_special_res!(res, special_res, ngroups, new_lengths, total_lengths, ::Val{T}) where T
-     _res = Tables.allocatecolumn(T, total_lengths)
+function _fill_res_with_special_res!(res, _res, special_res, ngroups, new_lengths, total_lengths)
      Threads.@threads for g in 1:ngroups
+        counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         for k in 1:length(counter)
             _res[(g-1)*length(counter) + k] = special_res[g][k]
         end
     end
     push!(res, _res)
+end
+# special_res cannot be based on previous columns of the combined data set
+function _update_res_with_special_res!(res, _res, special_res, ngroups, new_lengths, total_lengths, col)
+     Threads.@threads for g in 1:ngroups
+        counter::UnitRange{Int} = 1:1
+        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
+        for k in 1:length(counter)
+            _res[(g-1)*length(counter) + k] = special_res[g][k]
+        end
+    end
+    res[col] = _res
+    return _res
 end
 # first attemp for combine
 # Don't use it yet
@@ -186,7 +207,13 @@ function combine(ds::Dataset, @nospecialize(args...))
         cumsum!(new_lengths, new_lengths)
         total_lengths = ngroups
     else
-        special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
+        CT = return_type(ms[_first_vector_res].second.first,
+                 (typeof(ds[!, ms[_first_vector_res].first].val),))
+        special_res = Vector{CT}(undef, ngroups)
+        new_lengths = Vector{Int}(undef, ngroups)
+        # _columns(ds)[ms[_first_vector_res].first]
+        _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[ms[_first_vector_res].first], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+        # special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
         cumsum!(new_lengths, new_lengths)
         total_lengths = new_lengths[end]
     end
@@ -196,103 +223,61 @@ function combine(ds::Dataset, @nospecialize(args...))
 
     # this is the columns for the output ds
     newds = Dataset()
+    newds_lookup = index(newds).lookup
     var_cnt = 1
     for j in 1:length(groupcols)
-        _push_groups_to_res!(_columns(newds), ds, starts, new_lengths, total_lengths, j)
+        _push_groups_to_res!(_columns(newds), similar(ds[!, groupcols[j]].val, total_lengths), _columns(ds)[groupcols[j]], ds, starts, new_lengths, total_lengths, j)
         push!(index(newds), new_nm[var_cnt])
         var_cnt += 1
     end
     for i in 1:length(ms)
         # if newlookup has the name and has been created then use it otherwise use the
         # values from input data set
-    
+
         if i == _first_vector_res
-            T = _check_the_output_type(ds, ms[i])
-            _fill_res_with_special_res!(_columns(newds), special_res, ngroups, new_lengths, total_lengths, Val(T))
+            if !haskey(newds_lookup, newlookup[all_names[ms[i].first]]) #&& newlookup[all_names[ms[i].first]] != newlookup[ms[i].second.second]
+                T = _check_the_output_type(ds, ms[i])
+                _res = Tables.allocatecolumn(T, total_lengths)
+                _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
+            else
+                # update the existing column in newds
+                T = _check_the_output_type(ds, ms[i])
+                _res = Tables.allocatecolumn(T, total_lengths)
+                _update_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]])
+            end
         elseif !(ms[i].second.first isa Expr) && haskey(newlookup, all_names[ms[i].first])
             # it exists in new ds
-            if length(_columns(newds)) >= newlookup[all_names[ms[i].first]]
-                T = _check_the_output_type(_columns(newds)[newlookup[all_names[ms[i].first]]], ms[i]) 
-                _update_one_col_combine!(_columns(newds), _columns(newds)[newlookup[all_names[ms[i].first]]], ms[i], ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]], Val(T))
+            if haskey(newds_lookup, newlookup[all_names[ms[i].first]]) && newlookup[all_names[ms[i].first]] == newlookup[ms[i].second.second]
+                T = _check_the_output_type(_columns(newds)[newlookup[all_names[ms[i].first]]], ms[i])
+                _res = Tables.allocatecolumn(T, total_lengths)
+                _update_one_col_combine!(_columns(newds), _res, _columns(newds)[newlookup[all_names[ms[i].first]]], ms[i], ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]])
+            elseif haskey(newds_lookup, newlookup[all_names[ms[i].first]]) && newlookup[all_names[ms[i].first]] != newlookup[ms[i].second.second]
+                T = _check_the_output_type(_columns(newds)[newlookup[all_names[ms[i].first]]], ms[i])
+                _res = Tables.allocatecolumn(T, total_lengths)
+                _add_one_col_combine_from_combine!(_columns(newds), _res, _columns(newds)[newlookup[all_names[ms[i].first]]], newlookup[all_names[ms[i].first]] => ms[i].second, ngroups, new_lengths, total_lengths)
             else
                 # go back to the input ds
                 T = _check_the_output_type(ds, ms[i])
-                 _add_one_col_combine!(_columns(newds), ds, ms[i], starts, ngroups, new_lengths, total_lengths, Val(T))
+                _res = Tables.allocatecolumn(T, total_lengths)
+                 _add_one_col_combine!(_columns(newds), _res, _columns(ds)[ms[i].first], ds, ms[i], starts, ngroups, new_lengths, total_lengths)
             end
         elseif !(ms[i].second.first isa Expr) && !haskey(newlookup, all_names[ms[i].first])
             T = _check_the_output_type(ds, ms[i])
-            _add_one_col_combine!(_columns(newds), ds, ms[i], starts, ngroups, new_lengths, total_lengths, Val(T))
+            _res = Tables.allocatecolumn(T, total_lengths)
+            _add_one_col_combine!(_columns(newds), _res, _columns(ds)[ms[i].first], ds, ms[i], starts, ngroups, new_lengths, total_lengths)
         elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-            push!(_columns(newds), byrow(newds, ms[i].second.first.args[1], ms[i].first; ms[i].second.first.args[2]...))
+            # obtain the variables location in the new ds
+            byrow_map_cols = index(newds)[_names(idx_cpy)[idx_cpy[ms[i].first]]]
+            push!(_columns(newds), byrow(newds, ms[i].second.first.args[1], byrow_map_cols; ms[i].second.first.args[2]...))
 
         end
-        push!(index(newds), new_nm[var_cnt])
-        var_cnt += 1
+        if !haskey(index(newds), ms[i].second.second)
+            push!(index(newds), ms[i].second.second)
+        end
+
     end
     # newds_index = Index(newlookup, new_nm, Dict{Int, Function}(), copy(index(ds).sortedcols),
     #     copy(index(ds).rev), true, [],[], ngroups)
     # newds = Dataset(res, new_nm)
     newds
 end
-
-# function _combine(ds::Dataset, ms, _first_vector_res)
-    
-#     groupcols = index(ds).sortedcols
-#     starts = index(ds).starts
-#     ngroups = index(ds).ngroups[]
-
-#     # TODO should we allocate the result and reuse it later?
-#     # here we don't want to allocate, but it means we should compute
-#     # the transformation twice
-   
-#     _first_vector_var = ms[_first_vector_res].second.second
-#     CT = return_type(ms[_first_vector_res].second.first,
-#              (typeof(ds[!, ms[_first_vector_res].first].val),))
-#     special_res = Vector{CT}(undef, ngroups)
-#     new_lengths = Vector{Int}(undef, ngroups)
-#     Threads.@threads for g in 1:ngroups
-#         lo = starts[g]
-#         g == ngroups ? hi = nrow(ds) : hi = starts[g + 1] - 1
-#         special_res[g] = ms[_first_vector_res].second.first(view(_columns(ds)[ms[_first_vector_res].first], lo:hi))
-#         new_lengths[g] = length(special_res[g])
-#     end
-#     total_lengths = sum(new_lengths)
-    
-
-    
-#     res = AbstractArray[]
-#     for j in 1:length(groupcols)
-#         _tmpres = similar(ds[!, groupcols[j]], total_lengths)
-#         Threads.@threads for i in 1:ngroups
-#             for k in 1:new_lengths[i]
-#                 _tmpres[(i-1)*new_lengths[i] + k] = _columns(ds)[groupcols[j]][starts[i]]
-#             end
-#         end
-#         push!(res, _tmpres)
-#     end
-#     nm = _names(ds)[groupcols]
-#     for i in 1:length(ms)
-#         T = _check_the_output_type(ds, ms[i])
-#         _res = Tables.allocatecolumn(T, total_lengths)
-#         if i == _first_vector_res
-#             Threads.@threads for i1 in 1:ngroups
-#                 for k in 1:new_lengths[i1]
-#                     _res[(i1-1)*new_lengths[i1] + k] = special_res[i1][k]
-#                 end
-#             end
-#             push!(res, _res)
-#             push!(nm, ms[i].second.second)
-#             continue
-#         end
-#         # make sure lo and hi are not defined any where outside the following loops
-#         Threads.@threads for g in 1:ngroups
-#             lo = starts[g]
-#             g == ngroups ? hi = nrow(ds) : hi = starts[g + 1] - 1
-#             _res[(g-1)*new_lengths[g]+1:g*new_lengths[g]] .= ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
-#             # _res[g] = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
-#          end
-#         push!(res, _res)
-#         push!(nm, ms[i].second.second)
-#     end
-#     Dataset(res, nm, copycols = false)
-# end

@@ -284,23 +284,41 @@ function _check_the_output_type(ds::Dataset, ms)
 end
 
 # FIXME notyet complete
+# fill _res for grouped data: col => f => :newcol
+function _modify_grouped_fill_one_col!(_res, x, ms, starts, ngroups, nrows)
+    Threads.@threads for g in 1:ngroups
+        lo = starts[g]
+        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
+        _tmp_res = ms.second.first(view(x, lo:hi))
+        resize_col = _is_scalar(_tmp_res, length(lo:hi))
+        if resize_col
+            fill!(view(_res, lo:hi), _tmp_res)
+        else
+            copy!(view(_res, lo:hi), _tmp_res)
+        end
+    end
+    _res
+end
+
+
 function _modify_grouped(ds, ms)
     needs_reset_grouping = false
     for i in 1:length(ms)
             if (ms[i].second.first isa Base.Callable) && !(ms[i].second.second isa MultiCol)
                 T = _check_the_output_type(ds, ms[i])
-                 _res = Tables.allocatecolumn(T, nrow(ds))
-                Threads.@threads for g in 1:index(ds).ngroups[]
-                    lo = index(ds).starts[g]
-                    g == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[g + 1] - 1
-                    _tmp_res = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
-                    resize_col = _is_scalar(_tmp_res, length(lo:hi))
-                    if resize_col
-                        fill!(view(_res, lo:hi), _tmp_res)
-                    else
-                        copy!(view(_res, lo:hi), _tmp_res)
-                    end
-                end
+                _res = Tables.allocatecolumn(T, nrow(ds))
+                _modify_grouped_fill_one_col!(_res, _columns(ds)[ms[i].first], ms[i], index(ds).starts, index(ds).ngroups[], nrow(ds))
+                # Threads.@threads for g in 1:index(ds).ngroups[]
+                #     lo = index(ds).starts[g]
+                #     g == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[g + 1] - 1
+                #     _tmp_res = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
+                #     resize_col = _is_scalar(_tmp_res, length(lo:hi))
+                #     if resize_col
+                #         fill!(view(_res, lo:hi), _tmp_res)
+                #     else
+                #         copy!(view(_res, lo:hi), _tmp_res)
+                #     end
+                # end
                 ds[!, ms[i].second.second] = _res
             elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
                 ds[!, ms[i].second.second] = byrow(ds, ms[i].second.first.args[1], ms[i].first; ms[i].second.first.args[2]...)

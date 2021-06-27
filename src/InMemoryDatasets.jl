@@ -41,7 +41,7 @@ export
       ungroup!,
       modify,
       modify!,
-      combine,
+      # combine,
       setinfo!,
       # from byrow operations
       byrow,
