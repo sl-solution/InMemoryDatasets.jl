@@ -20,9 +20,8 @@ function normalize_modify!(outidx::Index, idx::Index,
                                                         <:Union{Symbol, AbstractString}}})
                                                         )
     src, (fun, dst) = sel
-    src isa Integer && throw(ArgumentError("in `modify` and `combine` it is not allowed to use column number as selector, use the column's name"))
     _check_ind_and_add!(outidx, Symbol(dst))
-    return _names(outidx)[outidx[src]] => fun => Symbol(dst)
+    return outidx[src] => fun => Symbol(dst)
 end
 # col => fun => dst, the job is to create col => fun => :dst
 function normalize_modify!(outidx::Index, idx::Index,
@@ -31,11 +30,10 @@ function normalize_modify!(outidx::Index, idx::Index,
                                                         <:Vector{<:Union{Symbol, AbstractString}}}})
                                                         )
     src, (fun, dst) = sel
-    src isa Integer && throw(ArgumentError("in `modify` and `combine` it is not allowed to use column number as selector, use the column's name"))
     for i in 1:length(dst)
         _check_ind_and_add!(outidx, Symbol(dst[i]))
     end
-    return _names(outidx)[outidx[src]] => fun => MultiCol(Symbol.(dst))
+    return outidx[src] => fun => MultiCol(Symbol.(dst))
 end
 # col => fun, the job is to create col => fun => :colname
 function normalize_modify!(outidx::Index, idx::Index,
@@ -43,20 +41,18 @@ function normalize_modify!(outidx::Index, idx::Index,
                                                     <:Union{Base.Callable}}))
 
     src, fun = sel
-    src isa Integer && throw(ArgumentError("in `modify` and `combine` it is not allowed to use column number as selector, use the column's name"))
-    return _names(outidx)[outidx[src]] => fun => _names(outidx)[outidx[src]]
+    return outidx[src] => fun => _names(outidx)[outidx[src]]
 end
 
 # col => byrow
 function normalize_modify!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Expr}))
-    sel.first isa Integer && throw(ArgumentError("in `modify` and `combine` it is not allowed to use column number as selector, use the column's name"))
     colsidx = outidx[sel.first]
     if sel.second.head == :BYROW
         # TODO needs a better name for destination
         # _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
-        return _names(outidx)[outidx[colsidx]] => sel.second => _names(outidx)[colsidx]
+        return outidx[colsidx] => sel.second => _names(outidx)[colsidx]
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
@@ -65,44 +61,43 @@ function normalize_modify!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                         <:Pair{<:Expr,
                                             <:Union{Symbol, AbstractString}}}))
-    sel.first isa Integer && throw(ArgumentError("in `modify` and `combine` it is not allowed to use column number as selector, use the column's name"))
     colsidx = outidx[sel.first]
     if sel.second.first.head == :BYROW
         # TODO needs a better name for destination
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
-        return _names(outidx)[outidx[colsidx]] => sel.second.first => Symbol(sel.second.second)
+        return outidx[colsidx] => sel.second.first => Symbol(sel.second.second)
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
 
 # cols => fun, the job is to create [col1 => fun => :col1name, col2 => fun => :col2name ...]
 function normalize_modify!(outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:AbstractVector{<:Union{Symbol, AbstractString}},
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Union{Base.Callable,Expr}}))
     colsidx = outidx[sel.first]
     if sel.second isa Expr
         if sel.second.head == :BYROW
             # TODO needs a better name for destination
             _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
-            return _names(outidx)[outidx[colsidx]] => sel.second => Symbol("row_", funname(sel.second.args[1]))
+            return outidx[colsidx] => sel.second => Symbol("row_", funname(sel.second.args[1]))
         end
     end
-    res = [normalize_modify!(outidx, idx, _names(outidx)[colsidx[1]] => sel.second)]
+    res = [normalize_modify!(outidx, idx, colsidx[1] => sel.second)]
     for i in 2:length(colsidx)
-        push!(res, normalize_modify!(outidx, idx, _names(outidx)[colsidx[i]] => sel.second))
+        push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second))
     end
     return res
 end
 
 # special case cols => byrow(...) => :name
 function normalize_modify!(outidx::Index, idx::Index,
-    @nospecialize(sel::Pair{<:AbstractVector{<:Union{Symbol, AbstractString}},
+    @nospecialize(sel::Pair{<:MultiColumnIndex,
                             <:Pair{<:Expr,
                                 <:Union{Symbol, AbstractString}}}))
     colsidx = outidx[sel.first]
     if sel.second.first.head == :BYROW
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
-        return _names(outidx)[outidx[colsidx]] => sel.second.first => Symbol(sel.second.second)
+        return outidx[colsidx] => sel.second.first => Symbol(sel.second.second)
     else
         throw(ArgumentError("only byrow operation is supported for cols => fun => :name"))
     end
@@ -110,16 +105,16 @@ end
 
 # cols .=> fun .=> dsts, the job is to create col1 => fun => :dst1, col2 => fun => :dst2, ...
 function normalize_modify!(outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:AbstractVector{<:Union{Symbol, AbstractString}},
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Pair{<:Union{Base.Callable,Expr},
                                                         <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
     colsidx = outidx[sel.first]
     if !(length(colsidx) == length(sel.second.second))
         throw(ArgumentError("The input number of columns and the length of the output names should match"))
     end
-    res = [normalize_modify!(outidx, idx, _names(outidx)[colsidx[1]] => sel.second.first => sel.second.second[1])]
+    res = [normalize_modify!(outidx, idx, colsidx[1] => sel.second.first => sel.second.second[1])]
     for i in 2:length(colsidx)
-        push!(res, normalize_modify!(outidx, idx, _names(outidx)[colsidx[i]] => sel.second.first => sel.second.second[i]))
+        push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second.first => sel.second.second[i]))
     end
     return res
 end
@@ -221,7 +216,7 @@ end
 
 function _modify_f_barrier(ds, msfirst, mssecond, mslast)
     if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
-        _modify_single_var!(ds, mssecond, _columns(ds)[index(ds)[msfirst]], mslast)
+        _modify_single_var!(ds, mssecond, _columns(ds)[msfirst], mslast)
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
         try
             ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
@@ -232,7 +227,7 @@ function _modify_f_barrier(ds, msfirst, mssecond, mslast)
             rethrow(e)
         end
     elseif  (mssecond isa Base.Callable) && (mslast isa MultiCol)
-        _modify_multiple_out!(ds, mssecond, _columns(ds)[index(ds)[msfirst]], mslast.x)
+        _modify_multiple_out!(ds, mssecond, _columns(ds)[msfirst], mslast.x)
     else
         @error "not yet know how to handle this situation $(msfirst => mssecond => mslast)"
     end
@@ -253,7 +248,7 @@ function _check_the_output_type(ds::Dataset, ms)
     # * AbstractVector{T} where T
     # * Vector{T}
     # * not a Vector
-    CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(ms.second.first)` on `:$(ms.first)`, you may want to try using `byrow`"))
+    CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(ms.second.first)` on `:$(_names(ds)[ms.first])`, you may want to try using `byrow`"))
     if CT <: AbstractVector
         if hasproperty(CT, :var)
             T = CT.var.ub
@@ -288,7 +283,7 @@ function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast)
     if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
         T = _check_the_output_type(ds, msfirst=>mssecond=>mslast)
         _res = Tables.allocatecolumn(T, nrow(ds))
-        _modify_grouped_fill_one_col!(_res, _columns(ds)[index(ds)[msfirst]], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
+        _modify_grouped_fill_one_col!(_res, _columns(ds)[msfirst], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
         ds[!, mslast] = _res
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
                 ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
