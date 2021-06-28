@@ -1,16 +1,17 @@
-function _is_byrow_valid(idx_cpy, ms)
+function _is_byrow_valid(idx, ms)
     righthands = Int[]
-    dslookup = idx_cpy.lookup
+    lookupdict = idx.lookup
     if ms[1].second.first isa Expr
         return false
     end
     for i in 1:length(ms)
         if (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-            byrow_vars = idx_cpy[ms[i].first]
+            
+            byrow_vars = idx[ms[i].first]
             !all(byrow_vars .∈ Ref(righthands)) && return false
         end
-        if haskey(dslookup, ms[i].second.second)
-            push!(righthands, dslookup[ms[i].second.second])
+        if haskey(idx, ms[i].second.second)
+            push!(righthands, idx[ms[i].second.second])
         end
     end
     return true
@@ -18,8 +19,10 @@ end
 
 function _check_mutliple_rows_for_each_group(ds, ms)
     for i in 1:length(ms)
-        # byrow are not checked since they are going to modify the number of rows
-        if !(ms[i].second.first isa Expr) && ms[i].first <= length(index(ds))
+        # byrow are not checked since they are not going to modify the number of rows
+        if !(ms[i].second.first isa Expr) &&
+                 haskey(index(ds), ms[i].first) && 
+                    !(ms[i].first ∈ map(x->x.second.second, view(ms, 1:(i-1))))
             T = return_type(ms[i].second.first, (typeof(ds[!, ms[i].first].val),))
             if T <: AbstractVector
                 return i
@@ -92,14 +95,14 @@ function _push_groups_to_res!(res, _tmpres, x, ds, starts, new_lengths, total_le
 end
 
 
-function _check_the_output_type(x, ms)
-    CT = return_type(ms.second.first, (typeof(x),))
+function _check_the_output_type(x, mssecond)
+    CT = return_type(mssecond, (typeof(x),))
     # TODO check other possibilities:
     # the result can be
     # * AbstractVector{T} where T
     # * Vector{T}
     # * not a Vector
-    CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(ms.second.first)` on input, you may want to try using `byrow`"))
+    CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(mssecond)` on input, you may want to try using `byrow`"))
     if CT <: AbstractVector
         if hasproperty(CT, :var)
             T = CT.var.ub
@@ -112,29 +115,28 @@ function _check_the_output_type(x, ms)
     return T
 end
 
-function _update_one_col_combine!(res, x, ms, ngroups, new_lengths, total_lengths, col, ::Val{T}) where T
-    _res = Tables.allocatecolumn(T, total_lengths)
+function _update_one_col_combine!(res, _res, x, _f, ngroups, new_lengths, total_lengths, col)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = new_lengths[g] - length(counter) + 1
         hi = new_lengths[g]
-        _res[lo:hi] .= ms.second.first(view(x, counter))
+        _res[lo:hi] .= _f(view(x, counter))
         # _res[g] = ms.second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     res[col] = _res
     return _res
 end
 
-function _add_one_col_combine_from_combine!(res, _res, x, ms, ngroups, new_lengths, total_lengths)
+function _add_one_col_combine_from_combine!(res, _res, x, _f, ngroups, new_lengths, total_lengths)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = new_lengths[g] - length(counter) + 1
         hi = new_lengths[g]
-        _res[lo:hi] .= ms.second.first(view(x, counter))
+        _res[lo:hi] .= _f(view(x, counter))
         # _res[g] = ms.second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     push!(res, _res)
@@ -142,7 +144,7 @@ function _add_one_col_combine_from_combine!(res, _res, x, ms, ngroups, new_lengt
 end
 
 
-function _add_one_col_combine!(res, _res, in_x, ds, ms, starts, ngroups, new_lengths, total_lengths)
+function _add_one_col_combine!(res, _res, in_x, ds, _f, starts, ngroups, new_lengths, total_lengths)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
@@ -151,7 +153,7 @@ function _add_one_col_combine!(res, _res, in_x, ds, ms, starts, ngroups, new_len
         g == ngroups ? hi = nrow(ds) : hi = starts[g + 1] - 1
         l1 = new_lengths[g] - length(counter) + 1
         h1 = new_lengths[g]
-        _res[l1:h1] .= ms.second.first(view(in_x, lo:hi))
+        _res[l1:h1] .= _f(view(in_x, lo:hi))
         # _res[g] = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     push!(res, _res)
@@ -181,6 +183,49 @@ function _update_res_with_special_res!(res, _res, special_res, ngroups, new_leng
     res[col] = _res
     return _res
 end
+
+function _combine_f_barrier_special(special_res, ds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
+    if !haskey(newds_lookup, mslast) #&& newlookup[all_names[ms[i].first]] != newlookup[ms[i].second.second]
+        T = _check_the_output_type(ds[!, msfirst].val, mssecond)
+        _res = Tables.allocatecolumn(T, total_lengths)
+        _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
+    else
+        # update the existing column in newds
+        T = _check_the_output_type(ds[!, msfirst].val, mssecond)
+        _res = Tables.allocatecolumn(T, total_lengths)
+        _update_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
+    end
+end
+
+
+function _combine_f_barrier(ds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+    if !(mssecond isa Expr) && haskey(newds_lookup, msfirst)
+        if !haskey(newds_lookup, mslast)
+            T = _check_the_output_type(_columns(newds)[newds_lookup[msfirst]], mssecond)
+            _res = Tables.allocatecolumn(T, total_lengths)
+            _add_one_col_combine_from_combine!(_columns(newds), _res, _columns(newds)[newds_lookup[msfirst]], mssecond, ngroups, new_lengths, total_lengths)
+        else
+            T = _check_the_output_type(_columns(newds)[newds_lookup[msfirst]], mssecond)
+            _res = Tables.allocatecolumn(T, total_lengths)
+            _update_one_col_combine!(_columns(newds), _res, _columns(newds)[newds_lookup[msfirst]], mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
+        end
+    elseif !(mssecond isa Expr) && !haskey(newds_lookup, msfirst)
+        if !haskey(newds_lookup, mslast)
+            T = _check_the_output_type(ds[!, msfirst].val, mssecond)
+            _res = Tables.allocatecolumn(T, total_lengths)
+            _add_one_col_combine!(_columns(newds), _res, _columns(ds)[index(ds)[msfirst]], ds, mssecond, starts, ngroups, new_lengths, total_lengths)
+        else
+            T = _check_the_output_type(ds[!, msfirst].val, mssecond)
+            _res = Tables.allocatecolumn(T, total_lengths)
+            _update_one_col_combine!(_columns(newds), _res, _columns(ds)[index(ds)[msfirst]], mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
+        end
+    elseif (mssecond isa Expr) && mssecond.head == :BYROW
+        push!(_columns(newds), byrow(newds, mssecond.args[1], msfirst; mssecond.args[2]...))
+    else
+        throw(ArgumentError("`combine` doesn't support $(msfirst=>mssecond=>mslast) combination"))
+    end
+end
+
 # first attemp for combine
 # Don't use it yet
 function combine(ds::Dataset, @nospecialize(args...))
@@ -190,8 +235,8 @@ function combine(ds::Dataset, @nospecialize(args...))
     # the rule is that in combine, byrow must only be used for already aggregated columns
     # so, we should check every thing pass to byrow has been assigned in args before it
     # if this is not the case, throw ArgumentError and ask user to use modify instead
-    !(_is_byrow_valid(idx_cpy, ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` instead"))
-
+    newlookup, new_nm = _create_index_for_newds(ds, ms)
+    !(_is_byrow_valid(Index(newlookup, new_nm, Dict{Int, Function}()), ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` otherwise"))
     # _check_mutliple_rows_for_each_group return the first transformation which causes multiple
     # rows or 0 if all transformations return scalar for each group
     # the transformation returning multiple rows must not be based on the previous columns in combine
@@ -218,64 +263,45 @@ function combine(ds::Dataset, @nospecialize(args...))
         special_res = Vector{CT}(undef, ngroups)
         new_lengths = Vector{Int}(undef, ngroups)
         # _columns(ds)[ms[_first_vector_res].first]
-        _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[ms[_first_vector_res].first], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+        _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
         # special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
         cumsum!(new_lengths, new_lengths)
         total_lengths = new_lengths[end]
     end
-    newlookup, new_nm = _create_index_for_newds(ds, ms)
-
     all_names = _names(ds)
 
     # this is the columns for the output ds
-    newds = Dataset()
+    # this make sure that we will reuse new_lengths
+    newds_idx = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Bool[], false, [], Int[], 1)
+
+    newds = Dataset([], newds_idx)
     newds_lookup = index(newds).lookup
     var_cnt = 1
     for j in 1:length(groupcols)
         _push_groups_to_res!(_columns(newds), similar(ds[!, groupcols[j]].val, total_lengths), _columns(ds)[groupcols[j]], ds, starts, new_lengths, total_lengths, j)
         push!(index(newds), new_nm[var_cnt])
+        setformat!(newds, new_nm[var_cnt] => get(index(ds).format, groupcols[j], identity))
         var_cnt += 1
+
     end
     for i in 1:length(ms)
         # if newlookup has the name and has been created then use it otherwise use the
         # values from input data set
 
         if i == _first_vector_res
-            if !haskey(newds_lookup, newlookup[all_names[ms[i].first]]) #&& newlookup[all_names[ms[i].first]] != newlookup[ms[i].second.second]
-                T = _check_the_output_type(ds, ms[i])
-                _res = Tables.allocatecolumn(T, total_lengths)
-                _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
-            else
-                # update the existing column in newds
-                T = _check_the_output_type(ds, ms[i])
-                _res = Tables.allocatecolumn(T, total_lengths)
-                _update_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]])
-            end
-        elseif !(ms[i].second.first isa Expr) && haskey(newlookup, all_names[ms[i].first])
-            # it exists in new ds
-            if haskey(newds_lookup, newlookup[all_names[ms[i].first]]) && newlookup[all_names[ms[i].first]] == newlookup[ms[i].second.second]
-                T = _check_the_output_type(_columns(newds)[newlookup[all_names[ms[i].first]]], ms[i])
-                _res = Tables.allocatecolumn(T, total_lengths)
-                _update_one_col_combine!(_columns(newds), _res, _columns(newds)[newlookup[all_names[ms[i].first]]], ms[i], ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]])
-            elseif haskey(newds_lookup, newlookup[all_names[ms[i].first]]) && newlookup[all_names[ms[i].first]] != newlookup[ms[i].second.second]
-                T = _check_the_output_type(_columns(newds)[newlookup[all_names[ms[i].first]]], ms[i])
-                _res = Tables.allocatecolumn(T, total_lengths)
-                _add_one_col_combine_from_combine!(_columns(newds), _res, _columns(newds)[newlookup[all_names[ms[i].first]]], newlookup[all_names[ms[i].first]] => ms[i].second, ngroups, new_lengths, total_lengths)
-            else
-                # go back to the input ds
-                T = _check_the_output_type(ds, ms[i])
-                _res = Tables.allocatecolumn(T, total_lengths)
-                 _add_one_col_combine!(_columns(newds), _res, _columns(ds)[ms[i].first], ds, ms[i], starts, ngroups, new_lengths, total_lengths)
-            end
-        elseif !(ms[i].second.first isa Expr) && !haskey(newlookup, all_names[ms[i].first])
-            T = _check_the_output_type(ds, ms[i])
-            _res = Tables.allocatecolumn(T, total_lengths)
-            _add_one_col_combine!(_columns(newds), _res, _columns(ds)[ms[i].first], ds, ms[i], starts, ngroups, new_lengths, total_lengths)
-        elseif (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-            # obtain the variables location in the new ds
-            byrow_map_cols = index(newds)[_names(idx_cpy)[idx_cpy[ms[i].first]]]
-            push!(_columns(newds), byrow(newds, ms[i].second.first.args[1], byrow_map_cols; ms[i].second.first.args[2]...))
-
+            _combine_f_barrier_special(special_res, ds, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+            # if !haskey(newds_lookup, newlookup[all_names[ms[i].first]]) #&& newlookup[all_names[ms[i].first]] != newlookup[ms[i].second.second]
+            #     T = _check_the_output_type(ds, ms[i])
+            #     _res = Tables.allocatecolumn(T, total_lengths)
+            #     _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
+            # else
+            #     # update the existing column in newds
+            #     T = _check_the_output_type(ds, ms[i])
+            #     _res = Tables.allocatecolumn(T, total_lengths)
+            #     _update_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]])
+            # end
+        else
+            _combine_f_barrier(ds, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
         end
         if !haskey(index(newds), ms[i].second.second)
             push!(index(newds), ms[i].second.second)
@@ -285,5 +311,15 @@ function combine(ds::Dataset, @nospecialize(args...))
     # newds_index = Index(newlookup, new_nm, Dict{Int, Function}(), copy(index(ds).sortedcols),
     #     copy(index(ds).rev), true, [],[], ngroups)
     # newds = Dataset(res, new_nm)
+    # grouping information for the output dataset
+    append!(index(newds).sortedcols, index(ds).sortedcols)
+    append!(index(newds).rev, index(ds).rev)
+    append!(index(newds).perm, collect(1:total_lengths))
+    index(newds).grouped[] = true
+    index(newds).ngroups[] = ngroups
+    append!(index(newds).starts, collect(1:total_lengths))
+    for i in 2:(length(new_lengths))
+        index(newds).starts[i] = new_lengths[i - 1]+1
+    end
     newds
 end
