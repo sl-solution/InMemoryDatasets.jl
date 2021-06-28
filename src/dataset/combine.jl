@@ -123,7 +123,6 @@ function _update_one_col_combine!(res, _res, x, _f, ngroups, new_lengths, total_
         lo = new_lengths[g] - length(counter) + 1
         hi = new_lengths[g]
         _res[lo:hi] .= _f(view(x, counter))
-        # _res[g] = ms.second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     res[col] = _res
     return _res
@@ -137,7 +136,6 @@ function _add_one_col_combine_from_combine!(res, _res, x, _f, ngroups, new_lengt
         lo = new_lengths[g] - length(counter) + 1
         hi = new_lengths[g]
         _res[lo:hi] .= _f(view(x, counter))
-        # _res[g] = ms.second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     push!(res, _res)
     return _res
@@ -154,7 +152,6 @@ function _add_one_col_combine!(res, _res, in_x, ds, _f, starts, ngroups, new_len
         l1 = new_lengths[g] - length(counter) + 1
         h1 = new_lengths[g]
         _res[l1:h1] .= _f(view(in_x, lo:hi))
-        # _res[g] = ms[i].second.first(view(_columns(ds)[ms[i].first], lo:hi))
     end
     push!(res, _res)
     return _res
@@ -185,7 +182,7 @@ function _update_res_with_special_res!(res, _res, special_res, ngroups, new_leng
 end
 
 function _combine_f_barrier_special(special_res, ds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
-    if !haskey(newds_lookup, mslast) #&& newlookup[all_names[ms[i].first]] != newlookup[ms[i].second.second]
+    if !haskey(newds_lookup, mslast) 
         T = _check_the_output_type(ds[!, msfirst].val, mssecond)
         _res = Tables.allocatecolumn(T, total_lengths)
         _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
@@ -226,8 +223,6 @@ function _combine_f_barrier(ds, newds, msfirst, mssecond, mslast, newds_lookup, 
     end
 end
 
-# first attemp for combine
-# Don't use it yet
 function combine(ds::Dataset, @nospecialize(args...))
     !isgrouped(ds) && throw(ArgumentError("`combine` is only for grouped data sets, use `modify` instead"))
     idx_cpy::Index = Index(copy(index(ds).lookup), copy(index(ds).names), Dict{Int, Function}())
@@ -249,9 +244,6 @@ function combine(ds::Dataset, @nospecialize(args...))
     starts::Vector{Int} = index(ds).starts
     ngroups::Int = index(ds).ngroups[]
 
-    # TODO should we allocate the result and reuse it later?
-    # here we don't want to allocate, but it means we should compute
-    # the transformation twice
     # we will use new_lengths later for assigning the grouping info of the new ds
     if _first_vector_res == 0
         new_lengths = ones(Int, ngroups)
@@ -270,8 +262,6 @@ function combine(ds::Dataset, @nospecialize(args...))
     end
     all_names = _names(ds)
 
-    # this is the columns for the output ds
-    # this make sure that we will reuse new_lengths
     newds_idx = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Bool[], false, [], Int[], 1)
 
     newds = Dataset([], newds_idx)
@@ -285,21 +275,8 @@ function combine(ds::Dataset, @nospecialize(args...))
 
     end
     for i in 1:length(ms)
-        # if newlookup has the name and has been created then use it otherwise use the
-        # values from input data set
-
         if i == _first_vector_res
             _combine_f_barrier_special(special_res, ds, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
-            # if !haskey(newds_lookup, newlookup[all_names[ms[i].first]]) #&& newlookup[all_names[ms[i].first]] != newlookup[ms[i].second.second]
-            #     T = _check_the_output_type(ds, ms[i])
-            #     _res = Tables.allocatecolumn(T, total_lengths)
-            #     _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
-            # else
-            #     # update the existing column in newds
-            #     T = _check_the_output_type(ds, ms[i])
-            #     _res = Tables.allocatecolumn(T, total_lengths)
-            #     _update_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, newlookup[all_names[ms[i].first]])
-            # end
         else
             _combine_f_barrier(ds, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
         end
@@ -308,9 +285,6 @@ function combine(ds::Dataset, @nospecialize(args...))
         end
 
     end
-    # newds_index = Index(newlookup, new_nm, Dict{Int, Function}(), copy(index(ds).sortedcols),
-    #     copy(index(ds).rev), true, [],[], ngroups)
-    # newds = Dataset(res, new_nm)
     # grouping information for the output dataset
     append!(index(newds).sortedcols, index(ds).sortedcols)
     append!(index(newds).rev, index(ds).rev)
