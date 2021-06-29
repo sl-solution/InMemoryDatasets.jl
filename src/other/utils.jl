@@ -1,3 +1,17 @@
+# modified return_type to suit for our purpose
+function return_type(f::Function, x::AbstractVector)
+    CT = nonmissingtype(eltype(x))
+    T = Core.Compiler.return_type(f, (Vector{CT}, ))
+    # workaround for SubArray type
+    if T <: SubArray
+        return Core.Compiler.return_type(f, (typeof(x), ))
+    end
+    if CT >: Missing
+        T = Union{T, Missing}
+    end
+    T
+end
+
 function _first_nonmiss(x)
     for i in 1:length(x)
         res = x[i]

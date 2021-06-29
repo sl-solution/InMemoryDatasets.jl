@@ -368,10 +368,10 @@ function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
     number_of_warnnings = 0
     for j in 1:length(colsidx)
         CT = eltype(_columns(ds)[colsidx[j]])
-        # return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of return_type is Union{Missing, Float64, Int64}
+        # Core.Compiler.return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of Core.Compiler.return_type is Union{Missing, Float64, Int64}
         # we remove missing and then check the result,
         # TODO is there any problem with this?
-        T = return_type(f, (nonmissingtype(CT),))
+        T = Core.Compiler.return_type(f, (nonmissingtype(CT),))
         if promote_type(T, CT) <: CT
             map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
             removeformat!(ds, colsidx[j])
@@ -441,10 +441,10 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
     number_of_warnnings = 0
     for j in 1:length(colsidx)
         CT = eltype(_columns(ds)[colsidx[j]])
-        # return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of return_type is Union{Missing, Float64, Int64}
+        # Core.Compiler.return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of Core.Compiler.return_type is Union{Missing, Float64, Int64}
         # we remove missing and then check the result,
         # TODO is there any problem with this?
-        T = return_type(f[j], (nonmissingtype(CT),))
+        T = Core.Compiler.return_type(f[j], (nonmissingtype(CT),))
         if promote_type(T, CT) <: CT
             map!(f[j], _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
             removeformat!(ds, colsidx[j])

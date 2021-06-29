@@ -1,8 +1,7 @@
 module InMemoryDatasets
 
-import Core.Compiler.return_type
 using Dates
-using Statistics
+@reexport using Statistics
 # using TableTraits,IteratorInterfaceExtensions
 using Reexport
 using Compat
@@ -20,8 +19,6 @@ import DataAPI,
        Tables.columnindex
 
 export
-      # experimental inner module to redefine statistical calculation
-      imd,
       # types
       AbstractDataset,
       DatasetColumns,
@@ -41,19 +38,29 @@ export
       ungroup!,
       modify,
       modify!,
-      # combine,
+      combine,
       setinfo!,
       # from byrow operations
       byrow,
       nunique,
-      stdze
+      # from stat
+      stdze,
+      lag,
+      lead,
+      rescale,
+      wsum,
+      wmean,
+      k_largest,
+      k_smallest
+
 
 
 
 include("other/index.jl")
 include("other/utils.jl")
-# imd is the inner module to redefine statistical functions
-include("imd/imd.jl")
+include("stat/non_hp_stat.jl")
+include("stat/hp_stat.jl")
+include("stat/stat.jl")
 include("abstractdataset/abstractdataset.jl")
 # create dataset
 include("dataset/constructor.jl")

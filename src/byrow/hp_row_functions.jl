@@ -22,7 +22,7 @@ end
 function hp_row_sum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _hp_op_for_sum!(x, y; f = f) = x .= hp_sum!(x, y; f = f)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
     mapreduce(identity, _hp_op_for_sum!, view(_columns(ds),colsidx), init = init0)
@@ -38,7 +38,7 @@ end
 function hp_row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _hp_op_for_prod!(x, y; f = f) = x .= hp_mult!(x, y; f = f)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
     mapreduce(identity, _hp_op_for_prod!, view(_columns(ds),colsidx), init = init0)
@@ -109,7 +109,7 @@ end
 function hp_row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _hp_op_for_min!(x, y; f = f) = x .= hp_min!(x, y; f = f)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemax(T))
     mapreduce(identity, _hp_op_for_min!, view(_columns(ds),colsidx), init = init0)
@@ -128,7 +128,7 @@ end
 function hp_row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _hp_op_for_max!(x, y; f = f) = x .= hp_max!(x, y; f = f)
     # TODO the type of zeros after applying f???
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemin(T))
@@ -139,7 +139,7 @@ hp_row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = 
 function hp_row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _sq_(x) = x^2
     ss = hp_row_sum(ds, _sq_ ∘ f, cols)
     sval = hp_row_sum(ds, f, cols)

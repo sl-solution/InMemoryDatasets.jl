@@ -132,7 +132,7 @@ function _is_byrow_valid(idx, ms)
     end
     for i in 1:length(ms)
         if (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-            
+
             byrow_vars = idx[ms[i].first]
             !all(byrow_vars .∈ Ref(righthands)) && return false
         end
@@ -147,9 +147,9 @@ function _check_mutliple_rows_for_each_group(ds, ms)
     for i in 1:length(ms)
         # byrow are not checked since they are not going to modify the number of rows
         if !(ms[i].second.first isa Expr) &&
-                 haskey(index(ds), ms[i].first) && 
+                 haskey(index(ds), ms[i].first) &&
                     !(ms[i].first ∈ map(x->x.second.second, view(ms, 1:(i-1))))
-            T = return_type(ms[i].second.first, (typeof(ds[!, ms[i].first].val),))
+            T = return_type(ms[i].second.first, ds[!, ms[i].first].val)
             if T <: AbstractVector
                 return i
             end
@@ -222,7 +222,7 @@ end
 
 
 function _check_the_output_type(x, mssecond)
-    CT = return_type(mssecond, (typeof(x),))
+    CT = return_type(mssecond, x)
     # TODO check other possibilities:
     # the result can be
     # * AbstractVector{T} where T
@@ -308,7 +308,7 @@ function _update_res_with_special_res!(res, _res, special_res, ngroups, new_leng
 end
 
 function _combine_f_barrier_special(special_res, ds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
-    if !haskey(newds_lookup, mslast) 
+    if !haskey(newds_lookup, mslast)
         T = _check_the_output_type(ds[!, msfirst].val, mssecond)
         _res = Tables.allocatecolumn(T, total_lengths)
         _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
@@ -377,7 +377,7 @@ function combine(ds::Dataset, @nospecialize(args...))
         total_lengths = ngroups
     else
         CT = return_type(ms[_first_vector_res].second.first,
-                 (typeof(ds[!, ms[_first_vector_res].first].val),))
+                 ds[!, ms[_first_vector_res].first].val)
         special_res = Vector{CT}(undef, ngroups)
         new_lengths = Vector{Int}(undef, ngroups)
         # _columns(ds)[ms[_first_vector_res].first]

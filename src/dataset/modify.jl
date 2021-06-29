@@ -157,8 +157,8 @@ function modify!(ds::Dataset, @nospecialize(args...))
         norm_var = normalize_modify_multiple!(idx_cpy, index(ds), args...)
         all_new_var = map(x -> x.second.second, norm_var)
         var_index = idx_cpy[unique(all_new_var)]
-        index(ds).sortedcols .∈ Ref(var_index) && throw(ArgumentError("the grouping variables cannot be modified, first use `ungroup!(ds)` to ungroup the data set"))
-        _modify_grouped(ds, normalize_modify_multiple!(idx_cpy, index(ds), args...))
+        any(index(ds).sortedcols .∈ Ref(var_index)) && throw(ArgumentError("the grouping variables cannot be modified, first use `ungroup!(ds)` to ungroup the data set"))
+        _modify_grouped(ds, norm_var)
     else
         _modify(ds, normalize_modify_multiple!(idx_cpy, index(ds), args...))
     end
@@ -242,7 +242,7 @@ function _modify(ds, ms)
 end
 
 function _check_the_output_type(ds::Dataset, ms)
-    CT = return_type(ms.second.first, (typeof(ds[!, ms.first].val),))
+    CT = return_type(ms.second.first, ds[!, ms.first].val)
     # TODO check other possibilities:
     # the result can be
     # * AbstractVector{T} where T
@@ -288,7 +288,7 @@ function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast)
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
                 ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
     elseif (mssecond isa Base.Callable) && (mslast isa MultiCol)
-                
+
         throw(ArgumentError("multi column output is not supported for grouped data set"))
     else
                 # if something ends here, we should implement new functionality for it
