@@ -1,7 +1,7 @@
 module InMemoryDatasets
 
 using Dates
-@reexport using Statistics
+
 # using TableTraits,IteratorInterfaceExtensions
 using Reexport
 using Compat
@@ -10,6 +10,7 @@ using PrettyTables, REPL
 using Markdown
 using PooledArrays
 @reexport using Missings, InvertedIndices
+@reexport using Statistics
 import DataAPI,
        DataAPI.All,
        DataAPI.Between,
