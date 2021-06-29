@@ -88,6 +88,11 @@ include("other/broadcasting.jl")
 include("dataset/modify.jl")
 include("dataset/combine.jl")
 include("abstractdataset/selection.jl")
+# sorting
+include("sort/util.jl")
+include("sort/qsort.jl")
+include("sort/int.jl")
+include("sort/pooled.jl")
 include("sort/sort.jl")
 include("sort/groupby.jl")
 
