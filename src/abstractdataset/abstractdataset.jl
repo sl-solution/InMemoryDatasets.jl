@@ -130,7 +130,7 @@ Base.:(*)(col2::SubOrDSCol, col1::SubOrDSCol) = *(__!(col2), __!(col1))
 Base.:(+)(col2::SubOrDSCol, col1::SubOrDSCol) = +(__!(col2), __!(col1))
 Base.:(/)(col2::SubOrDSCol, col1::SubOrDSCol) = /(__!(col2), __!(col1))
 Base.:(-)(col2::SubOrDSCol, col1::SubOrDSCol) = -(__!(col2), __!(col1))
-Base.Generator(f, col::SubOrDSCol) = Base.Generator(f, __!(col))
+# Base.Generator(f, col::SubOrDSCol) = Base.Generator(f, __!(col))
 
 ##############################################################################
 ##
