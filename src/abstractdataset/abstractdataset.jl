@@ -2144,31 +2144,31 @@ julia> disallowmissing(ds, error=false)
    2 │ missing
 ```
 """
-function Missings.disallowmissing(ds::AbstractDataset,
-                                  cols::Union{ColumnIndex, MultiColumnIndex}=:;
-                                  error::Bool=false)
-    # Create Dataset
-    idxcols = Set(index(ds)[cols])
-    newcols = AbstractVector[]
-    for i in axes(ds, 2)
-        x = _columns(ds)[i]
-        if i in idxcols
-            if !error && Missing <: eltype(x) && any(ismissing, x)
-                y = x
-            else
-                y = disallowmissing(x)
-            end
-            push!(newcols, y === x ? copy(y) : y)
-        else
-            push!(newcols, copy(x))
-        end
-    end
-    newds = Dataset(newcols, _names(ds), copycols=false)
-    setformat!(newds, _getformats(ds))
-    setinfo!(newds, _attributes(ds).meta.info[])
-    _copy_grouping_info!(newds, ds)
-    newds
-end
+# function Missings.disallowmissing(ds::AbstractDataset,
+#                                   cols::Union{ColumnIndex, MultiColumnIndex}=:;
+#                                   error::Bool=false)
+#     # Create Dataset
+#     idxcols = Set(index(ds)[cols])
+#     newcols = AbstractVector[]
+#     for i in axes(ds, 2)
+#         x = _columns(ds)[i]
+#         if i in idxcols
+#             if !error && Missing <: eltype(x) && any(ismissing, x)
+#                 y = x
+#             else
+#                 y = disallowmissing(x)
+#             end
+#             push!(newcols, y === x ? copy(y) : y)
+#         else
+#             push!(newcols, copy(x))
+#         end
+#     end
+#     newds = Dataset(newcols, _names(ds), copycols=false)
+#     setformat!(newds, _getformats(ds))
+#     setinfo!(newds, _attributes(ds).meta.info[])
+#     _copy_grouping_info!(newds, ds)
+#     newds
+# end
 
 """
     allowmissing(ds::AbstractDataset, cols=:)
@@ -2200,26 +2200,26 @@ julia> allowmissing(ds)
    2 │      2
 ```
 """
-function Missings.allowmissing(ds::AbstractDataset,
-                               cols::Union{ColumnIndex, MultiColumnIndex}=:)
-    # Create Dataset
-    idxcols = Set(index(ds)[cols])
-    newcols = AbstractVector[]
-    for i in axes(ds, 2)
-        x = _columns(ds)[i]
-        if i in idxcols
-            y = allowmissing(x)
-            push!(newcols, y === x ? copy(y) : y)
-        else
-            push!(newcols, copy(x))
-        end
-    end
-    newds = Dataset(newcols, _names(ds), copycols=false)
-    setformat!(newds, _getformats(ds))
-    setinfo!(newds, _attributes(ds).meta.info[])
-    _copy_grouping_info!(newds, ds)
-    newds
-end
+# function Missings.allowmissing(ds::AbstractDataset,
+#                                cols::Union{ColumnIndex, MultiColumnIndex}=:)
+#     # Create Dataset
+#     idxcols = Set(index(ds)[cols])
+#     newcols = AbstractVector[]
+#     for i in axes(ds, 2)
+#         x = _columns(ds)[i]
+#         if i in idxcols
+#             y = allowmissing(x)
+#             push!(newcols, y === x ? copy(y) : y)
+#         else
+#             push!(newcols, copy(x))
+#         end
+#     end
+#     newds = Dataset(newcols, _names(ds), copycols=false)
+#     setformat!(newds, _getformats(ds))
+#     setinfo!(newds, _attributes(ds).meta.info[])
+#     _copy_grouping_info!(newds, ds)
+#     newds
+# end
 
 """
     flatten(ds::AbstractDataset, cols)
