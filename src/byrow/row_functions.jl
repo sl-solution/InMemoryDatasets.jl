@@ -25,7 +25,7 @@ Base.hash(x::_Prehashed) = x.hash
 function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _op_for_sum!(x, y) = x .= _add_sum.(x, f.(y))
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
     mapreduce(identity, _op_for_sum!, view(_columns(ds),colsidx), init = init0)
@@ -36,7 +36,7 @@ row_sum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_sum
 function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _op_for_prod!(x, y) = x .= _mul_prod.(x, f.(y))
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
     mapreduce(identity, _op_for_prod!, view(_columns(ds),colsidx), init = init0)
@@ -80,7 +80,7 @@ row_mean(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_me
 function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _op_for_min!(x, y) = x .= _min_fun.(x, f.(y))
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemax(T))
     mapreduce(identity, _op_for_min!, view(_columns(ds),colsidx), init = init0)
@@ -92,7 +92,7 @@ row_minimum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row
 function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _op_for_max!(x, y) = x .= _max_fun.(x, f.(y))
     # TODO the type of zeros after applying f???
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemin(T))
@@ -123,7 +123,7 @@ end
 function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, (CT,))
     _sq_(x) = x^2
     ss = row_sum(ds, _sq_ ∘ f, cols)
     sval = row_sum(ds, f, cols)
