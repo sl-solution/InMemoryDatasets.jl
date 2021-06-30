@@ -412,7 +412,7 @@ function combine(ds::Dataset, @nospecialize(args...))
 
     end
     # grouping information for the output dataset
-    append!(index(newds).sortedcols, index(ds).sortedcols)
+    append!(index(newds).sortedcols, index(newds)[index(ds).names[index(ds).sortedcols]])
     append!(index(newds).rev, index(ds).rev)
     append!(index(newds).perm, collect(1:total_lengths))
     index(newds).grouped[] = true
