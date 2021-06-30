@@ -310,12 +310,12 @@ end
 function _combine_f_barrier_special(special_res, ds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
     if !haskey(newds_lookup, mslast)
         T = _check_the_output_type(ds[!, msfirst].val, mssecond)
-        _res = Tables.allocatecolumn(T, total_lengths)
+        _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
         _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
     else
         # update the existing column in newds
         T = _check_the_output_type(ds[!, msfirst].val, mssecond)
-        _res = Tables.allocatecolumn(T, total_lengths)
+        _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
         _update_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
     end
 end
@@ -325,25 +325,25 @@ function _combine_f_barrier(ds, newds, msfirst, mssecond, mslast, newds_lookup, 
     if !(mssecond isa Expr) && haskey(newds_lookup, msfirst)
         if !haskey(newds_lookup, mslast)
             T = _check_the_output_type(_columns(newds)[newds_lookup[msfirst]], mssecond)
-            _res = Tables.allocatecolumn(T, total_lengths)
+            _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
             _add_one_col_combine_from_combine!(_columns(newds), _res, _columns(newds)[newds_lookup[msfirst]], mssecond, ngroups, new_lengths, total_lengths)
         else
             T = _check_the_output_type(_columns(newds)[newds_lookup[msfirst]], mssecond)
-            _res = Tables.allocatecolumn(T, total_lengths)
+            _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
             _update_one_col_combine!(_columns(newds), _res, _columns(newds)[newds_lookup[msfirst]], mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
         end
     elseif !(mssecond isa Expr) && !haskey(newds_lookup, msfirst)
         if !haskey(newds_lookup, mslast)
             T = _check_the_output_type(ds[!, msfirst].val, mssecond)
-            _res = Tables.allocatecolumn(T, total_lengths)
+            _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
             _add_one_col_combine!(_columns(newds), _res, _columns(ds)[index(ds)[msfirst]], ds, mssecond, starts, ngroups, new_lengths, total_lengths)
         else
             T = _check_the_output_type(ds[!, msfirst].val, mssecond)
-            _res = Tables.allocatecolumn(T, total_lengths)
+            _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
             _update_one_col_combine!(_columns(newds), _res, _columns(ds)[index(ds)[msfirst]], mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
         end
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
-        push!(_columns(newds), byrow(newds, mssecond.args[1], msfirst; mssecond.args[2]...))
+        push!(_columns(newds), allowmissing(byrow(newds, mssecond.args[1], msfirst; mssecond.args[2]...)))
     else
         throw(ArgumentError("`combine` doesn't support $(msfirst=>mssecond=>mslast) combination"))
     end

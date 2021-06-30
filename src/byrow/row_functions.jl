@@ -295,7 +295,7 @@ function row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
     colsidx = index(ds)[cols]
     if length(colsidx) == 2
         try
-            f.(_columns(ds)[colsidx[1]], _columns(ds)[colsidx[2]])
+            allowmissing(f.(_columns(ds)[colsidx[1]], _columns(ds)[colsidx[2]]))
         catch e
             if e isa MethodError
                 _row_generic(ds, f, cols)
