@@ -208,17 +208,17 @@ end
 
 function _preprocess_column(col::Any, len::Integer, copycols::Bool)
     if col isa AbstractRange
-        return collect(col)
+        return allowmissing(collect(col))
     elseif col isa AbstractVector
-        return copycols ? copy(col) : col
+        return copycols ? copy(allowmissing(col)) : allowmissing(col)
     elseif col isa Union{AbstractArray{<:Any, 0}, Ref}
-        x = col[]
+        x = allowmissing(col[])
         return fill!(Tables.allocatecolumn(typeof(x), len), x)
     elseif col isa AbstractArray
         throw(ArgumentError("adding AbstractArray other than AbstractVector " *
                             "as a column of a data set is not allowed"))
     else
-        return fill!(Tables.allocatecolumn(typeof(col), len), col)
+        return fill!(Tables.allocatecolumn(typeof(allowmissing(col)), len), col)
     end
 end
 

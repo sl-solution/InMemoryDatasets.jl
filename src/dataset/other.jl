@@ -327,7 +327,7 @@ end
 """
     map!(ds::Dataset, f::Function, cols)
 
-Update each `col` in `ds[!, cols]` in-place when `map!` return a result, and skip when it is not possible.
+Update each row of each `col` in `ds[!, cols]` in-place when `map!` return a result, and skip when it is not possible.
 
 If `f` cannot be applied in place, use `map` for creating a copy of `ds`.
 
@@ -400,7 +400,7 @@ Base.map!(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `col` argu
 """
     map!(ds::Dataset, f::Vector{Function}, cols)
 
-Update jth `col` in `ds[!, cols]` in-place by calling `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped.
+Update each row of the jth `col` in `ds[!, cols]` in-place by calling `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped.
 
 Use `map` if the in-place operation is not possible.
 

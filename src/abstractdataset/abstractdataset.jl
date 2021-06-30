@@ -130,7 +130,7 @@ Base.:(*)(col2::SubOrDSCol, col1::SubOrDSCol) = *(__!(col2), __!(col1))
 Base.:(+)(col2::SubOrDSCol, col1::SubOrDSCol) = +(__!(col2), __!(col1))
 Base.:(/)(col2::SubOrDSCol, col1::SubOrDSCol) = /(__!(col2), __!(col1))
 Base.:(-)(col2::SubOrDSCol, col1::SubOrDSCol) = -(__!(col2), __!(col1))
-
+Base.Generator(f, col::SubOrDSCol) = Base.Generator(f, __!(col))
 
 ##############################################################################
 ##
@@ -211,7 +211,7 @@ end
 function _check_format_validity(ds, col, f)
     flag = false
     string(nameof(f))[1] == '#' && return flag
-    return_type(f, ds[!, col].val) == Union{} && return flag
+    Core.Compiler.return_type(f, (eltype(ds[!, col].val), )) == Union{} && return flag
     flag = true
 end
 #Modify Dataset
@@ -871,7 +871,7 @@ function _describe(ds::AbstractDataset, stats::AbstractVector)
     # An array of Dicts for summary statistics
     col_stats_dicts = map(_columns(ds)) do col
         if eltype(col) >: Missing
-            t = skipmissing(col)
+            t = col
             d = get_stats(t, predefined_funs)
             get_stats!(d, t, custom_funs)
         else
@@ -1118,16 +1118,12 @@ julia> dropmissing(ds, [:x, :y])
 """
 @inline function dropmissing(ds::AbstractDataset,
                              cols::Union{ColumnIndex, MultiColumnIndex}=:;
-                             view::Bool=false, disallowmissing::Bool=!view)
+                             view::Bool=false)
     rowidxs = completecases(ds, cols)
     if view
-        if disallowmissing
-            throw(ArgumentError("disallowmissing=true is incompatible with view=true"))
-        end
         return Base.view(ds, rowidxs, :)
     else
         newds = ds[rowidxs, :]
-        disallowmissing && disallowmissing!(newds, cols)
         return newds
     end
 end
@@ -1194,12 +1190,10 @@ julia> dropmissing!(ds, [:x, :y])
 ```
 """
 function dropmissing!(ds::AbstractDataset,
-                      cols::Union{ColumnIndex, MultiColumnIndex}=:;
-                      disallowmissing::Bool=true)
+                      cols::Union{ColumnIndex, MultiColumnIndex}=:)
     inds = completecases(ds, cols)
     inds .= .!(inds)
     delete!(ds, inds)
-    disallowmissing && disallowmissing!(ds, cols)
     ds
 end
 
