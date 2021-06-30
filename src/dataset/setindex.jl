@@ -318,17 +318,17 @@ function insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
         if !(item isa AbstractVector)
             if item isa Union{AbstractArray{<:Any, 0}, Ref}
                 x = item[]
-                item_new = fill!(Tables.allocatecolumn(typeof(x), target_row_count), x)
+                item_new = fill!(Tables.allocatecolumn(Union{typeof(x), Missing}, target_row_count), x)
             else
                 @assert !(item isa AbstractArray)
-                item_new = fill!(Tables.allocatecolumn(typeof(item), target_row_count), item)
+                item_new = fill!(Tables.allocatecolumn(Union{typeof(item), Missing}, target_row_count), item)
             end
         elseif item isa AbstractRange
-            item_new = collect(item)
+            item_new = allowmissing(collect(item))
         elseif copycols
-            item_new = copy(item)
+            item_new = copy(allowmissing(item))
         else
-            item_new = item
+            item_new = allowmissing(item)
         end
 
         firstindex(item_new) != 1 && _onebased_check_error()
