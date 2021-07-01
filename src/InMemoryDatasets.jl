@@ -93,6 +93,7 @@ include("sort/util.jl")
 include("sort/qsort.jl")
 include("sort/int.jl")
 include("sort/pooled.jl")
+include("sort/sortperm.jl")
 include("sort/sort.jl")
 include("sort/groupby.jl")
 
