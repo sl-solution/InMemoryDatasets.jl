@@ -130,6 +130,9 @@ Base.:(*)(col2::SubOrDSCol, col1::SubOrDSCol) = *(__!(col2), __!(col1))
 Base.:(+)(col2::SubOrDSCol, col1::SubOrDSCol) = +(__!(col2), __!(col1))
 Base.:(/)(col2::SubOrDSCol, col1::SubOrDSCol) = /(__!(col2), __!(col1))
 Base.:(-)(col2::SubOrDSCol, col1::SubOrDSCol) = -(__!(col2), __!(col1))
+function Base.convert(::Type{T}, x::T) where T<:DatasetColumn
+    x
+end
 # Base.Generator(f, col::SubOrDSCol) = Base.Generator(f, __!(col))
 
 ##############################################################################
@@ -331,7 +334,7 @@ function setinfo!(ds::AbstractDataset, s::String)
 end
 
 # TODO needs better printing
-function content(ds::AbstractDataset)
+function content(ds::AbstractDataset; output = false)
     println(summary(ds))
     if typeof(ds) <: SubDataset
         println("-----------------------------------")
@@ -340,7 +343,7 @@ function content(ds::AbstractDataset)
     println("   Created: ", _attributes(ds).meta.created)
     println("  Modified: ", _attributes(ds).meta.modified[])
     println("      Info: ", _attributes(ds).meta.info[])
-    f_v = [[], [], []]
+    f_v = [String[], Function[], Type[]]
     all_names = names(ds)
     for i in 1:ncol(ds)
         push!(f_v[1], all_names[i])
@@ -352,6 +355,9 @@ function content(ds::AbstractDataset)
     println("-----------------------------------")
     println("Variables information ")
     pretty_table(format_ds, header = (["var", "format", "eltype"]), alignment =:l)
+    if output
+        vcat(Dataset(meta = ["created", "modified", "info"], value = [_attributes(ds).meta.created, _attributes(ds).meta.modified[], _attributes(ds).meta.info[]]), format_ds, cols = :union)
+    end
 end
 
 """
