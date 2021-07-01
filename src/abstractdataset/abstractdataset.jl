@@ -1016,37 +1016,40 @@ julia> completecases(ds, [:x, :y])
  1
 ```
 """
-function completecases(ds::AbstractDataset, col::Colon=:)
-    if ncol(ds) == 0
-        throw(ArgumentError("Unable to compute complete cases of a " *
-                            "data set with no columns"))
-    end
-    res = trues(size(ds, 1))
-    aux = BitVector(undef, size(ds, 1))
-    for i in 1:size(ds, 2)
-        v = ds[!, i]
-        if Missing <: eltype(v)
-            # Disable fused broadcasting as it happens to be much slower
-            aux .= .!ismissing.(v)
-            res .&= aux
-        end
-    end
-    return res
-end
+completecases(ds::AbstractDataset, cols::MultiColumnIndex = :) = byrow(ds, all, cols, by = !ismissing)
+completecases(ds::AbstractDataset, col::ColumnIndex) = byrow(ds, all, [col], by = !ismissing)
 
-function completecases(ds::AbstractDataset, col::ColumnIndex)
-    v = ds[!, col]
-    if Missing <: eltype(v)
-        res = BitVector(undef, size(ds, 1))
-        res .= .!ismissing.(v)
-        return res
-    else
-        return trues(size(ds, 1))
-    end
-end
-
-completecases(ds::AbstractDataset, cols::MultiColumnIndex) =
-    completecases(ds[!, cols])
+# function completecases(ds::AbstractDataset, col::Colon=:)
+#     if ncol(ds) == 0
+#         throw(ArgumentError("Unable to compute complete cases of a " *
+#                             "data set with no columns"))
+#     end
+#     res = trues(size(ds, 1))
+#     aux = BitVector(undef, size(ds, 1))
+#     for i in 1:size(ds, 2)
+#         v = ds[!, i]
+#         if Missing <: eltype(v)
+#             # Disable fused broadcasting as it happens to be much slower
+#             aux .= .!ismissing.(v)
+#             res .&= aux
+#         end
+#     end
+#     return res
+# end
+#
+# function completecases(ds::AbstractDataset, col::ColumnIndex)
+#     v = ds[!, col]
+#     if Missing <: eltype(v)
+#         res = BitVector(undef, size(ds, 1))
+#         res .= .!ismissing.(v)
+#         return res
+#     else
+#         return trues(size(ds, 1))
+#     end
+# end
+#
+# completecases(ds::AbstractDataset, cols::MultiColumnIndex) =
+#     completecases(ds[!, cols])
 
 """
     dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, disallowmissing::Bool=!view)
