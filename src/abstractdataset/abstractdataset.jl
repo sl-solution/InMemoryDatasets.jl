@@ -133,7 +133,7 @@ Base.:(-)(col2::SubOrDSCol, col1::SubOrDSCol) = -(__!(col2), __!(col1))
 function Base.convert(::Type{T}, x::T) where T<:DatasetColumn
     x
 end
-function Base.convert(::Type{T}, x::T) where T<:SubDataColumn
+function Base.convert(::Type{T}, x::T) where T<:SubDatasetColumn
     x
 end
 # Base.Generator(f, col::SubOrDSCol) = Base.Generator(f, __!(col))
@@ -221,6 +221,14 @@ function _check_format_validity(ds, col, f)
     flag = true
 end
 #Modify Dataset
+"""
+    setformat!(ds::Dataset, col, f)
+    setformat!(ds::Dataset, col => f)
+    setformat!(ds::Dataset, col1 => f1, col2 => f2, ...)
+    setformat!(ds::Dataset, cols => f)
+
+sets specified formats for the selected `columns` of `ds`.
+"""
 function setformat!(ds::AbstractDataset, idx::Integer, f::Function)
     !_check_format_validity(ds, idx, f) && return ds
     setformat!(index(ds), idx, f)
@@ -293,6 +301,11 @@ function setformat!(ds::AbstractDataset, @nospecialize(args...))
 end
 setformat!(ds::AbstractDataset) = throw(ArgumentError("the columns and the format must be specified"))
 # removing formats
+"""
+    removeformat!(ds::Dataset, cols)
+
+removes format from selected `cols` in `ds`.
+"""
 function removeformat!(ds::AbstractDataset, idx::Integer)
     removeformat!(index(ds), idx)
     _modified(_attributes(ds))
@@ -330,6 +343,11 @@ function removeformat!(ds::AbstractDataset, @nospecialize(args...))
 end
 
 # set info
+"""
+    setinfo!(ds::AbstractDataset, s::String)
+
+sets `s` as the value for the `info` meta data of `ds`.
+"""
 function setinfo!(ds::AbstractDataset, s::String)
     _attributes(ds).meta.info[] = s
     _modified(_attributes(ds))
@@ -337,6 +355,11 @@ function setinfo!(ds::AbstractDataset, s::String)
 end
 
 # TODO needs better printing
+"""
+    content(ds::AbstractDataset; output = false)
+
+prints the meta information about `ds` and its variables. Setting `output = true` return a vector of data sets which contains the printed information as data sets.
+"""
 function content(ds::AbstractDataset; output = false)
     println(summary(ds))
     if typeof(ds) <: SubDataset
@@ -359,7 +382,7 @@ function content(ds::AbstractDataset; output = false)
     println("Variables information ")
     pretty_table(format_ds, header = (["var", "format", "eltype"]), alignment =:l)
     if output
-        vcat(Dataset(meta = ["created", "modified", "info"], value = [_attributes(ds).meta.created, _attributes(ds).meta.modified[], _attributes(ds).meta.info[]]), format_ds, cols = :union)
+        [Dataset(meta = ["created", "modified", "info"], value = [_attributes(ds).meta.created, _attributes(ds).meta.modified[], _attributes(ds).meta.info[]]), format_ds]
     end
 end
 
