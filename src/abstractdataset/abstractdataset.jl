@@ -133,6 +133,9 @@ Base.:(-)(col2::SubOrDSCol, col1::SubOrDSCol) = -(__!(col2), __!(col1))
 function Base.convert(::Type{T}, x::T) where T<:DatasetColumn
     x
 end
+function Base.convert(::Type{T}, x::T) where T<:SubDataColumn
+    x
+end
 # Base.Generator(f, col::SubOrDSCol) = Base.Generator(f, __!(col))
 
 ##############################################################################
