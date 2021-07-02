@@ -1,6 +1,6 @@
 # missings go to the end
 # fast algorithm for integers with few unique values forward direction
-function ds_sort_int_missatright!(x::Vector{<: Union{Missing,Integer}}, original_P, copy_P, where, lo, hi, rangelen, minval)
+function ds_sort_int_missatright!(x, original_P, copy_P, where, lo, hi, rangelen, minval)
     offs = 1 - minval
 
     @inbounds for i in 1:rangelen+2
@@ -10,7 +10,7 @@ function ds_sort_int_missatright!(x::Vector{<: Union{Missing,Integer}}, original
     # where = fill(0, rangelen+1)
     where[1] = 1
     @inbounds for i = lo:hi
-        ismissing(x[i]) ? where[rangelen+2] += 1 : where[x[i] + offs + 1] += 1
+        ismissing(x[i]) ? where[rangelen+2] += 1 : where[Int(x[i]) + offs + 1] += 1
     end
 
     #cumsum!(where, where)
@@ -19,7 +19,7 @@ function ds_sort_int_missatright!(x::Vector{<: Union{Missing,Integer}}, original
     end
 
     @inbounds for i = lo:hi
-        ismissing(x[i]) ? label = rangelen + 1 : label = x[i] + offs
+        ismissing(x[i]) ? label = rangelen + 1 : label = Int(x[i]) + offs
         original_P[where[label] + lo - 1] = copy_P[i]
         where[label] += 1
     end
@@ -29,7 +29,7 @@ function ds_sort_int_missatright!(x::Vector{<: Union{Missing,Integer}}, original
     end
 
     @inbounds for i = lo:hi
-        ismissing(x[i]) ? where[rangelen+1] += 1 : where[x[i] + offs] += 1
+        ismissing(x[i]) ? where[rangelen+1] += 1 : where[Int(x[i]) + offs] += 1
         # where[x[i] + offs] += 1
     end
     f_indx = lo
@@ -47,7 +47,7 @@ function ds_sort_int_missatright!(x::Vector{<: Union{Missing,Integer}}, original
         end
     end
 end
-function ds_sort_int_missatleft!(x::Vector{<: Union{Missing,Integer}}, original_P, copy_P, where, lo, hi, rangelen, minval)
+function ds_sort_int_missatleft!(x, original_P, copy_P, where, lo, hi, rangelen, minval)
     offs = 1 - minval
 
     @inbounds for i in 1:rangelen+2
@@ -57,7 +57,7 @@ function ds_sort_int_missatleft!(x::Vector{<: Union{Missing,Integer}}, original_
     # where = fill(0, rangelen+1)
     where[1] = 1
     @inbounds for i = lo:hi
-        ismissing(x[i]) ? where[2] += 1 : where[x[i] + offs + 2] += 1
+        ismissing(x[i]) ? where[2] += 1 : where[Int(x[i]) + offs + 2] += 1
     end
 
     #cumsum!(where, where)
@@ -66,7 +66,7 @@ function ds_sort_int_missatleft!(x::Vector{<: Union{Missing,Integer}}, original_
     end
 
     @inbounds for i = lo:hi
-        ismissing(x[i]) ? label = 1 : label = x[i] + offs + 1
+        ismissing(x[i]) ? label = 1 : label = Int(x[i]) + offs + 1
         original_P[where[label] + lo - 1] = copy_P[i]
         where[label] += 1
     end
@@ -76,10 +76,10 @@ function ds_sort_int_missatleft!(x::Vector{<: Union{Missing,Integer}}, original_
     end
 
     @inbounds for i = lo:hi
-        ismissing(x[i]) ? where[1] += 1 : where[x[i] + offs + 1] += 1
+        ismissing(x[i]) ? where[1] += 1 : where[Int(x[i]) + offs + 1] += 1
         # where[x[i] + offs] += 1
     end
-    f_indx = lo + where[1] - 1
+    f_indx = lo + where[1]
     @inbounds for i = 2:rangelen+1
         l_indx = f_indx + where[i] - 1
         val = i - 1 - offs
