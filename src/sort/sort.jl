@@ -1,27 +1,48 @@
-function Base.sort!(ds::Dataset, cols::MultiColumnIndex, rev::Vector{<:Bool}; issorted = false)
+Base.sortperm(ds::Dataset, cols; rev = false) = _sortperm(ds, cols, rev)[2]
+
+function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted = false)
     colsidx = index(ds)[cols]
-    @assert length(colsidx) == length(rev) "the reverse arugment must be the same length as the length of selected columns"
+    if length(rev) == 1
+        revs = repeat([rev], length(colsidx))
+    else
+        revs = rev
+    end
+
+    @assert length(colsidx) == length(revs) "the reverse arugment must be the same length as the length of selected columns"
     if issorted
-        index(ds).sortedcols == colsidx && index(ds).rev == rev && return ds
+        index(ds).sortedcols == colsidx && index(ds).rev == revs && return ds
         selected_columns, ranges, last_valid_index = _find_starts_of_groups(ds::Dataset, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
         _reset_grouping_info!(ds)
         append!(index(ds).sortedcols, selected_columns)
-        append!(index(ds).rev, rev)
+        append!(index(ds).rev, revs)
         append!(index(ds).perm, collect(1:nrow(ds)))
         append!(index(ds).starts, ranges)
         index(ds).ngroups[] = last_valid_index
         _modified(_attributes(ds))
         ds
     else
-        @error "not yet implemented for `issorted = false`"
+        starts, perm, ngroups = _sortperm(ds, cols, revs)
+        _reset_grouping_info!(ds)
+        append!(index(ds).sortedcols, collect(colsidx))
+        append!(index(ds).rev, revs)
+        append!(index(ds).perm, perm)
+        append!(index(ds).starts, starts)
+        index(ds).ngroups[] = ngroups
+        if Base.issorted(perm)
+            return ds
+        else
+            for j in 1:ncol(ds)
+                # TODO it is not thread safe to go through elements of pooled arrays (?????)
+                if DataAPI.refpool(_columns(ds)[j]) !== nothing
+                    _columns(ds)[j] = _columns(ds)[j][perm]
+                else
+                    _columns(ds)[j] = _threaded_permute(_columns(ds)[j], perm)
+                end
+            end
+        end
     end
+    ds
 end
 
-function Base.sort!(ds::Dataset, cols::MultiColumnIndex, rev::Bool; issorted = false)
-    colsidx = index(ds)[cols]
-    sort!(ds, cols, repeat([rev], length(colsidx)), issorted = issorted)
-end
 
-Base.sort!(ds::Dataset, cols::MultiColumnIndex; issorted = false) = sort!(ds, cols, false, issorted = issorted)
-Base.sort!(ds::Dataset, col::ColumnIndex; issorted = false) = sort!(ds, [col], issorted = issorted)
-Base.sort!(ds::Dataset, col::ColumnIndex, rev::Bool; issorted = false) = sort!(ds, [col], rev, issorted = issorted)
+Base.sort!(ds::Dataset, col::ColumnIndex; rev::Bool = false, issorted = false) = sort!(ds, [col], rev = rev, issorted = issorted)

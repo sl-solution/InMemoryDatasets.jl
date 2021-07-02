@@ -2,6 +2,9 @@ function _sortperm_unstable!(idx, x, ranges, last_valid_range, ord)
     Threads.@threads for i in 1:last_valid_range
         rangestart = ranges[i]
         i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
+        if (rangeend - rangestart) == 0
+            continue
+        end
         ds_sort!(x, idx, rangestart, rangeend, QuickSort, ord)
     end
 end
@@ -14,6 +17,9 @@ function _sortperm_pooledarray!(idx, idx_cpy, x, xpool, where, counts, ranges, l
     Threads.@threads for i in 1:last_valid_range
         lo = ranges[i]
         i == last_valid_range ? hi = length(x) : hi = ranges[i+1] - 1
+        if (hi - lo) == 0
+            continue
+        end
         _group_indexer!(x::Vector, idx, idx_cpy, where[Threads.threadid()], counts[Threads.threadid()], lo, hi, ngroups, perm, iperm)
     end
 end
@@ -76,7 +82,7 @@ missatleftless(::Missing, ::Missing) = false
 function _apply_by!(_temp, x::Vector{T}, idx, _by, rev, needrev, missat) where T
     Threads.@threads for j in 1:length(x)
         # if by(x) is Date or DateTime only grab its value
-        _temp[j] = _by(x[idx[j]])
+        @inbounds _temp[j] = _by(x[idx[j]])
     end
     # it is beneficial to check if the value of floats can be converted to Int
     # TODO rev=true should also be considered
@@ -84,7 +90,7 @@ function _apply_by!(_temp, x::Vector{T}, idx, _by, rev, needrev, missat) where T
     if !rev && eltype(_temp) <: Union{Missing, Float64}
         intable = true
         Threads.@threads for j in 1:length(x)
-            _is_intable(_temp[j]) && !isequal(_temp[j], -0.0) ? true : (intable = false && break)
+            @inbounds _is_intable(_temp[j]) && !isequal(_temp[j], -0.0) ? true : (intable = false && break)
         end
     end
     if !rev
@@ -111,7 +117,7 @@ function _fill_idx_for_sort!(idx)
 end
 
 # T is either Int32 or Int64 based on how many rows ds has
-function ds_sort_perm(ds::Dataset, colsidx::Vector{Int}, by::Vector{<:Function}, rev::Vector{Bool}, ::Val{T}) where T
+function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, ::Val{T}) where T
     @assert length(colsidx) == length(by) == length(rev) "each col should have all information about lt, by, and rev"
 
     # ordr = ord(lt,identity,rev,order)
@@ -137,19 +143,19 @@ function ds_sort_perm(ds::Dataset, colsidx::Vector{Int}, by::Vector{<:Function},
     int_count = [T[] for _ in 1:Threads.nthreads()]
 
     for i in 1:length(colsidx)
-        x = ds[!, colsidx[i]].val
+        x = _columns(ds)[colsidx[i]]
         # pooledarray are treating differently (or general case of poolable data)
         if DataAPI.refpool(x) !== nothing
-            # _tmp = map(by[i], x)
-            # rangelen = length(DataAPI.refpool(_tmp))
-            # for nt in 1:Threads.nthreads()
-            #     resize!(int_where[nt], rangelen + 2)
-            #     resize!(int_count[nt], rangelen + 2)
-            # end
-            # resize!(int_permcpy, length(idx))
-            # copy!(int_permcpy, idx)
-            # _ordr = ord(isless, identity, rev[i], Forward)
-            # _sortperm_pooledarray!(idx, int_permcpy, DataAPI.refarray(_tmp), DataAPI.refpool(_tmp), int_where, int_count, ranges, last_valid_range, rev[i])
+            _tmp = map(by[i], x[idx])
+            rangelen = length(DataAPI.refpool(_tmp))
+            for nt in 1:Threads.nthreads()
+                resize!(int_where[nt], rangelen + 2)
+                resize!(int_count[nt], rangelen + 2)
+            end
+            resize!(int_permcpy, length(idx))
+            copy!(int_permcpy, idx)
+            _ordr = ord(isless, identity, rev[i], Forward)
+            _sortperm_pooledarray!(idx, int_permcpy, DataAPI.refarray(_tmp), DataAPI.refpool(_tmp), int_where, int_count, ranges, last_valid_range, rev[i])
         else
             _tmp, _ordr, _missat, _needrev, intable=  _apply_by(x, idx, by[i], rev[i])
             # if _missat is :right it possible for fasttrack as long as lt = isless
@@ -164,7 +170,7 @@ function ds_sort_perm(ds::Dataset, colsidx::Vector{Int}, by::Vector{<:Function},
                     maxval::Int = hp_maximum(_tmp)
                     (diff, o1) = sub_with_overflow(maxval, minval)
                     (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-                    if !o1 && !o2 && rangelen < div(n,2)
+                    if !o1 && !o2 && (rangelen < div(n,2)/(i ==1 ? Threads.nthreads() : 1))
                         for nt in 1:Threads.nthreads()
                             resize!(int_where[nt], rangelen + 2)
                         end
@@ -174,7 +180,7 @@ function ds_sort_perm(ds::Dataset, colsidx::Vector{Int}, by::Vector{<:Function},
                         # note that -1 can not be applied to unsigned
                         _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr)
                     else
-                        if i == 1 && Threads.nthreads() > 1
+                        if i == 0 && Threads.nthreads() > 1
                             hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
                         else
                             _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
@@ -182,16 +188,33 @@ function ds_sort_perm(ds::Dataset, colsidx::Vector{Int}, by::Vector{<:Function},
                     end
                 end
             else
-                if i == 1 && Threads.nthreads() > 1
+                if i == 0 && Threads.nthreads() > 1
                     hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
                 else
                     _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
                 end
             end
         end
-
         last_valid_range = _fill_starts!(ranges, _tmp, rangescpy, last_valid_range, _ordr, Val(T))
         last_valid_range == nrow(ds) && return (ranges, idx, last_valid_range)
     end
     return (ranges, idx, last_valid_range)
 end
+
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool})
+    colsidx = index(ds)[cols]
+    @assert length(colsidx) == length(rev) "`rev` argument must be the same as length of selected columns"
+    by = Function[]
+    for j in 1:length(colsidx)
+        push!(by, getformat(ds, colsidx[j]))
+    end
+    ds_sort_perm(ds, colsidx, by, rev, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+end
+
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false)
+    colsidx = index(ds)[cols]
+    revs = repeat([rev], length(colsidx))
+    _sortperm(ds, cols, revs)
+end
+
+_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false) = _sortperm(ds, [col], rev)

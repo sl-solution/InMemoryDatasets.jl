@@ -1,23 +1,18 @@
-function groupby!(ds::Dataset, cols::MultiColumnIndex, rev::Vector{<:Bool}; issorted = false)
+function groupby!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted = false)
     if issorted
-        sort!(ds, cols, rev, issorted = issorted)
+        sort!(ds, cols, rev = rev, issorted = issorted)
         index(ds).grouped[] = true
         _modified(_attributes(ds))
         ds
     else
-        @error "not yet implemented"
+        sort!(ds, cols, rev = rev, issorted = issorted)
+        index(ds).grouped[] = true
+        _modified(_attributes(ds))
+        ds
     end
 end
 
-function groupby!(ds::Dataset, cols::MultiColumnIndex, rev::Bool; issorted = false)
-    colsidx = index(ds)[cols]
-    groupby!(ds, cols, repeat([rev], length(colsidx)), issorted = issorted)
-end
-
-
-groupby!(ds::Dataset, cols::MultiColumnIndex; issorted = false) = groupby!(ds, cols, false, issorted = issorted)
-groupby!(ds::Dataset, col::ColumnIndex; issorted = false) = groupby!(ds, [col], issorted = issorted)
-groupby!(ds::Dataset, col::ColumnIndex, rev::Bool; issorted = false) = groupby!(ds, [col], rev,  issorted = issorted)
+groupby!(ds::Dataset, col::ColumnIndex; rev = false, issorted = false) = groupby!(ds, [col]; rev = rev, issorted = issorted)
 
 function ungroup!(ds::Dataset)
     if index(ds).grouped[]
