@@ -14,8 +14,8 @@ byrow(ds::AbstractDataset, ::typeof(prod), cols::MultiColumnIndex = names(ds, Un
 byrow(ds::AbstractDataset, ::typeof(prod), col::ColumnIndex; by = identity, threads = true) = byrow(ds, prod, [col]; by = by, threads = threads)
 
 
-byrow(ds::AbstractDataset, ::typeof(count), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = x->true, threads = true) = threads ? hp_row_count(ds, by, cols) : row_count(ds, by, cols)
-byrow(ds::AbstractDataset, ::typeof(count), col::ColumnIndex; by = x->true, threads = true) = byrow(ds, count, [col], by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(count), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = isequal(true), threads = true) = threads ? hp_row_count(ds, by, cols) : row_count(ds, by, cols)
+byrow(ds::AbstractDataset, ::typeof(count), col::ColumnIndex; by = isequal(true), threads = true) = byrow(ds, count, [col], by = by, threads = threads)
 
 # byrow(ds::AbstractDataset, ::typeof(anymissing), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_anymissing(ds, cols)
 
