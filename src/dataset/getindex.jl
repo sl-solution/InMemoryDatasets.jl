@@ -127,19 +127,19 @@ end
 
 # ds[MultiRowIndex, MultiColumnIndex] => Dataset
 function _threaded_permute(x, perm)
-  x_cpy = similar(x, length(perm))
-  Threads.@threads for i in 1:length(x_cpy)
-    x_cpy[i] = x[perm[i]]
-  end
-  x_cpy
+    x_cpy = similar(x, length(perm))
+    Threads.@threads for i in 1:length(x_cpy)
+        x_cpy[i] = x[perm[i]]
+    end
+    x_cpy
 end
 
 # Create Dataset
 function _threaded_getindex(selected_rows::AbstractVector,
-                            selected_columns::AbstractVector,
-                            ds_columns::AbstractVector,
-                            idx::AbstractIndex)
-  # FIXME threading should be done along rows rather than columns
+    selected_columns::AbstractVector,
+    ds_columns::AbstractVector,
+    idx::AbstractIndex)
+    # FIXME threading should be done along rows rather than columns
     # @static if VERSION >= v"1.4"
     #     if length(selected_rows) >= 1_000_000 && Threads.nthreads() > 1
     #         new_columns = Vector{AbstractVector}(undef, length(selected_columns))
@@ -158,13 +158,18 @@ function _threaded_getindex(selected_rows::AbstractVector,
     new_columns = Vector{AbstractVector}(undef, length(selected_columns))
     # for many columns threads over columns
     if length(selected_columns) > 100
-      Threads.@threads for j in 1:length(selected_columns)
-        new_columns[j] = ds_columns[selected_columns[j]][selected_rows]
-      end
+        Threads.@threads for j in 1:length(selected_columns)
+            new_columns[j] = ds_columns[selected_columns[j]][selected_rows]
+        end
     else
-      for j in 1:length(selected_columns)
-        new_columns[j] = _threaded_permute(ds_columns[selected_columns[j]], selected_rows)
-      end
+        for j in 1:length(selected_columns)
+            # TODO it is not thread safe to go through elements of pooled arrays (?????)
+            if DataAPI.refpool(ds_columns[selected_columns[j]]) !== nothing
+                new_columns[j] = ds_columns[selected_columns[j]][selected_rows]
+            else
+                new_columns[j] = _threaded_permute(ds_columns[selected_columns[j]], selected_rows)
+            end
+        end
     end
     return Dataset(new_columns, idx, copycols=false)
 end
