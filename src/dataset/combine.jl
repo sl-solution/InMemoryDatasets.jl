@@ -212,9 +212,11 @@ function _push_groups_to_res!(res, _tmpres, x, ds, starts, new_lengths, total_le
     counter::UnitRange{Int} = 1:1
     for i in 1:ngroups
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
-        for k in 1:length(counter)
-            _tmpres[new_lengths[i] - length(counter) + k] = x[starts[i]]
-        end
+        # TODO is it efficient for Pooled arrays????
+        _tmpres[(new_lengths[i] - length(counter + 1)):(new_lengths[i])] .= x[starts[i]]
+        # for k in 1:length(counter)
+        #     _tmpres[new_lengths[i] - length(counter) + k] = x[starts[i]]
+        # end
     end
     push!(res, _tmpres)
     return _tmpres
@@ -288,6 +290,7 @@ function _fill_res_with_special_res!(res, _res, special_res, ngroups, new_length
      Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
+        # this is not optimized for pooled arrays
         for k in 1:length(counter)
             _res[new_lengths[g] - length(counter) + k] = special_res[g][k]
         end
@@ -299,6 +302,7 @@ function _update_res_with_special_res!(res, _res, special_res, ngroups, new_leng
      Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
+        # this is not optimized for pooled arrays
         for k in 1:length(counter)
             _res[new_lengths[g] - length(counter) + k] = special_res[g][k]
         end
