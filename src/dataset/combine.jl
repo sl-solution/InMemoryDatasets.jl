@@ -213,7 +213,7 @@ function _push_groups_to_res!(res, _tmpres, x, ds, starts, new_lengths, total_le
     for i in 1:ngroups
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
         # TODO is it efficient for Pooled arrays????
-        _tmpres[(new_lengths[i] - length(counter + 1)):(new_lengths[i])] .= x[starts[i]]
+        _tmpres[(new_lengths[i] - length(counter) + 1):(new_lengths[i])] .= x[starts[i]]
         # for k in 1:length(counter)
         #     _tmpres[new_lengths[i] - length(counter) + k] = x[starts[i]]
         # end
