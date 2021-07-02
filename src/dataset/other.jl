@@ -374,7 +374,7 @@ function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
         T = Core.Compiler.return_type(f, (nonmissingtype(CT),))
         if promote_type(T, CT) <: CT
             map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
-            removeformat!(ds, colsidx[j])
+            # removeformat!(ds, colsidx[j])
             _modified(_attributes(ds))
             if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
                 _reset_grouping_info!(ds)
@@ -447,7 +447,7 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
         T = Core.Compiler.return_type(f[j], (nonmissingtype(CT),))
         if promote_type(T, CT) <: CT
             map!(f[j], _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
-            removeformat!(ds, colsidx[j])
+            # removeformat!(ds, colsidx[j])
             _modified(_attributes(ds))
             if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
                 _reset_grouping_info!(ds)
