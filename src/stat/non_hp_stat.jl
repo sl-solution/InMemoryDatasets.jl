@@ -106,6 +106,7 @@ end
 stat_wsum(x::AbstractVector{T}, w::AbstractVector) where T  = stat_wsum(identity, x, w)
 
 function stat_mean(f, x::AbstractArray{T,1}) where T
+    length(x) == 1 && return x
     _op(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]))::Tuple{T,Int}
     _dmiss(y) = (ismissing(f(y)) ? zero(T) : f(y), !ismissing(f(y)))::Tuple{T,Bool}
     sval, n = mapreduce(_dmiss, _op, x)::Tuple{T, Int}
@@ -128,6 +129,7 @@ stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_w
 
 function stat_var(f, x::AbstractArray{T,1}, df=true) where T
     all(ismissing, x) && return missing
+    length(x) == 1 && return zero(f(x))
     _opvar(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]), _stat_add_sum(y1[3], y2[3]))::Tuple{T,T,Int}
     _dmiss(y) = ismissing(f(y)) ? zero(T) : f(y)
     _varf(y) = (_dmiss(y) ^ 2, _dmiss(y) , !ismissing(f(y)))
