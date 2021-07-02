@@ -1,6 +1,6 @@
 module InMemoryDatasets
 
-using Dates
+
 
 # using TableTraits,IteratorInterfaceExtensions
 using Reexport
@@ -11,6 +11,7 @@ using Markdown
 using PooledArrays
 @reexport using Missings, InvertedIndices
 @reexport using Statistics
+@reexport using Dates
 import DataAPI,
        DataAPI.All,
        DataAPI.Between,
@@ -27,6 +28,7 @@ export
       SubDataset,
       SubDatasetColumn,
       Dataset,
+      Between,
       # functions
       nrow,
       ncol,
