@@ -60,11 +60,11 @@ _date_value(x) = x
 function _apply_by_f_barrier(x::AbstractVector{T}, by, rev) where T
     needrev = rev
     missat = :right
-    CT = Core.Compiler.return_type(by, (nonmissingtype(T), ))
+    CT = Core.Compiler.return_type(by∘_date_value, (nonmissingtype(T), ))
     CT = Union{Missing, CT}
     _temp = Vector{CT}(undef, length(x))
     # FIXME this is trouble if counting sort is not going to be used
-    if rev && nonmissingtype(CT) <: Union{Signed, TimeType, Period}
+    if rev && nonmissingtype(CT) <: Signed
         _by = x-> -_date_value(by(x))
         needrev = false
         missat = :left
@@ -163,14 +163,14 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                 # further check for fast integer sort
                 n = length(_tmp)
                 if n > 1
-                    minval::Int = hp_minimum(_tmp)
+                    minval::Integer = hp_minimum(_tmp)
                     if ismissing(minval)
                         continue
                     end
-                    maxval::Int = hp_maximum(_tmp)
+                    maxval::Integer = hp_maximum(_tmp)
                     (diff, o1) = sub_with_overflow(maxval, minval)
                     (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-                    if !o1 && !o2 && (rangelen < div(n,2)/(i ==1 ? Threads.nthreads() : 1))
+                    if !o1 && !o2 && maxval < typemax(Int) && (rangelen < div(n,2)/(i ==1 ? Threads.nthreads() : 1))
                         for nt in 1:Threads.nthreads()
                             resize!(int_where[nt], rangelen + 2)
                         end
