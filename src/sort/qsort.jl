@@ -106,7 +106,7 @@ function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, m
     st2 = mid+1
     en2 = hi
     cnt = lo
-    while true
+    @inbounds while true
         if lt(o, x_cpy[st1], x_cpy[st2])
             x[cnt] = x_cpy[st1]
             idx[cnt] = idx_cpy[st1]
@@ -121,7 +121,7 @@ function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, m
             st2 > en2 && break
         end
     end
-    if st1 > en1
+    @inbounds if st1 > en1
         while cnt <= hi
             x[cnt] = x_cpy[st2]
             idx[cnt] = idx_cpy[st2]

@@ -116,6 +116,9 @@ function _fill_idx_for_sort!(idx)
     end
 end
 
+function _check_memory_availability_for_hp_sort(x)
+    return 4*sizeof(x) < Base.Sys.free_memory()
+end
 # T is either Int32 or Int64 based on how many rows ds has
 function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, ::Val{T}) where T
     @assert length(colsidx) == length(by) == length(rev) "each col should have all information about lt, by, and rev"
@@ -180,7 +183,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                         # note that -1 can not be applied to unsigned
                         _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr)
                     else
-                        if i == 0 && Threads.nthreads() > 1
+                        if i == 1 && Threads.nthreads() > 1 
                             hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
                         else
                             _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
@@ -188,7 +191,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                     end
                 end
             else
-                if i == 0 && Threads.nthreads() > 1
+                if i == 1 && Threads.nthreads() > 1 
                     hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
                 else
                     _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
