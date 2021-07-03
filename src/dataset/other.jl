@@ -14,41 +14,41 @@ Convert columns `cols` of data set `ds` from element type `T` to
 
 If `cols` is omitted all columns in the data set are converted.
 """
-# function allowmissing! end
+function allowmissing! end
 #
 # # Modify Dataset
-# function allowmissing!(ds::Dataset, col::ColumnIndex)
-#     colidx = index(ds)[col]
-#     # use _columns to avoid reseting format or grouping info
-#     _columns(ds)[colidx] = allowmissing(_columns(ds)[colidx])
-#     _modified(_attributes(ds))
-#     return ds
-# end
+function allowmissing!(ds::Dataset, col::ColumnIndex)
+    colidx = index(ds)[col]
+    # use _columns to avoid reseting format or grouping info
+    _columns(ds)[colidx] = allowmissing(_columns(ds)[colidx])
+    _modified(_attributes(ds))
+    return ds
+end
 #
 # # Modify Dataset
-# function allowmissing!(ds::Dataset, cols::AbstractVector{<:ColumnIndex})
-#     for col in cols
-#         allowmissing!(ds, col)
-#     end
-#     return ds
-# end
+function allowmissing!(ds::Dataset, cols::AbstractVector{<:ColumnIndex})
+    for col in cols
+        allowmissing!(ds, col)
+    end
+    return ds
+end
 #
 # # Modify Dataset
-# function allowmissing!(ds::Dataset, cols::AbstractVector{Bool})
-#     length(cols) == size(ds, 2) || throw(BoundsError(ds, (!, cols)))
-#     for (col, cond) in enumerate(cols)
-#         cond && allowmissing!(ds, col)
-#     end
-#     return ds
-# end
+function allowmissing!(ds::Dataset, cols::AbstractVector{Bool})
+    length(cols) == size(ds, 2) || throw(BoundsError(ds, (!, cols)))
+    for (col, cond) in enumerate(cols)
+        cond && allowmissing!(ds, col)
+    end
+    return ds
+end
 #
 # # Modify Dataset
-# allowmissing!(ds::Dataset, cols::MultiColumnIndex) =
-#     allowmissing!(ds, index(ds)[cols])
-#
-# # Modify Dataset
-# allowmissing!(ds::Dataset, cols::Colon=:) =
-#     allowmissing!(ds, axes(ds, 2))
+allowmissing!(ds::Dataset, cols::MultiColumnIndex) =
+    allowmissing!(ds, index(ds)[cols])
+
+# Modify Dataset
+allowmissing!(ds::Dataset, cols::Colon=:) =
+    allowmissing!(ds, axes(ds, 2))
 
 """
     disallowmissing!(ds::Dataset, cols=:; error::Bool=false)
@@ -63,45 +63,45 @@ If `cols` is omitted all columns in the data set are converted.
 If `error=false` then columns containing a `missing` value will be skipped instead
 of throwing an error.
 """
-# function disallowmissing! end
+function disallowmissing! end
 
 # Modify Dataset
-# function disallowmissing!(ds::Dataset, col::ColumnIndex; error::Bool=false)
-#     x = _columns(ds)[col]
-#     colidx = index(ds)[col]
-#     if !(!error && Missing <: eltype(x) && any(ismissing, x))
-#         # use _columns to avoid reseting attributes
-#          _columns(ds)[colidx] = disallowmissing(x)
-#     end
-#     _modified(_attributes(ds))
-#     return ds
-# end
+function disallowmissing!(ds::Dataset, col::ColumnIndex; error::Bool=false)
+    x = _columns(ds)[col]
+    colidx = index(ds)[col]
+    if !(!error && Missing <: eltype(x) && any(ismissing, x))
+        # use _columns to avoid reseting attributes
+         _columns(ds)[colidx] = disallowmissing(x)
+    end
+    _modified(_attributes(ds))
+    return ds
+end
 #
 # # Modify Dataset
-# function disallowmissing!(ds::Dataset, cols::AbstractVector{<:ColumnIndex};
-#                           error::Bool=false)
-#     for col in cols
-#         disallowmissing!(ds, col, error=error)
-#     end
-#     return ds
-# end
+function disallowmissing!(ds::Dataset, cols::AbstractVector{<:ColumnIndex};
+                          error::Bool=false)
+    for col in cols
+        disallowmissing!(ds, col, error=error)
+    end
+    return ds
+end
 #
-# # Modify Dataset
-# function disallowmissing!(ds::Dataset, cols::AbstractVector{Bool}; error::Bool=false)
-#     length(cols) == size(ds, 2) || throw(BoundsError(ds, (!, cols)))
-#     for (col, cond) in enumerate(cols)
-#         cond && disallowmissing!(ds, col, error=error)
-#     end
-#     return ds
-# end
+# Modify Dataset
+function disallowmissing!(ds::Dataset, cols::AbstractVector{Bool}; error::Bool=false)
+    length(cols) == size(ds, 2) || throw(BoundsError(ds, (!, cols)))
+    for (col, cond) in enumerate(cols)
+        cond && disallowmissing!(ds, col, error=error)
+    end
+    return ds
+end
 #
-# # Modify Dataset
-# disallowmissing!(ds::Dataset, cols::MultiColumnIndex; error::Bool=false) =
-#     disallowmissing!(ds, index(ds)[cols], error=error)
-#
-# # Modify Dataset
-# disallowmissing!(ds::Dataset, cols::Colon=:; error::Bool=false) =
-#     disallowmissing!(ds, axes(ds, 2), error=error)
+# Modify Dataset
+disallowmissing!(ds::Dataset, cols::MultiColumnIndex; error::Bool=false) =
+    disallowmissing!(ds, index(ds)[cols], error=error)
+
+# Modify Dataset
+disallowmissing!(ds::Dataset, cols::Colon=:; error::Bool=false) =
+    disallowmissing!(ds, axes(ds, 2), error=error)
 
 """
     repeat!(ds::Dataset; inner::Integer = 1, outer::Integer = 1)

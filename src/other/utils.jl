@@ -6,8 +6,14 @@ function return_type(f::Function, x::AbstractVector)
     if T <: SubArray
         return Core.Compiler.return_type(f, (typeof(x), ))
     end
-    if CT >: Missing
-        T = Union{T, Missing}
+    if T <: AbstractVector
+        if CT >: Missing
+            T = AbstractVector{Union{Missing, eltype(T)}}
+        end
+    else
+        if CT >: Missing
+            T = Union{Missing, T}
+        end
     end
     T
 end

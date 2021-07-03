@@ -74,4 +74,4 @@ byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::Union{MultiColumnIndex, Co
 byrow(ds::AbstractDataset, ::typeof(reduce), cols::Union{MultiColumnIndex, ColumnIndex} = names(ds, Union{Missing, Number}); op = .+, kwargs...) = reduce(op, eachcol(ds[!, cols]); kwargs...)
 
 byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = true) =  threads ?  hp_row_generic(ds, f, cols) : row_generic(ds, f, cols)
-byrow(ds::AbstractDataset, f::Function, col::ColumnIndex) = allowmissing(f.(ds[!, col]))
+byrow(ds::AbstractDataset, f::Function, col::ColumnIndex) = f.(ds[!, col])

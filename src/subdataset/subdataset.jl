@@ -262,8 +262,9 @@ function Dataset(sds::SubDataset; copycols::Bool=true)
     if copycols
         sds[:, :]
     else
-        newds = Dataset(collect(eachcol(sds)), Index(index(sds).lookup, index(sds).names, index(sds).format), copycols=false)
+        newds = Dataset(collect(eachcol(sds)), Index(parent(index(sds)).lookup, parent(index(sds)).names, parent(index(sds)).format), copycols=false)
         setinfo!(newds, _attributes(sds).meta.info[])
+        newds
     end
 end
 

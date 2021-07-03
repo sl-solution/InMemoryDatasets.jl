@@ -347,7 +347,7 @@ function _combine_f_barrier(ds, newds, msfirst, mssecond, mslast, newds_lookup, 
             _update_one_col_combine!(_columns(newds), _res, _columns(ds)[index(ds)[msfirst]], mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
         end
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
-        push!(_columns(newds), allowmissing(byrow(newds, mssecond.args[1], msfirst; mssecond.args[2]...)))
+        push!(_columns(newds), byrow(newds, mssecond.args[1], msfirst; mssecond.args[2]...))
     else
         throw(ArgumentError("`combine` doesn't support $(msfirst=>mssecond=>mslast) combination"))
     end

@@ -11,7 +11,7 @@ function insert_single_column!(ds::Dataset, v::AbstractVector, col_ind::ColumnIn
     if ncol(ds) != 0 && nrow(ds) != length(v)
         throw(ArgumentError("New columns must have the same length as old columns"))
     end
-    dv = isa(v, AbstractRange) ? collect(allowmissing(v)) : allowmissing(v)
+    dv = isa(v, AbstractRange) ? collect(v) : v
     firstindex(dv) != 1 && _onebased_check_error()
 
     if haskey(index(ds), col_ind)
@@ -324,11 +324,11 @@ function insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
                 item_new = fill!(Tables.allocatecolumn(Union{typeof(item), Missing}, target_row_count), item)
             end
         elseif item isa AbstractRange
-            item_new = allowmissing(collect(item))
+            item_new = collect(item)
         elseif copycols
-            item_new = copy(allowmissing(item))
+            item_new = copy(item)
         else
-            item_new = allowmissing(item)
+            item_new = item
         end
 
         firstindex(item_new) != 1 && _onebased_check_error()

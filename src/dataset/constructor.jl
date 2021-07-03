@@ -208,17 +208,17 @@ end
 
 function _preprocess_column(col::Any, len::Integer, copycols::Bool)
     if col isa AbstractRange
-        return allowmissing(collect(col))
+        return collect(col)
     elseif col isa AbstractVector
-        return copycols ? copy(allowmissing(col)) : allowmissing(col)
+        return copycols ? copy(col) : col
     elseif col isa Union{AbstractArray{<:Any, 0}, Ref}
-        x = allowmissing(col[])
+        x = col[]
         return fill!(Tables.allocatecolumn(typeof(x), len), x)
     elseif col isa AbstractArray
         throw(ArgumentError("adding AbstractArray other than AbstractVector " *
                             "as a column of a data set is not allowed"))
     else
-        return fill!(Tables.allocatecolumn(typeof(allowmissing(col)), len), col)
+        return fill!(Tables.allocatecolumn(typeof(col), len), col)
     end
 end
 
@@ -297,8 +297,8 @@ function Dataset(; kwargs...)
                     throw(ArgumentError("the `makeunique` keyword argument is not allowed " *
                                         "in Dataset(; kwargs...) constructor"))
             else
-                push!(cnames, kw)
-                push!(columns, val)
+              push!(cnames, kw)
+              push!(columns, val)
             end
         end
         Dataset(columns, Index(cnames), copycols=copycols)
