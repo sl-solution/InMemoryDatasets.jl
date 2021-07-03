@@ -118,6 +118,15 @@ Base.convert(::Type{Any}, col1::SubDatasetColumn) = convert(Any, __!(col1))
 # Basic operation should work fine
 const SubOrDSCol = Union{SubDatasetColumn, DatasetColumn}
 
+Base.isequal(col1::SubOrDSCol, y::Any) = isequal(__!(col1), y)
+Base.isequal(y::Any, col1::SubOrDSCol) = isequal(y, __!(col1))
+Base.isequal(col1::SubOrDSCol, col2::SubOrDSCol) = isequal(__!(col1), __!(col2))
+
+Base.:(==)(col1::SubOrDSCol, y::Any) = (==)(__!(col1), y)
+Base.:(==)(y::Any, col1::SubOrDSCol) = (==)(y, __!(col1))
+Base.:(==)(col1::SubOrDSCol, col2::SubOrDSCol) = (==)(__!(col1), __!(col2))
+
+
 Base.:(*)(col1::SubOrDSCol, x::Any) = *(__!(col1), x)
 Base.:(+)(col1::SubOrDSCol, x::Any) = +(__!(col1), x)
 Base.:(/)(col1::SubOrDSCol, x::Any) = /(__!(col1), x)
@@ -1048,40 +1057,40 @@ julia> completecases(ds, [:x, :y])
  1
 ```
 """
-completecases(ds::AbstractDataset, cols::MultiColumnIndex = :) = byrow(ds, all, cols, by = !ismissing)
-completecases(ds::AbstractDataset, col::ColumnIndex) = byrow(ds, all, [col], by = !ismissing)
+# completecases(ds::AbstractDataset, cols::MultiColumnIndex = :) = byrow(ds, all, cols, by = !ismissing)
+# completecases(ds::AbstractDataset, col::ColumnIndex) = byrow(ds, all, [col], by = !ismissing)
 
-# function completecases(ds::AbstractDataset, col::Colon=:)
-#     if ncol(ds) == 0
-#         throw(ArgumentError("Unable to compute complete cases of a " *
-#                             "data set with no columns"))
-#     end
-#     res = trues(size(ds, 1))
-#     aux = BitVector(undef, size(ds, 1))
-#     for i in 1:size(ds, 2)
-#         v = ds[!, i]
-#         if Missing <: eltype(v)
-#             # Disable fused broadcasting as it happens to be much slower
-#             aux .= .!ismissing.(v)
-#             res .&= aux
-#         end
-#     end
-#     return res
-# end
-#
-# function completecases(ds::AbstractDataset, col::ColumnIndex)
-#     v = ds[!, col]
-#     if Missing <: eltype(v)
-#         res = BitVector(undef, size(ds, 1))
-#         res .= .!ismissing.(v)
-#         return res
-#     else
-#         return trues(size(ds, 1))
-#     end
-# end
-#
-# completecases(ds::AbstractDataset, cols::MultiColumnIndex) =
-#     completecases(ds[!, cols])
+function completecases(ds::AbstractDataset, col::Colon=:)
+    if ncol(ds) == 0
+        throw(ArgumentError("Unable to compute complete cases of a " *
+                            "data set with no columns"))
+    end
+    res = trues(size(ds, 1))
+    aux = BitVector(undef, size(ds, 1))
+    for i in 1:size(ds, 2)
+        v = ds[!, i]
+        if Missing <: eltype(v)
+            # Disable fused broadcasting as it happens to be much slower
+            aux .= .!ismissing.(v)
+            res .&= aux
+        end
+    end
+    return res
+end
+
+function completecases(ds::AbstractDataset, col::ColumnIndex)
+    v = ds[!, col]
+    if Missing <: eltype(v)
+        res = BitVector(undef, size(ds, 1))
+        res .= .!ismissing.(v)
+        return res
+    else
+        return trues(size(ds, 1))
+    end
+end
+
+completecases(ds::AbstractDataset, cols::MultiColumnIndex) =
+    completecases(ds[!, cols])
 
 """
     dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, disallowmissing::Bool=!view)
