@@ -10,7 +10,7 @@
 2×2 Dataset
  Row │ x         y
      │ identity  identity
-     │ Int64?     Int64?
+     │ Int64     Int64
 ─────┼────────────────────
    1 │        1         1
    2 │        2         2
@@ -29,7 +29,7 @@ julia> ds = Dataset(randn(10,2), :auto)
 10×2 Dataset
  Row │ x1          x2        
      │ identity    identity  
-     │ Float64?     Float64?   
+     │ Float64     Float64   
 ─────┼───────────────────────
    1 │  0.108189   -2.71151
    2 │ -0.520872   -1.00426
@@ -49,7 +49,7 @@ julia>  setformat!(ds, 1 => myformat)
 10×2 Dataset
  Row │ x1        x2        
      │ myformat  identity  
-     │ Float64?   Float64?   
+     │ Float64   Float64   
 ─────┼─────────────────────
    1 │        0  -2.71151
    2 │       -1  -1.00426
@@ -69,7 +69,7 @@ julia> removeformat!(ds, :x1)
 10×2 Dataset
  Row │ x1          x2        
      │ identity    identity  
-     │ Float64?     Float64?   
+     │ Float64     Float64   
 ─────┼───────────────────────
    1 │  0.108189   -2.71151
    2 │ -0.520872   -1.00426
@@ -94,7 +94,7 @@ julia> ds = Dataset(x = 1:10, y = repeat(1:5, inner = 2), z = repeat(1:2, 5))
 10×3 Dataset
  Row │ x         y         z
      │ identity  identity  identity
-     │ Int64?     Int64?     Int64?
+     │ Int64     Int64     Int64
 ─────┼──────────────────────────────
    1 │        1         1         1
    2 │        2         1         2
@@ -114,7 +114,7 @@ julia> setformat!(ds, 2 => sqrt, 3 => gender)
 10×3 Dataset
  Row │ x         y        z
      │ identity  sqrt     gender
-     │ Int64?     Int64?    Int64?
+     │ Int64     Int64    Int64
 ─────┼───────────────────────────
    1 │        1  1.0        Male
    2 │        2  1.0      Female
@@ -131,7 +131,7 @@ julia> mask(ds, [iseven, isequal("Male")], 2:3)
 10×2 Dataset
  Row │ y         z
      │ identity  identity
-     │ Bool?      Bool?
+     │ Bool      Bool
 ─────┼────────────────────
    1 │    false     false
    2 │    false     false
@@ -148,7 +148,7 @@ julia> mask(ds, [val -> rem(val, 2) == 0, isequal("Male")], 2:3, mapformats = tr
 10×2 Dataset
  Row │ y         z
      │ identity  identity
-     │ Bool?      Bool?
+     │ Bool      Bool
 ─────┼────────────────────
    1 │    false      true
    2 │    false     false
@@ -181,7 +181,7 @@ julia> ds = Dataset(x = 1:10, y = repeat(1:5, inner = 2), z = repeat(1:2, 5))
 10×3 Dataset
  Row │ x         y         z
      │ identity  identity  identity
-     │ Int64?     Int64?     Int64?
+     │ Int64     Int64     Int64
 ─────┼──────────────────────────────
    1 │        1         1         1
    2 │        2         1         2
@@ -202,7 +202,7 @@ julia> modify(ds,
 10×6 Dataset
  Row │ x         y         z         sq_y      sq_z      row_-
      │ identity  identity  identity  identity  identity  identity
-     │ Int64?     Int64?     Int64?  Float64?  Float64? Float64?
+     │ Int64     Int64     Int64     Float64   Float64   Float64
 ─────┼────────────────────────────────────────────────────────────
    1 │        1         1         1   1.0       1.0       0.0
    2 │        4         1         2   1.0       1.41421   3.0
@@ -219,3 +219,51 @@ julia> modify(ds,
 ```
 
 In the example above, the value of the first column has been updated and been used in the last operation which itself is based on the calculation from previous operations.
+
+# Grouping Datasets
+
+The function `groupby!(ds, cols; rev = false, issorted = false)` groups a data set (sort `ds` based on `cols`). The sorting and grouping is done based on the formatted values of `cols` rather than the actual values. `combine(ds, args...)` can be used to aggregate the result for each group. The syntax for `args...` is similar to `modify`, with the excption that in `combine` only the variables names can be used to refer to columns in original data set or the output data set.
+
+```julia
+julia> ds = Dataset(g = [1, 1, 1, 2, 2],
+                   x1_int = [0, 0, 1, missing, 2],
+                   x2_int = [3, 2, 1, 3, -2],
+                   x1_float = [1.2, missing, -1.0, 2.3, 10],
+                   x2_float = [missing, missing, 3.0, missing, missing],
+                   x3_float = [missing, missing, -1.4, 3.0, -100.0])
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
+     │ identity  identity  identity  identity   identity   identity
+     │ Int64     Int64?    Int64     Float64?   Float64?   Float64?
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1         0         3        1.2  missing    missing
+   2 │        1         0         2  missing    missing    missing
+   3 │        1         1         1       -1.0        3.0       -1.4
+   4 │        2   missing         3        2.3  missing          3.0
+   5 │        2         2        -2       10.0  missing       -100.0
+
+julia> groupby!(ds, 1)
+5×6 Grouped Dataset with 2 groups
+Grouped by: g
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
+     │ identity  identity  identity  identity   identity   identity
+     │ Int64     Int64?    Int64     Float64?   Float64?   Float64?
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1         0         3        1.2  missing    missing
+   2 │        1         0         2  missing    missing    missing
+   3 │        1         1         1       -1.0        3.0       -1.4
+─────┼───────────────────────────────────────────────────────────────
+   4 │        2   missing         3        2.3  missing          3.0
+   5 │        2         2        -2       10.0  missing       -100.0
+
+julia> combine(ds, :x1_float => sum)
+2×2 Grouped Dataset with 2 groups
+Grouped by: g
+ Row │ g         x1_float
+     │ identity  identity
+     │ Int64     Float64?
+─────┼────────────────────
+   1 │        1       0.2
+─────┼────────────────────
+   2 │        2      12.3
+```
