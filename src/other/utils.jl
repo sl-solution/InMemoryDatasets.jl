@@ -110,6 +110,33 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     return groups, gslots, prev_max_group
 end
 
+
+function _grouper_for_int_pool!(prev_group, current_ngroups, y, f, minval, rangeval)
+    ngroups = current_ngroups * rangeval
+    seen = falses(rangeval, current_ngroups)
+    for i in 1:length(prev_group)
+        seen[(f(y[i]) - minval + 1), prev_group[i]] = true
+    end
+    if sum(seen) < ngroups
+        oldngroups = ngroups
+        remap = zeros(Int, rangeval, current_ngroups)
+        ngroups = 0
+        @inbounds for i in eachindex(seen)
+            ngroups += seen[i]
+            remap[i] = ngroups
+        end
+        @inbounds Threads.@threads for i in eachindex(prev_group)
+            gix = (f(y[i]) - minval + 1) + (prev_group[i] - 1)*rangeval
+            prev_group[i] = remap[gix]
+        end
+    else
+        @inbounds Threads.@threads for i in eachindex(prev_group)
+            gix = (f(y[i]) - minval + 1) + (prev_group[i] - 1)*rangeval
+            prev_group[i] = gix
+        end
+    end
+end
+
 # ds assumes is grouped based on cols and groups are gathered togther
 function  _find_starts_of_groups(ds, cols::Vector, ::Val{T}) where T
     colsidx = index(ds)[cols]
