@@ -183,7 +183,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                         # note that -1 can not be applied to unsigned
                         _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr)
                     else
-                        if i == 1 && Threads.nthreads() > 1 
+                        if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
                             hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
                         else
                             _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
@@ -191,7 +191,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                     end
                 end
             else
-                if i == 1 && Threads.nthreads() > 1 
+                if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
                     hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
                 else
                     _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
