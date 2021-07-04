@@ -111,8 +111,9 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
 end
 
 
-function _grouper_for_int_pool!(prev_group, current_ngroups, y, f, minval, rangeval)
+function _grouper_for_int_pool!(prev_group, groups, current_ngroups, y, f, minval, rangeval)
     ngroups = current_ngroups * rangeval
+    flag = true
     seen = falses(rangeval, current_ngroups)
     for i in 1:length(prev_group)
         seen[(f(y[i]) - minval + 1), prev_group[i]] = true
@@ -135,6 +136,13 @@ function _grouper_for_int_pool!(prev_group, current_ngroups, y, f, minval, range
             prev_group[i] = gix
         end
     end
+    if ngroups == length(prev_group)
+        flat = false
+    end
+    Threads.@threads for i in 1:length(groups)
+        @inbounds groups[i] = prev_group[i]
+    end
+    return flag, ngroups
 end
 
 # ds assumes is grouped based on cols and groups are gathered togther

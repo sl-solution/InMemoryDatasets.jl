@@ -98,6 +98,7 @@ include("sort/pooled.jl")
 include("sort/sortperm.jl")
 include("sort/sort.jl")
 include("sort/groupby.jl")
+include("sort/gatherby.jl")
 
 include("abstractdataset/iteration.jl")
 include("abstractdataset/prettytables.jl")
