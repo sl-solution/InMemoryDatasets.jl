@@ -251,12 +251,12 @@ function _check_the_output_type(ds::Dataset, ms)
     CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(ms.second.first)` on `:$(_names(ds)[ms.first])`, you may want to try using `byrow`"))
     if CT <: AbstractVector
         if hasproperty(CT, :var)
-            T = CT.var.ub
+            T = Union{Missing, CT.var.ub}
         else
-            T = eltype(CT)
+            T = Union{Missing, eltype(CT)}
         end
     else
-        T = CT
+        T = Union{Missing, CT}
     end
     T
 end
