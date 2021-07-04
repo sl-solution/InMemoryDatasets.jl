@@ -173,6 +173,10 @@ function Base.mapreduce(gds::GatherBy, f, op, col::ColumnIndex, init::T) where T
     end
     _fill_mapreduce_col!(res[end], f, op, init0, _columns(gds.parent)[index(gds.parent)[col]], gds.groups)
     newnm = _names(gds.parent)[gds.groupcols]
-    push!(newnm, _names(gds.parent)[index(gds.parent)[col]])
-    Dataset(res, newnm, copycols = false)
+    push!(newnm, Symbol(_names(gds.parent)[index(gds.parent)[col]], "_agg"))
+    newds = Dataset(res, newnm, copycols = false)
+    for j in 1:(length(res)-1)
+        setformat!(newds, j, getformat(gds.parent, gds.groups[j]))
+    end
+    newds
 end
