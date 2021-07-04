@@ -5,19 +5,17 @@ function _gatherby(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]
     n = nrow(ds)
     flag = false
-    # _max_level = _the_max_levels(ds, cols)
     _max_level = nrow(ds)
     prev_max_group = UInt(1)
     prev_groups = ones(UInt, nrow(ds))
     groups = Vector{T}(undef, nrow(ds))
     seen_non_int = false
-    #
+
     rhashes = Vector{UInt}(undef, 1)
     sz = max(1 + ((5 * _max_level) >> 2), 16)
     sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
     @assert 4 * sz >= 5 * _max_level
     gslots = Vector{T}(undef, 1)
-
 
     for j in 1:length(colidx)
         _f = identity
@@ -82,12 +80,7 @@ function _gatherby(ds, cols, ::Val{T}; mapformats = false) where T
             flag_out, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
             flag = flag_out
         end
-        # if overflow will happen we start from the current prev_groups as the starting point
         !flag && break
     end
-    # the return value is a vector of UInt, which has unique value for each group
-    # resize!(prev_groups_cpy, nrow(ds))
-    # fill!(prev_groups_cpy, UInt(0))
-    # flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups_cpy, groups, gslots, rhashes, identity, prev_groups, prev_max_group)
     return groups, Int(prev_max_group)
 end

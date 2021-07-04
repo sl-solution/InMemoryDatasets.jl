@@ -76,7 +76,6 @@ end
 
 function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]
-    # _max_level = _the_max_levels(ds, cols)
     _max_level = nrow(ds)
     prev_max_group = UInt(1)
     prev_groups = zeros(UInt, nrow(ds))
@@ -86,7 +85,6 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
     @assert 4 * sz >= 5 * _max_level
     gslots = Vector{T}(undef, sz)
-
 
     for j in 1:length(colidx)
         _f = identity
@@ -100,13 +98,9 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
             v = _columns(ds)[colidx[j]]
         end
         flag, prev_max_group = InMemoryDatasets._create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
-        # if overflow will happen we start from the current prev_groups as the starting point
+
         !flag && break
     end
-    # the return value is a vector of UInt, which has unique value for each group
-    # resize!(prev_groups_cpy, nrow(ds))
-    # fill!(prev_groups_cpy, UInt(0))
-    # flag, prev_max_group, of = InMemoryDatasets._create_dictionary!(prev_groups_cpy, groups, gslots, rhashes, identity, prev_groups, prev_max_group)
     return groups, gslots, prev_max_group
 end
 
