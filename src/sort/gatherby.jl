@@ -1,7 +1,7 @@
 using .Base: sub_with_overflow, add_with_overflow, mul_with_overflow
 
 # FIXME it needs more work, e.g it needs to handle missing values
-function _gatherby(ds, cols, ::Val{T}; mapformats = false) where T
+function _gatherby(ds, cols, ::Val{T}; mapformats = true) where T
     colidx = index(ds)[cols]
     n = nrow(ds)
     flag = false
@@ -83,4 +83,96 @@ function _gatherby(ds, cols, ::Val{T}; mapformats = false) where T
         !flag && break
     end
     return groups, Int(prev_max_group)
+end
+
+struct GatherBy
+    parent::Dataset
+    groupcols::Vector{Int}
+    groups::Vector{<:Integer}
+    ngroups::Int
+    mapformats::Bool
+end
+
+function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true)
+    colsidx = index(ds)[cols]
+    a = _gatherby(ds, colsidx, nrow(ds)<typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
+    GatherBy(ds, colsidx, a[1], a[2], mapformats)
+end
+
+
+function compute_indices(groups::AbstractVector{<:Integer}, ngroups::Integer)
+    # count elements in each group
+    stops = zeros(Int, ngroups+1)
+    @inbounds for gix in groups
+        stops[gix+1] += 1
+    end
+
+    # group start positions in a sorted table
+    starts = Vector{Int}(undef, ngroups+1)
+    if length(starts) > 0
+        starts[1] = 1
+        @inbounds for i in 1:ngroups
+            starts[i+1] = starts[i] + stops[i]
+        end
+    end
+
+    # define row permutation that sorts them into groups
+    rperm = Vector{Int}(undef, length(groups))
+    copyto!(stops, starts)
+    @inbounds for (i, gix) in enumerate(groups)
+        rperm[stops[gix+1]] = i
+        stops[gix+1] += 1
+    end
+    stops .-= 1
+
+    # When skipmissing=true was used, group 0 corresponds to missings to drop
+    # Otherwise it's empty
+    popfirst!(starts)
+    popfirst!(stops)
+
+    return rperm, starts, stops
+end
+
+Base.summary(gds::GatherBy) =
+        @sprintf("%d×%d Gathered Dataset, Gathered by: %s", size(gds.parent)..., join(_names(gds.parent)[gds.groupcols], " ,"))
+
+
+function Base.show(io::IO, gds::GatherBy;
+
+                   kwargs...)
+    _show(io, view(gds.parent,compute_indices(gds.groups, gds.ngroups)[1], :); title = summary(gds), kwargs...)
+end
+
+Base.show(io::IO, mime::MIME"text/plain", gds::GatherBy;
+          kwargs...) =
+    show(io, gds; title = summary(gds), kwargs...)
+
+
+function _fill_gathered_col!(x, y, loc)
+    for i in 1:length(y)
+        x[loc[i]] = y[i]
+    end
+end
+
+function _fill_mapreduce_col!(x, f, op, init0, y, loc)
+    for i in 1:length(y)
+        init0[loc[i]] =  op(init0[loc[i]], f(y[i]))
+        x[loc[i]] = init0[loc[i]]
+    end
+end
+
+function Base.mapreduce(gds::GatherBy, f, op, col::ColumnIndex, init::T) where T
+    init0 = fill(init, gds.ngroups)
+    res = AbstractVector[]
+    for j in gds.groupcols
+        push!(res, Tables.allocatecolumn(eltype(_columns(gds.parent)[j]), gds.ngroups))
+    end
+    push!(res, Tables.allocatecolumn(Union{T, Missing}, gds.ngroups))
+    for j in 1:(length(res)-1)
+        _fill_gathered_col!(res[j], _columns(gds.parent)[gds.groupcols[j]], gds.groups)
+    end
+    _fill_mapreduce_col!(res[end], f, op, init0, _columns(gds.parent)[index(gds.parent)[col]], gds.groups)
+    newnm = _names(gds.parent)[gds.groupcols]
+    push!(newnm, _names(gds.parent)[index(gds.parent)[col]])
+    Dataset(res, newnm, copycols = false)
 end

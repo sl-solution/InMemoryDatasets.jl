@@ -28,6 +28,7 @@ export
       SubDataset,
       SubDatasetColumn,
       Dataset,
+      GatherBy,
       Between,
       # functions
       nrow,
@@ -38,6 +39,7 @@ export
       content,
       mask,
       groupby!,
+      gatherby,
       ungroup!,
       modify,
       modify!,
