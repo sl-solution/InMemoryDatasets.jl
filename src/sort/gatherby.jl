@@ -98,7 +98,7 @@ function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true)
     a = _gatherby(ds, colsidx, nrow(ds)<typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
     GatherBy(ds, colsidx, a[1], a[2], mapformats)
 end
-
+gatherby(ds::Dataset, col::ColumnIndex; mapformats = true) = gatherby(ds, [col], mapformats = mapformats)
 
 function compute_indices(groups::AbstractVector{<:Integer}, ngroups::Integer)
     # count elements in each group
@@ -176,7 +176,7 @@ function Base.mapreduce(gds::GatherBy, f, op, col::ColumnIndex, init::T) where T
     push!(newnm, Symbol(_names(gds.parent)[index(gds.parent)[col]], "_agg"))
     newds = Dataset(res, newnm, copycols = false)
     for j in 1:(length(res)-1)
-        setformat!(newds, j, getformat(gds.parent, gds.groups[j]))
+        setformat!(newds, j, getformat(gds.parent, gds.groupcols[j]))
     end
     newds
 end
