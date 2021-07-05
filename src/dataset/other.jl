@@ -269,7 +269,9 @@ function Base.map(ds::Dataset, f::Function, cols::MultiColumnIndex)
             _f = identity
         end
         v = _columns(ds)[j]
-        fv = _f.(v)
+        T = Core.Compiler.return_type(_f, (eltype(v), ))
+        fv = Vector{T}(undef, length(v))
+        _hp_map_a_function!(fv, f, v)
         push!(vs, fv === v ? copy(fv) : fv)
     end
     if transfer_grouping_info
@@ -307,7 +309,9 @@ function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
             _f = identity
         end
         v = _columns(ds)[j]
-        fv = _f.(v)
+        T = Core.Compiler.return_type(_f, (eltype(v), ))
+        fv = Vector{T}(undef, length(v))
+        _hp_map_a_function!(fv, f, v)
         push!(vs, fv === v ? copy(fv) : fv)
     end
     if transfer_grouping_info
@@ -323,6 +327,13 @@ function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
     return newds
 
 end
+
+function _hp_map_a_function!(fv, f, v)
+    Threads.@threads for i in 1:length(v)
+        fv[i] = f(v[i])
+    end
+end
+
 
 """
     map!(ds::Dataset, f::Function, cols)
@@ -373,7 +384,8 @@ function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
         # TODO is there any problem with this?
         T = Core.Compiler.return_type(f, (nonmissingtype(CT),))
         if promote_type(T, CT) <: CT
-            map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
+            _hp_map!_a_function!(_columns(ds)[colsidx[j]], f)
+            # map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
             # removeformat!(ds, colsidx[j])
             _modified(_attributes(ds))
             if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
@@ -396,6 +408,12 @@ end
 
 Base.map!(ds::Dataset, f::Union{Function}, col::ColumnIndex) = map!(ds, f, [col])
 Base.map!(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
+
+function _hp_map!_a_function!(x, f)
+    Threads.@threads for i in 1:length(x)
+        x[i] = f(x[i])
+    end
+end
 
 """
     map!(ds::Dataset, f::Vector{Function}, cols)
