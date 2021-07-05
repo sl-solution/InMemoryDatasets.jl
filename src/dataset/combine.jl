@@ -181,13 +181,13 @@ function _compute_the_mutli_row_trans!(special_res, new_lengths, x, nrows, _f, _
 end
 
 # this returns lookup dictionary and names for the new ds
-function _create_index_for_newds(ds, ms)
+function _create_index_for_newds(ds, ms, groupcols)
     all_names = _names(ds)
     nm = Symbol[]
     lookup = Dict{Symbol, Int}()
     cnt = 1
-    for j in 1:length(index(ds).sortedcols)
-        new_name = all_names[index(ds).sortedcols[j]]
+    for j in 1:length(groupcols)
+        new_name = all_names[groupcols[j]]
         if !haskey(lookup, new_name)
             push!(nm, new_name)
             push!(lookup, new_name => cnt)
@@ -206,9 +206,7 @@ function _create_index_for_newds(ds, ms)
 end
 
 
-function _push_groups_to_res!(res, _tmpres, x, ds, starts, new_lengths, total_lengths, j)
-    groupcols = index(ds).sortedcols
-    ngroups::Int = index(ds).ngroups[]
+function _push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
     counter::UnitRange{Int} = 1:1
     for i in 1:ngroups
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
@@ -270,13 +268,13 @@ function _add_one_col_combine_from_combine!(res, _res, x, _f, ngroups, new_lengt
 end
 
 
-function _add_one_col_combine!(res, _res, in_x, ds, _f, starts, ngroups, new_lengths, total_lengths)
+function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = starts[g]
-        g == ngroups ? hi = nrow(ds) : hi = starts[g + 1] - 1
+        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         l1 = new_lengths[g] - length(counter) + 1
         h1 = new_lengths[g]
         _res[l1:h1] .= _f(view(in_x, lo:hi))
@@ -311,21 +309,21 @@ function _update_res_with_special_res!(res, _res, special_res, ngroups, new_leng
     return _res
 end
 
-function _combine_f_barrier_special(special_res, ds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
+function _combine_f_barrier_special(special_res, fromds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
     if !haskey(newds_lookup, mslast)
-        T = _check_the_output_type(ds[!, msfirst].val, mssecond)
+        T = _check_the_output_type(fromds, mssecond)
         _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
         _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
     else
         # update the existing column in newds
-        T = _check_the_output_type(ds[!, msfirst].val, mssecond)
+        T = _check_the_output_type(fromds, mssecond)
         _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
         _update_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
     end
 end
 
 
-function _combine_f_barrier(ds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
     if !(mssecond isa Expr) && haskey(newds_lookup, msfirst)
         if !haskey(newds_lookup, mslast)
             T = _check_the_output_type(_columns(newds)[newds_lookup[msfirst]], mssecond)
@@ -338,13 +336,13 @@ function _combine_f_barrier(ds, newds, msfirst, mssecond, mslast, newds_lookup, 
         end
     elseif !(mssecond isa Expr) && !haskey(newds_lookup, msfirst)
         if !haskey(newds_lookup, mslast)
-            T = _check_the_output_type(ds[!, msfirst].val, mssecond)
+            T = _check_the_output_type(fromds, mssecond)
             _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-            _add_one_col_combine!(_columns(newds), _res, _columns(ds)[index(ds)[msfirst]], ds, mssecond, starts, ngroups, new_lengths, total_lengths)
+            _add_one_col_combine!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds))
         else
-            T = _check_the_output_type(ds[!, msfirst].val, mssecond)
+            T = _check_the_output_type(fromds, mssecond)
             _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-            _update_one_col_combine!(_columns(newds), _res, _columns(ds)[index(ds)[msfirst]], mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
+            _update_one_col_combine!(_columns(newds), _res, fromds, mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
         end
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
         push!(_columns(newds), byrow(newds, mssecond.args[1], msfirst; mssecond.args[2]...))
@@ -360,7 +358,7 @@ function combine(ds::Dataset, @nospecialize(args...))
     # the rule is that in combine, byrow must only be used for already aggregated columns
     # so, we should check every thing pass to byrow has been assigned in args before it
     # if this is not the case, throw ArgumentError and ask user to use modify instead
-    newlookup, new_nm = _create_index_for_newds(ds, ms)
+    newlookup, new_nm = _create_index_for_newds(ds, ms, index(ds).sortedcols)
     !(_is_byrow_valid(Index(newlookup, new_nm, Dict{Int, Function}()), ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` otherwise"))
     # _check_mutliple_rows_for_each_group return the first transformation which causes multiple
     # rows or 0 if all transformations return scalar for each group
@@ -398,7 +396,7 @@ function combine(ds::Dataset, @nospecialize(args...))
     newds_lookup = index(newds).lookup
     var_cnt = 1
     for j in 1:length(groupcols)
-        _push_groups_to_res!(_columns(newds), similar(ds[!, groupcols[j]].val, total_lengths), _columns(ds)[groupcols[j]], ds, starts, new_lengths, total_lengths, j)
+        _push_groups_to_res!(_columns(newds), Tables.allocatecolumn(eltype(ds[!, groupcols[j]].val), total_lengths), _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
         push!(index(newds), new_nm[var_cnt])
         setformat!(newds, new_nm[var_cnt] => get(index(ds).format, groupcols[j], identity))
         var_cnt += 1
@@ -406,9 +404,9 @@ function combine(ds::Dataset, @nospecialize(args...))
     end
     for i in 1:length(ms)
         if i == _first_vector_res
-            _combine_f_barrier_special(special_res, ds, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+            _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
         else
-            _combine_f_barrier(ds, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+            _combine_f_barrier(_columns(ds)[index(ds)[ms[i].first]], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
         end
         if !haskey(index(newds), ms[i].second.second)
             push!(index(newds), ms[i].second.second)
