@@ -94,22 +94,22 @@ stat_sum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_sum(ident
 
 function stat_wsum(f, x::AbstractArray{Union{T,Missing},1}, w) where T
     all(ismissing, x) && return missing
-    _dmiss(y)::T = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])::T
+    _dmiss(y) = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])
     mapreduce(_dmiss, _stat_add_sum, zip(x,w))
 end
 stat_wsum(x::AbstractArray{Union{T,Missing},1}, w) where T  = stat_wsum(identity, x, w)
 function stat_wsum(f, x::AbstractVector{T}, w::AbstractVector) where T
     all(ismissing, x) && return missing
-    _dmiss(y)::T = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])::T
+    _dmiss(y) = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])
     mapreduce(_dmiss, _stat_add_sum, zip(x,w))
 end
 stat_wsum(x::AbstractVector{T}, w::AbstractVector) where T  = stat_wsum(identity, x, w)
 
 function stat_mean(f, x::AbstractArray{T,1}) where T
     length(x) == 1 && return x
-    _op(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]))::Tuple{T,Int}
-    _dmiss(y) = (ismissing(f(y)) ? zero(T) : f(y), !ismissing(f(y)))::Tuple{T,Bool}
-    sval, n = mapreduce(_dmiss, _op, x)::Tuple{T, Int}
+    _op(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]))
+    _dmiss(y) = (ismissing(f(y)) ? zero(T) : f(y), !ismissing(f(y)))
+    sval, n = mapreduce(_dmiss, _op, x)
     n == 0 ? missing : sval/n
 end
 
@@ -130,11 +130,11 @@ stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_w
 function stat_var(f, x::AbstractArray{T,1}, df=true) where T
     all(ismissing, x) && return missing
     length(x) == 1 && return zero(f(x))
-    _opvar(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]), _stat_add_sum(y1[3], y2[3]))::Tuple{T,T,Int}
+    _opvar(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]), _stat_add_sum(y1[3], y2[3]))
     _dmiss(y) = ismissing(f(y)) ? zero(T) : f(y)
     _varf(y) = (_dmiss(y) ^ 2, _dmiss(y) , !ismissing(f(y)))
 
-    ss, sval, n = mapreduce(_varf, _opvar, x)::Tuple{T, T, Int}
+    ss, sval, n = mapreduce(_varf, _opvar, x)
 
     if n == 0
         return missing
