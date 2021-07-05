@@ -271,7 +271,7 @@ function _show(io::IO,
 
         show_row_number = false
     end
-    if isgrouped(df) 
+    if isgrouped(df)
         extrahlines = index(df).starts[1:index(df).ngroups[]] .- 1
     else
         extrahlines = [0]
@@ -302,7 +302,7 @@ function _show(io::IO,
                  row_number_column_title     = string(rowlabel),
                  show_row_number             = show_row_number,
                  title                       = title,
-                 vcrop_mode                  = :middle,
+                 # vcrop_mode                  = :middle,
                  vlines                      = vlines,
                  kwargs...)
 

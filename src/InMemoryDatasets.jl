@@ -39,6 +39,7 @@ export
       content,
       mask,
       groupby!,
+      groupby,
       gatherby,
       ungroup!,
       modify,

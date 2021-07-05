@@ -140,7 +140,7 @@ Base.summary(gds::GatherBy) =
 function Base.show(io::IO, gds::GatherBy;
 
                    kwargs...)
-    pretty_table(gds.groups)
+     _show(io, view(gds.parent,compute_indices(gds.groups, gds.ngroups)[1], :); title = summary(gds), kwargs...)
 end
 
 Base.show(io::IO, mime::MIME"text/plain", gds::GatherBy;
@@ -236,7 +236,7 @@ function combine(gds::GatherBy, @nospecialize(args...))
         if i == _first_vector_res
             _combine_f_barrier_special(special_res, view(gds.parent[!, ms[i].first].val, a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
         else
-            _combine_f_barrier(view(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+            _combine_f_barrier((!haskey(newds_lookup, ms[i].first) && !(ms[i].second.first isa Expr)) ? view(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1]) : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
         end
         if !haskey(index(newds), ms[i].second.second)
             push!(index(newds), ms[i].second.second)
