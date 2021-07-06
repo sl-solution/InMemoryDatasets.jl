@@ -46,6 +46,7 @@ export
       modify!,
       combine,
       setinfo!,
+      allowmissing!,
       # from byrow operations
       byrow,
       nunique,
@@ -83,6 +84,8 @@ include("dataset/cat.jl")
 include("byrow/row_functions.jl")
 include("byrow/hp_row_functions.jl")
 include("byrow/byrow.jl")
+# ds stat
+include("stat/ds_stat.jl")
 # other functions
 include("dataset/other.jl")
 include("subdataset/subdataset.jl")
@@ -111,6 +114,5 @@ include("datasetrow/show.jl")
 include("abstractdataset/io.jl")
 
 include("other/tables.jl")
-
 
 end

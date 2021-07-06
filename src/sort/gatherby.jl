@@ -155,14 +155,17 @@ function _fill_gathered_col!(x, y, loc)
 end
 
 function _fill_mapreduce_col!(x, f, op, init0, y, loc)
-    for i in 1:length(y)
-        init0[loc[i]] =  op(init0[loc[i]], f(y[i]))
-        x[loc[i]] = init0[loc[i]]
+    init = init0[1, 1]
+    Threads.@threads for i in 1:length(y)
+        init0[loc[i], Threads.threadid()] =  op(init0[loc[i],Threads.threadid()], f(y[i]))
+    end
+    Threads.@threads for i in 1:length(x)
+        x[i] = mapreduce(identity, op, init0[i, :], init = init)
     end
 end
 
 function Base.mapreduce(gds::GatherBy, f, op, col::ColumnIndex, init::T) where T
-    init0 = fill(init, gds.ngroups)
+    init0 = fill(init, gds.ngroups, Threads.nthreads())
     res = AbstractVector[]
     for j in gds.groupcols
         push!(res, Tables.allocatecolumn(eltype(_columns(gds.parent)[j]), gds.ngroups))

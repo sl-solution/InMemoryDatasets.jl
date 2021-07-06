@@ -92,3 +92,45 @@ function ds_sort_int_missatleft!(x, original_P, copy_P, where, lo, hi, rangelen,
         x[j] = missing
     end
 end
+
+
+# to simplify the problem we assume number_of_chunks is 2^n for some n
+function _sort_chunks_int_right!(x, idx::Vector{<:Integer}, idx_cpy, where, number_of_chunks, rangelen, minval, o::Ordering)
+    cz = div(length(x), number_of_chunks)
+    en = length(x)
+    Threads.@threads for i in 1:number_of_chunks
+        ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()], (i-1)*cz+1,i*cz, rangelen, minval)
+    end
+    # take care of the last few observations
+    if number_of_chunks*div(length(x), number_of_chunks) < en
+        ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()],  number_of_chunks*div(length(x), number_of_chunks)+1, en, rangelen, minval)
+    end
+end
+
+# to simplify the problem we assume number_of_chunks is 2^n for some n
+function _sort_chunks_int_left!(x, idx::Vector{<:Integer}, idx_cpy, where, number_of_chunks, rangelen, minval, o::Ordering)
+    cz = div(length(x), number_of_chunks)
+    en = length(x)
+    Threads.@threads for i in 1:number_of_chunks
+        ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()], (i-1)*cz+1,i*cz, rangelen, minval)
+    end
+    # take care of the last few observations
+    if number_of_chunks*div(length(x), number_of_chunks) < en
+        ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()],  number_of_chunks*div(length(x), number_of_chunks)+1, en, rangelen, minval)
+    end
+end
+
+
+# sorting a vector using parallel quick sort
+# it uses a simple algorithm for doing this, and to make it even simpler the number of threads must be in the form of 2^n
+function hp_ds_sort_int!(x, idx, idx_cpy, where, rangelen, minval, missatleft, a::QuickSortAlg, o::Ordering)
+    cpucnt = Threads.nthreads()
+    @assert cpucnt >= 2 "we need at least 2 cpus for parallel sorting"
+    cpucnt = 2 ^ floor(Int, log2(cpucnt))
+    if missatleft
+        _sort_chunks_int_left!(x , idx, idx_cpy, where, cpucnt, rangelen, minval, o)
+    else
+        _sort_chunks_int_right!(x , idx, idx_cpy, where, cpucnt, rangelen, minval, o)
+    end
+    _sort_multi_sorted_chunk!(x, idx, cpucnt, a, o)
+end

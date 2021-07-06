@@ -181,7 +181,11 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                         copy!(int_permcpy, idx)
                         # if _missat == :left it means that we multiplied observations by -1 already and we should put missing at left
                         # note that -1 can not be applied to unsigned
-                        _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr)
+                        if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
+                            hp_ds_sort_int!(_tmp, idx, int_permcpy, int_where, rangelen, minval, _missat == :left, QuickSort, _ordr)
+                        else
+                            _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr)
+                        end
                     else
                         if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
                             hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
