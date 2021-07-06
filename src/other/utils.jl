@@ -7,7 +7,7 @@ function return_type(f::Function, x::AbstractVector)
         return Core.Compiler.return_type(f, (typeof(x), ))
     end
     if T <: AbstractVector
-        if CT >: Missing
+        if eltype(x) >: Missing
             T = AbstractVector{Union{Missing, eltype(T)}}
         end
     else
