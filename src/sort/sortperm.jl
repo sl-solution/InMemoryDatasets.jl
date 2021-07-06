@@ -122,7 +122,7 @@ end
 # T is either Int32 or Int64 based on how many rows ds has
 function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, ::Val{T}) where T
     @assert length(colsidx) == length(by) == length(rev) "each col should have all information about lt, by, and rev"
-
+    prv_gc = GC.enable(false)
     # ordr = ord(lt,identity,rev,order)
 
     # arrary to keep the permutation of rows
@@ -199,6 +199,8 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
             end
         end
         last_valid_range = _fill_starts!(ranges, _tmp, rangescpy, last_valid_range, _ordr, Val(T))
+        GC.enable(prv_gc)
+        GC.gc(false)
         last_valid_range == nrow(ds) && return (ranges, idx, last_valid_range)
     end
     return (ranges, idx, last_valid_range)

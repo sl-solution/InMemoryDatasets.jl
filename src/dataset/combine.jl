@@ -207,8 +207,8 @@ end
 
 
 function _push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
-    counter::UnitRange{Int} = 1:1
-    for i in 1:ngroups
+    Threads.@threads for i in 1:ngroups
+        counter::UnitRange{Int} = 1:1
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
         # TODO is it efficient for Pooled arrays????
         _tmpres[(new_lengths[i] - length(counter) + 1):(new_lengths[i])] .= x[starts[i]]

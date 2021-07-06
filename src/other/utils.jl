@@ -108,8 +108,11 @@ end
 function _grouper_for_int_pool!(prev_group, groups, current_ngroups, y, f, minval, rangeval)
     ngroups = current_ngroups * rangeval
     flag = true
-    seen = falses(rangeval, current_ngroups)
-    for i in 1:length(prev_group)
+
+    # seen = falses(rangeval, current_ngroups)
+    # TODO is it safe to thread it?
+    seen = fill(false, rangeval, current_ngroups)
+    Threads.@threads for i in 1:length(prev_group)
         seen[(f(y[i]) - minval + 1), prev_group[i]] = true
     end
     if sum(seen) < ngroups
