@@ -23,6 +23,7 @@ struct GroupBy
 end
 
 function groupby(ds::Dataset, cols::MultiColumnIndex; rev = false)
+    @assert !isgrouped(ds) "`groupby` is not yet implemented for already grouped data sets"
     colsidx = index(ds)[cols]
     a = _sortperm(ds, cols, rev)
     GroupBy(ds,colsidx, a[2], a[1], a[3])
@@ -30,7 +31,7 @@ end
 
 groupby(ds::Dataset, col::ColumnIndex; rev = false) = groupby(ds, [col], rev = rev)
 
-
+# TODO we need to take care of situations where gds.parent is already grouped, thus the grouping cols from that mess with new grouping cols of gds
 function combine(gds::GroupBy, @nospecialize(args...))
     idx_cpy::Index = Index(copy(index(gds.parent).lookup), copy(index(gds.parent).names), Dict{Int, Function}())
     ms = normalize_combine_multiple!(idx_cpy, index(gds.parent), args...)
@@ -93,15 +94,15 @@ function combine(gds::GroupBy, @nospecialize(args...))
 
     end
     # grouping information for the output dataset
-    # append!(index(newds).sortedcols, index(newds)[index(ds).names[index(gds.parent).sortedcols]])
-    # append!(index(newds).rev, index(ds).rev)
-    # append!(index(newds).perm, collect(1:total_lengths))
+    append!(index(newds).sortedcols, index(newds)[index(gds.parent).names[groupcols]])
+    append!(index(newds).rev, index(gds.parent).rev)
+    append!(index(newds).perm, collect(1:total_lengths))
     # index(newds).grouped[] = true
-    # index(newds).ngroups[] = ngroups
-    # append!(index(newds).starts, collect(1:total_lengths))
-    # for i in 2:(length(new_lengths))
-    #     index(newds).starts[i] = new_lengths[i - 1]+1
-    # end
+    index(newds).ngroups[] = ngroups
+    append!(index(newds).starts, collect(1:total_lengths))
+    for i in 2:(length(new_lengths))
+        index(newds).starts[i] = new_lengths[i - 1]+1
+    end
     newds
 end
 

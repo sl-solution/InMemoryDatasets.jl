@@ -134,7 +134,7 @@ function _grouper_for_int_pool!(prev_group, groups, current_ngroups, y, f, minva
         end
     end
     if ngroups == length(prev_group)
-        flat = false
+        flag = false
     end
     Threads.@threads for i in 1:length(groups)
         @inbounds groups[i] = prev_group[i]
