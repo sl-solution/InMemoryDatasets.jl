@@ -106,6 +106,9 @@ include("sort/sort.jl")
 include("sort/groupby.jl")
 include("sort/gatherby.jl")
 
+# joins
+include("join/left.jl")
+
 include("abstractdataset/iteration.jl")
 include("abstractdataset/prettytables.jl")
 include("abstractdataset/show.jl")
