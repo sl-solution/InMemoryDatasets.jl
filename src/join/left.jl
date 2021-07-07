@@ -7,15 +7,15 @@ function _fill_oncols_left_table!(_res, x, ranges, en, total)
     Threads.@threads for i in 1:length(x)
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        _res[lo:hi] .= x[i]
+        fill!(view(_res,lo:hi), x[i])
     end
 end
 
 function _fill_right_cols_left_table!(_res, x, ranges, en, total)
-    Threads.@threads for i in 1:length(x)
+    Threads.@threads for i in 1:length(ranges)
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        length(ranges[i]) == 0 ? _res[lo:hi] .= missing : _res[lo:hi] .= x[ranges[i]]
+        length(ranges[i]) == 0 ? fill!(view(_res, lo:hi), missing) : copy!(view(_res,lo:hi), view(x,ranges[i]))
     end
 end
 function _left_join_main(dsl::Dataset, dsr::Dataset; on::MultiColumnIndex, makeunique = false, check = true)
@@ -51,7 +51,6 @@ function _left_join_main(dsl::Dataset, dsr::Dataset; on::MultiColumnIndex, makeu
         push!(index(newds), new_var_name)
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
-
     newds
 
 end
