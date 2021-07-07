@@ -417,7 +417,7 @@ function combine(ds::Dataset, @nospecialize(args...))
     append!(index(newds).sortedcols, index(newds)[index(ds).names[index(ds).sortedcols]])
     append!(index(newds).rev, index(ds).rev)
     append!(index(newds).perm, collect(1:total_lengths))
-    index(newds).grouped[] = true
+    # index(newds).grouped[] = true
     index(newds).ngroups[] = ngroups
     append!(index(newds).starts, collect(1:total_lengths))
     for i in 2:(length(new_lengths))
