@@ -61,31 +61,60 @@ function _find_blocks_sorted!(ranges, x, lo, hi, cnt, o::Ordering, ::Val{T}) whe
     end
 end
 
-
-function _fill_starts_v2!(ranges, x, last_valid_range, o::Ordering, ::Val{T}) where T
+# inbits is zeros(Bool, length(x))
+function _fill_starts_v2!(ranges, inbits, x, last_valid_range, o::Ordering, ::Val{T}) where T
     # first split x to chunks
     # if last_valid_range == 1
     #     @error "not yet implemented"
     # else
     #
     # inbit = Vector{}
-    @inbounds for j in 1:last_valid_range
+    fill!(inbits, false)
+    Threads.@threads for j in 1:last_valid_range
+        inbits[ranges[j]] = true
+    end
+    Threads.@threads for j in 1:last_valid_range
+        lo::T = 0
+        hi::T = 0
         lo = ranges[j]
-        j == last_valid_range ? hi = length(x) : hi = rangescpy[j+1] - 1
-        cnt = _find_blocks_sorted!(ranges, x, lo, hi, cnt, o, Val(T))
+        j == last_valid_range ? hi = length(x) : hi = ranges[j+1] - 1
+        _mark_start_of_groups_sorted!(inbits, x, lo, hi, o, Val(T))
     end
-    @inbounds for j in 1:(cnt - 1)
-        rangescpy[j] = ranges[j]
+    cnt = 1
+    @inbounds for i in 1:length(inbits)
+        if inbits[i]
+            ranges[cnt] = i
+            cnt += 1
+        end
     end
-    return cnt - 1
-
+    cnt - 1
 end
 
-function _mark_start_of_groups!(x, lo, hi)
-    marked_start = falses(hi - lo + 1)
-    for i in 1:length(marked_start)
-        if !isequal(x[lo + i - 1], x[lo + i])
-            marked_start[i] = true
+function _mark_start_of_groups_sorted!(inbits, x, lo, hi, o, ::Val{T}) where T
+    n = hi - lo + 1
+    n == 1 && return
+    cp = ceil(Int, n/log2(n))
+    # cp = div(n,2)
+    counter = 0
+    st::T = lo
+    @inbounds while true
+        stopval::T = searchsortedlast(x, x[st], st, hi, o)
+        # # the last obs in the current group
+        st = stopval + 1
+        st > hi && break
+        inbits[st] = true
+        counter += 1
+        #
+        # # if too many levels switch strategy
+        # #TODO supplied by should be take into account
+        # # the decision is to always assume by = identity
+        if counter > cp
+            # ranges[cnt] = st
+            # cnt += 1
+            for i in st:hi - 1
+                !isequal(x[i], x[i+1]) ? inbits[i + 1] = true : nothing
+            end
+            break
         end
     end
 end

@@ -139,13 +139,13 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
     # rangescpy is a copy which will be help to rearrange ranges in place
     ranges = Vector{T}(undef, nrow(ds))
     # FIXME there is no need for this rangescpy if there is only one column
-    rangescpy = Vector{T}(undef, nrow(ds))
-
+    # rangescpy = Vector{T}(undef, nrow(ds))
+    inbits = zeros(Bool, nrow(ds))
 
     last_valid_range::T = 1
 
     ranges[1] = 1
-    rangescpy[1] = 1
+    # rangescpy[1] = 1
     # in case we have integer columns with few distinct values
     int_permcpy = T[]
     int_where = [T[] for _ in 1:Threads.nthreads()]
@@ -218,7 +218,8 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                 _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
             end
         end
-        last_valid_range = _fill_starts!(ranges, _tmp, rangescpy, last_valid_range, _ordr, Val(T))
+        # last_valid_range = _fill_starts!(ranges, _tmp, rangescpy, last_valid_range, _ordr, Val(T))
+        last_valid_range = _fill_starts_v2!(ranges, inbits, _tmp, last_valid_range, _ordr, Val(T))
         GC.enable(prv_gc)
         GC.gc(false)
         last_valid_range == nrow(ds) && return (ranges, idx, last_valid_range)
