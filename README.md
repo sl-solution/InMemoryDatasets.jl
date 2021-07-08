@@ -330,14 +330,13 @@ Grouped by: g
    4 │        2   missing         3        2.3  missing          3.0
    5 │        2         2        -2       10.0  missing       -100.0
 
-julia> combine(ds, :x1_float => sum)
-2×2 Grouped Dataset with 2 groups
-Grouped by: g
+julia> julia> combine(ds, :x1_float => sum)
+2×2 Sorted Dataset
+Sorted by: g
  Row │ g         x1_float
      │ identity  identity
      │ Int64     Float64?
 ─────┼────────────────────
    1 │        1       0.2
-─────┼────────────────────
    2 │        2      12.3
 ```
