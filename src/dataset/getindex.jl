@@ -163,9 +163,10 @@ function _threaded_getindex(selected_rows::AbstractVector,
         end
     else
         for j in 1:length(selected_columns)
-            # TODO it is not thread safe to go through elements of pooled arrays (?????)
+            # TODO should we be careful about types rahter than string, number, PooledArrays???
             if DataAPI.refpool(ds_columns[selected_columns[j]]) !== nothing
-                new_columns[j] = ds_columns[selected_columns[j]][selected_rows]
+                new_columns[j] = copy(ds_columns[selected_columns[j]])
+                new_columns[j].refs = _threaded_permute(new_columns[j].refs, selected_rows)
             else
                 new_columns[j] = _threaded_permute(ds_columns[selected_columns[j]], selected_rows)
             end

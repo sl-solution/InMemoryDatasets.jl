@@ -11,7 +11,7 @@ function insert_single_column!(ds::Dataset, v::AbstractVector, col_ind::ColumnIn
     if ncol(ds) != 0 && nrow(ds) != length(v)
         throw(ArgumentError("New columns must have the same length as old columns"))
     end
-    dv = isa(v, AbstractRange) ? collect(v) : v
+    dv = isa(v, AbstractRange) ? collect(v) : (isa(v, BitVector) ? convert(Vector{Bool}, v) : v)
     firstindex(dv) != 1 && _onebased_check_error()
 
     if haskey(index(ds), col_ind)

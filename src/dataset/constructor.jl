@@ -210,7 +210,11 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
     if col isa AbstractRange
         return collect(col)
     elseif col isa AbstractVector
-        return copycols ? copy(col) : col
+        if isa(col, BitVector)
+            return convert(Vector{Bool}, col)
+        else
+            return copycols ? copy(col) : col
+        end
     elseif col isa Union{AbstractArray{<:Any, 0}, Ref}
         x = col[]
         return fill!(Tables.allocatecolumn(typeof(x), len), x)

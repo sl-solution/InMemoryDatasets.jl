@@ -109,6 +109,12 @@ function _apply_by(x::AbstractVector, idx, by, rev)
     _apply_by!(_temp, x, idx, _by, rev, needrev, missat)
 end
 
+function _modify_poolarray_to_integer!(refs, trans)
+    Threads.@threads for i in 1:length(refs)
+        refs[i] = trans[refs[i]]
+    end
+end
+
 
 function _fill_idx_for_sort!(idx)
     @inbounds for i in 1:length(idx)
@@ -150,56 +156,66 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
         # pooledarray are treating differently (or general case of poolable data)
         if DataAPI.refpool(x) !== nothing
             _tmp = map(by[i], x[idx])
-            rangelen = length(DataAPI.refpool(_tmp))
-            for nt in 1:Threads.nthreads()
-                resize!(int_where[nt], rangelen + 2)
-                resize!(int_count[nt], rangelen + 2)
-            end
-            resize!(int_permcpy, length(idx))
-            copy!(int_permcpy, idx)
+            aaa = map(x->get(DataAPI.invrefpool(_tmp), x, missing), DataAPI.refpool(_tmp)[sortperm(DataAPI.refpool(_tmp), rev = rev[i])])
+            trans = Dict{eltype(aaa), UInt32}(aaa .=> 1:length(aaa))
+            _modify_poolarray_to_integer!(_tmp.refs, trans)
             _ordr = ord(isless, identity, rev[i], Forward)
-            _sortperm_pooledarray!(idx, int_permcpy, DataAPI.refarray(_tmp), DataAPI.refpool(_tmp), int_where, int_count, ranges, last_valid_range, rev[i])
+            _tmp = _tmp.refs
+            _needrev = false
+            intable = false
+            _missat = :right
         else
             _tmp, _ordr, _missat, _needrev, intable=  _apply_by(x, idx, by[i], rev[i])
+        #     rangelen = length(DataAPI.refpool(_tmp))
+        #     for nt in 1:Threads.nthreads()
+        #         resize!(int_where[nt], rangelen + 2)
+        #         resize!(int_count[nt], rangelen + 2)
+        #     end
+        #     resize!(int_permcpy, length(idx))
+        #     copy!(int_permcpy, idx)
+        #     _ordr = ord(isless, identity, rev[i], Forward)
+        #     _sortperm_pooledarray!(idx, int_permcpy, DataAPI.refarray(_tmp), DataAPI.refpool(_tmp), int_where, int_count, ranges, last_valid_range, rev[i])
+        # else
+        #     _tmp, _ordr, _missat, _needrev, intable=  _apply_by(x, idx, by[i], rev[i])
             # if _missat is :right it possible for fasttrack as long as lt = isless
-            if !_needrev && (eltype(_tmp) <: Union{Missing,Integer} || intable)
-                # further check for fast integer sort
-                n = length(_tmp)
-                if n > 1
-                    minval::Integer = hp_minimum(_tmp)
-                    if ismissing(minval)
-                        continue
+        end
+        if !_needrev && (eltype(_tmp) <: Union{Missing,Integer} || intable)
+            # further check for fast integer sort
+            n = length(_tmp)
+            if n > 1
+                minval::Integer = hp_minimum(_tmp)
+                if ismissing(minval)
+                    continue
+                end
+                maxval::Integer = hp_maximum(_tmp)
+                (diff, o1) = sub_with_overflow(maxval, minval)
+                (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
+                if !o1 && !o2 && maxval < typemax(Int) && (rangelen < div(n,2)/(i ==1 ? Threads.nthreads() : 1))
+                    for nt in 1:Threads.nthreads()
+                        resize!(int_where[nt], rangelen + 2)
                     end
-                    maxval::Integer = hp_maximum(_tmp)
-                    (diff, o1) = sub_with_overflow(maxval, minval)
-                    (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-                    if !o1 && !o2 && maxval < typemax(Int) && (rangelen < div(n,2)/(i ==1 ? Threads.nthreads() : 1))
-                        for nt in 1:Threads.nthreads()
-                            resize!(int_where[nt], rangelen + 2)
-                        end
-                        resize!(int_permcpy, length(idx))
-                        copy!(int_permcpy, idx)
-                        # if _missat == :left it means that we multiplied observations by -1 already and we should put missing at left
-                        # note that -1 can not be applied to unsigned
-                        if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
-                            hp_ds_sort_int!(_tmp, idx, int_permcpy, int_where, rangelen, minval, _missat == :left, QuickSort, _ordr)
-                        else
-                            _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr)
-                        end
+                    resize!(int_permcpy, length(idx))
+                    copy!(int_permcpy, idx)
+                    # if _missat == :left it means that we multiplied observations by -1 already and we should put missing at left
+                    # note that -1 can not be applied to unsigned
+                    if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
+                        hp_ds_sort_int!(_tmp, idx, int_permcpy, int_where, rangelen, minval, _missat == :left, QuickSort, _ordr)
                     else
-                        if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
-                            hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
-                        else
-                            _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
-                        end
+                        _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr)
+                    end
+                else
+                    if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
+                        hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
+                    else
+                        _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
                     end
                 end
+            end
+        else
+            if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
+                hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
             else
-                if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
-                    hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
-                else
-                    _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
-                end
+                _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
             end
         end
         last_valid_range = _fill_starts!(ranges, _tmp, rangescpy, last_valid_range, _ordr, Val(T))
