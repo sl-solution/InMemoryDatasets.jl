@@ -250,6 +250,8 @@ where `op` can be of the form `col => fun`, `cols=>fun`, `col=>fun=>:new_name`, 
 
 When a row operation is needed to be done, `byrow` can be used instead of `fun`, i.e. `cols => byrow(f, kwargs...)` or `cols => byrow(f, kwargs...)=>:new_name`. In this case `f` is applied to each row of `cols`.
 
+`modify!` modifies a data set in place.
+
 ## Examples
 
 ```julia
