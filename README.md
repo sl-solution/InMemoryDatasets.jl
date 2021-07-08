@@ -330,7 +330,7 @@ Grouped by: g
    4 │        2   missing         3        2.3  missing          3.0
    5 │        2         2        -2       10.0  missing       -100.0
 
-julia> julia> combine(ds, :x1_float => sum)
+julia> combine(ds, :x1_float => sum)
 2×2 Sorted Dataset
 Sorted by: g
  Row │ g         x1_float
