@@ -119,7 +119,7 @@ julia> map(ds, x->x^2, :x2_int)
    4 │        4   missing         9        5.29  missing          9.0
    5 │        4         4         4      100.0   missing      10000.0
 
-julia>  julia> map(ds, [sqrt, x->x^2], 2:3)
+julia> map(ds, [sqrt, x->x^2], 2:3)
 5×6 Dataset
  Row │ g         x1_int         x2_int    x1_float   x2_float   x3_float
      │ identity  identity       identity  identity   identity   identity
