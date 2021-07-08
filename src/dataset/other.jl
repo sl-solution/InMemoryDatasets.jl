@@ -271,7 +271,7 @@ function Base.map(ds::Dataset, f::Function, cols::MultiColumnIndex)
         v = _columns(ds)[j]
         T = Core.Compiler.return_type(_f, (eltype(v), ))
         fv = Vector{T}(undef, length(v))
-        _hp_map_a_function!(fv, f, v)
+        _hp_map_a_function!(fv, _f, v)
         push!(vs, fv === v ? copy(fv) : fv)
     end
     if transfer_grouping_info
@@ -311,7 +311,7 @@ function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
         v = _columns(ds)[j]
         T = Core.Compiler.return_type(_f, (eltype(v), ))
         fv = Vector{T}(undef, length(v))
-        _hp_map_a_function!(fv, f, v)
+        _hp_map_a_function!(fv, _f, v)
         push!(vs, fv === v ? copy(fv) : fv)
     end
     if transfer_grouping_info
@@ -383,6 +383,9 @@ function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
         # we remove missing and then check the result,
         # TODO is there any problem with this?
         T = Core.Compiler.return_type(f, (nonmissingtype(CT),))
+        if CT >: Missing
+            T = Union{Missing, T}
+        end
         if promote_type(T, CT) <: CT
             _hp_map!_a_function!(_columns(ds)[colsidx[j]], f)
             # map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
@@ -394,10 +397,10 @@ function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
             end
         else
             if number_of_warnnings < 5
-                @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place,"
+                @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place, the selected column is $(CT) and the result of calculation is $(T)"
                 number_of_warnnings += 1
             elseif number_of_warnnings == 5
-                @warn "more than 10 columns can not be replaced ...."
+                @warn "more than 5 columns can not be replaced ...."
                 number_of_warnnings += 1
             end
             continue
@@ -463,8 +466,11 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
         # we remove missing and then check the result,
         # TODO is there any problem with this?
         T = Core.Compiler.return_type(f[j], (nonmissingtype(CT),))
+        if CT >: Missing
+            T = Union{Missing, T}
+        end
         if promote_type(T, CT) <: CT
-            map!(f[j], _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
+            _hp_map!_a_function!(_columns(ds)[colsidx[j]], f[j])
             # removeformat!(ds, colsidx[j])
             _modified(_attributes(ds))
             if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
@@ -473,10 +479,10 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
             end
         else
             if number_of_warnnings < 10
-                @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place"
+                @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place, the selected column is $(CT) and the result of calculation is $(T)"
                 number_of_warnnings += 1
             elseif number_of_warnnings == 10
-                @warn "more than 10 columns can not be replaced ...."
+                @warn "more than 5 columns can not be replaced ...."
                 number_of_warnnings += 1
             end
             continue

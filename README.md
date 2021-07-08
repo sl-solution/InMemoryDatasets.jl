@@ -83,6 +83,82 @@ julia> removeformat!(ds, :x1)
   10 │ -1.07939     1.24903
 ```
 
+# Calling a function on each observation
+
+The `map(ds, fun, cols)` function can be used to call `fun`  on each observation in `cols` (actual values). When different functions needed to be applied to each column, a vector of functions can be supplied. The `map!(ds, fun, cols)` function can be used when the operations needed to be done in-place. `map!`  requires the operation be done in-place, if this is not possible, the function skip the operation.
+
+## Examples
+
+```julia
+julia> ds = Dataset(g = [1, 1, 1, 2, 2],
+                   x1_int = [0, 0, 1, missing, 2],
+                   x2_int = [3, 2, 1, 3, -2],
+                   x1_float = [1.2, missing, -1.0, 2.3, 10],
+                   x2_float = [missing, missing, 3.0, missing, missing],
+                   x3_float = [missing, missing, -1.4, 3.0, -100.0])
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
+     │ identity  identity  identity  identity   identity   identity
+    │ Int64     Int64?    Int64     Float64?   Float64?   Float64?
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1         0         3        1.2  missing    missing
+   2 │        1         0         2  missing    missing    missing
+   3 │        1         1         1       -1.0        3.0       -1.4
+   4 │        2   missing         3        2.3  missing          3.0
+   5 │        2         2        -2       10.0  missing       -100.0
+
+julia> map(ds, x->x^2, :x2_int)
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float    x2_float   x3_float
+     │ identity  identity  identity  identity    identity   identity
+     │ Int64     Int64?    Int64     Float64?    Float64?   Float64?
+─────┼─────────────────────────────────────────────────────────────────
+   1 │        1         0         9        1.44  missing    missing
+   2 │        1         0         4  missing     missing    missing
+   3 │        1         1         1        1.0         9.0        1.96
+   4 │        4   missing         9        5.29  missing          9.0
+   5 │        4         4         4      100.0   missing      10000.0
+
+julia>  julia> map(ds, [sqrt, x->x^2], 2:3)
+5×6 Dataset
+ Row │ g         x1_int         x2_int    x1_float   x2_float   x3_float
+     │ identity  identity       identity  identity   identity   identity
+     │ Int64     Float64?       Int64     Float64?   Float64?   Float64?
+─────┼────────────────────────────────────────────────────────────────────
+   1 │        1        0.0             9        1.2  missing    missing
+   2 │        1        0.0             4  missing    missing    missing
+   3 │        1        1.0             1       -1.0        3.0       -1.4
+   4 │        2  missing               9        2.3  missing          3.0
+   5 │        2        1.41421         4       10.0  missing       -100.0
+
+julia> map!(ds, x -> ismissing(x) ? 0 : x, r"x")
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float  x2_float  x3_float
+     │ identity  identity  identity  identity  identity  identity
+     │ Int64     Int64?    Int64     Float64?  Float64?  Float64?
+─────┼────────────────────────────────────────────────────────────
+   1 │        1         0         3       1.2       0.0       0.0
+   2 │        1         0         2       0.0       0.0       0.0
+   3 │        1         1         1      -1.0       3.0      -1.4
+   4 │        2         0         3       2.3       0.0       3.0
+   5 │        2         2        -2      10.0       0.0    -100.0
+
+julia> map!(ds, [sqrt, x->x^2], 2:3)
+┌ Warning: cannot map `f` on ds[!, :x1_int] in-place, the selected column is Union{Missing, Int64} and the result of calculation is Union{Missing, Float64}
+└ @ InMemoryDatasets ~/.julia/dev/InMemoryDatasets/src/dataset/other.jl:482
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
+     │ identity  identity  identity  identity   identity   identity
+     │ Int64     Int64?    Int64     Float64?   Float64?   Float64?
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1         0         9        1.2  missing    missing
+   2 │        1         0         4  missing    missing    missing
+   3 │        1         1         1       -1.0        3.0       -1.4
+   4 │        2   missing         9        2.3  missing          3.0
+   5 │        2         2         4       10.0  missing       -100.0
+
+```
+
 # Masking observations
 
 The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j]` is true, otherwise it is false. The `fun` is called on actual values by default, however, using the option `mapformats = true` causes `fun` to be called on the formatted values.
@@ -214,8 +290,6 @@ julia> modify(ds,
    8 │       64         4         2   2.0       1.41421  62.0
    9 │       81         5         1   2.23607   1.0      78.7639
   10 │      100         5         2   2.23607   1.41421  97.7639
-
-
 ```
 
 In the example above, the value of the first column has been updated and been used in the last operation which itself is based on the calculation from previous operations.
