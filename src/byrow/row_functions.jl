@@ -228,6 +228,7 @@ function row_sort!(ds::Dataset, cols = names(ds, Union{Missing, Number}); kwargs
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
+    ds
 end
 
 function row_sort(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); kwargs...)

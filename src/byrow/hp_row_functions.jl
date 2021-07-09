@@ -172,6 +172,10 @@ function hp_row_sort!(ds::Dataset, cols = names(ds, Union{Missing, Number}); kwa
     for i in 1:length(colsidx)
         _columns(ds)[colsidx[i]] = m[:, i]
     end
+    removeformat!(ds, cols)
+    any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
+    _modified(_attributes(ds))
+    ds
 end
 
 """
