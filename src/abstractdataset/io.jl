@@ -164,36 +164,41 @@ function html_escape(cell::AbstractString)
     return cell
 end
 
-function _show(io::IO, ::MIME"text/html", df::AbstractDataset;
+function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
                summary::Bool=true, eltypes::Bool=true, rowid::Union{Int, Nothing}=nothing)
-    _check_consistency(df)
+    _check_consistency(ds)
 
     # we will pass around this buffer to avoid its reallocation in ourstrwidth
     buffer = IOBuffer(Vector{UInt8}(undef, 80), read=true, write=true)
 
     if rowid !== nothing
-        if size(df, 2) == 0
+        if size(ds, 2) == 0
             rowid = nothing
-        elseif size(df, 1) != 1
+        elseif size(ds, 1) != 1
             throw(ArgumentError("rowid may be passed only with a single row data frame"))
         end
     end
 
-    mxrow, mxcol = size(df)
+    mxrow, mxcol = size(ds)
     if get(io, :limit, false)
         tty_rows, tty_cols = displaysize(io)
         mxrow = min(mxrow, tty_rows)
-        maxwidths = getmaxwidths(df, io, 1:mxrow, 0:-1, :X, nothing, true, buffer, 0) .+ 2
+        maxwidths = getmaxwidths(ds, io, 1:mxrow, 0:-1, :X, nothing, true, buffer, 0) .+ 2
         mxcol = min(mxcol, searchsortedfirst(cumsum(maxwidths), tty_cols))
     end
 
-    cnames = _names(df)[1:mxcol]
-    write(io, "<table class=\"data-frame\">")
+    cnames = _names(ds)[1:mxcol]
+    write(io, "<table class=\"data-set\">")
     write(io, "<thead>")
     write(io, "<tr>")
     write(io, "<th></th>")
     for column_name in cnames
         write(io, "<th>$(html_escape(String(column_name)))</th>")
+    end
+    write(io, "</tr>")
+    write(io, "<th></th>")
+    for column_name in cnames
+        write(io, "<th>$(getformat(ds, column_name))</th>")
     end
     write(io, "</tr>")
     if eltypes
@@ -202,7 +207,7 @@ function _show(io::IO, ::MIME"text/html", df::AbstractDataset;
         # We put a longer string for the type into the title argument of the <th> element,
         # which the users can hover over. The limit of 256 characters is arbitrary, but
         # we want some maximum limit, since the types can sometimes get really-really long.
-        types = Any[eltype(df[!, idx]) for idx in 1:mxcol]
+        types = Any[eltype(ds[!, idx]) for idx in 1:mxcol]
         ct, ct_title = batch_compacttype(types), batch_compacttype(types, 256)
         for j in 1:mxcol
             s = html_escape(ct[j])
@@ -214,12 +219,20 @@ function _show(io::IO, ::MIME"text/html", df::AbstractDataset;
     write(io, "</thead>")
     write(io, "<tbody>")
     if summary
-        omitmsg = if mxcol < size(df, 2)
-                      " (omitted printing of $(size(df, 2)-mxcol) columns)"
+        omitmsg = if mxcol < size(ds, 2)
+                      " (omitted printing of $(size(ds, 2)-mxcol) columns)"
                   else
                       ""
                   end
-        write(io, "<p>$(digitsep(nrow(df))) rows × $(digitsep(ncol(df))) columns$omitmsg</p>")
+        mainmsg = if !isempty(index(ds).sortedcols) && index(ds).grouped[]
+                "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> Grouped Dataset with $(index(ds).ngroups[]) groups </p><p> Grouped by: $(join(_names(ds)[index(ds).sortedcols],", ")) </p>"
+            elseif !isempty(index(ds).sortedcols)
+                "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> Sorted Dataset </p><p> Sorted by: $(join(_names(ds)[index(ds).sortedcols],", ")) </p>"
+            else
+                "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p>"
+            end
+        write(io, mainmsg)
+
     end
     for row in 1:mxrow
         write(io, "<tr>")
@@ -229,8 +242,8 @@ function _show(io::IO, ::MIME"text/html", df::AbstractDataset;
             write(io, "<th>$rowid</th>")
         end
         for column_name in cnames
-            if isassigned(df[!, column_name], row)
-                cell_val = df[row, column_name]
+            if isassigned(ds[!, column_name], row)
+                cell_val = getformat(ds, column_name)(ds[row, column_name])
                 if ismissing(cell_val)
                     write(io, "<td><em>missing</em></td>")
                 elseif cell_val isa Markdown.MD
@@ -252,7 +265,7 @@ function _show(io::IO, ::MIME"text/html", df::AbstractDataset;
         end
         write(io, "</tr>")
     end
-    if size(df, 1) > mxrow
+    if size(ds, 1) > mxrow
         write(io, "<tr>")
         write(io, "<th>&vellip;</th>")
         for column_name in cnames
