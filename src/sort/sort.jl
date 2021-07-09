@@ -28,13 +28,13 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted =
         append!(index(ds).perm, perm)
         append!(index(ds).starts, starts)
         index(ds).ngroups[] = ngroups
+        _modified(_attributes(ds))
         if Base.issorted(perm)
             return ds
         else
             for j in 1:ncol(ds)
-                # TODO it is not thread safe to go through elements of pooled arrays (?????)
                 if DataAPI.refpool(_columns(ds)[j]) !== nothing
-                    _columns(ds)[j] = _columns(ds)[j][perm]
+                    _columns(ds)[j].refs = _threaded_permute(_columns(ds)[j].refs, perm)
                 else
                     _columns(ds)[j] = _threaded_permute(_columns(ds)[j], perm)
                 end
