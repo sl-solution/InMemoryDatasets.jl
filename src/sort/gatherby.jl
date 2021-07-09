@@ -29,9 +29,6 @@ function _gatherby(ds, cols, ::Val{T}; mapformats = true) where T
         if DataAPI.refpool(_columns(ds)[colidx[j]]) !== nothing
             v = DataAPI.refarray(_columns(ds)[colidx[j]])
             minval = hp_minimum(_f, v)
-            if ismissing(minval)
-                continue
-            end
             maxval = hp_maximum(_f, v)
             (diff, o1) = sub_with_overflow(maxval, minval)
             (rangelen, o2) = add_with_overflow(diff, oneunit(diff))

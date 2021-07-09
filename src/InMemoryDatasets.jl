@@ -40,7 +40,7 @@ export
       mask,
       groupby!,
       groupby,
-      gatherby,
+      # gatherby,
       ungroup!,
       modify,
       modify!,
@@ -57,8 +57,8 @@ export
       rescale,
       wsum,
       wmean,
-      k_largest,
-      k_smallest
+      topk
+      
 
 
 
