@@ -210,7 +210,7 @@ end
 function k_largest(x::AbstractVector{Union{T,Missing}}, k::Int) where T
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [maximum(identity, x)]
-    all(ismissing, x) && return missing
+    all(ismissing, x) && return [missing]
     res = Vector{T}(undef,k)
     fill!(res, typemin(T))
     cnt = 0
@@ -243,7 +243,7 @@ end
 function k_smallest(x::AbstractVector{Union{T,Missing}}, k::Int) where T
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [minimum(identity, x)]
-    all(ismissing, x) && return missing
+    all(ismissing, x) && return [missing]
     res = Vector{T}(undef,k)
     fill!(res, typemax(T))
     cnt = 0
@@ -257,5 +257,19 @@ function k_smallest(x::AbstractVector{Union{T,Missing}}, k::Int) where T
         res[1:cnt]
     else
         res
+    end
+end
+
+
+"""
+    topk(x, k; rev = false)
+
+return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `missing`
+"""
+function topk(x::AbstractVector, k::Int; rev = false)
+    if rev
+        k_smallest(x, k)
+    else
+        k_largest(x, k)
     end
 end
