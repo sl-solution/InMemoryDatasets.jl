@@ -147,15 +147,15 @@ julia> map!(ds, [sqrt, x->x^2], 2:3)
 ┌ Warning: cannot map `f` on ds[!, :x1_int] in-place, the selected column is Union{Missing, Int64} and the result of calculation is Union{Missing, Float64}
 └ @ InMemoryDatasets ~/.julia/dev/InMemoryDatasets/src/dataset/other.jl:482
 5×6 Dataset
- Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
-     │ identity  identity  identity  identity   identity   identity
-     │ Int64     Int64?    Int64     Float64?   Float64?   Float64?
-─────┼───────────────────────────────────────────────────────────────
-   1 │        1         0         9        1.2  missing    missing
-   2 │        1         0         4  missing    missing    missing
-   3 │        1         1         1       -1.0        3.0       -1.4
-   4 │        2   missing         9        2.3  missing          3.0
-   5 │        2         2         4       10.0  missing       -100.0
+ Row │ g         x1_int    x2_int    x1_float  x2_float  x3_float
+     │ identity  identity  identity  identity  identity  identity
+     │ Int64     Int64?    Int64     Float64?  Float64?  Float64?
+─────┼────────────────────────────────────────────────────────────
+   1 │        1         0         9       1.2       0.0       0.0
+   2 │        1         0         4       0.0       0.0       0.0
+   3 │        1         1         1      -1.0       3.0      -1.4
+   4 │        2         0         9       2.3       0.0       3.0
+   5 │        2         2         4      10.0       0.0    -100.0
 
 ```
 
