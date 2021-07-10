@@ -17,6 +17,13 @@ import DataAPI,
        DataAPI.Between,
        DataAPI.Cols,
        DataAPI.describe,
+       DataAPI.innerjoin,
+       DataAPI.outerjoin,
+       DataAPI.rightjoin,
+       DataAPI.leftjoin,
+       # DataAPI.semijoin,
+       DataAPI.antijoin,
+       # DataAPI.crossjoin,
        Tables,
        Tables.columnindex
 
@@ -57,7 +64,15 @@ export
       rescale,
       wsum,
       wmean,
-      topk
+      topk,
+      # from join
+      innerjoin,
+      outerjoin,
+      leftjoin,
+      # rightjoin,
+      antijoin,
+      asofjoin
+
       
 
 
@@ -107,7 +122,9 @@ include("sort/groupby.jl")
 include("sort/gatherby.jl")
 
 # joins
-include("join/left.jl")
+include("join/join.jl")
+include("join/asof.jl")
+include("join/main.jl")
 
 include("abstractdataset/iteration.jl")
 include("abstractdataset/prettytables.jl")
