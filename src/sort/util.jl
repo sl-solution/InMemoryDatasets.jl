@@ -118,3 +118,17 @@ function _mark_start_of_groups_sorted!(inbits, x, lo, hi, o, ::Val{T}) where T
         end
     end
 end
+
+function _permute_ds_after_sort!(ds, perm)
+    if issorted(perm)
+        return ds
+    end
+    for j in 1:ncol(ds)
+        if DataAPI.refpool(_columns(ds)[j]) !== nothing
+            _columns(ds)[j].refs = _threaded_permute(_columns(ds)[j].refs, perm)
+        else
+            _columns(ds)[j] = _threaded_permute(_columns(ds)[j], perm)
+        end
+    end
+    _modified(_attributes(ds))
+end

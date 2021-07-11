@@ -8,7 +8,7 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted =
         revs = rev
     end
 
-    @assert length(colsidx) == length(revs) "the reverse arugment must be the same length as the length of selected columns"
+    @assert length(colsidx) == length(revs) "the reverse argument must be the same length as the length of selected columns"
     if issorted
         index(ds).sortedcols == colsidx && index(ds).rev == revs && return ds
         selected_columns, ranges, last_valid_index = _find_starts_of_groups(ds::Dataset, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
@@ -29,17 +29,7 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted =
         append!(index(ds).starts, starts)
         index(ds).ngroups[] = ngroups
         _modified(_attributes(ds))
-        if Base.issorted(perm)
-            return ds
-        else
-            for j in 1:ncol(ds)
-                if DataAPI.refpool(_columns(ds)[j]) !== nothing
-                    _columns(ds)[j].refs = _threaded_permute(_columns(ds)[j].refs, perm)
-                else
-                    _columns(ds)[j] = _threaded_permute(_columns(ds)[j], perm)
-                end
-            end
-        end
+        _permute_ds_after_sort!(ds, perm)
     end
     ds
 end

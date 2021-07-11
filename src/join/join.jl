@@ -149,6 +149,50 @@ function _join_left(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = fa
 
 end
 
+function _join_left!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+    oncols_left = index(dsl)[onleft]
+    oncols_right = index(dsr)[onright]
+    right_cols = setdiff(1:length(index(dsr)), oncols_right)
+    if !makeunique && !isempty(intersect(_names(dsl)[oncols_left], _names(dsr)[oncols_right])) 
+        throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
+    end
+    # dsr_oncols = select(dsr, oncols, copycols = true)
+    _current_dsr_modified_time = _attributes(dsr).meta.modified[] 
+    sort!(dsr, oncols_right)
+    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    fill!(ranges, 1:nrow(dsr))
+    for j in 1:length(oncols_left)
+        _fl = getformat(dsl, oncols_left[j])
+        _fr = getformat(dsr, oncols_right[j])
+        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+    end
+
+    if !all(x->length(x) <= 1, ranges)
+        _permute_ds_after_sort!(dsr, index(dsr).perm)
+        _attributes(dsr).meta.modified[] = _current_dsr_modified_time
+        throw(ArgumentError("`leftjoin!` can only be used when each observation in left data set matches at most one observation from right data set"))
+    end
+
+    new_ends = map(x -> max(1, length(x)), ranges)
+    cumsum!(new_ends, new_ends)
+    total_length = new_ends[end]
+
+    if check
+        @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly"
+    end
+   
+    for j in 1:length(right_cols)
+        _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
+        _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
+        push!(_columns(dsl), _res)
+        new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
+        push!(index(dsl), new_var_name)
+        setformat!(dsl, index(dsl)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
+    end
+    _modified(_attributes(dsl))
+    dsl
+end
+
 function _join_inner(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
