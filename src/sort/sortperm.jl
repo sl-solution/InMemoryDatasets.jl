@@ -161,7 +161,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
             trans = Dict{eltype(aaa), Int32}(aaa .=> 1:length(aaa))
             _modify_poolarray_to_integer!(_tmp.refs, trans)
             _ordr = ord(isless, identity, false, Forward)
-            _tmp .= _tmp.refs
+            _tmp = _tmp.refs
             _needrev = false
             intable = false
             _missat = :right
