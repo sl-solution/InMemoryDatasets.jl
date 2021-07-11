@@ -11,7 +11,7 @@ function insert_single_column!(ds::Dataset, v::AbstractVector, col_ind::ColumnIn
     if ncol(ds) != 0 && nrow(ds) != length(v)
         throw(ArgumentError("New columns must have the same length as old columns"))
     end
-    dv = isa(v, AbstractRange) ? collect(v) : (isa(v, BitVector) ? convert(Vector{Bool}, v) : v)
+    dv = isa(v, AbstractRange) ? collect(allowmissing(v)) : (isa(v, BitVector) ? convert(Vector{Union{Bool, Missing}}, v) : allowmissing(v))
     firstindex(dv) != 1 && _onebased_check_error()
 
     if haskey(index(ds), col_ind)
@@ -324,11 +324,11 @@ function insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
                 item_new = fill!(Tables.allocatecolumn(Union{typeof(item), Missing}, target_row_count), item)
             end
         elseif item isa AbstractRange
-            item_new = collect(item)
+            item_new = allowmissing(collect(item))
         elseif copycols
-            item_new = copy(item)
+            item_new = copy(allowmissing(item))
         else
-            item_new = item
+            item_new = allowmissing(item)
         end
 
         firstindex(item_new) != 1 && _onebased_check_error()
@@ -350,7 +350,7 @@ function insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
             end
             # insert! modifies index, thus it should modifies gattributes
             insert!(index(ds), col_ind, name)
-            insert!(_columns(ds), col_ind, item_new)
+            insert!(_columns(ds), col_ind, allowmissing(item_new))
             _modified(_attributes(ds))
         end
         col_ind += 1

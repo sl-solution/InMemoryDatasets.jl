@@ -69,9 +69,13 @@ export
       innerjoin,
       outerjoin,
       leftjoin,
+      leftjoin!,
       # rightjoin,
       antijoin,
-      asofjoin
+      asofjoin,
+      asofjoin!,
+      update,
+      update!
 
       
 
@@ -124,6 +128,7 @@ include("sort/gatherby.jl")
 # joins
 include("join/join.jl")
 include("join/asof.jl")
+include("join/update.jl")
 include("join/main.jl")
 
 include("abstractdataset/iteration.jl")
