@@ -118,8 +118,11 @@ function DataAPI.antijoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique =
     end
 end
 
-function asofjoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false)
+function asofjoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :value)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
+    if !(border ∈ (:value, :missing))
+        throw(ArgumentError("`border` keyword only accept :value or :missing"))
+    end
     if !(on isa AbstractVector)
         on = [on]
     else
@@ -128,11 +131,11 @@ function asofjoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backwar
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
+        # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
         if direction == :backward
-            _join_asofback(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique)
+            _join_asofback(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique, border = border)
         elseif direction == :forward
-            _join_asoffor(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique)
+            _join_asoffor(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique, border = border)
         else
             throw(ArgumentError("`direction` can be only :backward or :forward"))
         end
@@ -140,11 +143,11 @@ function asofjoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backwar
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
+        # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
         if direction == :backward
-            _join_asofback(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique)
+            _join_asofback(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique, border = border)
         elseif direction == :forward
-            _join_asoffor(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique)
+            _join_asoffor(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique, border = border)
         else
             throw(ArgumentError("`direction` can be only :backward or :forward"))
         end
@@ -153,8 +156,11 @@ function asofjoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backwar
     end
 end
 
-function asofjoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false)
+function asofjoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :value)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
+    if !(border ∈ (:value, :missing))
+        throw(ArgumentError("`border` keyword only accept :value or :missing"))
+    end
     if !(on isa AbstractVector)
         on = [on]
     else
@@ -163,11 +169,11 @@ function asofjoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backwa
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
+        # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
         if direction == :backward
-            _join_asofback!(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique)
+            _join_asofback!(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique, border = border)
         elseif direction == :forward
-            _join_asoffor!(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique)
+            _join_asoffor!(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique, border = border)
         else
             throw(ArgumentError("`direction` can be only :backward or :forward"))
         end
@@ -175,11 +181,11 @@ function asofjoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backwa
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
+        # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
         if direction == :backward
-            _join_asofback!(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique)
+            _join_asofback!(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique, border = border)
         elseif direction == :forward
-            _join_asoffor!(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique)
+            _join_asoffor!(dsl, dsr, onleft = onleft, onright = onright, makeunique = makeunique, border = border)
         else
             throw(ArgumentError("`direction` can be only :backward or :forward"))
         end

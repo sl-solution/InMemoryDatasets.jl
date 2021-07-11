@@ -1,27 +1,33 @@
 function _find_ranges_for_asofback!(ranges, x, y, _fl, _fr)
     Threads.@threads for i in 1:length(x)
-        ranges[i] = searchsortedlast_join(_fr, y, _fl(x[i]), 1, length(y), Base.Order.Forward)
-        if ranges[i] == 0
-            ranges[i] = 1
+        curr_start = ranges[i].start
+        ranges[i] = searchsortedlast_join(_fr, y, _fl(x[i]), ranges[i].start, ranges[i].stop, Base.Order.Forward):1
+        if ranges[i].start < curr_start
+            ranges[i] = curr_start:0
         end
     end
 end
 function _find_ranges_for_asoffor!(ranges, x, y)
     Threads.@threads for i in 1:length(x)
-        ranges[i] = searchsortedfirst_join(_fr, y, _fl(x[i]), 1, length(y), Base.Order.Forward)
-        if ranges[i] > length(y)
-            ranges[i] = length(y)
+        cur_stop = ranges[i].stop
+        ranges[i] = searchsortedfirst_join(_fr, y, _fl(x[i]), ranges[i].start, ranges[i].stop, Base.Order.Forward):1
+        if ranges[i].start > cur_stop
+            ranges[i] = cur_stop:0
         end
     end
 end
 
-function  _fill_right_cols_table_asof!(_res, x, ranges, total)
+function  _fill_right_cols_table_asof!(_res, x, ranges, total, bordervalue)
     Threads.@threads for i in 1:length(ranges)
-        _res[i] = x[ranges[i]]
+        _res[i] = x[ranges[i].start]
+        if !bordervalue && ranges[i].stop == 0
+            _res[i] = missing
+        end
     end
 end
 
-function _join_asofback(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false)
+# border = :value | :missing
+function _join_asofback(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, border = :value)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -30,11 +36,17 @@ function _join_asofback(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique 
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{Int}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    fill!(ranges, 1:nrow(dsr))
+    for j in 1:(length(oncols_left) - 1) 
+        _fl = getformat(dsl, oncols_left[j])
+        _fr = getformat(dsr, oncols_right[j])
+        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+    end
 
-    _fl = getformat(dsl, oncols_left[1])
-    _fr = getformat(dsr, oncols_right[1])
-    _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[1]], _columns(dsr)[oncols_right[1]], _fl, _fr)
+    _fl = getformat(dsl, oncols_left[length(oncols_left)])
+    _fr = getformat(dsr, oncols_right[length(oncols_left)])
+    _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
 
     total_length = nrow(dsl)
 
@@ -46,8 +58,8 @@ function _join_asofback(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique 
     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
 
     for j in 1:length(right_cols)
-        _res = Tables.allocatecolumn(eltype(_columns(dsr)[right_cols[j]]), total_length)
-        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length)
+        _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
+        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :value)
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
@@ -57,7 +69,7 @@ function _join_asofback(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique 
 
 end
 
-function _join_asofback!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false)
+function _join_asofback!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, border = :value)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -66,17 +78,23 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{Int}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    fill!(ranges, 1:nrow(dsr))
+    for j in 1:(length(oncols_left) - 1) 
+        _fl = getformat(dsl, oncols_left[j])
+        _fr = getformat(dsr, oncols_right[j])
+        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+    end
 
-    _fl = getformat(dsl, oncols_left[1])
-    _fr = getformat(dsr, oncols_right[1])
-    _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[1]], _columns(dsr)[oncols_right[1]], _fl, _fr)
+    _fl = getformat(dsl, oncols_left[length(oncols_left)])
+    _fr = getformat(dsr, oncols_right[length(oncols_left)])
+    _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
 
     total_length = nrow(dsl)
 
     for j in 1:length(right_cols)
-        _res = Tables.allocatecolumn(eltype(_columns(dsr)[right_cols[j]]), total_length)
-        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length)
+        _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
+        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :value)
         push!(_columns(dsl), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(dsl), new_var_name)
@@ -89,7 +107,7 @@ end
 
 
 
-function _join_asoffor(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false)
+function _join_asoffor(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, border = :value)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -98,11 +116,17 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique =
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{Int}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    fill!(ranges, 1:nrow(dsr))
+    for j in 1:(length(oncols_left) - 1) 
+        _fl = getformat(dsl, oncols_left[j])
+        _fr = getformat(dsr, oncols_right[j])
+        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+    end
 
-    _fl = getformat(dsl, oncols_left[1])
-    _fr = getformat(dsr, oncols_right[1])
-    _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[1]], _columns(dsr)[oncols_right[1]], _fl, _fr)
+    _fl = getformat(dsl, oncols_left[length(oncols_left)])
+    _fr = getformat(dsr, oncols_right[length(oncols_left)])
+    _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
 
     total_length = nrow(dsl)
 
@@ -114,8 +138,8 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique =
     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
 
     for j in 1:length(right_cols)
-        _res = Tables.allocatecolumn(eltype(_columns(dsr)[right_cols[j]]), total_length)
-        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length)
+        _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
+        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :value)
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
@@ -124,7 +148,7 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique =
     newds
 
 end
-function _join_asoffor!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false)
+function _join_asoffor!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, border = :value)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -133,17 +157,23 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique 
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{Int}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    fill!(ranges, 1:nrow(dsr))
+    for j in 1:(length(oncols_left) - 1) 
+        _fl = getformat(dsl, oncols_left[j])
+        _fr = getformat(dsr, oncols_right[j])
+        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+    end
 
-    _fl = getformat(dsl, oncols_left[1])
-    _fr = getformat(dsr, oncols_right[1])
-    _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[1]], _columns(dsr)[oncols_right[1]], _fl, _fr)
+    _fl = getformat(dsl, oncols_left[length(oncols_left)])
+    _fr = getformat(dsr, oncols_right[length(oncols_left)])
+    _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
 
     total_length = nrow(dsl)
 
     for j in 1:length(right_cols)
-        _res = Tables.allocatecolumn(eltype(_columns(dsr)[right_cols[j]]), total_length)
-        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length)
+        _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
+        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :value)
         push!(_columns(dsl), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(dsl), new_var_name)
