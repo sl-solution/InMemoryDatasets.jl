@@ -168,7 +168,8 @@ function _join_left!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
     end
 
     if !all(x->length(x) <= 1, ranges)
-        _permute_ds_after_sort!(dsr, index(dsr).perm)
+        # unsort dsr
+        _permute_ds_after_sort!(dsr, invperm(index(dsr).perm))
         _attributes(dsr).meta.modified[] = _current_dsr_modified_time
         throw(ArgumentError("`leftjoin!` can only be used when each observation in left data set matches at most one observation from right data set"))
     end
