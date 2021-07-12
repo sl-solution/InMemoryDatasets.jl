@@ -1,8 +1,9 @@
-_stat_add_sum(x, y) = Base.add_sum(x, y)
+# _stat_add_sum(x, y) = Base.add_sum(x, y)
+_stat_add_sum(x::T, y::S) where T where S = convert(promote_type(S,T), x + y)
 _stat_add_sum(x, ::Missing) = x
 _stat_add_sum(::Missing, x) = x
 _stat_add_sum(::Missing, ::Missing) = missing
-_stat_mul_prod(x, y) = Base.mul_prod(x, y)
+_stat_mul_prod(x, y) = x * y
 _stat_mul_prod(x, ::Missing) = x
 _stat_mul_prod(::Missing, x) = x
 _stat_mul_prod(::Missing, ::Missing) = missing
@@ -15,6 +16,13 @@ _stat_max_fun(x, ::Missing) = x
 _stat_max_fun(::Missing, y) = y
 _stat_max_fun(::Missing, ::Missing) = missing
 _stat_bool(f) = x->f(x)::Bool
+
+_stat_ismissing(x::Any)::Int = 0
+_stat_ismissing(::Missing)::Int = 1
+_stat_notmissing(x::Any)::Int = 1
+_stat_notmissing(::Missing)::Int = 0
+const INTEGERS = Union{Signed, Unsigned, Int8, Int16, Int32, Int64}
+const FLOATS = Union{Float16, Float32, Float64}
 
 
 """
@@ -87,7 +95,7 @@ stat_minimum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_minim
 
 function stat_sum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
     all(ismissing, x) && return missing
-    _dmiss(y) = ifelse(ismissing(f(y)),  zero(T), f(y))
+    _dmiss(y) = ifelse(ismissing(f(y)),  zero(T), f(y))::T
     Base.mapreduce_impl(_dmiss, _stat_add_sum, x, lo, hi)
 end
 stat_sum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_sum(identity, x; lo = lo, hi = hi)
@@ -105,10 +113,10 @@ function stat_wsum(f, x::AbstractVector{T}, w::AbstractVector) where T
 end
 stat_wsum(x::AbstractVector{T}, w::AbstractVector) where T  = stat_wsum(identity, x, w)
 
-function stat_mean(f, x::AbstractArray{T,1}) where T
+function stat_mean(f, x::AbstractArray{T,1})::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     length(x) == 1 && return x
     _op(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]))
-    _dmiss(y) = (ismissing(f(y)) ? zero(T) : f(y), !ismissing(f(y)))
+    _dmiss(y) = (ismissing(f(y)) ? zero(T) : f(y), _stat_notmissing(f(y)))
     sval, n = mapreduce(_dmiss, _op, x)
     n == 0 ? missing : sval/n
 end
@@ -127,12 +135,12 @@ end
 stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_wmean(identity, x, w)
 
 
-function stat_var(f, x::AbstractArray{T,1}, df=true) where T
+function stat_var(f, x::AbstractArray{T,1}, df=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     all(ismissing, x) && return missing
     length(x) == 1 && return zero(f(x))
     _opvar(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]), _stat_add_sum(y1[3], y2[3]))
     _dmiss(y) = ismissing(f(y)) ? zero(T) : f(y)
-    _varf(y) = (_dmiss(y) ^ 2, _dmiss(y) , !ismissing(f(y)))
+    _varf(y) = (_dmiss(y) ^ 2, _dmiss(y) , _stat_notmissing(f(y)))
 
     ss, sval, n = mapreduce(_varf, _opvar, x)
 
@@ -152,7 +160,7 @@ end
 
 stat_var(x::AbstractArray{T,1}, df=true) where T = stat_var(identity, x, df)
 
-function stat_std(f , x::AbstractArray{T,1}, df=true) where T
+function stat_std(f , x::AbstractArray{T,1}, df=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     sqrt(stat_var(f, x,df))
 end
 stat_std(x::AbstractArray{T,1}, df=true) where T = stat_std(identity, x, df)
@@ -163,7 +171,7 @@ function stat_median(v::AbstractArray{T,1}) where T
     isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))
     all(ismissing, v) && return missing
     (nonmissingtype(eltype(v))<:AbstractFloat || nonmissingtype(eltype(v))>:AbstractFloat) && any(isnan, v) && return convert(eltype(v), NaN)
-    nmis = mapreduce(ismissing, +, v)
+    nmis::Int = mapreduce(ismissing, +, v)
     n = length(v) - nmis
     mid = div(1+n,2)
     if isodd(n)
