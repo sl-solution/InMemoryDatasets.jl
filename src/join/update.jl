@@ -10,20 +10,20 @@ function _update_left_with_right!(x, y, ranges, checkmissing)
     end
 end
 
-function _update!(dsl::Dataset, dsr::Dataset; onleft, onright, check = true, checkmissing = true)
+function _update!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, check = true, checkmissing = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    
+
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])
         _fr = getformat(dsr, oncols_right[j])
         _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
     end
-   
+
     for j in 1:length(right_cols)
         if haskey(index(dsl).lookup, _names(dsr)[right_cols[j]])
             left_cols_idx = index(dsl)[_names(dsr)[right_cols[j]]]

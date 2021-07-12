@@ -149,7 +149,7 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
 
 end
 
-function _join_left!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -159,7 +159,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
     # dsr_oncols = select(dsr, oncols, copycols = true)
     _current_dsr_modified_time = _attributes(dsr).meta.modified[]
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])
@@ -194,7 +194,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
     dsl
 end
 
-function _join_inner(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -203,7 +203,7 @@ function _join_inner(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])
@@ -238,13 +238,13 @@ function _join_inner(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
 end
 
 
-function _join_anti(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+function _join_anti(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])
@@ -286,7 +286,7 @@ function _fill_oncols_left_table_left_outer!(res, x, notinleft, en, total)
 end
 
 
-function _join_outer(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -295,7 +295,7 @@ function _join_outer(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])

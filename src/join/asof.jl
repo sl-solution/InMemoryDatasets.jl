@@ -27,7 +27,7 @@ function  _fill_right_cols_table_asof!(_res, x, ranges, total, bordervalue)
 end
 
 # border = :value | :missing
-function _join_asofback(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, border = :value)
+function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :value) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -36,9 +36,9 @@ function _join_asofback(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique 
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
-    for j in 1:(length(oncols_left) - 1) 
+    for j in 1:(length(oncols_left) - 1)
         _fl = getformat(dsl, oncols_left[j])
         _fr = getformat(dsr, oncols_right[j])
         _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
@@ -69,7 +69,7 @@ function _join_asofback(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique 
 
 end
 
-function _join_asofback!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, border = :value)
+function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :value) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -78,9 +78,9 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
-    for j in 1:(length(oncols_left) - 1) 
+    for j in 1:(length(oncols_left) - 1)
         _fl = getformat(dsl, oncols_left[j])
         _fr = getformat(dsr, oncols_right[j])
         _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
@@ -107,7 +107,7 @@ end
 
 
 
-function _join_asoffor(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, border = :value)
+function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :value) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -116,9 +116,9 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique =
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
-    for j in 1:(length(oncols_left) - 1) 
+    for j in 1:(length(oncols_left) - 1)
         _fl = getformat(dsl, oncols_left[j])
         _fr = getformat(dsr, oncols_right[j])
         _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
@@ -148,7 +148,7 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique =
     newds
 
 end
-function _join_asoffor!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, border = :value)
+function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :value) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -157,9 +157,9 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique 
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
-    for j in 1:(length(oncols_left) - 1) 
+    for j in 1:(length(oncols_left) - 1)
         _fl = getformat(dsl, oncols_left[j])
         _fr = getformat(dsr, oncols_right[j])
         _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
