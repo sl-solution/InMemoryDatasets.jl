@@ -430,7 +430,7 @@ julia> grades = Dataset(mark = [0, 49.5, 59.5, 69.5, 79.5, 89.5, 95.5],
    6 │     89.5  A
    7 │     95.5  A+
 
-julia> asofjoin(classA, grades, on = :mark)
+julia> closejoin(classA, grades, on = :mark)
 5×3 Dataset
  Row │ id        mark      grade
      │ identity  identity  identity
