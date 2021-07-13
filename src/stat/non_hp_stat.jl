@@ -1,5 +1,5 @@
-# _stat_add_sum(x, y) = Base.add_sum(x, y)
 _stat_add_sum(x::T, y::S) where T where S = convert(promote_type(S,T), x + y)
+_stat_add_sum(x::Bool, y::Bool) = x + y
 _stat_add_sum(x, ::Missing) = x
 _stat_add_sum(::Missing, x) = x
 _stat_add_sum(::Missing, ::Missing) = missing
@@ -93,12 +93,12 @@ function stat_minimum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
 end
 stat_minimum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_minimum(identity, x; lo = lo, hi = hi)
 
-function stat_sum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
+function stat_sum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: Union{Missing, INTEGERS, FLOATS}
     all(ismissing, x) && return missing
-    _dmiss(y) = ifelse(ismissing(f(y)),  zero(T), f(y))::T
+    _dmiss(y) = ifelse(ismissing(f(y)),  zero(T), f(y))
     Base.mapreduce_impl(_dmiss, _stat_add_sum, x, lo, hi)
 end
-stat_sum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_sum(identity, x; lo = lo, hi = hi)
+stat_sum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: Union{Missing, INTEGERS, FLOATS} = stat_sum(identity, x; lo = lo, hi = hi)
 
 function stat_wsum(f, x::AbstractArray{Union{T,Missing},1}, w) where T
     all(ismissing, x) && return missing
