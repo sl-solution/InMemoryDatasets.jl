@@ -84,8 +84,8 @@ const ≅ = isequal
 end
 
 @testset "Dataset keyword argument constructor" begin
-    x = [1, 2, 3]
-    y = [4, 5, 6]
+    x = allowmissing([1, 2, 3])
+    y = allowmissing([4, 5, 6])
 
     ds = Dataset(x=x, y=y)
     @test size(ds) == (3, 2)
@@ -165,7 +165,7 @@ end
     ds = Dataset(:type => [], :begin => [])
     @test propertynames(ds) == [:type, :begin]
 
-    a=[1, 2, 3]
+    a=allowmissing([1, 2, 3])
     ds = Dataset(:a=>a, :b=>1, :c=>1:3)
     @test propertynames(ds) == [:a, :b, :c]
     @test ds.a.val == a
@@ -184,7 +184,7 @@ end
     ds = Dataset("type" => [], "begin" => [])
     @test propertynames(ds) == [:type, :begin]
 
-    a=[1, 2, 3]
+    a=allowmissing([1, 2, 3])
     ds = Dataset("a"=>a, "b"=>1, "c"=>1:3)
     @test propertynames(ds) == [:a, :b, :c]
     @test ds."a" == a
@@ -201,9 +201,9 @@ end
     ds = Dataset(Dict(:A => 1:3, :B => 4:6))
     @inferred Dataset(Dict(:A => 1:3, :B => 4:6))
     @test ds == Dataset(A = 1:3, B = 4:6)
-    @test eltype.(eachcol(ds)) == [Int, Int]
+    @test eltype.(eachcol(ds)) == Union[Union{Missing, Int}, Union{Missing, Int}]
 
-    a=[1, 2, 3]
+    a=allowmissing([1, 2, 3])
     ds = Dataset(Dict(:a=>a, :b=>1, :c=>1:3))
     @test propertynames(ds) == [:a, :b, :c]
     @test ds.a == a
@@ -216,9 +216,9 @@ end
     ds = Dataset(Dict("A" => 1:3, "B" => 4:6))
     @inferred Dataset(Dict("A" => 1:3, "B" => 4:6))
     @test ds == Dataset(A = 1:3, B = 4:6)
-    @test eltype.(eachcol(ds)) == [Int, Int]
+    @test eltype.(eachcol(ds)) == Union[Union{Missing, Int}, Union{Missing, Int}]
 
-    a=[1, 2, 3]
+    a=allowmissing([1, 2, 3])
     ds = Dataset(Dict("a"=>a, "b"=>1, "c"=>1:3))
     @test propertynames(ds) == [:a, :b, :c]
     @test ds."a" == a
@@ -229,8 +229,8 @@ end
 end
 
 @testset "vector constructors" begin
-    x = [1, 2, 3]
-    y = [1, 2, 3]
+    x = allowmissing([1, 2, 3])
+    y = allowmissing([1, 2, 3])
 
     ds = Dataset([x, y], :auto)
     @test propertynames(ds) == [:x1, :x2]
@@ -285,12 +285,12 @@ end
 
     n = [:x1, :x2]
     v = AbstractVector[1:3, [1, 2, 3]]
-    @test Dataset(v, n).x1.val isa Vector{Int}
+    @test Dataset(v, n).x1.val isa Vector{Union{Int, Missing}}
     @test v[1] isa AbstractRange
 
     n = ["x1", "x2"]
     v = AbstractVector[1:3, [1, 2, 3]]
-    @test Dataset(v, n)."x1".val isa Vector{Int}
+    @test Dataset(v, n)."x1".val isa Vector{Union{Int, Missing}}
     @test v[1] isa AbstractRange
 end
 
@@ -318,13 +318,13 @@ end
 
 @testset "column types" begin
     ds = Dataset(A = 1:3, B = 2:4, C = 3:5)
-    answer = [Array{Int, 1}, Array{Int, 1}, Array{Int, 1}]
+    answer = [Array{Union{Missing, Int}, 1}, Array{Union{Missing, Int}, 1}, Array{Union{Missing, Int}, 1}]
     @test typeof.(eachcol(ds)) == answer
     ds[!, :D] = [4, 5, missing]
     push!(answer, Vector{Union{Int, Missing}})
     @test typeof.(eachcol(ds)) == answer
     ds[!, :E] .= 'c'
-    push!(answer, Vector{Char})
+    push!(answer, Vector{Union{Missing, Char}})
     @test typeof.(eachcol(ds)) == answer
 end
 
@@ -337,8 +337,8 @@ end
 @testset "broadcasting into 0 rows" begin
     for ds in [Dataset(x1=1:0, x2=1), Dataset(x1=1, x2=1:0)]
         @test size(ds) == (0, 2)
-        @test ds.x1.val isa Vector{Int}
-        @test ds.x2.val isa Vector{Int}
+        @test ds.x1.val isa Vector{Union{Missing, Int}}
+        @test ds.x2.val isa Vector{Union{Missing, Int}}
     end
 end
 
