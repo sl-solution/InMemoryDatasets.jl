@@ -566,7 +566,7 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], border = :value)
  Row │ time                     ticker    price     quantity  bid         ask
      │ identity                 identity  identity  identity  identity    identity
      │ DateTime?                String?   Float64?  Int64?    Float64?    Float64?
-─────┼───────────────────────────────────────────────────────────────────────────────
+────┼───────────────────────────────────────────────────────────────────────────────
    1 │ 2016-05-25T13:30:00.023  MSFT         51.95        75       51.95       51.96
    2 │ 2016-05-25T13:30:00.038  MSFT         51.95       155       51.97       51.98
    3 │ 2016-05-25T13:30:00.048  GOOG        720.77       100      720.5       720.93
