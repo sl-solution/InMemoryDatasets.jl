@@ -348,7 +348,7 @@ Sorted by: g
 
 `closejoin!` does the joining in-place. The in-place operation also can be done for `leftjoin` when there is no more than one match observation from the right table.
 
-> The joining functions uses the formatted value for find the match.
+> The joining functions use the formatted value for find the match.
 
 ## Examples
 
@@ -544,7 +544,7 @@ julia> closejoin(trades, quotes, on = :time, makeunique = true)
 In the above example the close join for each `ticker` can be done by supplying `ticker` as the first variable of `on` keyword, i.e. when more than one variable is used for `on` the last one will be used for close match and the rest are used for exact match.
 
 ```julia
-julia> closejoin(trades, quotes, on = [:ticker, :time])
+julia> closejoin(trades, quotes, on = [:ticker, :time], border = :value)
 5×6 Dataset
  Row │ time                     ticker    price     quantity  bid       ask
      │ identity                 identity  identity  identity  identity  identity
@@ -558,7 +558,7 @@ julia> closejoin(trades, quotes, on = [:ticker, :time])
    
  ```
  
- The border values can be controled by supplying `border` option. When it is set to `:missing` for the `:backward` direction the value below the smallest value will be set to `missing`, and for the `:forward` direction the value above the largest value will be set to `missing`.
+ When `border` is set to `:missing` for the `:backward` direction the value below the smallest value will be set to `missing`, and for the `:forward` direction the value above the largest value will be set to `missing`.
  
  ```julia
  julia> closejoin(trades, quotes, on = [:ticker, :time], border = :missing)
