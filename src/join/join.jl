@@ -39,9 +39,10 @@ function searchsorted_join(_f, v::AbstractVector, x, ilo::T, ihi::T, o::Ordering
     hi = ihi + u
     @inbounds while lo < hi - u
         m = midpoint(lo, hi)
-        if lt(o, _f(v[m]), x)
+        fvm = _f(v[m])
+        if lt(o, fvm, x)
             lo = m
-        elseif lt(o, x, _f(v[m]))
+        elseif lt(o, x, fvm)
             hi = m
         else
             a = searchsortedfirst_join(_f, v, x, max(lo,ilo), m, o)
@@ -52,6 +53,11 @@ function searchsorted_join(_f, v::AbstractVector, x, ilo::T, ihi::T, o::Ordering
     return (lo + 1) : (hi - 1)
 end
 
+function _fill_val_join!(x, r, val)
+    for i in r
+        x[i] = val
+    end
+end
 
 function _find_ranges_for_join!(ranges, x, y, _fl, _fr)
     Threads.@threads for i in 1:length(x)
@@ -63,7 +69,7 @@ function _fill_oncols_left_table_left!(_res, x, ranges, en, total)
     Threads.@threads for i in 1:length(x)
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        fill!(view(_res,lo:hi), x[i])
+        _fill_val_join!(_res, lo:hi, x[i])
     end
     Threads.@threads for i in en[length(x)]+1:total
         _res[i] = missing
@@ -75,7 +81,7 @@ function _fill_oncols_left_table_inner!(_res, x, ranges, en, total)
         length(ranges[i]) == 0 && continue
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        fill!(view(_res,lo:hi), x[i])
+        _fill_val_join!(_res, lo:hi, x[i])
     end
 end
 
@@ -84,7 +90,7 @@ function _fill_oncols_left_table_anti!(_res, x, ranges, en, total)
         length(ranges[i]) != 0 && continue
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        fill!(view(_res,lo:hi), x[i])
+        _fill_val_join!(_res, lo:hi, x[i])
     end
 end
 
@@ -93,7 +99,7 @@ function _fill_right_cols_table_left!(_res, x, ranges, en, total)
     Threads.@threads for i in 1:length(ranges)
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        length(ranges[i]) == 0 ? fill!(view(_res, lo:hi), missing) : copy!(view(_res,lo:hi), view(x,ranges[i]))
+        length(ranges[i]) == 0 ? _fill_val_join!(_res, lo:hi, missing) : copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
     end
 end
 
@@ -102,7 +108,7 @@ function _fill_right_cols_table_inner!(_res, x, ranges, en, total)
         length(ranges[i]) == 0 && continue
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        copy!(view(_res,lo:hi), view(x,ranges[i]))
+        copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
     end
 end
 
