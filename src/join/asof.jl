@@ -31,7 +31,7 @@ function _join_asofback(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique 
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl)[oncols_left], _names(dsr)[oncols_right]))
+    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
@@ -73,7 +73,7 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl)[oncols_left], _names(dsr)[oncols_right]))
+    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
@@ -111,7 +111,7 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique =
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl)[oncols_left], _names(dsr)[oncols_right]))
+    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
@@ -152,7 +152,7 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique 
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl)[oncols_left], _names(dsr)[oncols_right]))
+    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
