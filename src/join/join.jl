@@ -39,9 +39,10 @@ function searchsorted_join(_f, v::AbstractVector, x, ilo::T, ihi::T, o::Ordering
     hi = ihi + u
     @inbounds while lo < hi - u
         m = midpoint(lo, hi)
-        if lt(o, _f(v[m]), x)
+        fvm = _f(v[m])
+        if lt(o, fvm, x)
             lo = m
-        elseif lt(o, x, _f(v[m]))
+        elseif lt(o, x, fvm)
             hi = m
         else
             a = searchsortedfirst_join(_f, v, x, max(lo,ilo), m, o)
@@ -52,6 +53,11 @@ function searchsorted_join(_f, v::AbstractVector, x, ilo::T, ihi::T, o::Ordering
     return (lo + 1) : (hi - 1)
 end
 
+function _fill_val_join!(x, r, val)
+    for i in r
+        x[i] = val
+    end
+end
 
 function _find_ranges_for_join!(ranges, x, y, _fl, _fr)
     Threads.@threads for i in 1:length(x)
@@ -63,7 +69,7 @@ function _fill_oncols_left_table_left!(_res, x, ranges, en, total)
     Threads.@threads for i in 1:length(x)
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        fill!(view(_res,lo:hi), x[i])
+        _fill_val_join!(_res, lo:hi, x[i])
     end
     Threads.@threads for i in en[length(x)]+1:total
         _res[i] = missing
@@ -75,7 +81,7 @@ function _fill_oncols_left_table_inner!(_res, x, ranges, en, total)
         length(ranges[i]) == 0 && continue
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        fill!(view(_res,lo:hi), x[i])
+        _fill_val_join!(_res, lo:hi, x[i])
     end
 end
 
@@ -84,7 +90,7 @@ function _fill_oncols_left_table_anti!(_res, x, ranges, en, total)
         length(ranges[i]) != 0 && continue
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        fill!(view(_res,lo:hi), x[i])
+        _fill_val_join!(_res, lo:hi, x[i])
     end
 end
 
@@ -93,7 +99,7 @@ function _fill_right_cols_table_left!(_res, x, ranges, en, total)
     Threads.@threads for i in 1:length(ranges)
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        length(ranges[i]) == 0 ? fill!(view(_res, lo:hi), missing) : copy!(view(_res,lo:hi), view(x,ranges[i]))
+        length(ranges[i]) == 0 ? _fill_val_join!(_res, lo:hi, missing) : copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
     end
 end
 
@@ -102,20 +108,20 @@ function _fill_right_cols_table_inner!(_res, x, ranges, en, total)
         length(ranges[i]) == 0 && continue
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
-        copy!(view(_res,lo:hi), view(x,ranges[i]))
+        copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
     end
 end
 
-function _join_left(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols])) 
+    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])
@@ -149,17 +155,17 @@ function _join_left(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = fa
 
 end
 
-function _join_left!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols])) 
+    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    _current_dsr_modified_time = _attributes(dsr).meta.modified[] 
+    _current_dsr_modified_time = _attributes(dsr).meta.modified[]
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])
@@ -181,7 +187,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
     if check
         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly"
     end
-   
+
     for j in 1:length(right_cols)
         _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
         _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
@@ -194,16 +200,16 @@ function _join_left!(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
     dsl
 end
 
-function _join_inner(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols])) 
+    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])
@@ -238,13 +244,13 @@ function _join_inner(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
 end
 
 
-function _join_anti(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+function _join_anti(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])
@@ -286,16 +292,16 @@ function _fill_oncols_left_table_left_outer!(res, x, notinleft, en, total)
 end
 
 
-function _join_outer(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = false, check = true)
+function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols])) 
+    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{Int}}(undef, nrow(dsl))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
         _fl = getformat(dsl, oncols_left[j])
@@ -335,4 +341,3 @@ function _join_outer(dsl::Dataset, dsr::Dataset; onleft, onright, makeunique = f
     newds
 
 end
-
