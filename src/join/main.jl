@@ -118,7 +118,7 @@ function DataAPI.antijoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique =
     end
 end
 
-function closejoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :value)
+function closejoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :missing)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:value, :missing))
         throw(ArgumentError("`border` keyword only accept :value or :missing"))
@@ -156,7 +156,7 @@ function closejoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backwa
     end
 end
 
-function closejoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :value)
+function closejoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :missing)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:value, :missing))
         throw(ArgumentError("`border` keyword only accept :value or :missing"))
