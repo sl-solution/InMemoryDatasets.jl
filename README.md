@@ -544,7 +544,7 @@ julia> closejoin(trades, quotes, on = :time, makeunique = true)
 In the above example the close join for each `ticker` can be done by supplying `ticker` as the first variable of `on` keyword, i.e. when more than one variable is used for `on` the last one will be used for close match and the rest are used for exact match.
 
 ```julia
-julia> closejoin(trades, quotes, on = [:ticker, :time], border = :value)
+julia> closejoin(trades, quotes, on = [:ticker, :time], border = :nearest)
 5×6 Dataset
  Row │ time                     ticker    price     quantity  bid       ask
      │ identity                 identity  identity  identity  identity  identity
