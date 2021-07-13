@@ -7,7 +7,7 @@ function _find_ranges_for_asofback!(ranges, x, y, _fl, _fr)
         end
     end
 end
-function _find_ranges_for_asoffor!(ranges, x, y)
+function _find_ranges_for_asoffor!(ranges, x, y, _fl, _fr)
     Threads.@threads for i in 1:length(x)
         cur_stop = ranges[i].stop
         ranges[i] = searchsortedfirst_join(_fr, y, _fl(x[i]), ranges[i].start, ranges[i].stop, Base.Order.Forward):1

@@ -72,8 +72,8 @@ export
       leftjoin!,
       # rightjoin,
       antijoin,
-      asofjoin,
-      asofjoin!,
+      closejoin,
+      closejoin!,
       update,
       update!
 

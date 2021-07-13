@@ -10,7 +10,7 @@
 2×2 Dataset
  Row │ x         y
      │ identity  identity
-     │ Int64     Int64
+     │ Int64?     Int64?
 ─────┼────────────────────
    1 │        1         1
    2 │        2         2
@@ -29,7 +29,7 @@ julia> ds = Dataset(randn(10,2), :auto)
 10×2 Dataset
  Row │ x1          x2        
      │ identity    identity  
-     │ Float64     Float64   
+     │ Float64?     Float64?   
 ─────┼───────────────────────
    1 │  0.108189   -2.71151
    2 │ -0.520872   -1.00426
@@ -49,7 +49,7 @@ julia>  setformat!(ds, 1 => myformat)
 10×2 Dataset
  Row │ x1        x2        
      │ myformat  identity  
-     │ Float64   Float64   
+     │ Float64?   Float64?   
 ─────┼─────────────────────
    1 │        0  -2.71151
    2 │       -1  -1.00426
@@ -69,7 +69,7 @@ julia> removeformat!(ds, :x1)
 10×2 Dataset
  Row │ x1          x2        
      │ identity    identity  
-     │ Float64     Float64   
+     │ Float64?     Float64?   
 ─────┼───────────────────────
    1 │  0.108189   -2.71151
    2 │ -0.520872   -1.00426
@@ -99,7 +99,7 @@ julia> ds = Dataset(g = [1, 1, 1, 2, 2],
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
      │ identity  identity  identity  identity   identity   identity
-    │ Int64     Int64?    Int64     Float64?   Float64?   Float64?
+    │ Int64?     Int64?    Int64?     Float64?   Float64?   Float64?
 ─────┼───────────────────────────────────────────────────────────────
    1 │        1         0         3        1.2  missing    missing
    2 │        1         0         2  missing    missing    missing
@@ -111,7 +111,7 @@ julia> map(ds, x->x^2, :x2_int)
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float    x2_float   x3_float
      │ identity  identity  identity  identity    identity   identity
-     │ Int64     Int64?    Int64     Float64?    Float64?   Float64?
+     │ Int64?     Int64?    Int64?     Float64?    Float64?   Float64?
 ─────┼─────────────────────────────────────────────────────────────────
    1 │        1         0         9        1.44  missing    missing
    2 │        1         0         4  missing     missing    missing
@@ -123,7 +123,7 @@ julia> map(ds, [sqrt, x->x^2], 2:3)
 5×6 Dataset
  Row │ g         x1_int         x2_int    x1_float   x2_float   x3_float
      │ identity  identity       identity  identity   identity   identity
-     │ Int64     Float64?       Int64     Float64?   Float64?   Float64?
+     │ Int64?     Float64?       Int64?     Float64?   Float64?   Float64?
 ─────┼────────────────────────────────────────────────────────────────────
    1 │        1        0.0             9        1.2  missing    missing
    2 │        1        0.0             4  missing    missing    missing
@@ -135,7 +135,7 @@ julia> map!(ds, x -> ismissing(x) ? 0 : x, r"x")
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float  x2_float  x3_float
      │ identity  identity  identity  identity  identity  identity
-     │ Int64     Int64?    Int64     Float64?  Float64?  Float64?
+     │ Int64?     Int64?    Int64?     Float64?  Float64?  Float64?
 ─────┼────────────────────────────────────────────────────────────
    1 │        1         0         3       1.2       0.0       0.0
    2 │        1         0         2       0.0       0.0       0.0
@@ -149,14 +149,13 @@ julia> map!(ds, [sqrt, x->x^2], 2:3)
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float  x2_float  x3_float
      │ identity  identity  identity  identity  identity  identity
-     │ Int64     Int64?    Int64     Float64?  Float64?  Float64?
+     │ Int64?     Int64?    Int64?     Float64?  Float64?  Float64?
 ─────┼────────────────────────────────────────────────────────────
    1 │        1         0         9       1.2       0.0       0.0
    2 │        1         0         4       0.0       0.0       0.0
    3 │        1         1         1      -1.0       3.0      -1.4
    4 │        2         0         9       2.3       0.0       3.0
    5 │        2         2         4      10.0       0.0    -100.0
-
 ```
 
 # Masking observations
@@ -170,7 +169,7 @@ julia> ds = Dataset(x = 1:10, y = repeat(1:5, inner = 2), z = repeat(1:2, 5))
 10×3 Dataset
  Row │ x         y         z
      │ identity  identity  identity
-     │ Int64     Int64     Int64
+     │ Int64?     Int64?     Int64?
 ─────┼──────────────────────────────
    1 │        1         1         1
    2 │        2         1         2
@@ -190,7 +189,7 @@ julia> setformat!(ds, 2 => sqrt, 3 => gender)
 10×3 Dataset
  Row │ x         y        z
      │ identity  sqrt     gender
-     │ Int64     Int64    Int64
+     │ Int64?    Int64?    Int64?
 ─────┼───────────────────────────
    1 │        1  1.0        Male
    2 │        2  1.0      Female
@@ -207,7 +206,7 @@ julia> mask(ds, [iseven, isequal("Male")], 2:3)
 10×2 Dataset
  Row │ y         z
      │ identity  identity
-     │ Bool      Bool
+     │ Bool?      Bool?
 ─────┼────────────────────
    1 │    false     false
    2 │    false     false
@@ -224,7 +223,7 @@ julia> mask(ds, [val -> rem(val, 2) == 0, isequal("Male")], 2:3, mapformats = tr
 10×2 Dataset
  Row │ y         z
      │ identity  identity
-     │ Bool      Bool
+     │ Bool?      Bool?
 ─────┼────────────────────
    1 │    false      true
    2 │    false     false
@@ -259,7 +258,7 @@ julia> ds = Dataset(x = 1:10, y = repeat(1:5, inner = 2), z = repeat(1:2, 5))
 10×3 Dataset
  Row │ x         y         z
      │ identity  identity  identity
-     │ Int64     Int64     Int64
+     │ Int64?     Int64?     Int64?
 ─────┼──────────────────────────────
    1 │        1         1         1
    2 │        2         1         2
@@ -280,7 +279,7 @@ julia> modify(ds,
 10×6 Dataset
  Row │ x         y         z         sq_y      sq_z      row_-
      │ identity  identity  identity  identity  identity  identity
-     │ Int64     Int64     Int64     Float64   Float64   Float64
+     │ Int64?     Int64?    Int64?  Float64?   Float64?   Float64?
 ─────┼────────────────────────────────────────────────────────────
    1 │        1         1         1   1.0       1.0       0.0
    2 │        4         1         2   1.0       1.41421   3.0
@@ -310,7 +309,7 @@ julia> ds = Dataset(g = [1, 1, 1, 2, 2],
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
      │ identity  identity  identity  identity   identity   identity
-     │ Int64     Int64?    Int64     Float64?   Float64?   Float64?
+     │ Int64?     Int64?    Int64?     Float64?   Float64?   Float64?
 ─────┼───────────────────────────────────────────────────────────────
    1 │        1         0         3        1.2  missing    missing
    2 │        1         0         2  missing    missing    missing
@@ -323,7 +322,7 @@ julia> groupby!(ds, 1)
 Grouped by: g
  Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
      │ identity  identity  identity  identity   identity   identity
-     │ Int64     Int64?    Int64     Float64?   Float64?   Float64?
+     │ Int64?     Int64?    Int64?     Float64?   Float64?   Float64?
 ─────┼───────────────────────────────────────────────────────────────
    1 │        1         0         3        1.2  missing    missing
    2 │        1         0         2  missing    missing    missing
@@ -337,8 +336,110 @@ julia> combine(ds, :x1_float => sum)
 Sorted by: g
  Row │ g         x1_float
      │ identity  identity
-     │ Int64     Float64?
+     │ Int64?    Float64?
 ─────┼────────────────────
    1 │        1       0.2
    2 │        2      12.3
+```
+
+# Joins
+
+`leftjoin`, `innerjoin` , `outerjoin`, `antijoin`, and  `closejoin`  are the main function for joining two data sets.  The `closejoin` join two data sets based on exact match on the key variable or the closest match when the exact match doesn't exist.
+
+`closejoin!` does the joining in-place. The in-place operation also can be done for `leftjoin` when there is no more than one match observation from the right table.
+
+> The joining functions uses the formatted value for find the match.
+
+## Examples
+
+```julia
+julia> name = Dataset(ID = [1, 2, 3], Name = ["John Doe", "Jane Doe", "Joe Blogs"])
+3×2 Dataset
+ Row │ ID        Name
+     │ identity  identity
+     │ Int64?    String?
+─────┼─────────────────────
+   1 │        1  John Doe
+   2 │        2  Jane Doe
+   3 │        3  Joe Blogs
+
+julia> job = Dataset(ID = [1, 2, 4], Job = ["Lawyer", "Doctor", "Farmer"])
+3×2 Dataset
+ Row │ ID        Job
+     │ identity  identity
+     │ Int64?    tring?
+─────┼────────────────────
+   1 │        1  Lawyer
+   2 │        2  Doctor
+   3 │        4  Farmer
+
+julia> leftjoin(name, job, on = :ID)
+3×3 Dataset
+ Row │ ID        Name       Job
+     │ identity  identity   identity
+     │ Int64?    String?    String?
+─────┼───────────────────────────────
+   1 │        1  John Doe   Lawyer
+   2 │        2  Jane Doe   Doctor
+   3 │        3  Joe Blogs  missing
+
+julia> innerjoin(name, job, on = :ID)
+2×3 Dataset
+ Row │ ID        Name      Job
+     │ identity  identity  identity
+     │ Int64?    String?   String?
+─────┼──────────────────────────────
+   1 │        1  John Doe  Lawyer
+   2 │        2  Jane Doe  Doctor
+
+julia> outerjoin(name, job, on = :ID)
+4×3 Dataset
+ Row │ ID        Name       Job
+     │ identity  identity   identity
+     │ Int64?    String?    String?
+─────┼───────────────────────────────
+   1 │        1  John Doe   Lawyer
+   2 │        2  Jane Doe   Doctor
+   3 │        3  Joe Blogs  missing
+   4 │        4  missing    Farmer
+
+julia> classA = Dataset(id = ["id1", "id2", "id3", "id4", "id5"],
+                        mark = [50, 69.5, 45.5, 88.0, 98.5])
+5×2 Dataset
+ Row │ id        mark
+     │ identity  identity
+     │ String?   Float64?
+─────┼────────────────────
+   1 │ id1           50.0
+   2 │ id2           69.5
+   3 │ id3           45.5
+   4 │ id4           88.0
+   5 │ id5           98.5
+julia> grades = Dataset(mark = [0, 49.5, 59.5, 69.5, 79.5, 89.5, 95.5], 
+                        grade = ["F", "P", "C", "B", "A-", "A", "A+"])
+7×2 Dataset
+ Row │ mark      grade
+     │ identity  identity
+     │ Float64?  String?
+─────┼────────────────────
+   1 │      0.0  F
+   2 │     49.5  P
+   3 │     59.5  C
+   4 │     69.5  B
+   5 │     79.5  A-
+   6 │     89.5  A
+   7 │     95.5  A+
+
+julia> asofjoin(classA, grades, on = :mark)
+5×3 Dataset
+ Row │ id        mark      grade
+     │ identity  identity  identity
+     │ String?   Float64?  String?
+─────┼──────────────────────────────
+   1 │ id1           50.0  P
+   2 │ id2           69.5  B
+   3 │ id3           45.5  F
+   4 │ id4           88.0  A-
+   5 │ id5           98.5  A+
+
 ```
