@@ -29,6 +29,7 @@ import DataAPI,
 
 export
       # types
+      Characters,
       AbstractDataset,
       DatasetColumns,
       DatasetColumn,
@@ -77,13 +78,14 @@ export
       update,
       update!
 
-      
+
 
 
 
 
 include("other/index.jl")
 include("other/utils.jl")
+include("characters/characters.jl")
 include("stat/non_hp_stat.jl")
 include("stat/hp_stat.jl")
 include("stat/stat.jl")

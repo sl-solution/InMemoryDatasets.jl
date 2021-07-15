@@ -11,7 +11,14 @@ function insert_single_column!(ds::Dataset, v::AbstractVector, col_ind::ColumnIn
     if ncol(ds) != 0 && nrow(ds) != length(v)
         throw(ArgumentError("New columns must have the same length as old columns"))
     end
-    dv = isa(v, AbstractRange) ? collect(allowmissing(v)) : (isa(v, BitVector) ? convert(Vector{Union{Bool, Missing}}, v) : allowmissing(v))
+    # if isa(v, AbstractRange)
+    #     dv = collect(allowmissing(v))
+    # elseif isa(v, BitVector)
+    #     dv = convert(Vector{Union{Bool, Missing}}, v)
+    # elseif
+    #
+    # dv = isa(v, AbstractRange) ?  : (isa(v, BitVector) ? convert(Vector{Union{Bool, Missing}}, v) : allowmissing(v))
+    dv = _preprocess_column(v, nrow(ds), false)
     firstindex(dv) != 1 && _onebased_check_error()
 
     if haskey(index(ds), col_ind)
@@ -350,7 +357,8 @@ function insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:An
             end
             # insert! modifies index, thus it should modifies gattributes
             insert!(index(ds), col_ind, name)
-            insert!(_columns(ds), col_ind, allowmissing(item_new))
+            item_new = _preprocess_column(item_new, nrow(ds), false)
+            insert!(_columns(ds), col_ind, item_new)
             _modified(_attributes(ds))
         end
         col_ind += 1
