@@ -212,7 +212,7 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
     elseif col isa AbstractVector
         if isa(col, BitVector)
             return convert(Vector{Union{Bool, Missing}}, col)
-        elseif eltype(col) <: Union{Missing, AbstractString}
+        elseif eltype(col) <: Union{Missing, AbstractString} && !(eltype(col) <: Union{Missing, Characters})
             if DataAPI.refpool(col) !== nothing
                 ml = hp_maximum(length, DataAPI.refpool(col))
                 col = map(x->Characters{ml}(x), col)
@@ -231,7 +231,7 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
         throw(ArgumentError("adding AbstractArray other than AbstractVector " *
                             "as a column of a data set is not allowed"))
     else
-        if typeof(col) <: AbstractString
+        if typeof(col) <: Union{Missing, AbstractString} && !(typeof(col) <: Union{Missing, Characters})
             return fill!(Tables.allocatecolumn(Union{Missing, typeof(Characters(col))}, len), Characters(col))
         else
             return fill!(Tables.allocatecolumn(Union{Missing, typeof(col)}, len), col)
