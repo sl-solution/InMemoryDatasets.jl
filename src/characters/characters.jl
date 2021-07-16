@@ -55,6 +55,8 @@ codeunit(s::Characters, i::Integer) = s.data[i]
 
 isvalid(s::Characters, i::Int) = checkbounds(Bool, s, i)
 
+Characters(s::Symbol) = Character(string(s))
+
 function read(io::IO, T::Type{Characters{N}}) where N
     return read!(io, Ref{T}())[]::T
 end
