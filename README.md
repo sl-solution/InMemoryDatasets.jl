@@ -357,8 +357,8 @@ julia> name = Dataset(ID = [1, 2, 3], Name = ["John Doe", "Jane Doe", "Joe Blogs
 3×2 Dataset
  Row │ ID        Name
      │ identity  identity
-     │ Int64?    String?
-─────┼─────────────────────
+     │ Int64?    Characte…?
+─────┼──────────────────────
    1 │        1  John Doe
    2 │        2  Jane Doe
    3 │        3  Joe Blogs
@@ -367,61 +367,61 @@ julia> job = Dataset(ID = [1, 2, 4], Job = ["Lawyer", "Doctor", "Farmer"])
 3×2 Dataset
  Row │ ID        Job
      │ identity  identity
-     │ Int64?    tring?
-─────┼────────────────────
+     │ Int64?    Characte…?
+─────┼──────────────────────
    1 │        1  Lawyer
    2 │        2  Doctor
    3 │        4  Farmer
 
 julia> leftjoin(name, job, on = :ID)
 3×3 Dataset
- Row │ ID        Name       Job
-     │ identity  identity   identity
-     │ Int64?    String?    String?
-─────┼───────────────────────────────
-   1 │        1  John Doe   Lawyer
-   2 │        2  Jane Doe   Doctor
-   3 │        3  Joe Blogs  missing
+ Row │ ID        Name        Job
+     │ identity  identity    identity
+     │ Int64?    Characte…?  Characte…?
+─────┼──────────────────────────────────
+   1 │        1  John Doe    Lawyer
+   2 │        2  Jane Doe    Doctor
+   3 │        3  Joe Blogs   missing
 
 julia> innerjoin(name, job, on = :ID)
 2×3 Dataset
- Row │ ID        Name      Job
-     │ identity  identity  identity
-     │ Int64?    String?   String?
-─────┼──────────────────────────────
-   1 │        1  John Doe  Lawyer
-   2 │        2  Jane Doe  Doctor
+ Row │ ID        Name        Job
+     │ identity  identity    identity
+     │ Int64?    Characte…?  Characte…?
+─────┼──────────────────────────────────
+   1 │        1  John Doe    Lawyer
+   2 │        2  Jane Doe    Doctor
 
 julia> outerjoin(name, job, on = :ID)
 4×3 Dataset
- Row │ ID        Name       Job
-     │ identity  identity   identity
-     │ Int64?    String?    String?
-─────┼───────────────────────────────
-   1 │        1  John Doe   Lawyer
-   2 │        2  Jane Doe   Doctor
-   3 │        3  Joe Blogs  missing
-   4 │        4  missing    Farmer
+ Row │ ID        Name        Job
+     │ identity  identity    identity
+     │ Int64?    Characte…?  Characte…?
+─────┼──────────────────────────────────
+   1 │        1  John Doe    Lawyer
+   2 │        2  Jane Doe    Doctor
+   3 │        3  Joe Blogs   missing
+   4 │        4  missing     Farmer
 
 julia> classA = Dataset(id = ["id1", "id2", "id3", "id4", "id5"],
                         mark = [50, 69.5, 45.5, 88.0, 98.5])
 5×2 Dataset
- Row │ id        mark
-     │ identity  identity
-     │ String?   Float64?
-─────┼────────────────────
-   1 │ id1           50.0
-   2 │ id2           69.5
-   3 │ id3           45.5
-   4 │ id4           88.0
-   5 │ id5           98.5
+ Row │ id          mark
+     │ identity    identity
+     │ Characte…?  Float64?
+─────┼──────────────────────
+   1 │ id1             50.0
+   2 │ id2             69.5
+   3 │ id3             45.5
+   4 │ id4             88.0
+   5 │ id5             98.5
 julia> grades = Dataset(mark = [0, 49.5, 59.5, 69.5, 79.5, 89.5, 95.5], 
                         grade = ["F", "P", "C", "B", "A-", "A", "A+"])
 7×2 Dataset
  Row │ mark      grade
      │ identity  identity
-     │ Float64?  String?
-─────┼────────────────────
+     │ Float64?  Characte…?
+─────┼──────────────────────
    1 │      0.0  F
    2 │     49.5  P
    3 │     59.5  C
@@ -441,7 +441,6 @@ julia> closejoin(classA, grades, on = :mark)
    3 │ id3           45.5  F
    4 │ id4           88.0  A-
    5 │ id5           98.5  A+
-
 ```
 
 Examples of using `closejoin` for financial data.
@@ -461,27 +460,27 @@ julia> trades = Dataset(
                  100, 100, 100]],
                ["time", "ticker", "price", "quantity"])
 5×4 Dataset
- Row │ time                   ticker    price     quantity
-     │ identity               identity  identity  identity
-     │ String?                String?   Float64?  Int64?
-─────┼─────────────────────────────────────────────────────
-   1 │ 20160525 13:30:00.023  MSFT         51.95        75
-   2 │ 20160525 13:30:00.038  MSFT         51.95       155
-   3 │ 20160525 13:30:00.048  GOOG        720.77       100
-   4 │ 20160525 13:30:00.048  GOOG        720.92       100
-   5 │ 20160525 13:30:00.048  AAPL         98.0        100
-
-julia> trades = map(trades, x -> DateTime(x, dateformat"yyyymmdd HH:MM:SS.s"), 1)
-5×4 Dataset
- Row │ time                     ticker    price     quantity
-     │ identity                 identity  identity  identity
-     │ DateTime?                String?   Float64?  Int64?
+ Row │ time                   ticker      price     quantity
+     │ identity               identity    identity  identity
+     │ Characte…?             Characte…?  Float64?  Int64?
 ─────┼───────────────────────────────────────────────────────
-   1 │ 2016-05-25T13:30:00.023  MSFT         51.95        75
-   2 │ 2016-05-25T13:30:00.038  MSFT         51.95       155
-   3 │ 2016-05-25T13:30:00.048  GOOG        720.77       100
-   4 │ 2016-05-25T13:30:00.048  GOOG        720.92       100
-   5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100
+   1 │ 20160525 13:30:00.023  MSFT           51.95        75
+   2 │ 20160525 13:30:00.038  MSFT           51.95       155
+   3 │ 20160525 13:30:00.048  GOOG          720.77       100
+   4 │ 20160525 13:30:00.048  GOOG          720.92       100
+   5 │ 20160525 13:30:00.048  AAPL           98.0        100
+
+julia> modify!(trades, 1 => byrow(x -> DateTime(x, dateformat"yyyymmdd HH:MM:SS.s")))
+5×4 Dataset
+ Row │ time                     ticker      price     quantity
+     │ identity                 identity    identity  identity
+     │ DateTime?                Characte…?  Float64?  Int64?
+─────┼─────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75
+   2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155
+   3 │ 2016-05-25T13:30:00.048  GOOG          720.77       100
+   4 │ 2016-05-25T13:30:00.048  GOOG          720.92       100
+   5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100
 
 julia> quotes = Dataset(
               [["20160525 13:30:00.023",
@@ -500,45 +499,45 @@ julia> quotes = Dataset(
                720.93, 98.01, 720.88, 52.03]],
              ["time", "ticker", "bid", "ask"])
 8×4 Dataset
- Row │ time                   ticker    bid       ask
-     │ identity               identity  identity  identity
-     │ String?                String?   Float64?  Float64?
-─────┼─────────────────────────────────────────────────────
-   1 │ 20160525 13:30:00.023  GOOG        720.5     720.93
-   2 │ 20160525 13:30:00.023  MSFT         51.95     51.96
-   3 │ 20160525 13:30:00.030  MSFT         51.97     51.98
-   4 │ 20160525 13:30:00.041  MSFT         51.99     52.0
-   5 │ 20160525 13:30:00.048  GOOG        720.5     720.93
-   6 │ 20160525 13:30:00.049  AAPL         97.99     98.01
-   7 │ 20160525 13:30:00.072  GOOG        720.5     720.88
-   8 │ 20160525 13:30:00.075  MSFT         52.01     52.03
-
-julia> quotes = map(quotes, x -> DateTime(x, dateformat"yyyymmdd HH:MM:SS.s"), 1)
-8×4 Dataset
- Row │ time                     ticker    bid       ask
-     │ identity                 identity  identity  identity
-     │ DateTime?                String?   Float64?  Float64?
+ Row │ time                   ticker      bid       ask
+     │ identity               identity    identity  identity
+     │ Characte…?             Characte…?  Float64?  Float64?
 ─────┼───────────────────────────────────────────────────────
-   1 │ 2016-05-25T13:30:00.023  GOOG        720.5     720.93
-   2 │ 2016-05-25T13:30:00.023  MSFT         51.95     51.96
-   3 │ 2016-05-25T13:30:00.030  MSFT         51.97     51.98
-   4 │ 2016-05-25T13:30:00.041  MSFT         51.99     52.0
-   5 │ 2016-05-25T13:30:00.048  GOOG        720.5     720.93
-   6 │ 2016-05-25T13:30:00.049  AAPL         97.99     98.01
-   7 │ 2016-05-25T13:30:00.072  GOOG        720.5     720.88
-   8 │ 2016-05-25T13:30:00.075  MSFT         52.01     52.03
+   1 │ 20160525 13:30:00.023  GOOG          720.5     720.93
+   2 │ 20160525 13:30:00.023  MSFT           51.95     51.96
+   3 │ 20160525 13:30:00.030  MSFT           51.97     51.98
+   4 │ 20160525 13:30:00.041  MSFT           51.99     52.0
+   5 │ 20160525 13:30:00.048  GOOG          720.5     720.93
+   6 │ 20160525 13:30:00.049  AAPL           97.99     98.01
+   7 │ 20160525 13:30:00.072  GOOG          720.5     720.88
+   8 │ 20160525 13:30:00.075  MSFT           52.01     52.03
+
+julia> modify!(quotes, 1 => byrow(x -> DateTime(x, dateformat"yyyymmdd HH:MM:SS.s")))
+8×4 Dataset
+ Row │ time                     ticker      bid       ask
+     │ identity                 identity    identity  identity
+     │ DateTime?                Characte…?  Float64?  Float64?
+─────┼─────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  GOOG          720.5     720.93
+   2 │ 2016-05-25T13:30:00.023  MSFT           51.95     51.96
+   3 │ 2016-05-25T13:30:00.030  MSFT           51.97     51.98
+   4 │ 2016-05-25T13:30:00.041  MSFT           51.99     52.0
+   5 │ 2016-05-25T13:30:00.048  GOOG          720.5     720.93
+   6 │ 2016-05-25T13:30:00.049  AAPL           97.99     98.01
+   7 │ 2016-05-25T13:30:00.072  GOOG          720.5     720.88
+   8 │ 2016-05-25T13:30:00.075  MSFT           52.01     52.03
 
 julia> closejoin(trades, quotes, on = :time, makeunique = true)
 5×7 Dataset
- Row │ time                     ticker    price     quantity  ticker_1  bid       ask
-     │ identity                 identity  identity  identity  identity  identity  identity
-     │ DateTime?                String?   Float64?  Int64?    String?   Float64?  Float64?
-─────┼─────────────────────────────────────────────────────────────────────────────────────
-   1 │ 2016-05-25T13:30:00.023  MSFT         51.95        75  MSFT         51.95     51.96
-   2 │ 2016-05-25T13:30:00.038  MSFT         51.95       155  MSFT         51.97     51.98
-   3 │ 2016-05-25T13:30:00.048  GOOG        720.77       100  GOOG        720.5     720.93
-   4 │ 2016-05-25T13:30:00.048  GOOG        720.92       100  GOOG        720.5     720.93
-   5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100  GOOG        720.5     720.93
+ Row │ time                     ticker      price     quantity  ticker_1    bid       ask
+     │ identity                 identity    identity  identity  identity    identity  identity
+     │ DateTime?                Characte…?  Float64?  Int64?    Characte…?  Float64?  Float64?
+─────┼─────────────────────────────────────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75  MSFT           51.95     51.96
+   2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155  MSFT           51.97     51.98
+   3 │ 2016-05-25T13:30:00.048  GOOG          720.77       100  GOOG          720.5     720.93
+   4 │ 2016-05-25T13:30:00.048  GOOG          720.92       100  GOOG          720.5     720.93
+   5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100  GOOG          720.5     720.93
 ```
 
 In the above example the close join for each `ticker` can be done by supplying `ticker` as the first variable of `on` keyword, i.e. when more than one variable is used for `on` the last one will be used for close match and the rest are used for exact match.
@@ -546,31 +545,29 @@ In the above example the close join for each `ticker` can be done by supplying `
 ```julia
 julia> closejoin(trades, quotes, on = [:ticker, :time], border = :nearest)
 5×6 Dataset
- Row │ time                     ticker    price     quantity  bid       ask
-     │ identity                 identity  identity  identity  identity  identity
-     │ DateTime?                String?   Float64?  Int64?    Float64?  Float64?
-─────┼───────────────────────────────────────────────────────────────────────────
-   1 │ 2016-05-25T13:30:00.023  MSFT         51.95        75     51.95     51.96
-   2 │ 2016-05-25T13:30:00.038  MSFT         51.95       155     51.97     51.98
-   3 │ 2016-05-25T13:30:00.048  GOOG        720.77       100    720.5     720.93
-   4 │ 2016-05-25T13:30:00.048  GOOG        720.92       100    720.5     720.93
-   5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100     97.99     98.01
-   
- ```
- 
- When `border` is set to `:missing` for the `:backward` direction the value below the smallest value will be set to `missing`, and for the `:forward` direction the value above the largest value will be set to `missing`.
- 
- ```julia
- julia> closejoin(trades, quotes, on = [:ticker, :time], border = :missing)
-5×6 Dataset
- Row │ time                     ticker    price     quantity  bid         ask
-     │ identity                 identity  identity  identity  identity    identity
-     │ DateTime?                String?   Float64?  Int64?    Float64?    Float64?
-────┼───────────────────────────────────────────────────────────────────────────────
-   1 │ 2016-05-25T13:30:00.023  MSFT         51.95        75       51.95       51.96
-   2 │ 2016-05-25T13:30:00.038  MSFT         51.95       155       51.97       51.98
-   3 │ 2016-05-25T13:30:00.048  GOOG        720.77       100      720.5       720.93
-   4 │ 2016-05-25T13:30:00.048  GOOG        720.92       100      720.5       720.93
-   5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100  missing     missing
+ Row │ time                     ticker      price     quantity  bid       ask
+     │ identity                 identity    identity  identity  identity  identity
+     │ DateTime?                Characte…?  Float64?  Int64?    Float64?  Float64?
+─────┼─────────────────────────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75     51.95     51.96
+   2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155     51.97     51.98
+   3 │ 2016-05-25T13:30:00.048  GOOG          720.77       100    720.5     720.93
+   4 │ 2016-05-25T13:30:00.048  GOOG          720.92       100    720.5     720.93
+   5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100     97.99     98.01
+```
 
+ When `border` is set to `:missing` for the `:backward` direction the value below the smallest value will be set to `missing`, and for the `:forward` direction the value above the largest value will be set to `missing`.
+
+```julia
+julia> closejoin(trades, quotes, on = [:ticker, :time], border = :missing)
+5×6 Dataset
+ Row │ time                     ticker      price     quantity  bid         ask
+     │ identity                 identity    identity  identity  identity    identity
+     │ DateTime?                Characte…?  Float64?  Int64?    Float64?    Float64?
+─────┼─────────────────────────────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75       51.95       51.96
+   2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155       51.97       51.98
+   3 │ 2016-05-25T13:30:00.048  GOOG          720.77       100      720.5       720.93
+   4 │ 2016-05-25T13:30:00.048  GOOG          720.92       100      720.5       720.93
+   5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100  missing     missing
 ```
