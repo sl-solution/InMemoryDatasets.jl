@@ -89,6 +89,7 @@ include("characters/characters.jl")
 include("stat/non_hp_stat.jl")
 include("stat/hp_stat.jl")
 include("stat/stat.jl")
+include("readcsv/readcsv.jl")
 include("abstractdataset/abstractdataset.jl")
 # create dataset
 include("dataset/constructor.jl")
