@@ -2,12 +2,23 @@
 
 import Base: iterate, lastindex, getindex, sizeof, length, ncodeunits, codeunit, isvalid, read, write, setindex!, string, convert
 
-struct Characters{N} <: AbstractString
-    data::NTuple{N,UInt16}
-    Characters{N}(itr) where {N} = new(NTuple{N,UInt16}(rpad(itr, N)))
+struct Characters{N, M} <: AbstractString
+    data::NTuple{N, M}
+    Characters{N, M}(itr) where {N} where {M} = new(NTuple{N, M}(rpad(itr, N)))
 end
 
-Characters(s::AbstractString) = Characters{length(s)}(s)
+Characters{N}(itr) where {N} = Characters{N, UInt8}(itr)
+
+function Characters(s::AbstractString)
+    sl = cld(sizeof(s), length(s))
+    if  sl == 1
+        Characters{length(s), UInt8}(s)
+    elseif sl == 2
+        Characters{length(s), UInt16}(s)
+    else
+        throw(ArgumentError("Characters only support UTF-8 and UTF-16"))
+    end
+end
 
 Base.string(s::Characters) = join(Char.(s.data))
 
@@ -50,7 +61,7 @@ length(s::Characters) = length(s.data)
 
 ncodeunits(s::Characters) = length(s.data)
 
-codeunit(::Characters) = UInt16
+codeunit(::Characters{N, M}) where N where M = M
 codeunit(s::Characters, i::Integer) = s.data[i]
 
 isvalid(s::Characters, i::Int) = checkbounds(Bool, s, i)
@@ -59,11 +70,12 @@ Characters(s::Symbol) = Character(string(s))
 
 Characters(::Missing) = missing
 Characters{N}(::Missing) where N = missing
+Characters{N, M}(::Missing) where N where M = missing
 
-function read(io::IO, T::Type{Characters{N}}) where N
+function read(io::IO, T::Type{Characters{N, M}}) where N where M
     return read!(io, Ref{T}())[]::T
 end
 
-function write(io::IO, s::Characters{N}) where N
+function write(io::IO, s::Characters{N, M}) where N where M
     return write(io, Ref(s))
 end

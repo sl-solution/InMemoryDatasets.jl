@@ -215,11 +215,17 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
         elseif eltype(col) <: Union{Missing, AbstractString} && !(eltype(col) <: Union{Missing, Characters})
             if DataAPI.refpool(col) !== nothing
                 ml = hp_maximum(length, DataAPI.refpool(col))
-                col = map(x->Characters{ml}(x), col)
+                ul = hp_maximum(x->cld(sizeof(x), length(x)), DataAPI.refpool(col))
+                ul == 1 ? col = map(x->Characters{ml, UInt8}(x), col) : col = map(x->Characters{ml, UInt16}(x), col)
                 return allowmissing(col)
             else
                 ml = hp_maximum(length, col)
-                return copycols ? copy(allowmissing(Characters{ml}.(col))) : allowmissing(Characters{ml}.(col))
+                ul = hp_maximum(x->cld(sizeof(x), length(x)), col)
+                if ul == 1
+                    return allowmissing(Characters{ml, UInt8}.(col))
+                else
+                    return allowmissing(Characters{ml, UInt16}.(col))
+                end
             end
         else
             return copycols ? copy(allowmissing(col)) : allowmissing(col)
