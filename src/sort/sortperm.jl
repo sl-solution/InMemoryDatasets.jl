@@ -155,7 +155,11 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
         x = _columns(ds)[colsidx[i]]
         # pooledarray are treating differently (or general case of poolable data)
         if DataAPI.refpool(x) !== nothing
-            _tmp = map(by[i], x)
+            if by[i] == identity
+                _tmp = copy(x)
+            else
+                _tmp = map(by[i], x)
+            end
             _tmp.refs .= _threaded_permute(_tmp.refs, idx)
             aaa = map(x->get(DataAPI.invrefpool(_tmp), x, missing), sort!(Dataset(x = DataAPI.refpool(_tmp)), :, rev = rev[i]).x.val)
             trans = Dict{eltype(aaa), Int32}(aaa .=> 1:length(aaa))
