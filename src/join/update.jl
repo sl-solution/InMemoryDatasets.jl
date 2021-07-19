@@ -1,16 +1,26 @@
-function _update_left_with_right!(x, y, ranges, checkmissing)
+function _update_left_with_right!(x, y, ranges, allowmissing, mode)
     Threads.@threads for i in 1:length(x)
         if length(ranges[i]) > 0
-            if checkmissing && !ismissing(y[ranges[i].stop])
-                x[i] = y[ranges[i].stop]
-            elseif !checkmissing
-                x[i] = y[ranges[i].stop]
+            if mode == :all
+                if !allowmissing && !ismissing(y[ranges[i].stop])
+                    x[i] = y[ranges[i].stop]
+                elseif allowmissing
+                    x[i] = y[ranges[i].stop]
+                end
+            elseif mode == :missing
+                if ismissing(x[i])
+                    if !allowmissing && !ismissing(y[ranges[i].stop])
+                        x[i] = y[ranges[i].stop]
+                    elseif allowmissing
+                        x[i] = y[ranges[i].stop]
+                    end
+                end
             end
         end
     end
 end
 
-function _update!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, check = true, checkmissing = true) where T
+function _update!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
@@ -30,7 +40,7 @@ function _update!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, check =
             TL = nonmissingtype(eltype(_columns(dsl)[left_cols_idx]))
             TR = nonmissingtype(eltype(_columns(dsr)[right_cols[j]]))
             if promote_type(TR, TL) <: TL
-                _update_left_with_right!(_columns(dsl)[left_cols_idx], _columns(dsr)[right_cols[j]], ranges, checkmissing)
+                _update_left_with_right!(_columns(dsl)[left_cols_idx], _columns(dsr)[right_cols[j]], ranges, allowmissing, mode)
             end
         end
     end

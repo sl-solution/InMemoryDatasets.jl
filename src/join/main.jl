@@ -194,8 +194,9 @@ function closejoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backw
     end
 end
 
-function update!(dsmain::Dataset, dsupdate::Dataset; on = nothing, checkmissing = true)
+function update!(dsmain::Dataset, dsupdate::Dataset; on = nothing, allowmissing = false, mode = :all)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
+    !(mode ∈ (:all, :missing, :missings))  && throw(ArgumentError("`mode` can be either :all or :missing"))
     if !(on isa AbstractVector)
         on = [on]
     else
@@ -204,14 +205,14 @@ function update!(dsmain::Dataset, dsupdate::Dataset; on = nothing, checkmissing 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsmain)[on]
         onright = index(dsupdate)[on]
-        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, checkmissing = checkmissing)
+        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode)
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsmain)[map(x->x.first, on)]
         onright = index(dsupdate)[map(x->x.second, on)]
-        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, checkmissing = checkmissing)
+        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
     dsmain
 end
-update(dsmain::Dataset, dsupdate::Dataset; on = nothing, checkmissing = true) = update!(copy(dsmain), dsupdate; on = on, checkmissing = checkmissing)
+update(dsmain::Dataset, dsupdate::Dataset; on = nothing, allowmissing = false) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode)

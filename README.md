@@ -571,3 +571,71 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], border = :missing)
    4 │ 2016-05-25T13:30:00.048  GOOG          720.92       100      720.5       720.93
    5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100  missing     missing
 ```
+
+# Update a data set with another data set
+
+`update!` updates a data set with given data set. The function uses the given keys (`on = ...`) to match the rows which need updating. By default the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true`  changes this behaviour. If there are multiple rows in the main data set which match the key using `mode = :all` causes all of them to be updated, and `mode = :missing` updates only the ones which are missing in the main data set. If there are multiple rows in the transaction data set which match the key only the last one will be used to update the main data set.
+
+## Examples
+
+```julia
+julia> main = Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
+                      id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+                      x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
+                      x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
+7×4 Dataset
+ Row │ group       id        x1         x2
+     │ identity    identity  identity   identity
+     │ Characte…?  Int64?    Float64?   Int64?
+─────┼───────────────────────────────────────────
+   1 │ G1                 1        1.2         5
+   2 │ G1                 1        2.3         4
+   3 │ G1                 2  missing           4
+   4 │ G1                 2        2.3         2
+   5 │ G2                 1        1.3         1
+   6 │ G2                 1        2.1   missing
+   7 │ G2                 2        0.0         2
+
+
+julia> update = Dataset(group = ["G1", "G2"], id = [2, 1], 
+                        x1 = [2.5, missing], x2 = [missing, 3])
+2×4 Dataset
+ Row │ group       id        x1         x2
+     │ identity    identity  identity   identity
+     │ Characte…?  Int64?    Float64?   Int64?
+─────┼───────────────────────────────────────────
+   1 │ G1                 2        2.5   missing
+   2 │ G2                 1  missing           3
+
+
+julia> update!(copy(main), update, on = [:group, :id], 
+               allowmissing = false, mode = :missing)
+7×4 Dataset
+ Row │ group       id        x1        x2
+     │ identity    identity  identity  identity
+     │ Characte…?  Int64?    Float64?  Int64?
+─────┼──────────────────────────────────────────
+   1 │ G1                 1       1.2         5
+   2 │ G1                 1       2.3         4
+   3 │ G1                 2       2.5         4
+   4 │ G1                 2       2.3         2
+   5 │ G2                 1       1.3         1
+   6 │ G2                 1       2.1         3
+   7 │ G2                 2       0.0         2
+
+
+julia> update!(copy(main), update, on = [:group, :id],
+               allowmissing = false, mode = :all)
+7×4 Dataset
+ Row │ group       id        x1        x2
+     │ identity    identity  identity  identity
+     │ Characte…?  Int64?    Float64?  Int64?
+─────┼──────────────────────────────────────────
+   1 │ G1                 1       1.2         5
+   2 │ G1                 1       2.3         4
+   3 │ G1                 2       2.5         4
+   4 │ G1                 2       2.5         2
+   5 │ G2                 1       1.3         3
+   6 │ G2                 1       2.1         3
+   7 │ G2                 2       0.0         2
+```
