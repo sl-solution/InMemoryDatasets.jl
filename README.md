@@ -458,17 +458,7 @@ julia> trades = Dataset(
                  720.77, 720.92, 98.00],
                 [75, 155,
                  100, 100, 100]],
-               ["time", "ticker", "price", "quantity"])
-5×4 Dataset
- Row │ time                   ticker      price     quantity
-     │ identity               identity    identity  identity
-     │ Characte…?             Characte…?  Float64?  Int64?
-─────┼───────────────────────────────────────────────────────
-   1 │ 20160525 13:30:00.023  MSFT           51.95        75
-   2 │ 20160525 13:30:00.038  MSFT           51.95       155
-   3 │ 20160525 13:30:00.048  GOOG          720.77       100
-   4 │ 20160525 13:30:00.048  GOOG          720.92       100
-   5 │ 20160525 13:30:00.048  AAPL           98.0        100
+               ["time", "ticker", "price", "quantity"]);
 
 julia> modify!(trades, 1 => byrow(x -> DateTime(x, dateformat"yyyymmdd HH:MM:SS.s")))
 5×4 Dataset
@@ -497,20 +487,7 @@ julia> quotes = Dataset(
                720.50, 97.99, 720.50, 52.01],
               [720.93, 51.96, 51.98, 52.00,
                720.93, 98.01, 720.88, 52.03]],
-             ["time", "ticker", "bid", "ask"])
-8×4 Dataset
- Row │ time                   ticker      bid       ask
-     │ identity               identity    identity  identity
-     │ Characte…?             Characte…?  Float64?  Float64?
-─────┼───────────────────────────────────────────────────────
-   1 │ 20160525 13:30:00.023  GOOG          720.5     720.93
-   2 │ 20160525 13:30:00.023  MSFT           51.95     51.96
-   3 │ 20160525 13:30:00.030  MSFT           51.97     51.98
-   4 │ 20160525 13:30:00.041  MSFT           51.99     52.0
-   5 │ 20160525 13:30:00.048  GOOG          720.5     720.93
-   6 │ 20160525 13:30:00.049  AAPL           97.99     98.01
-   7 │ 20160525 13:30:00.072  GOOG          720.5     720.88
-   8 │ 20160525 13:30:00.075  MSFT           52.01     52.03
+             ["time", "ticker", "bid", "ask"]);
 
 julia> modify!(quotes, 1 => byrow(x -> DateTime(x, dateformat"yyyymmdd HH:MM:SS.s")))
 8×4 Dataset
@@ -574,7 +551,7 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], border = :missing)
 
 # Update a data set with another data set
 
-`update!` updates a data set with given data set. The function uses the given keys (`on = ...`) to match the rows which need updating. By default the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true`  changes this behaviour. If there are multiple rows in the main data set which match the key using `mode = :all` causes all of them to be updated, and `mode = :missing` updates only the ones which are missing in the main data set. If there are multiple rows in the transaction data set which match the key only the last one will be used to update the main data set.
+`update!` updates a data set with a given data set. The function uses the given keys (`on = ...`) to match the rows which need updating. By default the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true`  changes this behaviour. If there are multiple rows in the main data set which match the key using `mode = :all` causes all of them to be updated, and `mode = :missing` updates only the ones which are missing in the main data set. If there are multiple rows in the transaction data set which match the key only the last one will be used to update the main data set.
 
 ## Examples
 
