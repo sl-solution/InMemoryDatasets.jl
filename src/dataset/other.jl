@@ -328,12 +328,6 @@ function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
 
 end
 
-function _hp_map_a_function!(fv, f, v)
-    Threads.@threads for i in 1:length(v)
-        fv[i] = f(v[i])
-    end
-end
-
 
 """
     map!(ds::Dataset, f::Function, cols)
@@ -411,12 +405,6 @@ end
 
 Base.map!(ds::Dataset, f::Union{Function}, col::ColumnIndex) = map!(ds, f, [col])
 Base.map!(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
-
-function _hp_map!_a_function!(x, f)
-    Threads.@threads for i in 1:length(x)
-        x[i] = f(x[i])
-    end
-end
 
 """
     map!(ds::Dataset, f::Vector{Function}, cols)

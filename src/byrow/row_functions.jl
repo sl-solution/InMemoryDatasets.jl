@@ -283,7 +283,7 @@ row_hash(ds::AbstractDataset, cols = :) = row_hash(ds, identity, cols)
 
 function _fill_col!(inmat, column, rows, j)
     for i in 1:length(rows)
-        inmat[i, j] = column[rows[i]]
+        inmat[j, i] = column[rows[i]]
     end
 end
 function _fill_matrix!(inmat, all_data, rows, cols)
@@ -310,11 +310,11 @@ function row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
 end
 function _row_generic(ds::AbstractDataset, f::Function, colsidx)
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    inmat = Matrix{T}(undef, min(1000, nrow(ds)), length(colsidx))
+    inmat = Matrix{T}(undef, length(colsidx), min(1000, nrow(ds)))
 
     all_data = view(_columns(ds), colsidx)
     _fill_matrix!(inmat, all_data, 1:min(1000, nrow(ds)), colsidx)
-    res_temp = f.(eachrow(inmat))
+    res_temp = allowmissing(f.(eachcol(inmat)))
     if !(typeof(res_temp) <:  AbstractVector)
         throw(ArgumentError("output of `f` must be a vector"))
     end
@@ -341,18 +341,31 @@ function _row_generic(ds::AbstractDataset, f::Function, colsidx)
     return res
 end
 
-function _row_generic_vec!(res, ds, f, colsidx, ::Val{T}) where T
-    all_data = view(_columns(ds), colsidx)
-    chunck = div(length(res) - 1000, 1000)
-    max_cz = length(res) - 1000 - (chunck - 1)* 1000
-    inmat = Matrix{T}(undef, max_cz, length(colsidx))
-    # make sure that the variable inside the loop are not the same as the out of scope one
+function _row_generic_vec!_barrier(res, f, inmat, all_data, chunck, colsidx)
+
     for i in 1:chunck
         t_st = i*1000 + 1
         i == chunck ? t_en = length(res) : t_en = (i+1)*1000
         _fill_matrix!(inmat, all_data, t_st:t_en, colsidx)
         for k in t_st:t_en
-            res[k] = f(view(inmat, k - t_st + 1, :))
+            res[k] = f(view(inmat, :, k - t_st + 1))
         end
     end
+end
+
+function _row_generic_vec!(res, ds, f, colsidx, ::Val{T}) where T
+    all_data = view(_columns(ds), colsidx)
+    chunck = div(length(res) - 1000, 1000)
+    max_cz = length(res) - 1000 - (chunck - 1)* 1000
+    inmat = Matrix{T}(undef, length(colsidx), max_cz)
+    # make sure that the variable inside the loop are not the same as the out of scope one
+    # for i in 1:chunck
+    #     t_st = i*1000 + 1
+    #     i == chunck ? t_en = length(res) : t_en = (i+1)*1000
+    #     _fill_matrix!(inmat, all_data, t_st:t_en, colsidx)
+    #     for k in t_st:t_en
+    #         res[k] = f(view(inmat, k - t_st + 1, :))
+    #     end
+    # end
+    _row_generic_vec!_barrier(res, f, inmat, all_data, chunck, colsidx)
 end

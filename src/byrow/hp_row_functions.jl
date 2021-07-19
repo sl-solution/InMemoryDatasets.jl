@@ -209,11 +209,11 @@ end
 
 function _hp_row_generic(ds::AbstractDataset, f::Function, colsidx)
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    inmat = Matrix{T}(undef, min(1000, nrow(ds)), length(colsidx))
+    inmat = Matrix{T}(undef, length(colsidx), min(1000, nrow(ds)))
 
     all_data = view(_columns(ds), colsidx)
     _fill_matrix!(inmat, all_data, 1:min(1000, nrow(ds)), colsidx)
-    res_temp = f.(eachrow(inmat))
+    res_temp = allowmissing(f.(eachcol(inmat)))
     if !(typeof(res_temp) <:  AbstractVector)
         throw(ArgumentError("output of `f` must be a vector"))
     end
@@ -248,20 +248,20 @@ function _hp_row_generic_vec!(res, ds, f, colsidx, ::Val{T}) where T
     if loopsize == 0
         st = 1001
         en = length(res)
-        inmat = Matrix{T}(undef, en - st + 1, length(colsidx))
+        inmat = Matrix{T}(undef, length(colsidx), en - st + 1)
         _fill_matrix!(inmat, all_data, st:en, colsidx)
-        view(res, st:en) .= f.(eachrow(inmat))
+        view(res, st:en) .= f.(eachcol(inmat))
         return
     end
     max_cz = length(res) - 1000 - (loopsize - 1)*1000
-    inmat_all = [Matrix{T}(undef, max_cz, length(colsidx)) for i in 1:nt]
+    inmat_all = [Matrix{T}(undef, length(colsidx), max_cz) for i in 1:nt]
     # make sure that the variable inside the loop are not the same as the out of scope one
     Threads.@threads for i in 1:loopsize
         t_st = i*1000 + 1
         i == loopsize ? t_en = length(res) : t_en = (i+1)*1000
         _fill_matrix!(inmat_all[Threads.threadid()], all_data, t_st:t_en, colsidx)
         for k in t_st:t_en
-            res[k] = f(view(inmat_all[Threads.threadid()], k - t_st + 1, :))
+            res[k] = f(view(inmat_all[Threads.threadid()], :, k - t_st + 1))
         end
     end
 end

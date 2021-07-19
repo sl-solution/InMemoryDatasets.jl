@@ -57,6 +57,9 @@ isvalid(s::Characters, i::Int) = checkbounds(Bool, s, i)
 
 Characters(s::Symbol) = Character(string(s))
 
+Characters(::Missing) = missing
+Characters{N}(::Missing) where N = missing
+
 function read(io::IO, T::Type{Characters{N}}) where N
     return read!(io, Ref{T}())[]::T
 end

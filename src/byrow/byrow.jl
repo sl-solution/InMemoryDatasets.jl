@@ -74,4 +74,16 @@ byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::Union{MultiColumnIndex, Co
 byrow(ds::AbstractDataset, ::typeof(reduce), cols::Union{MultiColumnIndex, ColumnIndex} = names(ds, Union{Missing, Number}); op = .+, kwargs...) = reduce(op, eachcol(ds[!, cols]); kwargs...)
 
 byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = true) =  threads ?  hp_row_generic(ds, f, cols) : row_generic(ds, f, cols)
-byrow(ds::AbstractDataset, f::Function, col::ColumnIndex) = f.(ds[!, col])
+function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = true)
+	if threads
+		T = Core.Compiler.return_type(f, (nonmissingtype(eltype(ds[!, col])), ))
+		res = Vector{Union{Missing, T}}(undef, nrow(ds))
+		_hp_map_a_function!(res, f, ds[!, col].val)
+	else
+		T = Core.Compiler.return_type(f, (nonmissingtype(eltype(ds[!, col])), ))
+		res = Vector{Union{Missing, T}}(undef, nrow(ds))
+		map!(f, res, ds[!, col].val)
+	end
+	res
+end
+

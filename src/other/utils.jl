@@ -18,6 +18,19 @@ function return_type(f::Function, x::AbstractVector)
     T
 end
 
+function _hp_map_a_function!(fv, f, v)
+    Threads.@threads for i in 1:length(v)
+        fv[i] = f(v[i])
+    end
+end
+
+function _hp_map!_a_function!(x, f)
+    Threads.@threads for i in 1:length(x)
+        x[i] = f(x[i])
+    end
+end
+
+
 function _first_nonmiss(x)
     for i in 1:length(x)
         res = x[i]
