@@ -174,11 +174,11 @@ function Base.contains(main::Dataset, transaction::Dataset; on = nothing)
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(main)[on]
         onright = index(transaction)[on]
-        _in(main, transaction, nrow(main) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright)
+        _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright)
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(main)[map(x->x.first, on)]
         onright = index(transaction)[map(x->x.second, on)]
-        _in(main, transaction, nrow(main) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright)
+        _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
