@@ -283,15 +283,22 @@ function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths
     return _res
 end
 
+function _special_res_fill_barrier!(_res, vals, nl_g, l_cnt)
+    for k in 1:l_cnt
+        _res[nl_g - l_cnt + k] = vals[k]
+    end
+end
+
 # special_res cannot be based on previous columns of the combined data set
 function _fill_res_with_special_res!(res, _res, special_res, ngroups, new_lengths, total_lengths)
      Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         # this is not optimized for pooled arrays
-        for k in 1:length(counter)
-            _res[new_lengths[g] - length(counter) + k] = special_res[g][k]
-        end
+        # for k in 1:length(counter)
+        #     _res[new_lengths[g] - length(counter) + k] = special_res[g][k]
+        # end
+        _special_res_fill_barrier!(_res, special_res[g], new_lengths[g], length(counter))
     end
     push!(res, _res)
 end
@@ -301,9 +308,10 @@ function _update_res_with_special_res!(res, _res, special_res, ngroups, new_leng
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         # this is not optimized for pooled arrays
-        for k in 1:length(counter)
-            _res[new_lengths[g] - length(counter) + k] = special_res[g][k]
-        end
+        # for k in 1:length(counter)
+        #     _res[new_lengths[g] - length(counter) + k] = special_res[g][k]
+        # end
+        _special_res_fill_barrier!(_res, special_res[g], new_lengths[g], length(counter))
     end
     res[col] = _res
     return _res
