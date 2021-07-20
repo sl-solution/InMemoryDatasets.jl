@@ -22,21 +22,48 @@ end
 
 Base.string(s::Characters) = join(Char.(s.data))
 
-Base.:(==)(s1::Characters, s2::Characters) = s1.data == s2.data
+function Base.:(==)(s1::Characters, s2::Characters)
+    s1end = length(s1)
+    s2end = length(s2)
+    @inbounds for i in length(s1):-1:1
+        s1.data[i] == 0x20 ? s1end -= 1 : break
+    end
+    @inbounds for i in length(s2):-1:1
+        s2.data[i] == 0x20 ? s2end -= 1 : break
+    end
+    s1end != s2end && return false
+    @inbounds for i in 1:s1end
+        s1.data[i] != s2.data[i] && return false
+    end
+    return true
+end
+
 function Base.:(==)(s1::Characters{N}, s2::AbstractString) where N
     M = max(N, length(s2))
     Characters{M}(s1) == Characters{M}(s2)
 end
 Base.:(==)(s1::AbstractString, s2::Characters) = s2 == s1
 
-Base.isequal(s1::Characters, s2::Characters) = isequal(s1.data, s2.data)
+Base.isequal(s1::Characters, s2::Characters) = s1 == s2
 function Base.isequal(s1::Characters{N}, s2::AbstractString) where N
     M = max(N, length(s2))
     isequal(Characters{M}(s1), Characters{M}(s2))
 end
 Base.isequal(s1::AbstractString, s2::Characters) = isequal(s2, s1)
 
-Base.isless(s1::Characters, s2::Characters) = isless(s1.data, s2.data)
+function Base.isless(s1::Characters, s2::Characters)
+    s1end = length(s1)
+    s2end = length(s2)
+    @inbounds for i in length(s1):-1:1
+        s1.data[i] == 0x20 ? s1end -= 1 : break
+    end
+    @inbounds for i in length(s2):-1:1
+        s2.data[i] == 0x20 ? s2end -= 1 : break
+    end
+    isless(view(s1, 1:s1end), view(s2, 1:s2end))
+end
+
+
 function Base.isless(s1::Characters{N}, s2::AbstractString) where N
     M = max(N, length(s2))
     isless(Characters{M}(s1), Characters{M}(s2))

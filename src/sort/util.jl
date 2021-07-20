@@ -120,6 +120,7 @@ function _mark_start_of_groups_sorted!(inbits, x, lo, hi, o, ::Val{T}) where T
 end
 
 function _permute_ds_after_sort!(ds, perm)
+    @assert nrow(ds) == length(perm) "the length of perm and the nrow of the data set must match"
     if issorted(perm)
         return ds
     end

@@ -98,30 +98,10 @@ function DataAPI.outerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique 
     end
 end
 
-function DataAPI.antijoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, check = true)
-    on === nothing && throw(ArgumentError("`on` keyword must be specified"))
-    if !(on isa AbstractVector)
-        on = [on]
-    else
-        on = on
-    end
-    if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(dsl)[on]
-        onright = index(dsr)[on]
-        _join_anti(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, check = check)
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(dsl)[map(x->x.first, on)]
-        onright = index(dsr)[map(x->x.second, on)]
-        _join_anti(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, check = check)
-    else
-        throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
-    end
-end
-
 """
     contains(main, transaction; on)
 
-returns a boolean vector where is true when the key for the 
+returns a boolean vector where is true when the key for the
 corresponding row in the `main` data set is found in the transaction data set.
 
 # Examples
@@ -183,6 +163,38 @@ function Base.contains(main::Dataset, transaction::Dataset; on = nothing)
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
 end
+
+
+function DataAPI.antijoin(dsl::Dataset, dsr::Dataset; on = nothing)
+    # on === nothing && throw(ArgumentError("`on` keyword must be specified"))
+    # if !(on isa AbstractVector)
+    #     on = [on]
+    # else
+    #     on = on
+    # end
+    # if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
+    #     onleft = index(dsl)[on]
+    #     onright = index(dsr)[on]
+        dsl[.!contains(dsl, dsr, on = on), :]
+        # _join_anti(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, check = check)
+    # elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+    #     onleft = index(dsl)[map(x->x.first, on)]
+    #     onright = index(dsr)[map(x->x.second, on)]
+        # _join_anti(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, check = check)
+    # else
+    #     throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
+    # end
+end
+function DataAPI.semijoin(dsl::Dataset, dsr::Dataset; on = nothing)
+    dsl[contains(dsl, dsr, on = on), :]
+end
+function antijoin!(dsl::Dataset, dsr::Dataset; on = nothing)
+    delete!(dsl, contains(dsl, dsr, on = on))
+end
+function semijoin!(dsl::Dataset, dsr::Dataset; on = nothing)
+    delete!(dsl, .!contains(dsl, dsr, on = on))
+end
+
 
 function closejoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :missing)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))

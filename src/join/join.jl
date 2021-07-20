@@ -244,36 +244,36 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
 end
 
 
-function _join_anti(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
-    oncols_left = index(dsl)[onleft]
-    oncols_right = index(dsr)[onright]
-    right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right)
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    fill!(ranges, 1:nrow(dsr))
-    for j in 1:length(oncols_left)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
-    end
-    new_ends = map(x -> length(x) == 0 ? 1 : 0, ranges)
-    cumsum!(new_ends, new_ends)
-    total_length = new_ends[end]
-
-    if check
-        @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly"
-    end
-    res = []
-    for j in 1:length(index(dsl))
-        _res = Tables.allocatecolumn(eltype(_columns(dsl)[j]), total_length)
-        _fill_oncols_left_table_anti!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
-        push!(res, _res)
-    end
-    newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
-    newds
-
-end
+# function _join_anti(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
+#     oncols_left = index(dsl)[onleft]
+#     oncols_right = index(dsr)[onright]
+#     right_cols = setdiff(1:length(index(dsr)), oncols_right)
+#     # dsr_oncols = select(dsr, oncols, copycols = true)
+#     sort!(dsr, oncols_right)
+#     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+#     fill!(ranges, 1:nrow(dsr))
+#     for j in 1:length(oncols_left)
+#         _fl = getformat(dsl, oncols_left[j])
+#         _fr = getformat(dsr, oncols_right[j])
+#         _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+#     end
+#     new_ends = map(x -> length(x) == 0 ? 1 : 0, ranges)
+#     cumsum!(new_ends, new_ends)
+#     total_length = new_ends[end]
+#
+#     if check
+#         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly"
+#     end
+#     res = []
+#     for j in 1:length(index(dsl))
+#         _res = Tables.allocatecolumn(eltype(_columns(dsl)[j]), total_length)
+#         _fill_oncols_left_table_anti!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
+#         push!(res, _res)
+#     end
+#     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+#     newds
+#
+# end
 
 function _in(dsl::Dataset, dsrin::Dataset, ::Val{T}; onleft, onright) where T
     oncols_left = index(dsl)[onleft]
@@ -281,6 +281,7 @@ function _in(dsl::Dataset, dsrin::Dataset, ::Val{T}; onleft, onright) where T
     # right_cols = setdiff(1:length(index(dsr)), oncols_right)
     # dsr_oncols = select(dsr, oncols, copycols = true)
     dsr = sort!(dsrin[!, oncols_right], :)
+    oncols_right = 1:length(oncols_right)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
