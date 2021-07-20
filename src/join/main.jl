@@ -118,6 +118,72 @@ function DataAPI.antijoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique =
     end
 end
 
+"""
+    contains(main, transaction; on)
+
+returns a boolean vector where is true when the key for the 
+corresponding row in the `main` data set is found in the transaction data set.
+
+# Examples
+
+```jldoctest
+julia> main = Dataset(g1 = [1,2,3,4,1,4,1,2], x1 = 1:8)
+8×2 Dataset
+ Row │ g1        x1
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         3
+   4 │        4         4
+   5 │        1         5
+   6 │        4         6
+   7 │        1         7
+   8 │        2         8
+
+julia> tds = Dataset(group = [1,2,3])
+3×1 Dataset
+ Row │ group
+     │ identity
+     │ Int64?
+─────┼──────────
+   1 │        1
+   2 │        2
+   3 │        3
+
+julia> contains(main, tds, on = :g1 => :group)
+8-element Vector{Bool}:
+ 1
+ 1
+ 1
+ 0
+ 1
+ 0
+ 1
+ 1
+```
+"""
+function Base.contains(main::Dataset, transaction::Dataset; on = nothing)
+    on === nothing && throw(ArgumentError("`on` keyword must be specified"))
+    if !(on isa AbstractVector)
+        on = [on]
+    else
+        on = on
+    end
+    if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
+        onleft = index(main)[on]
+        onright = index(transaction)[on]
+        _in(main, transaction, nrow(main) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright)
+    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+        onleft = index(main)[map(x->x.first, on)]
+        onright = index(transaction)[map(x->x.second, on)]
+        _in(main, transaction, nrow(main) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright)
+    else
+        throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
+    end
+end
+
 function closejoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :missing)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing))

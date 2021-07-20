@@ -275,6 +275,21 @@ function _join_anti(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
 
 end
 
+function _in(dsl::Dataset, dsrin::Dataset, ::Val{T}; onleft, onright) where T
+    oncols_left = index(dsl)[onleft]
+    oncols_right = index(dsrin)[onright]
+    # right_cols = setdiff(1:length(index(dsr)), oncols_right)
+    # dsr_oncols = select(dsr, oncols, copycols = true)
+    dsr = sort!(dsrin[!, oncols_right], :)
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+    fill!(ranges, 1:nrow(dsr))
+    for j in 1:length(oncols_left)
+        _fl = getformat(dsl, oncols_left[j])
+        _fr = getformat(dsr, oncols_right[j])
+        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+    end
+    map(x -> length(x) == 0 ? false : true, ranges)
+end
 
 function _find_right_not_in_left(ranges, n)
     res = ones(Bool, n)
