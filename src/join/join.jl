@@ -137,14 +137,14 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
     end
     res = []
     for j in 1:length(index(dsl))
-        _res = Tables.allocatecolumn(eltype(_columns(dsl)[j]), total_length)
+        _res = allocatecol(_columns(dsl)[j], total_length)
         _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
         push!(res, _res)
     end
     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
 
     for j in 1:length(right_cols)
-        _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
+        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
@@ -189,7 +189,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     end
 
     for j in 1:length(right_cols)
-        _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
+        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
         push!(_columns(dsl), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
@@ -225,14 +225,14 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     end
     res = []
     for j in 1:length(index(dsl))
-        _res = Tables.allocatecolumn(eltype(_columns(dsl)[j]), total_length)
+        _res = allocatecol(_columns(dsl)[j], total_length)
         _fill_oncols_left_table_inner!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
         push!(res, _res)
     end
     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
 
     for j in 1:length(right_cols)
-        _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
+        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         _fill_right_cols_table_inner!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
@@ -334,7 +334,7 @@ function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     end
     res = []
     for j in 1:length(index(dsl))
-        _res = Tables.allocatecolumn(Union{eltype(_columns(dsl)[j]), Missing}, total_length)
+        _res = allocatecol(_columns(dsl)[j], total_length)
         _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
         push!(res, _res)
     end
@@ -346,7 +346,7 @@ function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
 
     for j in 1:length(right_cols)
-        _res = Tables.allocatecolumn(Union{Missing, eltype(_columns(dsr)[right_cols[j]])}, total_length)
+        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
         _fill_oncols_left_table_left_outer!(_res, _columns(dsr)[right_cols[j]], notinleft, new_ends, total_length)
         push!(_columns(newds), _res)

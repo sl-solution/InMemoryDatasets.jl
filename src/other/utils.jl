@@ -18,6 +18,24 @@ function return_type(f::Function, x::AbstractVector)
     T
 end
 
+
+function allocatecol(x::AbstractVector, len)
+    if DataAPI.refpool(x) !== nothing
+        _res = copy(x)
+        resize!(_res, len)
+    else
+        _res = Tables.allocatecolumn(Union{Missing, eltype(x)}, len)
+    end
+    return _res
+end
+
+function allocatecol(T, len)
+    Tables.allocatecolumn(Union{Missing, T}, len)
+end
+
+
+
+
 function _hp_map_a_function!(fv, f, v)
     Threads.@threads for i in 1:length(v)
         fv[i] = f(v[i])
