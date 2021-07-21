@@ -344,9 +344,9 @@ Sorted by: g
 
 # Joins
 
-`leftjoin`, `innerjoin` , `outerjoin`, `antijoin`, and  `closejoin`  are the main functions for joining two data sets. `closejoin` joins two data sets based on exact match on the key variable or the closest match when the exact match doesn't exist.
+`leftjoin`, `innerjoin` , `outerjoin`, `antijoin`, `semijoin`, and  `closejoin`  are the main functions for joining two data sets. `closejoin` joins two data sets based on exact match on the key variable or the closest match when the exact match doesn't exist.
 
-`closejoin!` does the joining in-place. The in-place operation also can be done for `leftjoin` when there is no more than one match from the right data set.
+`closejoin!` does the joining in-place. The in-place operation also can be done for `antijoin`, `semijoin`, and `leftjoin` where in the latter case there must not be more than one match from the right data set.
 
 > The joining functions use the formatted value for finding the match.
 
