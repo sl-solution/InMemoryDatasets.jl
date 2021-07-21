@@ -206,18 +206,22 @@ function _create_index_for_newds(ds, ms, groupcols)
 end
 
 
+function _push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
+    y = DataAPI.refarray(x)
+    Threads.@threads for i in 1:ngroups
+        counter::UnitRange{Int} = 1:1
+        i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
+        fill!(view(_tmpres.refs, (new_lengths[i] - length(counter) + 1):(new_lengths[i])),  y[starts[i]])
+    end
+    push!(res, _tmpres)
+end
 function _push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
     Threads.@threads for i in 1:ngroups
         counter::UnitRange{Int} = 1:1
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
-        # TODO is it efficient for Pooled arrays????
         fill!(view(_tmpres, (new_lengths[i] - length(counter) + 1):(new_lengths[i])),  x[starts[i]])
-        # for k in 1:length(counter)
-        #     _tmpres[new_lengths[i] - length(counter) + k] = x[starts[i]]
-        # end
     end
     push!(res, _tmpres)
-    return _tmpres
 end
 
 
@@ -404,7 +408,12 @@ function combine(ds::Dataset, @nospecialize(args...))
     newds_lookup = index(newds).lookup
     var_cnt = 1
     for j in 1:length(groupcols)
-        _push_groups_to_res!(_columns(newds), Tables.allocatecolumn(eltype(ds[!, groupcols[j]].val), total_lengths), _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
+        _tmpres = allocatecol(ds[!, groupcols[j]].val, total_lengths)
+        if DataAPI.refpool(_tmpres) !== nothing
+            _push_groups_to_res_pa!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
+        else
+            _push_groups_to_res!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
+        end
         push!(index(newds), new_nm[var_cnt])
         setformat!(newds, new_nm[var_cnt] => get(index(ds).format, groupcols[j], identity))
         var_cnt += 1

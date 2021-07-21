@@ -77,7 +77,12 @@ function combine(gds::GroupBy, @nospecialize(args...))
     newds_lookup = index(newds).lookup
     var_cnt = 1
     for j in 1:length(groupcols)
-        _push_groups_to_res!(_columns(newds), Tables.allocatecolumn(eltype(gds.parent[!, groupcols[j]].val), total_lengths), view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+        _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, total_lengths)
+        if DataAPI.refpool(_tmpres) !== nothing
+            _push_groups_to_res_pa!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+        else
+            _push_groups_to_res!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+        end
         push!(index(newds), new_nm[var_cnt])
         setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
         var_cnt += 1
