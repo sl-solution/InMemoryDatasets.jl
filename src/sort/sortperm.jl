@@ -161,7 +161,9 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                 _tmp = map(by[i], x)
             end
             _tmp.refs .= _threaded_permute(_tmp.refs, idx)
-            aaa = map(x->get(DataAPI.invrefpool(_tmp), x, missing), sort!(Dataset(x = DataAPI.refpool(_tmp)), :, rev = rev[i]).x.val)
+            # collect here is to handle Categorical array.
+            # TODO does it affect performance???
+            aaa = map(x->get(DataAPI.invrefpool(_tmp), x, missing), sort!(Dataset(x = collect(DataAPI.refpool(_tmp))), :, rev = rev[i]).x.val)
             trans = Dict{eltype(aaa), Int32}(aaa .=> 1:length(aaa))
             _modify_poolarray_to_integer!(_tmp.refs, trans)
             _ordr = ord(isless, identity, false, Forward)

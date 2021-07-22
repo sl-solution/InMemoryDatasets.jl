@@ -59,6 +59,7 @@ function _fill_val_join!(x, r, val)
     end
 end
 
+# TODO it is not working for CategroicalArrays
 function _find_ranges_for_join!(ranges, x, y, _fl, _fr)
     Threads.@threads for i in 1:length(x)
         ranges[i] = searchsorted_join(_fr, y, _fl(x[i]), ranges[i].start, ranges[i].stop, Base.Order.Forward)
@@ -138,14 +139,22 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
     res = []
     for j in 1:length(index(dsl))
         _res = allocatecol(_columns(dsl)[j], total_length)
-        _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_oncols_left_table_left!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length)
+        else
+            _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
+        end
         push!(res, _res)
     end
     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
-        _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_right_cols_table_left!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, new_ends, total_length)
+        else
+            _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
+        end
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
@@ -190,7 +199,11 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
-        _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_right_cols_table_left!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, new_ends, total_length)
+        else
+            _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
+        end
         push!(_columns(dsl), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(dsl), new_var_name)
@@ -226,14 +239,22 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     res = []
     for j in 1:length(index(dsl))
         _res = allocatecol(_columns(dsl)[j], total_length)
-        _fill_oncols_left_table_inner!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_oncols_left_table_inner!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length)
+        else
+            _fill_oncols_left_table_inner!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
+        end
         push!(res, _res)
     end
     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
-        _fill_right_cols_table_inner!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_right_cols_table_inner!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, new_ends, total_length)
+        else
+            _fill_right_cols_table_inner!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
+        end
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
@@ -335,11 +356,16 @@ function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     res = []
     for j in 1:length(index(dsl))
         _res = allocatecol(_columns(dsl)[j], total_length)
-        _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_oncols_left_table_left!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length)
+        else
+            _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
+        end
         push!(res, _res)
     end
 
     for j in 1:length(oncols_left)
+        # TODO is it possible to use refs of pooled array for this (there are two different columns and the refs may not be the same)
         _fill_oncols_left_table_left_outer!(res[oncols_left[j]], _columns(dsr)[oncols_right[j]], notinleft, new_ends, total_length)
     end
 
@@ -347,8 +373,13 @@ function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
-        _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
-        _fill_oncols_left_table_left_outer!(_res, _columns(dsr)[right_cols[j]], notinleft, new_ends, total_length)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_right_cols_table_left!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, new_ends, total_length)
+            _fill_oncols_left_table_left_outer!(_res.refs, _columns(dsr)[right_cols[j]].refs, notinleft, new_ends, total_length)
+        else
+            _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length)
+            _fill_oncols_left_table_left_outer!(_res, _columns(dsr)[right_cols[j]], notinleft, new_ends, total_length)
+        end
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)

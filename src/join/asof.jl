@@ -59,7 +59,11 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
-        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest)
+        else
+            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+        end
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
@@ -94,7 +98,11 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, 
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
-        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest)
+        else
+            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+        end
         push!(_columns(dsl), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(dsl), new_var_name)
@@ -139,7 +147,12 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, ma
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
-        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest)
+        else
+            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+        end
+        # _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
@@ -173,7 +186,12 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
-        _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+        if DataAPI.refpool(_res) !== nothing
+            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest)
+        else
+            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+        end
+        # _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
         push!(_columns(dsl), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(dsl), new_var_name)
