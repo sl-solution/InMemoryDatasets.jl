@@ -17,7 +17,7 @@ function _find_ranges_for_asoffor!(ranges, x, y, _fl, _fr)
     end
 end
 
-function  _fill_right_cols_table_asof!(_res, x, ranges, total, bordervalue)
+function  _fill_right_cols_table_asof!(_res, x, ranges, total, bordervalue, fill_val)
     Threads.@threads for i in 1:length(ranges)
         _res[i] = x[ranges[i].start]
         if !bordervalue && ranges[i].stop == 0
@@ -60,9 +60,10 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
-            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest)
+            fill_val = DataAPI.invrefpool(_res)[missing]
+            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest, fill_val)
         else
-            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest, missing)
         end
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
@@ -99,9 +100,10 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
-            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest)
+            fill_val = DataAPI.invrefpool(_res)[missing]
+            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest, fill_val)
         else
-            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest, missing)
         end
         push!(_columns(dsl), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
@@ -148,9 +150,10 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, ma
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
-            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest)
+            fill_val = DataAPI.invrefpool(_res)[missing]
+            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest, fill_val)
         else
-            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest, missing)
         end
         # _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
         push!(_columns(newds), _res)
@@ -187,9 +190,10 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
-            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest)
+            fill_val = DataAPI.invrefpool(_res)[missing]
+            _fill_right_cols_table_asof!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, total_length, border == :nearest, fill_val)
         else
-            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
+            _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest, missing)
         end
         # _fill_right_cols_table_asof!(_res, _columns(dsr)[right_cols[j]], ranges, total_length, border == :nearest)
         push!(_columns(dsl), _res)

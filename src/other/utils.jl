@@ -20,8 +20,10 @@ end
 
 
 function allocatecol(x::AbstractVector, len)
+    @assert len > 0 "cannot allocate a column with length zero"
     if DataAPI.refpool(x) !== nothing
         _res = copy(x)
+        _res[1] = missing
         resize!(_res, len)
     else
         _res = Tables.allocatecolumn(Union{Missing, eltype(x)}, len)
