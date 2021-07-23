@@ -1,6 +1,6 @@
-Base.sortperm(ds::Dataset, cols; rev = false) = _sortperm(ds, cols, rev)[2]
+Base.sortperm(ds::Dataset, cols; rev = false, mapformats::Bool = true) = _sortperm(ds, cols, rev, mapformats = mapformats)[2]
 
-function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted = false)
+function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true)
     colsidx = index(ds)[cols]
     if length(rev) == 1
         revs = repeat([rev], length(colsidx))
@@ -21,7 +21,7 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted =
         _modified(_attributes(ds))
         ds
     else
-        starts, perm, ngroups = _sortperm(ds, cols, revs)
+        starts, perm, ngroups = _sortperm(ds, cols, revs; mapformats = mapformats)
         _reset_grouping_info!(ds)
         append!(index(ds).sortedcols, collect(colsidx))
         append!(index(ds).rev, revs)
@@ -35,4 +35,15 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted =
 end
 
 
-Base.sort!(ds::Dataset, col::ColumnIndex; rev::Bool = false, issorted = false) = sort!(ds, [col], rev = rev, issorted = issorted)
+Base.sort!(ds::Dataset, col::ColumnIndex; rev::Bool = false, issorted::Bool = false, mapformats::Bool = true) = sort!(ds, [col], rev = rev, issorted = issorted, mapformats = mapformats)
+
+function unsort!(ds::Dataset)
+    if isempty(index(ds).perm)
+        return ds
+    else
+        _permute_ds_after_sort!(ds, invperm(index(ds).perm))
+        # TODO we may don't need to reset grouping info
+        _reset_grouping_info!(ds)
+        ds
+    end
+end

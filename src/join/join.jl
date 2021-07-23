@@ -1,10 +1,11 @@
-function searchsortedfirst_join(_f, v::AbstractVector, x, lo::T, hi::T, o::Ordering)::keytype(v) where T<:Integer
+function searchsortedfirst_join(_f, v::AbstractVector, x, lo::T, hi::T, o::Ordering, ::Val{T2})::keytype(v) where T<:Integer where T2
     u = T(1)
     lo = lo - u
     hi = hi + u
     @inbounds while lo < hi - u
         m = midpoint(lo, hi)
-        if lt(o, _f(v[m]), x)
+        fvm = _f(v[m])::T2
+        if lt(o, fvm , x)
             lo = m
         else
             hi = m
@@ -15,13 +16,14 @@ end
 
 # index of the last value of vector a that is less than or equal to x;
 # returns 0 if x is less than all values of v.
-function searchsortedlast_join(_f, v::AbstractVector, x, lo::T, hi::T, o::Ordering)::keytype(v) where T<:Integer
+function searchsortedlast_join(_f, v::AbstractVector, x, lo::T, hi::T, o::Ordering, ::Val{T2})::keytype(v) where T<:Integer where T2
     u = T(1)
     lo = lo - u
     hi = hi + u
     @inbounds while lo < hi - u
         m = midpoint(lo, hi)
-        if lt(o, x, _f(v[m]))
+        fvm = _f(v[m])::T2
+        if lt(o, x, fvm)
             hi = m
         else
             lo = m
@@ -33,20 +35,20 @@ end
 # returns the range of indices of v equal to x
 # if v does not contain x, returns a 0-length range
 # indicating the insertion point of x
-function searchsorted_join(_f, v::AbstractVector, x, ilo::T, ihi::T, o::Ordering)::UnitRange{keytype(v)} where T<:Integer
+function searchsorted_join(_f, v::AbstractVector, x, ilo::T, ihi::T, o::Ordering, ::Val{T2})::UnitRange{keytype(v)} where T<:Integer where T2
     u = T(1)
     lo = ilo - u
     hi = ihi + u
     @inbounds while lo < hi - u
         m = midpoint(lo, hi)
-        fvm = _f(v[m])
+        fvm = _f(v[m])::T2
         if lt(o, fvm, x)
             lo = m
         elseif lt(o, x, fvm)
             hi = m
         else
-            a = searchsortedfirst_join(_f, v, x, max(lo,ilo), m, o)
-            b = searchsortedlast_join(_f, v, x, m, min(hi,ihi), o)
+            a = searchsortedfirst_join(_f, v, x, max(lo,ilo), m, o, Val(T2))
+            b = searchsortedlast_join(_f, v, x, m, min(hi,ihi), o, Val(T2))
             return a : b
         end
     end
@@ -59,10 +61,9 @@ function _fill_val_join!(x, r, val)
     end
 end
 
-# TODO it is not working for CategroicalArrays
-function _find_ranges_for_join!(ranges, x, y, _fl, _fr)
+function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}) where T1 where T2
     Threads.@threads for i in 1:length(x)
-        ranges[i] = searchsorted_join(_fr, y, _fl(x[i]), ranges[i].start, ranges[i].stop, Base.Order.Forward)
+        ranges[i] = searchsorted_join(_fr, y, _fl(x[i])::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
     end
 end
 
@@ -113,6 +114,50 @@ function _fill_right_cols_table_inner!(_res, x, ranges, en, total)
     end
 end
 
+function _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+    var_l = _columns(dsl)[oncols_left[j]]
+    var_r = _columns(dsr)[oncols_right[j]]
+    l_idx = oncols_left[j]
+    r_idx = oncols_right[j]
+    format_l = getformat(dsl, l_idx)
+    format_r = getformat(dsr, r_idx)
+    # TODO this is not very elegent code
+    # the reason for this is that for Categorical array we need to translate Categorical values to actual values
+    # but this is not a good idea for PooledArray (currently I just use a way to fix this)
+    # the type annotation is not also very acceptable (I am not sure it is needed here??)
+    # FIXME optimisation is required for Characters type (there are many allocations when used with Pooled arrays or Cat Array)
+    if DataAPI.refpool(var_l) !== nothing && !(var_l isa PooledArray) && DataAPI.refpool(var_r) !== nothing && !(var_r isa PooledArray)
+        dict_l = _generate_inverted_dict_pool(var_l)
+        dict_r = _generate_inverted_dict_pool(var_r)
+        T1 = Core.Compiler.return_type(format_l, (valtype(dict_l), ))
+        T2 = Core.Compiler.return_type(format_r, (valtype(dict_r), ))
+        _fl = x -> format_l(dict_l[x])
+        _fr = x -> format_r(dict_r[x])
+        _find_ranges_for_join!(ranges, var_l.refs, var_r.refs, _fl, _fr, Val(T1), Val(T2))
+    elseif DataAPI.refpool(var_l) !== nothing && !(var_l isa PooledArray)
+        dict_l = _generate_inverted_dict_pool(var_l)
+        T1 = Core.Compiler.return_type(format_l, (valtype(dict_l), ))
+        T2 = Core.Compiler.return_type(format_r, (eltype(var_r), ))
+        _fl = x -> format_l(dict_l[x])
+        _fr = format_r
+        _find_ranges_for_join!(ranges, var_l.refs, var_r, _fl, _fr, Val(T1), Val(T2))
+    elseif DataAPI.refpool(var_r) !== nothing && !(var_r isa PooledArray)
+        dict_r = _generate_inverted_dict_pool(var_r)
+        T2 = Core.Compiler.return_type(format_r, (valtype(dict_r), ))
+        T1 = Core.Compiler.return_type(format_l, (eltype(var_l), ))
+        _fl = format_l
+        _fr = x -> format_r(dict_r[x])
+        _find_ranges_for_join!(ranges, var_l, var_r.refs, _fl, _fr, Val(T1), Val(T2))
+    else
+        T1 = Core.Compiler.return_type(format_l, (eltype(var_l), ))
+        T2 = Core.Compiler.return_type(format_r, (eltype(var_r), ))
+        _fl = format_l
+        _fr = format_r
+        _find_ranges_for_join!(ranges, var_l, var_r, _fl, _fr, Val(T1), Val(T2))
+    end
+end
+
+
 function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -125,9 +170,7 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
     end
     new_ends = map(x -> max(1, length(x)), ranges)
     cumsum!(new_ends, new_ends)
@@ -179,9 +222,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
     end
 
     if !all(x->length(x) <= 1, ranges)
@@ -228,9 +269,7 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
     end
     new_ends = map(length, ranges)
     cumsum!(new_ends, new_ends)
@@ -267,38 +306,6 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
 
 end
 
-
-# function _join_anti(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
-#     oncols_left = index(dsl)[onleft]
-#     oncols_right = index(dsr)[onright]
-#     right_cols = setdiff(1:length(index(dsr)), oncols_right)
-#     # dsr_oncols = select(dsr, oncols, copycols = true)
-#     sort!(dsr, oncols_right)
-#     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-#     fill!(ranges, 1:nrow(dsr))
-#     for j in 1:length(oncols_left)
-#         _fl = getformat(dsl, oncols_left[j])
-#         _fr = getformat(dsr, oncols_right[j])
-#         _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
-#     end
-#     new_ends = map(x -> length(x) == 0 ? 1 : 0, ranges)
-#     cumsum!(new_ends, new_ends)
-#     total_length = new_ends[end]
-#
-#     if check
-#         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly"
-#     end
-#     res = []
-#     for j in 1:length(index(dsl))
-#         _res = Tables.allocatecolumn(eltype(_columns(dsl)[j]), total_length)
-#         _fill_oncols_left_table_anti!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
-#         push!(res, _res)
-#     end
-#     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
-#     newds
-#
-# end
-
 function _in(dsl::Dataset, dsrin::Dataset, ::Val{T}; onleft, onright) where T
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsrin)[onright]
@@ -309,9 +316,7 @@ function _in(dsl::Dataset, dsrin::Dataset, ::Val{T}; onleft, onright) where T
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
     end
     map(x -> length(x) == 0 ? false : true, ranges)
 end
@@ -344,9 +349,7 @@ function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
     end
     new_ends = map(x -> max(1, length(x)), ranges)
     notinleft = _find_right_not_in_left(ranges, nrow(dsr))

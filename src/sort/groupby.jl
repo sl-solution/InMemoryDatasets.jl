@@ -1,18 +1,18 @@
-function groupby!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted = false)
+function groupby!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true)
     if issorted
-        sort!(ds, cols, rev = rev, issorted = issorted)
+        sort!(ds, cols, rev = rev, issorted = issorted, mapformats = mapformats)
         index(ds).grouped[] = true
         _modified(_attributes(ds))
         ds
     else
-        sort!(ds, cols, rev = rev, issorted = issorted)
+        sort!(ds, cols, rev = rev, issorted = issorted, mapformats = mapformats)
         index(ds).grouped[] = true
         _modified(_attributes(ds))
         ds
     end
 end
 
-groupby!(ds::Dataset, col::ColumnIndex; rev = false, issorted = false) = groupby!(ds, [col]; rev = rev, issorted = issorted)
+groupby!(ds::Dataset, col::ColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true) = groupby!(ds, [col]; rev = rev, issorted = issorted, mapformats = mapformats)
 
 struct GroupBy
     parent::Dataset
@@ -22,14 +22,14 @@ struct GroupBy
     lastvalid
 end
 
-function groupby(ds::Dataset, cols::MultiColumnIndex; rev = false)
+function groupby(ds::Dataset, cols::MultiColumnIndex; rev = false, mapformats::Bool = true)
     @assert !isgrouped(ds) "`groupby` is not yet implemented for already grouped data sets"
     colsidx = index(ds)[cols]
-    a = _sortperm(ds, cols, rev)
+    a = _sortperm(ds, cols, rev, mapformats = mapformats)
     GroupBy(ds,colsidx, a[2], a[1], a[3])
 end
 
-groupby(ds::Dataset, col::ColumnIndex; rev = false) = groupby(ds, [col], rev = rev)
+groupby(ds::Dataset, col::ColumnIndex; rev = false, mapformats::Bool = true) = groupby(ds, [col], rev = rev, mapformats = mapformats)
 
 # TODO we need to take care of situations where gds.parent is already grouped, thus the grouping cols from that mess with new grouping cols of gds
 function combine(gds::GroupBy, @nospecialize(args...))
@@ -46,7 +46,7 @@ function combine(gds::GroupBy, @nospecialize(args...))
     # result (which seems reasonable ??)
     _first_vector_res = _check_mutliple_rows_for_each_group(gds.parent, ms)
 
-    _is_groupingcols_modifed(gds.parent, ms) && throw(ArgumentError("`combine` cannot modify the grouping columns"))
+    _is_groupingcols_modifed(gds.parent, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
     groupcols::Vector{Int} = gds.groupcols
     a = (gds.perm, gds.starts, gds.lastvalid)

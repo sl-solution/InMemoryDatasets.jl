@@ -378,7 +378,7 @@ function combine(ds::Dataset, @nospecialize(args...))
     # result (which seems reasonable ??)
     _first_vector_res = _check_mutliple_rows_for_each_group(ds, ms)
 
-    _is_groupingcols_modifed(ds, ms) && throw(ArgumentError("`combine` cannot modify the grouping columns"))
+    _is_groupingcols_modifed(ds, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
     groupcols::Vector{Int} = index(ds).sortedcols
     starts::Vector{Int} = index(ds).starts

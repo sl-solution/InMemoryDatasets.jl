@@ -35,7 +35,17 @@ function allocatecol(T, len)
     Tables.allocatecolumn(Union{Missing, T}, len)
 end
 
-
+function _generate_inverted_dict_pool(x)
+    invp = DataAPI.invrefpool(x)
+    if invp isa Dict
+        return Dict{valtype(invp), keytype(invp)}(values(invp) .=> keys(invp))
+    elseif invp.invpool isa Dict
+        a = Dict{valtype(invp.invpool), Union{Missing, keytype(invp.invpool)}}(values(invp.invpool) .=> keys(invp.invpool))
+        push!(a, 0 => missing)
+    else
+        throw(ArgumentError("$(typeof(x)) is not supported, used PooledArray or Categorical Array"))
+    end
+end
 
 
 function _hp_map_a_function!(fv, f, v)
@@ -176,7 +186,7 @@ function _grouper_for_int_pool!(prev_group, groups, current_ngroups, y, f, minva
 end
 
 # ds assumes is grouped based on cols and groups are gathered togther
-function  _find_starts_of_groups(ds, cols::Vector, ::Val{T}) where T
+function  _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) where T
     colsidx = index(ds)[cols]
 
     ranges = Vector{T}(undef, nrow(ds))
@@ -186,13 +196,18 @@ function  _find_starts_of_groups(ds, cols::Vector, ::Val{T}) where T
     last_valid_index = 1
 
     for j in 1:length(colsidx)
-        last_valid_index = _find_starts_of_groups!(_columns(ds)[colsidx[j]], getformat(ds, colsidx[j]), ranges, ranges_cpy, last_valid_index)
+        if mapformats
+            _f = getformat(ds, colsidx[j])
+        else
+            _f = identity
+        end
+        last_valid_index = _find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , ranges, ranges_cpy, last_valid_index)
     end
     return colsidx, ranges, last_valid_index
 end
 
-_find_starts_of_groups(ds, col::ColumnIndex, ::Val{T}) where T = _find_starts_of_groups(ds, [col], Val(T))
-_find_starts_of_groups(ds, cols::UnitRange, ::Val{T}) where T = _find_starts_of_groups(ds, collect(cols), Val(T))
+_find_starts_of_groups(ds, col::ColumnIndex, ::Val{T}; mapformats = true) where T = _find_starts_of_groups(ds, [col], Val(T), mapformats = mapformats)
+_find_starts_of_groups(ds, cols::UnitRange, ::Val{T}; mapformats = true) where T = _find_starts_of_groups(ds, collect(cols), Val(T), mapformats = mapformats)
 
 
 function _find_starts_of_groups!(x, format, ranges, ranges_cpy, last_valid_index)

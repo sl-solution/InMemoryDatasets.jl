@@ -234,20 +234,26 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
     return (ranges, idx, last_valid_range)
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool})
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; mapformats = true)
     colsidx = index(ds)[cols]
     @assert length(colsidx) == length(rev) "`rev` argument must be the same as length of selected columns"
     by = Function[]
-    for j in 1:length(colsidx)
-        push!(by, getformat(ds, colsidx[j]))
+    if mapformats
+        for j in 1:length(colsidx)
+            push!(by, getformat(ds, colsidx[j]))
+        end
+    else
+        for j in 1:length(colsidx)
+            push!(by, identity)
+        end
     end
     ds_sort_perm(ds, colsidx, by, rev, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false)
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; mapformats = true)
     colsidx = index(ds)[cols]
     revs = repeat([rev], length(colsidx))
-    _sortperm(ds, cols, revs)
+    _sortperm(ds, cols, revs; mapformats = mapformats)
 end
 
-_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false) = _sortperm(ds, [col], rev)
+_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; mapformats = true) = _sortperm(ds, [col], rev; mapformats = mapformats)

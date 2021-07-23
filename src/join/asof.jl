@@ -39,14 +39,14 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
     end
 
-    _fl = getformat(dsl, oncols_left[length(oncols_left)])
-    _fr = getformat(dsr, oncols_right[length(oncols_left)])
-    _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
+
+    # _fl = getformat(dsl, oncols_left[length(oncols_left)])
+    # _fr = getformat(dsr, oncols_right[length(oncols_left)])
+    # _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, length(oncols_left))
 
     total_length = nrow(dsl)
 
@@ -86,14 +86,14 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, 
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
     end
 
-    _fl = getformat(dsl, oncols_left[length(oncols_left)])
-    _fr = getformat(dsr, oncols_right[length(oncols_left)])
-    _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
+    # _fl = getformat(dsl, oncols_left[length(oncols_left)])
+    # _fr = getformat(dsr, oncols_right[length(oncols_left)])
+    # _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, length(oncols_left))
+
 
     total_length = nrow(dsl)
 
@@ -129,14 +129,14 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, ma
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
     end
 
-    _fl = getformat(dsl, oncols_left[length(oncols_left)])
-    _fr = getformat(dsr, oncols_right[length(oncols_left)])
-    _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
+    # _fl = getformat(dsl, oncols_left[length(oncols_left)])
+    # _fr = getformat(dsr, oncols_right[length(oncols_left)])
+    # _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, length(oncols_left))
+
 
     total_length = nrow(dsl)
 
@@ -176,14 +176,14 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
-        _fl = getformat(dsl, oncols_left[j])
-        _fr = getformat(dsr, oncols_right[j])
-        _find_ranges_for_join!(ranges, _columns(dsl)[oncols_left[j]], _columns(dsr)[oncols_right[j]], _fl, _fr)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
     end
 
-    _fl = getformat(dsl, oncols_left[length(oncols_left)])
-    _fr = getformat(dsr, oncols_right[length(oncols_left)])
-    _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
+    # _fl = getformat(dsl, oncols_left[length(oncols_left)])
+    # _fr = getformat(dsr, oncols_right[length(oncols_left)])
+    # _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, length(oncols_left))
+
 
     total_length = nrow(dsl)
 
