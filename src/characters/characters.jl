@@ -20,6 +20,10 @@ function Characters(s::AbstractString)
     end
 end
 
+macro c_str(str)
+    Characters(str)
+end
+
 Base.string(s::Characters) = join(Char.(s.data))
 
 function Base.:(==)(s1::Characters, s2::Characters)

@@ -29,6 +29,7 @@ import DataAPI,
 
 export
       # types
+      @c_str,
       Characters,
       AbstractDataset,
       DatasetColumns,
