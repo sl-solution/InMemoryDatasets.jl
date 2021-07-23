@@ -7,13 +7,9 @@ function return_type(f::Function, x::AbstractVector)
         return Core.Compiler.return_type(f, (typeof(x), ))
     end
     if T <: AbstractVector
-        if eltype(x) >: Missing
-            T = AbstractVector{Union{Missing, eltype(T)}}
-        end
+        T = AbstractVector{Union{Missing, eltype(T)}}
     else
-        if CT >: Missing
-            T = Union{Missing, T}
-        end
+        T = Union{Missing, T}
     end
     T
 end
@@ -38,7 +34,7 @@ end
 function _generate_inverted_dict_pool(x)
     invp = DataAPI.invrefpool(x)
     if invp isa Dict
-        return Dict{valtype(invp), keytype(invp)}(values(invp) .=> keys(invp))
+        return Dict{valtype(invp), Union{Missing, keytype(invp)}}(values(invp) .=> keys(invp))
     elseif invp.invpool isa Dict
         a = Dict{valtype(invp.invpool), Union{Missing, keytype(invp.invpool)}}(values(invp.invpool) .=> keys(invp.invpool))
         push!(a, 0 => missing)

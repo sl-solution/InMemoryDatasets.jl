@@ -121,7 +121,7 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, onc
     r_idx = oncols_right[j]
     format_l = getformat(dsl, l_idx)
     format_r = getformat(dsr, r_idx)
-    # TODO this is not very elegent code
+    # TODO this is not very elegant code
     # the reason for this is that for Categorical array we need to translate Categorical values to actual values
     # but this is not a good idea for PooledArray (currently I just use a way to fix this)
     # the type annotation is not also very acceptable (I am not sure it is needed here??)
