@@ -677,3 +677,73 @@ julia> unique!(ds)  # modifies ds
 ```
 """
 (unique, unique!)
+
+
+"""
+    dropmissing!(ds::Dataset, cols=:; disallowmissing::Bool=true)
+
+Remove rows with missing values from data set `ds` and return it.
+
+If `cols` is provided, only missing values in the corresponding columns are considered.
+`cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
+
+If `disallowmissing` is `true` (the default) then the `cols` columns will
+get converted using [`disallowmissing!`](@ref).
+
+See also: [`dropmissing`](@ref) and [`completecases`](@ref).
+
+```jldoctest
+julia> ds = Dataset(i = 1:5,
+                      x = [missing, 4, missing, 2, 1],
+                      y = [missing, missing, "c", "d", "e"])
+5×3 Dataset
+ Row │ i      x        y
+     │ Int64  Int64?   String?
+─────┼─────────────────────────
+   1 │     1  missing  missing
+   2 │     2        4  missing
+   3 │     3  missing  c
+   4 │     4        2  d
+   5 │     5        1  e
+
+julia> dropmissing!(copy(ds))
+2×3 Dataset
+ Row │ i      x      y
+     │ Int64  Int64  String
+─────┼──────────────────────
+   1 │     4      2  d
+   2 │     5      1  e
+
+julia> dropmissing!(copy(ds), disallowmissing=false)
+2×3 Dataset
+ Row │ i      x       y
+     │ Int64  Int64?  String?
+─────┼────────────────────────
+   1 │     4       2  d
+   2 │     5       1  e
+
+julia> dropmissing!(copy(ds), :x)
+3×3 Dataset
+ Row │ i      x      y
+     │ Int64  Int64  String?
+─────┼───────────────────────
+   1 │     2      4  missing
+   2 │     4      2  d
+   3 │     5      1  e
+
+julia> dropmissing!(ds, [:x, :y])
+2×3 Dataset
+ Row │ i      x      y
+     │ Int64  Int64  String
+─────┼──────────────────────
+   1 │     4      2  d
+   2 │     5      1  e
+```
+"""
+function dropmissing!(ds::Dataset,
+                      cols::Union{ColumnIndex, MultiColumnIndex}=:)
+    inds = completecases(ds, cols)
+    inds .= .!(inds)
+    delete!(ds, inds)
+    ds
+end

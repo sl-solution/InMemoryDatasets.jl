@@ -293,4 +293,4 @@ function update!(dsmain::Dataset, dsupdate::Dataset; on = nothing, allowmissing 
     end
     dsmain
 end
-update(dsmain::Dataset, dsupdate::Dataset; on = nothing, allowmissing = false) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode)
+update(dsmain::Dataset, dsupdate::Dataset; on = nothing, allowmissing = false, mode = :all) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode)

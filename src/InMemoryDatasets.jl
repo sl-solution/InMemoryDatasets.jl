@@ -45,6 +45,9 @@ export
       setformat!,
       removeformat!,
       content,
+      completecases,
+      dropmissing,
+      dropmissing!,
       mask,
       groupby!,
       groupby,
@@ -54,7 +57,7 @@ export
       modify!,
       combine,
       setinfo!,
-      allowmissing!,
+      # allowmissing!,
       # from byrow operations
       byrow,
       nunique,

@@ -574,7 +574,7 @@ julia> main = Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
    7 │ G2                 2        0.0         2
 
 
-julia> update = Dataset(group = ["G1", "G2"], id = [2, 1], 
+julia> transaction = Dataset(group = ["G1", "G2"], id = [2, 1], 
                         x1 = [2.5, missing], x2 = [missing, 3])
 2×4 Dataset
  Row │ group       id        x1         x2
@@ -585,7 +585,7 @@ julia> update = Dataset(group = ["G1", "G2"], id = [2, 1],
    2 │ G2                 1  missing           3
 
 
-julia> update!(copy(main), update, on = [:group, :id], 
+julia> update(main, transaction, on = [:group, :id], 
                allowmissing = false, mode = :missing)
 7×4 Dataset
  Row │ group       id        x1        x2
@@ -601,7 +601,7 @@ julia> update!(copy(main), update, on = [:group, :id],
    7 │ G2                 2       0.0         2
 
 
-julia> update!(copy(main), update, on = [:group, :id],
+julia> update(main, transaction, on = [:group, :id],
                allowmissing = false, mode = :all)
 7×4 Dataset
  Row │ group       id        x1        x2

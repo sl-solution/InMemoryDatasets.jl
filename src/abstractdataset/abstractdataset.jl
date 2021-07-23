@@ -383,7 +383,7 @@ function content(ds::AbstractDataset; output = false)
     for i in 1:ncol(ds)
         push!(f_v[1], all_names[i])
         push!(f_v[2], getformat(ds, i))
-        push!(f_v[3], eltype(ds[!, i]))
+        push!(f_v[3], nonmissingtype(eltype(ds[!, i])))
     end
 
     format_ds = Dataset(f_v, [:variable, :format, :eltype], copycols = false)
@@ -1057,40 +1057,40 @@ julia> completecases(ds, [:x, :y])
  1
 ```
 """
-# completecases(ds::AbstractDataset, cols::MultiColumnIndex = :) = byrow(ds, all, cols, by = !ismissing)
-# completecases(ds::AbstractDataset, col::ColumnIndex) = byrow(ds, all, [col], by = !ismissing)
+completecases(ds::AbstractDataset, cols::MultiColumnIndex = :) = byrow(ds, all, cols, by = !ismissing)
+completecases(ds::AbstractDataset, col::ColumnIndex) = byrow(ds, all, [col], by = !ismissing)
 
-function completecases(ds::AbstractDataset, col::Colon=:)
-    if ncol(ds) == 0
-        throw(ArgumentError("Unable to compute complete cases of a " *
-                            "data set with no columns"))
-    end
-    res = trues(size(ds, 1))
-    aux = BitVector(undef, size(ds, 1))
-    for i in 1:size(ds, 2)
-        v = ds[!, i]
-        if Missing <: eltype(v)
-            # Disable fused broadcasting as it happens to be much slower
-            aux .= .!ismissing.(v)
-            res .&= aux
-        end
-    end
-    return res
-end
+# function completecases(ds::AbstractDataset, col::Colon=:)
+#     if ncol(ds) == 0
+#         throw(ArgumentError("Unable to compute complete cases of a " *
+#                             "data set with no columns"))
+#     end
+#     res = trues(size(ds, 1))
+#     aux = BitVector(undef, size(ds, 1))
+#     for i in 1:size(ds, 2)
+#         v = ds[!, i]
+#         if Missing <: eltype(v)
+#             # Disable fused broadcasting as it happens to be much slower
+#             aux .= .!ismissing.(v)
+#             res .&= aux
+#         end
+#     end
+#     return res
+# end
 
-function completecases(ds::AbstractDataset, col::ColumnIndex)
-    v = ds[!, col]
-    if Missing <: eltype(v)
-        res = BitVector(undef, size(ds, 1))
-        res .= .!ismissing.(v)
-        return res
-    else
-        return trues(size(ds, 1))
-    end
-end
+# function completecases(ds::AbstractDataset, col::ColumnIndex)
+#     v = ds[!, col]
+#     if Missing <: eltype(v)
+#         res = BitVector(undef, size(ds, 1))
+#         res .= .!ismissing.(v)
+#         return res
+#     else
+#         return trues(size(ds, 1))
+#     end
+# end
 
-completecases(ds::AbstractDataset, cols::MultiColumnIndex) =
-    completecases(ds[!, cols])
+# completecases(ds::AbstractDataset, cols::MultiColumnIndex) =
+#     completecases(ds[!, cols])
 
 """
     dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, disallowmissing::Bool=!view)
@@ -1170,75 +1170,6 @@ julia> dropmissing(ds, [:x, :y])
         newds = ds[rowidxs, :]
         return newds
     end
-end
-
-"""
-    dropmissing!(ds::AbstractDataset, cols=:; disallowmissing::Bool=true)
-
-Remove rows with missing values from data set `ds` and return it.
-
-If `cols` is provided, only missing values in the corresponding columns are considered.
-`cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
-
-If `disallowmissing` is `true` (the default) then the `cols` columns will
-get converted using [`disallowmissing!`](@ref).
-
-See also: [`dropmissing`](@ref) and [`completecases`](@ref).
-
-```jldoctest
-julia> ds = Dataset(i = 1:5,
-                      x = [missing, 4, missing, 2, 1],
-                      y = [missing, missing, "c", "d", "e"])
-5×3 Dataset
- Row │ i      x        y
-     │ Int64  Int64?   String?
-─────┼─────────────────────────
-   1 │     1  missing  missing
-   2 │     2        4  missing
-   3 │     3  missing  c
-   4 │     4        2  d
-   5 │     5        1  e
-
-julia> dropmissing!(copy(ds))
-2×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  String
-─────┼──────────────────────
-   1 │     4      2  d
-   2 │     5      1  e
-
-julia> dropmissing!(copy(ds), disallowmissing=false)
-2×3 Dataset
- Row │ i      x       y
-     │ Int64  Int64?  String?
-─────┼────────────────────────
-   1 │     4       2  d
-   2 │     5       1  e
-
-julia> dropmissing!(copy(ds), :x)
-3×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  String?
-─────┼───────────────────────
-   1 │     2      4  missing
-   2 │     4      2  d
-   3 │     5      1  e
-
-julia> dropmissing!(ds, [:x, :y])
-2×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  String
-─────┼──────────────────────
-   1 │     4      2  d
-   2 │     5      1  e
-```
-"""
-function dropmissing!(ds::AbstractDataset,
-                      cols::Union{ColumnIndex, MultiColumnIndex}=:)
-    inds = completecases(ds, cols)
-    inds .= .!(inds)
-    delete!(ds, inds)
-    ds
 end
 
 """
