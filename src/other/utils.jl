@@ -15,12 +15,16 @@ function return_type(f::Function, x::AbstractVector)
 end
 
 
-function allocatecol(x::AbstractVector, len)
+function allocatecol(x::AbstractVector, len; addmissing = true)
     @assert len > 0 "cannot allocate a column with length zero"
     if DataAPI.refpool(x) !== nothing
         _res = copy(x)
-        _res[1] = missing
-        resize!(_res, len)
+        if addmissing
+            _res[1] = missing
+        end
+        if len !== length(x)
+            resize!(_res, len)
+        end
     else
         _res = Tables.allocatecolumn(Union{Missing, eltype(x)}, len)
     end

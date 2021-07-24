@@ -150,4 +150,7 @@ include("abstractdataset/io.jl")
 
 include("other/tables.jl")
 
+# taking care of missings in other packages
+include("missings/missings.jl")
+
 end

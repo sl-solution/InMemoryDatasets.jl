@@ -77,7 +77,8 @@ function combine(gds::GroupBy, @nospecialize(args...))
     newds_lookup = index(newds).lookup
     var_cnt = 1
     for j in 1:length(groupcols)
-        _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, total_lengths)
+        addmissing = false
+        _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, total_lengths, addmissing = addmissing)
         if DataAPI.refpool(_tmpres) !== nothing
             _push_groups_to_res_pa!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
         else
@@ -99,15 +100,15 @@ function combine(gds::GroupBy, @nospecialize(args...))
 
     end
     # grouping information for the output dataset
-    append!(index(newds).sortedcols, index(newds)[index(gds.parent).names[groupcols]])
-    append!(index(newds).rev, index(gds.parent).rev)
-    append!(index(newds).perm, collect(1:total_lengths))
-    # index(newds).grouped[] = true
-    index(newds).ngroups[] = ngroups
-    append!(index(newds).starts, collect(1:total_lengths))
-    for i in 2:(length(new_lengths))
-        index(newds).starts[i] = new_lengths[i - 1]+1
-    end
+    # append!(index(newds).sortedcols, index(newds)[index(gds.parent).names[groupcols]])
+    # append!(index(newds).rev, index(gds.parent).rev)
+    # append!(index(newds).perm, collect(1:total_lengths))
+    # # index(newds).grouped[] = true
+    # index(newds).ngroups[] = ngroups
+    # append!(index(newds).starts, collect(1:total_lengths))
+    # for i in 2:(length(new_lengths))
+    #     index(newds).starts[i] = new_lengths[i - 1]+1
+    # end
     newds
 end
 

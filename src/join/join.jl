@@ -181,10 +181,11 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
     end
     res = []
     for j in 1:length(index(dsl))
-        _res = allocatecol(_columns(dsl)[j], total_length)
+        addmissing = false
+        _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
-            fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_oncols_left_table_left!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length, fill_val)
+            # fill_val = DataAPI.invrefpool(_res)[missing]
+            _fill_oncols_left_table_left!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length, missing)
         else
             _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing)
         end
@@ -241,10 +242,10 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     end
 
     for j in 1:length(right_cols)
-        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
+        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
-            fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, new_ends, total_length, fill_val)
+            # fill_val = DataAPI.invrefpool(_res)[missing]
+            _fill_right_cols_table_left!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, new_ends, total_length, missing)
         else
             _fill_right_cols_table_left!(_res, _columns(dsr)[right_cols[j]], ranges, new_ends, total_length, missing)
         end
@@ -280,7 +281,7 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     end
     res = []
     for j in 1:length(index(dsl))
-        _res = allocatecol(_columns(dsl)[j], total_length)
+        _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
             _fill_oncols_left_table_inner!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length)
         else
@@ -291,7 +292,7 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
 
     for j in 1:length(right_cols)
-        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
+        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
             _fill_right_cols_table_inner!(_res.refs, _columns(dsr)[right_cols[j]].refs, ranges, new_ends, total_length)
         else
