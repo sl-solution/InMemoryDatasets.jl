@@ -380,8 +380,8 @@ function combine(ds::Dataset, @nospecialize(args...))
 
     _is_groupingcols_modifed(ds, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
-    groupcols::Vector{Int} = index(ds).sortedcols
-    starts::Vector{Int} = index(ds).starts
+    groupcols = index(ds).sortedcols
+    starts = index(ds).starts
     ngroups::Int = index(ds).ngroups[]
 
     # we will use new_lengths later for assigning the grouping info of the new ds

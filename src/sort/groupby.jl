@@ -48,10 +48,10 @@ function combine(gds::GroupBy, @nospecialize(args...))
 
     _is_groupingcols_modifed(gds.parent, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
-    groupcols::Vector{Int} = gds.groupcols
+    groupcols = gds.groupcols
     a = (gds.perm, gds.starts, gds.lastvalid)
-    starts::Vector{Int} = a[2]
-    ngroups::Int = gds.lastvalid
+    starts = a[2]
+    ngroups = gds.lastvalid
 
     # we will use new_lengths later for assigning the grouping info of the new ds
     if _first_vector_res == 0
