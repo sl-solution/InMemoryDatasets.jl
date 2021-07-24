@@ -153,4 +153,6 @@ include("other/tables.jl")
 # taking care of missings in other packages
 include("missings/missings.jl")
 
+# precompile
+include("precompile/precompile.jl")
 end
