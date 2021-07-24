@@ -23,3 +23,7 @@ Statistics.std(f, x::AbstractArray{Union{T,Missing},1}, df = true) where T = sta
 Statistics.std(x::AbstractArray{Union{T,Missing},1}, df = true) where T = stat_std(x, df)
 
 Statistics.median(x::AbstractArray{Union{T,Missing},1}) where T = stat_median(x)
+
+
+Base.extrema(f, x::AbstractArray{Union{T,Missing},1}; threads = false) where T  = threads ? (hp_minimum(f, x), hp_maximum(f, x)) : (stat_minimum(f, x), stat_maximum(f, x))
+Base.extrema(x::AbstractArray{Union{T,Missing},1}; threads = false) where T  = threads ? (hp_minimum(identity, x), hp_maximum(identity, x)) : (stat_minimum(identity, x), stat_maximum(identity, x))
