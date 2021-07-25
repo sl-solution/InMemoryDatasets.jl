@@ -117,7 +117,7 @@ end
 
 
 function _fill_idx_for_sort!(idx)
-    @inbounds for i in 1:length(idx)
+    @inbounds Threads.@threads for i in 1:length(idx)
         idx[i] = i
     end
 end
@@ -163,6 +163,8 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
             _tmp.refs .= _threaded_permute(_tmp.refs, idx)
             # collect here is to handle Categorical array.
             # TODO does it affect performance???
+            # TODO optimise this 1) In pool array the pool has the order of their refs 2) we don't need dictionary for translation, i.e. we should use simple array for translation
+            # Categorical array must be investigated
             aaa = map(x->get(DataAPI.invrefpool(_tmp), x, missing), sort!(Dataset(x = collect(DataAPI.refpool(_tmp))), :, rev = rev[i]).x.val)
             trans = Dict{eltype(aaa), Int32}(aaa .=> 1:length(aaa))
             _modify_poolarray_to_integer!(_tmp.refs, trans)
