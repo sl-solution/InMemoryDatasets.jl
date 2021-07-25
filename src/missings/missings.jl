@@ -1,5 +1,6 @@
 # Dates.jl
-Dates.Date(::Missing) = missing
+Dates.Date(::Missing, kwargs...) = missing
+Dates.DateTime(::Missing, kwargs...) = missing
 Dates.year(::Missing) = missing
 Dates.month(::Missing) = missing
 Dates.day(::Missing) = missing
