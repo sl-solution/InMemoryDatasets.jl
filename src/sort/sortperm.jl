@@ -116,6 +116,13 @@ function _modify_poolarray_to_integer!(refs, trans)
 end
 
 
+function _fast_path_modify_to_integer!(xrefs, perm)
+    Threads.@threads for i in 1:length(xrefs)
+        xrefs[i] = perm[xrefs[i]]
+    end
+end
+
+
 function _fill_idx_for_sort!(idx)
     @inbounds Threads.@threads for i in 1:length(idx)
         idx[i] = i
@@ -160,14 +167,18 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
             else
                 _tmp = map(by[i], x)
             end
-            _tmp.refs .= _threaded_permute(_tmp.refs, idx)
+            if i > 1
+                _tmp.refs .= _threaded_permute(_tmp.refs, idx)
+            end
             # collect here is to handle Categorical array.
-            # TODO does it affect performance???
-            # TODO optimise this 1) In pool array the pool has the order of their refs 2) we don't need dictionary for translation, i.e. we should use simple array for translation
-            # Categorical array must be investigated
-            aaa = map(x->get(DataAPI.invrefpool(_tmp), x, missing), sort!(Dataset(x = collect(DataAPI.refpool(_tmp))), :, rev = rev[i]).x.val)
-            trans = Dict{eltype(aaa), Int32}(aaa .=> 1:length(aaa))
-            _modify_poolarray_to_integer!(_tmp.refs, trans)
+            if _tmp isa PooledArray
+                _fast_path_modify_to_integer!(_tmp.refs, invperm(sortperm(Dataset(x = DataAPI.refpool(_tmp), copycols = false), :, rev = rev[i])))
+            else
+                # This path is for Categorical array and must be optimised
+                aaa = map(x->get(DataAPI.invrefpool(_tmp), x, missing), sort!(Dataset(x = collect(DataAPI.refpool(_tmp))), :, rev = rev[i]).x.val)
+                trans = Dict{eltype(aaa), Int32}(aaa .=> 1:length(aaa))
+                _modify_poolarray_to_integer!(_tmp.refs, trans)
+            end
             _ordr = ord(isless, identity, false, Forward)
             _tmp = _tmp.refs
             _needrev = false

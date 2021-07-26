@@ -11,6 +11,10 @@ precompile(Tuple{typeof(Base.Threads.threading_run), Function})
 precompile(Tuple{typeof(InMemoryDatasets.groupby!), InMemoryDatasets.Dataset, Int64})
 precompile(Tuple{typeof(InMemoryDatasets._apply_by), Array{Union{Base.Missing, Int64}, 1}, Array{Int32, 1}, Function, Bool})
 precompile(Tuple{typeof(InMemoryDatasets._apply_by_f_barrier), Array{Union{Base.Missing, Int64}, 1}, typeof(Base.identity), Bool})
+precompile(Tuple{typeof(InMemoryDatasets.ds_sort_perm), InMemoryDatasets.Dataset, Array{Int64, 1}, Array{Function, 1}, Array{Bool, 1}, Base.Val{Int32}})
+precompile(Tuple{typeof(InMemoryDatasets.ds_sort_perm), InMemoryDatasets.Dataset, Base.OneTo{Int64}, Array{Function, 1}, Array{Bool, 1}, Base.Val{Int32}})
+precompile(Tuple{typeof(InMemoryDatasets._fast_path_modify_to_integer!), Array{UInt32, 1}, Array{Int32, 1}})
+precompile(Tuple{typeof(InMemoryDatasets.hp_ds_sort_int!), Array{UInt32, 1}, Array{Int32, 1}, Array{Int32, 1}, Array{Array{Int32, 1}, 1}, UInt32, UInt32, Bool, Base.Sort.QuickSortAlg, Base.Order.ForwardOrdering})
 
 precompile(Tuple{typeof(InMemoryDatasets.hp_minimum), Array{Union{Base.Missing, Int64}, 1}})
 precompile(Tuple{typeof(InMemoryDatasets.hp_minimum), Function, Array{Union{Base.Missing, Int64}, 1}})
@@ -77,6 +81,10 @@ precompile(Tuple{typeof(Statistics.mean), Array{Union{Base.Missing, Float64}, 1}
 precompile(Tuple{typeof(InMemoryDatasets.modify), InMemoryDatasets.Dataset, Any})
 
 precompile(Tuple{typeof(InMemoryDatasets.combine), InMemoryDatasets.GroupBy, Any})
+precompile(Tuple{typeof(InMemoryDatasets._push_groups_to_res_pa!), Array{AbstractArray{T, 1} where T, 1}, PooledArrays.PooledArray{Union{Base.Missing, InMemoryDatasets.Characters{5, UInt8}}, UInt32, 1, Array{UInt32, 1}}, Base.SubArray{Union{Base.Missing, InMemoryDatasets.Characters{5, UInt8}}, 1, PooledArrays.PooledArray{Union{Base.Missing, InMemoryDatasets.Characters{5, UInt8}}, UInt32, 1, Array{UInt32, 1}}, Tuple{Array{Int32, 1}}, false}, Array{Int32, 1}, Array{Int64, 1}, Int32, Int64, Array{Int64, 1}, Int32})
+precompile(Tuple{typeof(Base.Broadcast.broadcasted), Base.Broadcast.Style{Tuple}, Function, Tuple{Float64}})
+precompile(Tuple{Type{Base.Broadcast.Broadcasted{Base.Broadcast.Style{Tuple}, Axes, F, Args} where Args<:Tuple where F where Axes}, typeof(Base.identity), Tuple{Tuple{Float64}}})
+precompile(Tuple{typeof(Base.Broadcast.materialize!), Base.SubArray{Union{Base.Missing, Float64}, 1, Array{Union{Base.Missing, Float64}, 1}, Tuple{Base.UnitRange{Int64}}, true}, Base.Broadcast.Broadcasted{Base.Broadcast.Style{Tuple}, Nothing, typeof(Base.identity), Tuple{Tuple{Float64}}}})
 precompile(Tuple{typeof(Base.ht_keyindex), Base.Dict{Symbol, Int64}, Symbol})
 precompile(Tuple{Type{Base.Pair{A, B} where B where A}, Function, Symbol})
 precompile(Tuple{Type{Base.Pair{typeof(Base.sum), Symbol}}, Any, Any})
@@ -99,4 +107,3 @@ precompile(Tuple{typeof(InMemoryDatasets._push_groups_to_res!), Array{AbstractAr
 precompile(Tuple{typeof(InMemoryDatasets.setformat!), InMemoryDatasets.Dataset, Base.Pair{Symbol, typeof(Base.identity)}})
 precompile(Tuple{typeof(Base.nameof), Function})
 precompile(Tuple{typeof(InMemoryDatasets._add_one_col_combine!), Array{AbstractArray{T, 1} where T, 1}, Array{Union{Base.Missing, Float64}, 1}, Base.SubArray{Union{Base.Missing, Float64}, 1, Array{Union{Base.Missing, Float64}, 1}, Tuple{Array{Int32, 1}}, false}, typeof(Base.sum), Array{Int32, 1}, Int32, Array{Int64, 1}, Int32, Int64})
-
