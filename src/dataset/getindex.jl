@@ -163,10 +163,16 @@ function _threaded_getindex(selected_rows::AbstractVector,
         end
     else
         for j in 1:length(selected_columns)
-            # TODO should we be careful about types rahter than string, number, PooledArrays???
+            # TODO should we be careful about types string, number, PooledArrays???
             if DataAPI.refpool(ds_columns[selected_columns[j]]) !== nothing
-                new_columns[j] = copy(ds_columns[selected_columns[j]])
-                new_columns[j].refs = _threaded_permute(new_columns[j].refs, selected_rows)
+                pa = ds_columns[selected_columns[j]]
+                if pa isa PooledArray
+                    # we could use copy but it will be inefficient for small selected_rows
+                    new_columns[j] = PooledArray(PooledArrays.RefArray(_threaded_permute(pa.refs, selected_rows)), DataAPI.invrefpool(pa), DataAPI.refpool(pa), PooledArrays.refcount(pa))
+                else
+                    # for other pooled data(like Categorical arrays) we don't have optimised path
+                    new_columns[j] = pa[selected_rows]
+                end
             else
                 new_columns[j] = _threaded_permute(ds_columns[selected_columns[j]], selected_rows)
             end

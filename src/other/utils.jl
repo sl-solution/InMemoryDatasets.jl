@@ -18,12 +18,15 @@ end
 function allocatecol(x::AbstractVector, len; addmissing = true)
     @assert len > 0 "cannot allocate a column with length zero"
     if DataAPI.refpool(x) !== nothing
-        _res = copy(x)
+        if x isa PooledArray
+            _res = PooledArray(PooledArrays.RefArray(x.refs[1:1]), DataAPI.invrefpool(x), DataAPI.refpool(x), PooledArrays.refcount(x))
+        else
+            # TODO not optimised for Categorical arrays
+            _res = copy(x)
+        end
+        resize!(_res, len)
         if addmissing
             _res[1] = missing
-        end
-        if len !== length(x)
-            resize!(_res, len)
         end
     else
         _res = Tables.allocatecolumn(Union{Missing, eltype(x)}, len)
