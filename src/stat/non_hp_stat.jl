@@ -114,7 +114,7 @@ end
 stat_wsum(x::AbstractVector{T}, w::AbstractVector) where T  = stat_wsum(identity, x, w)
 
 function stat_mean(f, x::AbstractArray{T,1})::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
-    length(x) == 1 && return first(x)
+    length(x) == 1 && return f(first(x))
     _op(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]))
     _dmiss(y) = (ismissing(f(y)) ? zero(T) : f(y), _stat_notmissing(f(y)))
     sval, n = mapreduce(_dmiss, _op, x)
@@ -137,7 +137,7 @@ stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_w
 
 function stat_var(f, x::AbstractArray{T,1}, df=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     all(ismissing, x) && return missing
-    length(x) == 1 && return zero(f(x))
+    length(x) == 1 && return zero(f(x[1]))
     _opvar(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]), _stat_add_sum(y1[3], y2[3]))
     _dmiss(y) = ismissing(f(y)) ? zero(T) : f(y)
     _varf(y) = (_dmiss(y) ^ 2, _dmiss(y) , _stat_notmissing(f(y)))
