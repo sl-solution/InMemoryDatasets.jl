@@ -245,10 +245,13 @@ end
 # Create Dataset
 # In select we should check if the attributes can be passed and also check how to set info
 Base.getindex(ds::Dataset, row_ind::Colon, col_inds::MultiColumnIndex) =
-    select(ds, col_inds, copycols=true)
+    select(ds, col_inds)
 
 # ds[!, MultiColumnIndex] => Dataset
 # Create Dataset
 # the same as : we should check about attributes which can be passed
-Base.getindex(ds::Dataset, row_ind::typeof(!), col_inds::MultiColumnIndex) =
-    select(ds, col_inds, copycols=false)
+function Base.getindex(ds::Dataset, row_ind::typeof(!), col_inds::MultiColumnIndex)
+    colsidx = index(ds)[col_inds]
+    view(ds, :, colsidx)
+end
+    # throw(ArgumentError("syntax `ds[!, col]` is only valid for single column, for multiple columns use `ds[:, cols]` or `select(ds, col...)`"))

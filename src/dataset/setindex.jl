@@ -270,8 +270,8 @@ julia> insertcols!(ds, 2, :c => 2:4, :c => 3:5, makeunique=true)
 ```
 """
 function insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:Any}...;
-                     makeunique::Bool=false, copycols::Bool=true)
-
+                     makeunique::Bool=false)
+    copycols = true
 # Modify Dataset
     col_ind = Int(col isa SymbolOrString ? columnindex(ds, col) : col)
     if !(0 < col_ind <= ncol(ds) + 1)
@@ -368,20 +368,20 @@ end
 
 # Modify Dataset
 insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{<:AbstractString, <:Any}...;
-                     makeunique::Bool=false, copycols::Bool=true) =
+                     makeunique::Bool=false) =
     insertcols!(ds, col, (Symbol(n) => v for (n, v) in name_cols)...,
-                makeunique=makeunique, copycols=copycols)
+                makeunique=makeunique)
 
 # Modify Dataset
 insertcols!(ds::Dataset, name_cols::Pair{Symbol, <:Any}...;
-            makeunique::Bool=false, copycols::Bool=true) =
-    insertcols!(ds, ncol(ds)+1, name_cols..., makeunique=makeunique, copycols=copycols)
+            makeunique::Bool=false) =
+    insertcols!(ds, ncol(ds)+1, name_cols..., makeunique=makeunique)
 
 # Modify Dataset
 insertcols!(ds::Dataset, name_cols::Pair{<:AbstractString, <:Any}...;
-            makeunique::Bool=false, copycols::Bool=true) =
+            makeunique::Bool=false) =
     insertcols!(ds, (Symbol(n) => v for (n, v) in name_cols)...,
-                makeunique=makeunique, copycols=copycols)
+                makeunique=makeunique)
 
 # Modify Dataset
 function insertcols!(ds::Dataset, col::Int=ncol(ds)+1; makeunique::Bool=false, name_cols...)

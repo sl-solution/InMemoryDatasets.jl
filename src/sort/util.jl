@@ -126,13 +126,15 @@ function _permute_ds_after_sort!(ds, perm)
     end
     for j in 1:ncol(ds)
         if DataAPI.refpool(_columns(ds)[j]) !== nothing
-            if _columns(ds)[j] isa PooledArray
-                pa = _columns(ds)[j]
-                _columns(ds)[j] = PooledArray(PooledArrays.RefArray(_threaded_permute(pa.refs, perm)), DataAPI.invrefpool(pa), DataAPI.refpool(pa), PooledArrays.refcount(pa))
-            else
-                # TODO must be optimised
-                _columns(ds)[j] = _columns(ds)[j][perm]
-            end
+            # if _columns(ds)[j] isa PooledArray
+            #     pa = _columns(ds)[j]
+            #     _columns(ds)[j] = PooledArray(PooledArrays.RefArray(_threaded_permute(pa.refs, perm)), DataAPI.invrefpool(pa), DataAPI.refpool(pa), PooledArrays.refcount(pa))
+            # else
+            #     # TODO must be optimised
+            #     _columns(ds)[j] = _columns(ds)[j][perm]
+            # end
+            # since we don't support copycols for external usage it is safe to only permute refs
+            _columns(ds)[j].refs = _threaded_permute(_columns(ds)[j].refs, perm)
         else
             _columns(ds)[j] = _threaded_permute(_columns(ds)[j], perm)
         end

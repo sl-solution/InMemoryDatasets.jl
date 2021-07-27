@@ -218,7 +218,7 @@ Base.@propagate_inbounds Base.getindex(sds::SubDataset, ::Colon,
     parent(sds)[rows(sds), parentcols(index(sds), colinds)]
 Base.@propagate_inbounds Base.getindex(df::SubDataset, row_ind::typeof(!),
                                        col_inds::MultiColumnIndex) =
-    select(df, col_inds, copycols=false)
+    view(df, :,  col_inds)
 
 
 Base.@propagate_inbounds function Base.setindex!(sds::SubDataset, val::Any, idx::CartesianIndex{2})

@@ -246,31 +246,28 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
 end
 
 # Create Dataset
-Dataset(df::Dataset; copycols::Bool=true) = copy(df, copycols=copycols)
+Dataset(df::Dataset) = copy(df)
 
 # Create Dataset
 function Dataset(pairs::Pair{Symbol, <:Any}...; makeunique::Bool=false,
-                   copycols::Bool=true)::Dataset
+                   )::Dataset
     colnames = [Symbol(k) for (k, v) in pairs]
     columns = Any[v for (k, v) in pairs]
-    return Dataset(columns, Index(colnames, makeunique=makeunique),
-                     copycols=copycols)
+    return Dataset(columns, Index(colnames, makeunique=makeunique)
+                     )
 end
 
 # Create Dataset
-function Dataset(pairs::Pair{<:AbstractString, <:Any}...; makeunique::Bool=false,
-                   copycols::Bool=true)::Dataset
+function Dataset(pairs::Pair{<:AbstractString, <:Any}...; makeunique::Bool=false)::Dataset
     colnames = [Symbol(k) for (k, v) in pairs]
     columns = Any[v for (k, v) in pairs]
-    return Dataset(columns, Index(colnames, makeunique=makeunique),
-                     copycols=copycols)
+    return Dataset(columns, Index(colnames, makeunique=makeunique))
 end
 
 
 # Create Dataset
 # this is needed as a workaround for Tables.jl dispatch
-function Dataset(pairs::AbstractVector{<:Pair}; makeunique::Bool=false,
-                   copycols::Bool=true)
+function Dataset(pairs::AbstractVector{<:Pair}; makeunique::Bool=false)
     if isempty(pairs)
         return Dataset()
     else
@@ -279,13 +276,12 @@ function Dataset(pairs::AbstractVector{<:Pair}; makeunique::Bool=false,
         end
         colnames = [Symbol(k) for (k, v) in pairs]
         columns = Any[v for (k, v) in pairs]
-        return Dataset(columns, Index(colnames, makeunique=makeunique),
-                         copycols=copycols)
+        return Dataset(columns, Index(colnames, makeunique=makeunique))
     end
 end
 
 # Create Dataset
-function Dataset(d::AbstractDict; copycols::Bool=true)
+function Dataset(d::AbstractDict)
     if all(k -> k isa Symbol, keys(d))
         colnames = collect(Symbol, keys(d))
     elseif all(k -> k isa AbstractString, keys(d))
@@ -296,7 +292,7 @@ function Dataset(d::AbstractDict; copycols::Bool=true)
 
     colindex = Index(colnames)
     columns = Any[v for v in values(d)]
-    df = Dataset(columns, colindex, copycols=copycols)
+    df = Dataset(columns, colindex)
     d isa Dict && select!(df, sort!(propertynames(df)))
     return df
 end
@@ -427,10 +423,10 @@ If `copycols=false`, return a new `Dataset` sharing column vectors with `ds`.
 
 > This function uses `copy` rather than `deepcopy` internally, thus, it is not safe to use it when observations are mutable.
 """
-function Base.copy(ds::Dataset; copycols::Bool=true)
+function Base.copy(ds::Dataset)
     # TODO currently if the observation is mutable, copying data set doesn't protect it
     # Create Dataset
-    newds = Dataset(copy(_columns(ds)), copy(index(ds)), copycols=copycols)
+    newds = Dataset(copy(_columns(ds)), copy(index(ds)))
     setinfo!(newds, _attributes(ds).meta.info[])
     return newds
 end

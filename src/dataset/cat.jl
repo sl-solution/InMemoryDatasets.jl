@@ -8,10 +8,10 @@
 
 # Modify Dataset
 function hcat!(ds1::Dataset, ds2::AbstractDataset;
-               makeunique::Bool=false, copycols::Bool=true)
+               makeunique::Bool=false)
     u = add_names(index(ds1), index(ds2), makeunique=makeunique)
     for i in 1:length(u)
-        ds1[!, u[i]] = copycols ? ds2[:, i] : _columns(ds2)[i]
+        ds1[!, u[i]] = ds2[:, i]
     end
     _modified(_attributes(ds1))
     return ds1
@@ -21,9 +21,9 @@ end
 
 # Modify Dataset
 hcat!(ds1::Dataset, ds2::Dataset;
-      makeunique::Bool=false, copycols::Bool=true) =
+      makeunique::Bool=false) =
     invoke(hcat!, Tuple{Dataset, AbstractDataset}, ds1, ds2,
-           makeunique=makeunique, copycols=copycols)::Dataset
+           makeunique=makeunique)::Dataset
 
 # Modify Dataset
 # hcat!(ds::Dataset, x::AbstractVector; makeunique::Bool=false, copycols::Bool=true) =
@@ -36,17 +36,17 @@ hcat!(ds1::Dataset, ds2::Dataset;
           # makeunique=makeunique, copycols=copycols)
 
 # Modify Dataset
-hcat!(x, ds::Dataset; makeunique::Bool=false, copycols::Bool=true) =
+hcat!(x, ds::Dataset; makeunique::Bool=false) =
     throw(ArgumentError("x must be AbstractDataset"))
 
 # Modify Dataset
-hcat!(ds::Dataset, x; makeunique::Bool=false, copycols::Bool=true) =
+hcat!(ds::Dataset, x; makeunique::Bool=false) =
     throw(ArgumentError("x must be AbstractVector or AbstractDataset"))
 
 # hcat! for 1-n arguments
 
 # Modify Dataset
-hcat!(ds::Dataset; makeunique::Bool=false, copycols::Bool=true) = ds
+hcat!(ds::Dataset; makeunique::Bool=false) = ds
 
 # Modify Dataset
 # hcat!(a::Dataset, b, c...; makeunique::Bool=false, copycols::Bool=true) =
@@ -62,12 +62,12 @@ hcat!(ds::Dataset; makeunique::Bool=false, copycols::Bool=true) = ds
 
 # Create Dataset
 Base.hcat(ds1::Dataset, ds2::AbstractDataset;
-          makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(copy(ds1, copycols=copycols), ds2,
-          makeunique=makeunique, copycols=copycols)
+          makeunique::Bool=false) =
+    hcat!(copy(ds1), ds2,
+          makeunique=makeunique)
 
 # Create Dataset
 Base.hcat(ds1::Dataset, ds2::AbstractDataset, dsn::AbstractDataset...;
-          makeunique::Bool=false, copycols::Bool=true) =
-    hcat!(hcat(ds1, ds2, makeunique=makeunique, copycols=copycols), dsn...,
-          makeunique=makeunique, copycols=copycols)
+          makeunique::Bool=false) =
+    hcat!(hcat(ds1, ds2, makeunique=makeunique), dsn...,
+          makeunique=makeunique)
