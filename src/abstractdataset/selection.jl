@@ -1478,7 +1478,7 @@ julia> combine(gd, :, AsTable(Not(:a)) => sum, renamecols=false)
 #            renamecols::Bool) =
 #     manipulate(dfv, Int[index(dfv)[c]], copycols=copycols, keeprows=keeprows, renamecols=renamecols)
 
-function normalize_select(idx, cols::Union{ColumnIndex, MultiColumnIndex}...)
+function normalize_select(idx, @nospecialize(cols::Union{ColumnIndex, MultiColumnIndex}...))
     selected_cols = Int[]
     for i in 1:length(cols)
         push!(selected_cols, idx[cols[i]]...)
@@ -1488,7 +1488,7 @@ end
 
 # sell and sell! will replace select and select!
 # Dataset shouldn't support copycols since it causes modifying a data set without telling other alias data sets
-function select(ds::Dataset, args...)
+function select(ds::Dataset, @nospecialize(args...))
     selected_cols = normalize_select(index(ds), args...)
     res = AbstractVector[]
 
@@ -1525,7 +1525,7 @@ function select(ds::Dataset, args...)
     return newds
 end
 
-function select!(ds, args...)
+function select!(ds, @nospecialize(args...))
     selected_cols = normalize_select(index(ds), args...)
     unwanted_cols = setdiff(1:ncol(ds), selected_cols)
     sort!(unwanted_cols, rev = true)
