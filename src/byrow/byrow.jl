@@ -19,10 +19,29 @@ byrow(ds::AbstractDataset, ::typeof(count), col::ColumnIndex; by = isequal(true)
 
 # byrow(ds::AbstractDataset, ::typeof(anymissing), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_anymissing(ds, cols)
 
-byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; by = x->isequal(true, x), threads = true) = threads ? hp_row_any(ds, by, cols) : row_any(ds, by, cols)
+function byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; by = x->isequal(true, x), threads = true)
+	colsidx = index(ds)[cols]
+	if by isa AbstractVector
+		bys = map(_bool, by)
+		threads ? hp_row_any_multi(ds, bys, colsidx) : row_any_multi(ds, bys, colsidx)
+	else
+		bys = repeat([_bool(by)], length(colsidx))
+		threads ? hp_row_any_multi(ds, bys, colsidx) : row_any_multi(ds, bys, colsidx)
+	end
+end
+
 byrow(ds::AbstractDataset, ::typeof(any), col::ColumnIndex; by = x->isequal(true, x), threads = true) = byrow(ds, any, [col]; by = by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; by = x->isequal(true, x), threads = true) = threads ? hp_row_all(ds, by, cols) : row_all(ds, by, cols)
+function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; by = x->isequal(true, x), threads = true)
+	colsidx = index(ds)[cols]
+	if by isa AbstractVector
+		bys = map(_bool, by)
+		threads ? hp_row_all_multi(ds, bys, colsidx) : row_all_multi(ds, bys, colsidx)
+	else
+		bys = repeat([_bool(by)], length(colsidx))
+		threads ? hp_row_all_multi(ds, bys, colsidx) : row_all_multi(ds, bys, colsidx)
+	end
+end
 byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; by = x->isequal(true, x), threads = true) = byrow(ds, all, [col]; by = by, threads = threads)
 
 byrow(ds::AbstractDataset, ::typeof(mean), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = true) = threads ? hp_row_mean(ds, by, cols) : row_mean(ds, by, cols)
@@ -86,4 +105,3 @@ function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = tru
 	end
 	res
 end
-

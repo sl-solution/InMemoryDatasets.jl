@@ -2,8 +2,8 @@ struct MultiCol
     x
 end
 function byrow(@nospecialize(f); @nospecialize(args...))
-    br = :($f, $args)
-    br.head = :BYROW
+    br = [:($f, $args)]
+    br[1].head = :BYROW
     br
 end
 
@@ -47,6 +47,17 @@ end
 # col => byrow
 function normalize_modify!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
+                                                    <:Vector{Expr}}))
+    colsidx = outidx[sel.first]
+    if sel.second[1].head == :BYROW
+        # TODO needs a better name for destination
+        # _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
+        return outidx[colsidx] => sel.second[1] => _names(outidx)[colsidx]
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
+function normalize_modify!(outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Expr}))
     colsidx = outidx[sel.first]
     if sel.second.head == :BYROW
@@ -57,6 +68,18 @@ function normalize_modify!(outidx::Index, idx::Index,
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
 # col => byrow => dst
+function normalize_modify!(outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:ColumnIndex,
+                                        <:Pair{<:Vector{Expr},
+                                            <:Union{Symbol, AbstractString}}}))
+    colsidx = outidx[sel.first]
+    if sel.second.first[1].head == :BYROW
+        # TODO needs a better name for destination
+        _check_ind_and_add!(outidx, Symbol(sel.second.second))
+        return outidx[colsidx] => sel.second.first[1] => Symbol(sel.second.second)
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
 function normalize_modify!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                         <:Pair{<:Expr,
@@ -73,7 +96,24 @@ end
 # cols => fun, the job is to create [col1 => fun => :col1name, col2 => fun => :col2name ...]
 function normalize_modify!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Union{Base.Callable,Expr}}))
+                                                    <:Union{Base.Callable,Vector{Expr}}}))
+    colsidx = outidx[sel.first]
+    if sel.second isa AbstractVector && sel.second[1] isa Expr
+        if sel.second[1].head == :BYROW
+            # TODO needs a better name for destination
+            _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second[1].args[1])))
+            return outidx[colsidx] => sel.second => Symbol("row_", funname(sel.second[1].args[1]))
+        end
+    end
+    res = Any[normalize_modify!(outidx, idx, colsidx[1] => sel.second)]
+    for i in 2:length(colsidx)
+        push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second))
+    end
+    return res
+end
+function normalize_modify!(outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
+                                                    <:Expr}))
     colsidx = outidx[sel.first]
     if sel.second isa Expr
         if sel.second.head == :BYROW
@@ -82,7 +122,7 @@ function normalize_modify!(outidx::Index, idx::Index,
             return outidx[colsidx] => sel.second => Symbol("row_", funname(sel.second.args[1]))
         end
     end
-    res = [normalize_modify!(outidx, idx, colsidx[1] => sel.second)]
+    res = Any[normalize_modify!(outidx, idx, colsidx[1] => sel.second)]
     for i in 2:length(colsidx)
         push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second))
     end
@@ -90,6 +130,18 @@ function normalize_modify!(outidx::Index, idx::Index,
 end
 
 # special case cols => byrow(...) => :name
+function normalize_modify!(outidx::Index, idx::Index,
+    @nospecialize(sel::Pair{<:MultiColumnIndex,
+                            <:Pair{<:Vector{Expr},
+                                <:Union{Symbol, AbstractString}}}))
+    colsidx = outidx[sel.first]
+    if sel.second.first[1].head == :BYROW
+        _check_ind_and_add!(outidx, Symbol(sel.second.second))
+        return outidx[colsidx] => sel.second.first[1] => Symbol(sel.second.second)
+    else
+        throw(ArgumentError("only byrow operation is supported for cols => fun => :name"))
+    end
+end
 function normalize_modify!(outidx::Index, idx::Index,
     @nospecialize(sel::Pair{<:MultiColumnIndex,
                             <:Pair{<:Expr,
@@ -106,15 +158,38 @@ end
 # cols .=> fun .=> dsts, the job is to create col1 => fun => :dst1, col2 => fun => :dst2, ...
 function normalize_modify!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Pair{<:Union{Base.Callable,Expr},
+                                                    <:Pair{<:Union{Base.Callable,Vector{Expr}},
                                                         <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
     colsidx = outidx[sel.first]
     if !(length(colsidx) == length(sel.second.second))
         throw(ArgumentError("The input number of columns and the length of the output names should match"))
     end
-    res = [normalize_modify!(outidx, idx, colsidx[1] => sel.second.first => sel.second.second[1])]
+    res = Any[normalize_modify!(outidx, idx, colsidx[1] => sel.second.first => sel.second.second[1])]
     for i in 2:length(colsidx)
         push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second.first => sel.second.second[i]))
+    end
+    return res
+end
+# cols .=> fun .=> dsts, the job is to create col1 => fun => :dst1, col2 => fun => :dst2, ...
+function normalize_modify!(outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
+                                                    <:Pair{<:Expr,
+                                                        <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
+    colsidx = outidx[sel.first]
+    if !(length(colsidx) == length(sel.second.second))
+        throw(ArgumentError("The input number of columns and the length of the output names should match"))
+    end
+    res = Any[normalize_modify!(outidx, idx, colsidx[1] => sel.second.first => sel.second.second)]
+    for i in 2:length(colsidx)
+        push!(res, normalize_modify!(outidx, idx, colsidx[i] => sel.second.first => sel.second.second[i]))
+    end
+    return res
+end
+
+function normalize_modify!(outidx::Index, idx::Index, arg::AbstractVector)
+    res = Any[normalize_modify!(outidx, idx, arg[1])]
+    for i in 2:length(arg)
+        push!(res, normalize_modify!(outidx::Index, idx::Index, arg[i]))
     end
     return res
 end
@@ -285,8 +360,8 @@ function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast)
         _res = Tables.allocatecolumn(T, nrow(ds))
         _modify_grouped_fill_one_col!(_res, _columns(ds)[msfirst], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
         ds[!, mslast] = _res
-    elseif (mssecond isa Expr) && mssecond.head == :BYROW
-                ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
+    elseif (mssecond isa Expr) && mssecond[1].head == :BYROW
+                ds[!, mslast] = byrow(ds, mssecond[1].args[1], msfirst; mssecond[1].args[2]...)
     elseif (mssecond isa Base.Callable) && (mslast isa MultiCol)
 
         throw(ArgumentError("multi column output is not supported for grouped data set"))

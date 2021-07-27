@@ -1477,3 +1477,49 @@ manipulate(df::Dataset, c::ColumnIndex; copycols::Bool, keeprows::Bool,
 manipulate(dfv::SubDataset, c::ColumnIndex; copycols::Bool, keeprows::Bool,
            renamecols::Bool) =
     manipulate(dfv, Int[index(dfv)[c]], copycols=copycols, keeprows=keeprows, renamecols=renamecols)
+
+function normalize_selection(idx, cols::Union{ColumnIndex, MultiColumnIndex}...)
+    selected_cols = Int[]
+    for i in 1:length(cols)
+        push!(selected_cols, idx[cols[i]]...)
+    end
+    unique!(selected_cols)
+end
+
+# It has some issue pa, must be fixed
+function sell(ds, args...; copycols = true)
+    selected_cols = normalize_selection(index(ds), args...)
+    res = AbstractVector[]
+    if copycols
+        for j in 1:length(selected_cols)
+            push!(res, copy(_columns(ds)[selected_cols[j]]))
+        end
+        newds = Dataset(res, _names(ds)[selected_cols], copycols = false)
+    else
+        for j in 1:length(selected_cols)
+            push!(res, _columns(ds)[selected_cols[j]])
+        end
+        newds = Dataset(res, _names(ds)[selected_cols], copycols = false)
+    end
+    for j in 1:length(selected_cols)
+        setformat!(newds, j => getformat(ds, selected_cols[j]))
+    end
+    if copycols && all(index(ds).sortedcols .∈ Ref(selected_cols))
+        scols = Int[]
+        revs = copy(index(ds).rev)
+        scols_ds = index(ds).sortedcols
+        for k in 1:length(scols_ds)
+            push!(scols, findfirst(isequal(scols_ds[k]), selected_cols))
+        end
+        _copy_grouping_info!(newds, ds)
+        # need to reorder things
+        empty!(index(newds).sortedcols)
+        empty!(index(newds).rev)
+        append!(index(newds).sortedcols, scols)
+        append!(index(newds).rev, revs)
+    else
+        _reset_grouping_info!(ds)
+    end
+    setinfo!(newds, _attributes(ds).meta.info[])
+    return newds
+end

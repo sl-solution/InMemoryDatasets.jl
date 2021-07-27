@@ -110,6 +110,7 @@ include("dataset/del_and_append.jl")
 include("dataset/cat.jl")
 
 # byrow operations
+include("byrow/util.jl")
 include("byrow/row_functions.jl")
 include("byrow/hp_row_functions.jl")
 include("byrow/byrow.jl")
