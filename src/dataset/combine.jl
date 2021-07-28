@@ -328,7 +328,13 @@ function _update_one_col_combine!(res, _res, x, _f, ngroups, new_lengths, total_
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = new_lengths[g] - length(counter) + 1
         hi = new_lengths[g]
-        _res[lo:hi] .= (_f(view(x, counter)),)
+        _tmp_res = _f(view(x, counter))
+        check_scalar = _is_scalar(_tmp_res, length(lo:hi))
+        if check_scalar
+            fill!(view(_res,lo:hi), _tmp_res)
+        else
+            copy!(view(_res, lo:hi), _tmp_res)
+        end
     end
     res[col] = _res
     return _res
@@ -341,7 +347,13 @@ function _add_one_col_combine_from_combine!(res, _res, x, _f, ngroups, new_lengt
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = new_lengths[g] - length(counter) + 1
         hi = new_lengths[g]
-        _res[lo:hi] .= (_f(view(x, counter)),)
+        _tmp_res = _f(view(x, counter))
+        check_scalar = _is_scalar(_tmp_res, length(lo:hi))
+        if check_scalar
+            fill!(view(_res,lo:hi), _tmp_res)
+        else
+            copy!(view(_res, lo:hi), _tmp_res)
+        end
     end
     push!(res, _res)
     return _res
@@ -357,7 +369,13 @@ function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         l1 = new_lengths[g] - length(counter) + 1
         h1 = new_lengths[g]
-        _res[l1:h1] .= (_f(view(in_x, lo:hi)),)
+        _tmp_res = _f(view(in_x, lo:hi))
+        check_scalar = _is_scalar(_tmp_res, length(l1:h1))
+        if check_scalar
+            fill!(view(_res,l1:h1), _tmp_res)
+        else
+            copy!(view(_res, l1:h1), _tmp_res)
+        end
     end
     push!(res, _res)
     return _res
