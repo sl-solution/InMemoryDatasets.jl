@@ -578,20 +578,20 @@ _bool_mask(f) = x->f(x)::Bool
 # Unique cases
 
 # Modify Dataset
-Base.unique!(ds::Dataset) = delete!(ds, nonunique(ds))
-Base.unique!(ds::Dataset, cols::AbstractVector) =
-    delete!(ds, nonunique(ds, cols))
-Base.unique!(ds::Dataset, cols) =
-    delete!(ds, nonunique(ds, cols))
+Base.unique!(ds::Dataset; mapformats = false) = delete!(ds, nonunique(ds, mapformats = mapformats))
+Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false) =
+    delete!(ds, nonunique(ds, cols, mapformats = mapformats))
+Base.unique!(ds::Dataset, cols; mapformats = false) =
+    delete!(ds, nonunique(ds, cols, mapformats = mapformats))
 
 # Unique rows of an Dataset.
-@inline function Base.unique(ds::AbstractDataset; view::Bool=false)
-    rowidxs = (!).(nonunique(ds))
+@inline function Base.unique(ds::AbstractDataset; view::Bool=false, mapformats = false)
+    rowidxs = (!).(nonunique(ds, mapformats = mapformats))
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
 
-@inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false)
-    rowidxs = (!).(nonunique(ds, cols))
+@inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false, mapformats = false)
+    rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats))
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
 
