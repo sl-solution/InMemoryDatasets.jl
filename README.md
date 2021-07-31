@@ -297,7 +297,7 @@ In the example above, the value of the first column has been updated and been us
 
 # Grouping Datasets
 
-The function `groupby!(ds, cols; rev = false, issorted = false)` groups a data set (sort `ds` based on `cols`). The sorting and grouping is done based on the formatted values of `cols` rather than the actual values. `combine(ds, args...)` can be used to aggregate the result for each group. The syntax for `args...` is similar to `modify`, with the excption that in `combine` only the variables names can be used to refer to columns in the original or the output data set.
+The function `groupby!(ds, cols; rev = false, issorted = false)` groups a data set (sort `ds` based on `cols`). The sorting and grouping is done based on the formatted values of `cols` rather than the actual values. `combine(ds, args...)` can be used to aggregate the result for each group. The syntax for `args...` is similar to `modify`, with the exception that in `combine` all `cols`  in  `cols=>fun` always refers to the original data set, and `cols`  in `cols=>byrow(fun...)`  always refers to variables in the output data set .
 
 ```julia
 julia> ds = Dataset(g = [1, 1, 1, 2, 2],

@@ -1,3 +1,18 @@
+function _restrict_byrow_left_handside(outidx, idx, cols)
+    colsidx = outidx[cols]
+    names_outidx = _names(outidx)[colsidx]
+    # we shouldn't use the variables which exist in idx
+    n_colsidx = Int[]
+    for i in 1:length(colsidx)
+        if !haskey(idx.lookup, names_outidx[i])
+            push!(n_colsidx, colsidx[i])
+        end
+    end
+    isempty(n_colsidx) && throw(ArgumentError("column selection returns an empty set for $(cols), modify the columns before continuing with operation"))
+    return n_colsidx
+end
+
+
 # col => fun => dst, the job is to create col => fun => :dst
 function normalize_combine!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
@@ -5,9 +20,8 @@ function normalize_combine!(outidx::Index, idx::Index,
                                                         <:Union{Symbol, AbstractString}}})
                                                         )
     src, (fun, dst) = sel
-    src isa Integer && throw(ArgumentError("in `combine` it is not allowed to use column number as selector, use the column's name"))
     _check_ind_and_add!(outidx, Symbol(dst))
-    return _names(outidx)[outidx[src]] => fun => Symbol(dst)
+    return _names(idx)[idx[src]] => fun => Symbol(dst)
 end
 # col => fun => dst, the job is to create col => fun => :dst
 function normalize_combine!(outidx::Index, idx::Index,
@@ -16,11 +30,10 @@ function normalize_combine!(outidx::Index, idx::Index,
                                                         <:Vector{<:Union{Symbol, AbstractString}}}})
                                                         )
     src, (fun, dst) = sel
-    src isa Integer && throw(ArgumentError("in `combine` it is not allowed to use column number as selector, use the column's name"))
     for i in 1:length(dst)
         _check_ind_and_add!(outidx, Symbol(dst[i]))
     end
-    return _names(outidx)[outidx[src]] => fun => MultiCol(Symbol.(dst))
+    return _names(idx)[idx[src]] => fun => MultiCol(Symbol.(dst))
 end
 # col => fun, the job is to create col => fun => :colname
 function normalize_combine!(outidx::Index, idx::Index,
@@ -28,32 +41,33 @@ function normalize_combine!(outidx::Index, idx::Index,
                                                     <:Union{Base.Callable}}))
 
     src, fun = sel
-    src isa Integer && throw(ArgumentError("in `combine` it is not allowed to use column number as selector, use the column's name"))
-    return _names(outidx)[outidx[src]] => fun => _names(outidx)[outidx[src]]
+    _check_ind_and_add!(outidx, Symbol(_names(outidx)[outidx[src]], "_", funname(fun)))
+    return _names(idx)[idx[src]] => fun => Symbol(_names(idx)[idx[src]], "_", funname(fun))
 end
 
 # col => byrow
 function normalize_combine!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Vector{Expr}}))
-    sel.first isa Integer && throw(ArgumentError("in `combine` it is not allowed to use column number as selector, use the column's name"))
-    colsidx = outidx[sel.first]
+    colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
     if sel.second[1].head == :BYROW
         # TODO needs a better name for destination
-        # _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
-        return _names(outidx)[outidx[colsidx]] => sel.second[1] => _names(outidx)[colsidx]
+        dsc_sym = Symbol(_names(outidx)[outidx[sel.first]], "_", funname(sel.second[1]))
+        _check_ind_and_add!(outidx, dsc_sym )
+        return _names(outidx)[outidx[colsidx]] => sel.second[1] => dsc_sym
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
 function normalize_combine!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Expr}))
-    sel.first isa Integer && throw(ArgumentError("in `combine` it is not allowed to use column number as selector, use the column's name"))
-    colsidx = outidx[sel.first]
+    colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
     if sel.second.head == :BYROW
         # TODO needs a better name for destination
         # _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
-        return _names(outidx)[outidx[colsidx]] => sel.second => _names(outidx)[colsidx]
+         dsc_sym = Symbol(_names(outidx)[outidx[sel.first]], "_", funname(sel.second))
+        _check_ind_and_add!(outidx, dsc_sym )
+        return _names(outidx)[outidx[colsidx]] => sel.second => dsc_sym
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
@@ -62,8 +76,7 @@ function normalize_combine!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                         <:Pair{<:Vector{Expr},
                                             <:Union{Symbol, AbstractString}}}))
-    sel.first isa Integer && throw(ArgumentError("in `combine` it is not allowed to use column number as selector, use the column's name"))
-    colsidx = outidx[sel.first]
+    colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
     if sel.second.first[1].head == :BYROW
         # TODO needs a better name for destination
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
@@ -75,8 +88,7 @@ function normalize_combine!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                         <:Pair{<:Expr,
                                             <:Union{Symbol, AbstractString}}}))
-    sel.first isa Integer && throw(ArgumentError("in `combine` it is not allowed to use column number as selector, use the column's name"))
-    colsidx = outidx[sel.first]
+    colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
     if sel.second.first.head == :BYROW
         # TODO needs a better name for destination
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
@@ -87,9 +99,10 @@ end
 
 # cols => fun, the job is to create [col1 => fun => :col1name, col2 => fun => :col2name ...]
 function normalize_combine!(outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:AbstractVector{<:Union{Symbol, AbstractString}},
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Vector{Expr}}))
-    colsidx = outidx[sel.first]
+    colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
+
     if sel.second[1] isa Expr
         if sel.second[1].head == :BYROW
             # TODO needs a better name for destination
@@ -97,36 +110,33 @@ function normalize_combine!(outidx::Index, idx::Index,
             return _names(outidx)[outidx[colsidx]] => sel.second[1] => Symbol("row_", funname(sel.second[1].args[1]))
         end
     end
-    res = Any[normalize_combine!(outidx, idx, _names(outidx)[colsidx[1]] => sel.second[1])]
-    for i in 2:length(colsidx)
-        push!(res, normalize_combine!(outidx, idx, _names(outidx)[colsidx[i]] => sel.second[1]))
-    end
-    return res
 end
 function normalize_combine!(outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:AbstractVector{<:Union{Symbol, AbstractString}},
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Union{Base.Callable,Expr}}))
-    colsidx = outidx[sel.first]
     if sel.second isa Expr
         if sel.second.head == :BYROW
+            colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
+
             # TODO needs a better name for destination
             _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
             return _names(outidx)[outidx[colsidx]] => sel.second => Symbol("row_", funname(sel.second.args[1]))
         end
     end
-    res = Any[normalize_combine!(outidx, idx, _names(outidx)[colsidx[1]] => sel.second)]
+    colsidx = idx[sel.first]
+    res = Any[normalize_combine!(outidx, idx, _names(idx)[colsidx[1]] => sel.second)]
     for i in 2:length(colsidx)
-        push!(res, normalize_combine!(outidx, idx, _names(outidx)[colsidx[i]] => sel.second))
+        push!(res, normalize_combine!(outidx, idx, _names(idx)[colsidx[i]] => sel.second))
     end
     return res
 end
 
 # special case cols => byrow(...) => :name
 function normalize_combine!(outidx::Index, idx::Index,
-    @nospecialize(sel::Pair{<:AbstractVector{<:Union{Symbol, AbstractString}},
+    @nospecialize(sel::Pair{<:MultiColumnIndex,
                             <:Pair{<:Vector{Expr},
                                 <:Union{Symbol, AbstractString}}}))
-    colsidx = outidx[sel.first]
+    colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
     if sel.second.first[1].head == :BYROW
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
         return _names(outidx)[outidx[colsidx]] => sel.second.first[1] => Symbol(sel.second.second)
@@ -135,10 +145,10 @@ function normalize_combine!(outidx::Index, idx::Index,
     end
 end
 function normalize_combine!(outidx::Index, idx::Index,
-    @nospecialize(sel::Pair{<:AbstractVector{<:Union{Symbol, AbstractString}},
+    @nospecialize(sel::Pair{<:MultiColumnIndex,
                             <:Pair{<:Expr,
                                 <:Union{Symbol, AbstractString}}}))
-    colsidx = outidx[sel.first]
+    colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
     if sel.second.first.head == :BYROW
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
         return _names(outidx)[outidx[colsidx]] => sel.second.first => Symbol(sel.second.second)
@@ -149,10 +159,10 @@ end
 
 # cols .=> fun .=> dsts, the job is to create col1 => fun => :dst1, col2 => fun => :dst2, ...
 function normalize_combine!(outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:AbstractVector{<:Union{Symbol, AbstractString}},
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Pair{<:Vector{Expr},
                                                         <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
-    colsidx = outidx[sel.first]
+    colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
     if !(length(colsidx) == length(sel.second.second))
         throw(ArgumentError("The input number of columns and the length of the output names should match"))
     end
@@ -163,16 +173,16 @@ function normalize_combine!(outidx::Index, idx::Index,
     return res
 end
 function normalize_combine!(outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:AbstractVector{<:Union{Symbol, AbstractString}},
-                                                    <:Pair{<:Union{Base.Callable,Expr},
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
+                                                    <:Pair{<:Union{Base.Callable},
                                                         <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
-    colsidx = outidx[sel.first]
+    colsidx = idx[sel.first]
     if !(length(colsidx) == length(sel.second.second))
         throw(ArgumentError("The input number of columns and the length of the output names should match"))
     end
-    res = Any[normalize_combine!(outidx, idx, _names(outidx)[colsidx[1]] => sel.second.first => sel.second.second[1])]
+    res = Any[normalize_combine!(outidx, idx, _names(idx)[colsidx[1]] => sel.second.first => sel.second.second[1])]
     for i in 2:length(colsidx)
-        push!(res, normalize_combine!(outidx, idx, _names(outidx)[colsidx[i]] => sel.second.first => sel.second.second[i]))
+        push!(res, normalize_combine!(outidx, idx, _names(idx)[colsidx[i]] => sel.second.first => sel.second.second[i]))
     end
     return res
 end
@@ -380,6 +390,26 @@ function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths
     push!(res, _res)
     return _res
 end
+function _update_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, col)
+    # make sure lo and hi are not defined any where outside the following loop
+    Threads.@threads for g in 1:ngroups
+        counter::UnitRange{Int} = 1:1
+        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
+        lo = starts[g]
+        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
+        l1 = new_lengths[g] - length(counter) + 1
+        h1 = new_lengths[g]
+        _tmp_res = _f(view(in_x, lo:hi))
+        check_scalar = _is_scalar(_tmp_res, length(l1:h1))
+        if check_scalar
+            fill!(view(_res,l1:h1), _tmp_res)
+        else
+            copy!(view(_res, l1:h1), _tmp_res)
+        end
+    end
+    res[col] = _res
+    return _res
+end
 
 function _special_res_fill_barrier!(_res, vals, nl_g, l_cnt)
     for k in 1:l_cnt
@@ -416,31 +446,15 @@ function _update_res_with_special_res!(res, _res, special_res, ngroups, new_leng
 end
 
 function _combine_f_barrier_special(special_res, fromds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
-    if !haskey(newds_lookup, mslast)
         T = _check_the_output_type(fromds, mssecond)
         _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
         _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
-    else
-        # update the existing column in newds
-        T = _check_the_output_type(fromds, mssecond)
-        _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-        _update_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
-    end
 end
 
 
 function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
-    if !(mssecond isa Expr) && haskey(newds_lookup, msfirst)
-        if !haskey(newds_lookup, mslast)
-            T = _check_the_output_type(_columns(newds)[newds_lookup[msfirst]], mssecond)
-            _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-            _add_one_col_combine_from_combine!(_columns(newds), _res, _columns(newds)[newds_lookup[msfirst]], mssecond, ngroups, new_lengths, total_lengths)
-        else
-            T = _check_the_output_type(_columns(newds)[newds_lookup[msfirst]], mssecond)
-            _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-            _update_one_col_combine!(_columns(newds), _res, _columns(newds)[newds_lookup[msfirst]], mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
-        end
-    elseif !(mssecond isa Expr) && !haskey(newds_lookup, msfirst)
+ 
+    if !(mssecond isa Expr)
         if !haskey(newds_lookup, mslast)
             T = _check_the_output_type(fromds, mssecond)
             _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
@@ -448,8 +462,10 @@ function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_look
         else
             T = _check_the_output_type(fromds, mssecond)
             _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-            _update_one_col_combine!(_columns(newds), _res, fromds, mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
+            _update_one_col_combine!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds), newds_lookup[mslast])
+            # _update_one_col_combine!(_columns(newds), _res, fromds, mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
         end
+        
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
         push!(_columns(newds), byrow(newds, mssecond.args[1], msfirst; mssecond.args[2]...))
     else
@@ -517,7 +533,7 @@ function combine(ds::Dataset, @nospecialize(args...))
         if i == _first_vector_res
             _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
         else
-            _combine_f_barrier((!haskey(newds_lookup, ms[i].first) && !(ms[i].second.first isa Expr)) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+            _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
         end
         if !haskey(index(newds), ms[i].second.second)
             push!(index(newds), ms[i].second.second)
