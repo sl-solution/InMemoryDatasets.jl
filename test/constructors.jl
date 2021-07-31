@@ -42,7 +42,7 @@ const ≅ = isequal
             @test ds == Dataset(vecvec, cols, copycols=copycolsarg)
             @test ds == Dataset(collect(Any, vecvec), cols, copycols=copycolsarg)
             @test ds == Dataset(collect(AbstractVector, vecvec), cols, copycols=copycolsarg)
-            @test ds == Dataset([col=>vect for (col, vect) in zip(cols, vecvec)], copycols=copycolsarg)
+            @test ds == Dataset([col=>vect for (col, vect) in zip(cols, vecvec)])
         end
     end
 
@@ -126,13 +126,13 @@ end
     @test ds1.y.val !== ds2.y.val
     @test ds1.y.val !== ds3.y.val
 
-    ds2 = Dataset(ds1, copycols=false)
-    ds3 = copy(ds1, copycols=false)
+    ds2 = Dataset(ds1)
+    ds3 = copy(ds1)
     @test ds1 == ds2 == ds3
-    @test ds1.x.val === ds2.x.val
-    @test ds1.x.val === ds3.x.val
-    @test ds1.y.val === ds2.y.val
-    @test ds1.y.val === ds3.y.val
+    @test ds1.x.val !== ds2.x.val
+    @test ds1.x.val !== ds3.x.val
+    @test ds1.y.val !== ds2.y.val
+    @test ds1.y.val !== ds3.y.val
 
     ds1 = view(ds1, :, :)
     ds2 = Dataset(ds1)
@@ -171,9 +171,9 @@ end
     @test ds.a.val == a
     @test ds.a.val !== a
 
-    ds = Dataset(:a=>a, :b=>1, :c=>1:3, copycols=false)
+    ds = Dataset(:a=>a, :b=>1, :c=>1:3)
     @test propertynames(ds) == [:a, :b, :c]
-    @test ds.a.val === a
+    @test ds.a.val == a
 
     ds = Dataset("x1" => zeros(3), "x2" => ones(3))
     @inferred Dataset("x1" => zeros(3), "x2" => ones(3))
@@ -190,9 +190,9 @@ end
     @test ds."a" == a
     @test ds."a".val !== a
 
-    ds = Dataset("a"=>a, "b"=>1, "c"=>1:3, copycols=false)
+    ds = Dataset("a"=>a, "b"=>1, "c"=>1:3)
     @test propertynames(ds) == [:a, :b, :c]
-    @test ds."a".val === a
+    @test ds."a".val == a
 
     @test_throws ArgumentError Dataset(["type" => 1, :begin => 2])
 end
@@ -209,9 +209,9 @@ end
     @test ds.a == a
     @test ds.a.val !== a
 
-    ds = Dataset(Dict(:a=>a, :b=>1, :c=>1:3), copycols=false)
+    ds = Dataset(Dict(:a=>a, :b=>1, :c=>1:3))
     @test propertynames(ds) == [:a, :b, :c]
-    @test ds.a.val === a
+    @test ds.a.val == a
 
     ds = Dataset(Dict("A" => 1:3, "B" => 4:6))
     @inferred Dataset(Dict("A" => 1:3, "B" => 4:6))
@@ -223,9 +223,9 @@ end
     @test propertynames(ds) == [:a, :b, :c]
     @test ds."a" == a
     @test ds."a".val !== a
-    ds = Dataset(Dict("a"=>a, "b"=>1, "c"=>1:3), copycols=false)
+    ds = Dataset(Dict("a"=>a, "b"=>1, "c"=>1:3))
     @test propertynames(ds) == [:a, :b, :c]
-    @test ds."a".val === a
+    @test ds."a".val == a
 end
 
 @testset "vector constructors" begin
