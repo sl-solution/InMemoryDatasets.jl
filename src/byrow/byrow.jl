@@ -92,7 +92,11 @@ byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::Union{MultiColumnIndex, Co
 
 byrow(ds::AbstractDataset, ::typeof(reduce), cols::Union{MultiColumnIndex, ColumnIndex} = names(ds, Union{Missing, Number}); op = .+, kwargs...) = reduce(op, eachcol(ds[!, cols]); kwargs...)
 
-byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = true) =  threads ?  hp_row_generic(ds, f, cols) : row_generic(ds, f, cols)
+function byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = true)
+	colsidx = index(ds)[cols]
+	length(colsidx) == 1 && return byrow(ds, f, colsidx[1]; threads = threads)
+	threads ?  hp_row_generic(ds, f, cols) : row_generic(ds, f, cols)
+end
 function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = true)
 	if threads
 		T = Core.Compiler.return_type(f, (nonmissingtype(eltype(ds[!, col])), ))
