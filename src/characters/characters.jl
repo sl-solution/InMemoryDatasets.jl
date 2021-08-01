@@ -103,6 +103,19 @@ Characters(::Missing) = missing
 Characters{N}(::Missing) where N = missing
 Characters{N, M}(::Missing) where N where M = missing
 
+const memhash = UInt === UInt64 ? :memhash_seed : :memhash32_seed
+const memhash_seed = UInt === UInt64 ? 0x71e729fd56419c81 : 0x56419c81
+
+# this needs more work
+function hash(s::Characters, h::UInt)
+    s_end = length(s)
+    @inbounds for i in length(s):-1:1
+        s.data[i] == 0x20 ? s_end -= 1 : break
+    end
+    h += memhash_seed
+    ccall(memhash, UInt, (Ptr{UInt8}, Csize_t, UInt32), s, sizeof(view(s, 1:s_end)), h % UInt32) + h
+end
+
 function read(io::IO, T::Type{Characters{N, M}}) where N where M
     return read!(io, Ref{T}())[]::T
 end
