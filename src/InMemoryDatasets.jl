@@ -159,4 +159,5 @@ include("missings/missings.jl")
 
 # precompile
 include("precompile/precompile.jl")
+_precompile_()
 end
