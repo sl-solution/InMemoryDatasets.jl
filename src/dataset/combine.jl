@@ -1,6 +1,9 @@
 function _restrict_byrow_left_handside(outidx, idx, cols)
     colsidx = outidx[cols]
     names_outidx = _names(outidx)[colsidx]
+    if names_outidx isa Symbol
+        names_outidx = [names_outidx]
+    end
     # we shouldn't use the variables which exist in idx
     n_colsidx = Int[]
     for i in 1:length(colsidx)
@@ -52,7 +55,7 @@ function normalize_combine!(outidx::Index, idx::Index,
     colsidx = _restrict_byrow_left_handside(outidx, idx, sel.first)
     if sel.second[1].head == :BYROW
         # TODO needs a better name for destination
-        dsc_sym = Symbol(_names(outidx)[outidx[sel.first]], "_", funname(sel.second[1]))
+        dsc_sym = Symbol(_names(outidx)[outidx[sel.first]], "_", funname(sel.second[1].args[1]))
         _check_ind_and_add!(outidx, dsc_sym )
         return _names(outidx)[outidx[colsidx]] => sel.second[1] => dsc_sym
     end
@@ -65,7 +68,7 @@ function normalize_combine!(outidx::Index, idx::Index,
     if sel.second.head == :BYROW
         # TODO needs a better name for destination
         # _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
-         dsc_sym = Symbol(_names(outidx)[outidx[sel.first]], "_", funname(sel.second))
+         dsc_sym = Symbol(_names(outidx)[outidx[sel.first]], "_", funname(sel.second.args[1]))
         _check_ind_and_add!(outidx, dsc_sym )
         return _names(outidx)[outidx[colsidx]] => sel.second => dsc_sym
     end
@@ -124,9 +127,23 @@ function normalize_combine!(outidx::Index, idx::Index,
         end
     end
     colsidx = idx[sel.first]
-    res = Any[normalize_combine!(outidx, idx, _names(idx)[colsidx[1]] => sel.second)]
-    for i in 2:length(colsidx)
+    res = Any[]
+    for i in 1:length(colsidx)
         push!(res, normalize_combine!(outidx, idx, _names(idx)[colsidx[i]] => sel.second))
+    end
+    return res
+end
+# cols => funs which will be normalize as col1=>fun1, col2=>fun2, ...
+function normalize_combine!(outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
+                                                    <:Vector{<:Base.Callable}}))
+    colsidx = idx[sel.first]
+    if !(length(colsidx) == length(sel.second))
+        throw(ArgumentError("The input number of columns and the length of the number of functions should match"))
+    end
+    res = Any[]
+    for i in 1:length(colsidx)
+        push!(res, normalize_combine!(outidx, idx, _names(idx)[colsidx[i]] => sel.second[i]))
     end
     return res
 end
@@ -188,9 +205,16 @@ function normalize_combine!(outidx::Index, idx::Index,
 end
 
 function normalize_combine!(outidx::Index, idx::Index, arg::AbstractVector)
-    res = Any[normalize_combine!(outidx, idx, arg[1])]
-    for i in 2:length(arg)
-        push!(res, normalize_combine!(outidx::Index, idx::Index, arg[i]))
+    res = Any[]
+    for i in 1:length(arg)
+        _res = normalize_combine!(outidx::Index, idx::Index, arg[i])
+        if _res isa AbstractVector
+            for j in 1:length(_res)
+                push!(res, _res[j])
+            end
+        else
+            push!(res, _res)
+        end
     end
     return res
 end

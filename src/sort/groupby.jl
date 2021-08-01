@@ -29,6 +29,22 @@ function groupby(ds::Dataset, cols::MultiColumnIndex; rev = false, mapformats::B
     GroupBy(ds,colsidx, a[2], a[1], a[3])
 end
 
+function _threaded_permute_for_groupby(x, perm)
+    if DataAPI.refpool(x) !== nothing
+        pa = x
+        if pa isa PooledArray
+            # we could use copy but it will be inefficient for small selected_rows
+            res = PooledArray(PooledArrays.RefArray(_threaded_permute(pa.refs, perm)), DataAPI.invrefpool(pa), DataAPI.refpool(pa), PooledArrays.refcount(pa))
+        else
+            # for other pooled data(like Categorical arrays) we don't have optimised path
+            res = pa[perm]
+        end
+    else
+        res = _threaded_permute(x, perm)
+    end
+    res
+end
+
 groupby(ds::Dataset, col::ColumnIndex; rev = false, mapformats::Bool = true) = groupby(ds, [col], rev = rev, mapformats = mapformats)
 
 # TODO we need to take care of situations where gds.parent is already grouped, thus the grouping cols from that mess with new grouping cols of gds
@@ -88,11 +104,28 @@ function combine(gds::GroupBy, @nospecialize(args...))
         setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
         var_cnt += 1
     end
+    old_x = ms[1].first
+    curr_x = _columns(gds.parent)[1]
     for i in 1:length(ms)
+        # TODO this needs a little work, we should permute a column once and reuse it as many times as possible
+        # this can be done by sorting the first argument of col=>fun=>dst between each byrow 
+        if i == 1
+            curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1])
+        else
+            if old_x !== ms[i].first
+                if haskey(index(gds.parent).lookup, ms[i].first)
+                    curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1])
+                    old_x = ms[i].first
+                else
+                    curr_x = view(_columns(gds.parent)[1], a[1])
+                end
+            end
+        end
+
         if i == _first_vector_res
             _combine_f_barrier_special(special_res, view(gds.parent[!, ms[i].first].val, a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
         else
-            _combine_f_barrier(haskey(index(gds.parent).lookup, ms[i].first) ? view(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1]) : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+            _combine_f_barrier(haskey(index(gds.parent).lookup, ms[i].first) ? curr_x : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
         end
         if !haskey(index(newds), ms[i].second.second)
             push!(index(newds), ms[i].second.second)
