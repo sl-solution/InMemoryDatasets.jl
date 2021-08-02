@@ -1,9 +1,10 @@
-_stat_add_sum(x::T, y::S) where T where S = convert(promote_type(S,T), x + y)
+# _stat_add_sum(x::T, y::S) where T where S = convert(promote_type(S,T), x + y)
+_stat_add_sum(x, y) = Base.add_sum(x, y)
 _stat_add_sum(x::Bool, y::Bool) = x + y
 _stat_add_sum(x, ::Missing) = x
 _stat_add_sum(::Missing, x) = x
 _stat_add_sum(::Missing, ::Missing) = missing
-_stat_mul_prod(x, y) = x * y
+_stat_mul_prod(x, y) = Base.mul_prod(x, y)
 _stat_mul_prod(x, ::Missing) = x
 _stat_mul_prod(::Missing, x) = x
 _stat_mul_prod(::Missing, ::Missing) = missing
