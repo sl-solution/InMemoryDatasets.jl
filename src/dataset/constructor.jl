@@ -215,18 +215,22 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
         elseif eltype(col) <: Union{Missing, AbstractString} && !(eltype(col) <: Union{Missing, Characters})
             if DataAPI.refpool(col) !== nothing
                 ml = hp_maximum(x->ismissing(x) ? 1 : length(x), DataAPI.refpool(col))
-                ul = hp_maximum(x->ismissing(x) ? 1 : cld(sizeof(x), length(x)), DataAPI.refpool(col))
-                ul == 1 ? col = map(x->Characters{ml, UInt8}(x), col) : col = map(x->Characters{ml, UInt16}(x), col)
-                return allowmissing(col)
+                if ml < 17
+                    ul = hp_maximum(x->ismissing(x) ? 1 : cld(sizeof(x), length(x)), DataAPI.refpool(col))
+                    ul == 1 ? col = map(x->Characters{ml, UInt8}(x), col) : col = map(x->Characters{ml, UInt16}(x), col)
+                end
             else
                 ml = hp_maximum(x->ismissing(x) ? 1 : length(x), col)
-                ul = hp_maximum(x->ismissing(x) ? 1 : cld(sizeof(x), length(x)), col)
-                if ul == 1
-                    return allowmissing(Characters{ml, UInt8}.(col))
-                else
-                    return allowmissing(Characters{ml, UInt16}.(col))
+                if ml < 17
+                    ul = hp_maximum(x->ismissing(x) ? 1 : cld(sizeof(x), length(x)), col)
+                    if ul == 1
+                        return allowmissing(Characters{ml, UInt8}.(col))
+                    else
+                        return allowmissing(Characters{ml, UInt16}.(col))
+                    end
                 end
             end
+            return copycols ? copy(allowmissing(col)) : allowmissing(col)
         else
             return copycols ? copy(allowmissing(col)) : allowmissing(col)
         end
@@ -238,7 +242,10 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
                             "as a column of a data set is not allowed"))
     else
         if typeof(col) <: Union{Missing, AbstractString} && !(typeof(col) <: Union{Missing, Characters})
-            return fill!(Tables.allocatecolumn(Union{Missing, typeof(Characters(col))}, len), Characters(col))
+            if length(col) < 17
+                return fill!(Tables.allocatecolumn(Union{Missing, typeof(Characters(col))}, len), Characters(col))
+            end
+            return fill!(Tables.allocatecolumn(Union{Missing, typeof(Characters(col))}, len), col)
         else
             return fill!(Tables.allocatecolumn(Union{Missing, typeof(col)}, len), col)
         end

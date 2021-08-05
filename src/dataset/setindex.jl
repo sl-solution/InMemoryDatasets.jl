@@ -270,8 +270,8 @@ julia> insertcols!(ds, 2, :c => 2:4, :c => 3:5, makeunique=true)
 ```
 """
 function insertcols!(ds::Dataset, col::ColumnIndex, name_cols::Pair{Symbol, <:Any}...;
-                     makeunique::Bool=false)
-    copycols = true
+                     makeunique::Bool=false, unsupported_copy_cols = true)
+    copycols = unsupported_copy_cols
 # Modify Dataset
     col_ind = Int(col isa SymbolOrString ? columnindex(ds, col) : col)
     if !(0 < col_ind <= ncol(ds) + 1)
@@ -403,6 +403,7 @@ end
 
 
 Base.getindex(col1::DatasetColumn{Dataset,<:AbstractVector}, i::Integer) = getindex(__!(col1), i)
+Base.getindex(col1::DatasetColumn{Dataset,<:AbstractVector}, i::CartesianIndex) = getindex(__!(col1), i)
 Base.getindex(col1::DatasetColumn{Dataset,<:AbstractVector}, row_inds::AbstractVector) = getindex(__!(col1), row_inds)
 Base.getindex(col1::DatasetColumn{Dataset,<:AbstractVector}, row_inds::Colon) = getindex(__!(col1), row_inds)
 
@@ -461,6 +462,7 @@ end
 # #################
 
 Base.getindex(col1::SubDatasetColumn{Dataset,<:AbstractVector}, i::Integer) = getindex(__!(col1), i)
+Base.getindex(col1::SubDatasetColumn{Dataset,<:AbstractVector}, i::CartesianIndex) = getindex(__!(col1), i)
 Base.getindex(col1::SubDatasetColumn{Dataset,<:AbstractVector}, row_inds::AbstractVector) = getindex(__!(col1), row_inds)
 Base.getindex(col1::SubDatasetColumn{Dataset,<:AbstractVector}, row_inds::Colon) = getindex(__!(col1), row_inds)
 

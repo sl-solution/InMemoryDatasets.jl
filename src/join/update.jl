@@ -21,6 +21,7 @@ function _update_left_with_right!(x, y, ranges, allowmissing, mode)
 end
 
 function _update!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all) where T
+    isempty(dsl) && return dsl
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)

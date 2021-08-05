@@ -160,7 +160,7 @@ julia> map!(ds, [sqrt, x->x^2], 2:3)
 
 # Masking observations
 
-The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j]` is true, otherwise it is false. The `fun` is called on actual values by default, however, using the option `mapformats = true` causes `fun` to be called on the formatted values.
+The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j])` is true. The `fun` is called on actual values by default, however, using the option `mapformats = true` causes `fun` to be called on the formatted values.
 
 ## Examples
 
@@ -297,7 +297,7 @@ In the example above, the value of the first column has been updated and been us
 
 # Grouping Datasets
 
-The function `groupby!(ds, cols; rev = false, issorted = false)` groups a data set (sort `ds` based on `cols`). The sorting and grouping is done based on the formatted values of `cols` rather than the actual values. `combine(ds, args...)` can be used to aggregate the result for each group. The syntax for `args...` is similar to `modify`, with the exception that in `combine` all `cols`  in  `cols=>fun` always refers to the original data set, and `cols`  in `cols=>byrow(fun...)`  always refers to variables in the output data set .
+The function `groupby!(ds, cols; rev = false, issorted = false)` groups a data set (sort `ds` based on `cols`). The sorting and grouping is done based on the formatted values of `cols` by default. However, using the option `mapformats = false`  changes this behaviour. `combine(ds, args...)` can be used to aggregate the result for each group. The syntax for `args...` is similar to `modify`, with the exception that in `combine` all `cols`  in  `cols=>fun` always refers to the original data set, and `cols`  in `cols=>byrow(fun...)`  always refers to variables in the output data set. When `new_name` is not provided, `combine`  attaches the name of the transformation at the end of the aggregated variable and creates a new name for the output column.
 
 ```julia
 julia> ds = Dataset(g = [1, 1, 1, 2, 2],
@@ -305,7 +305,7 @@ julia> ds = Dataset(g = [1, 1, 1, 2, 2],
                    x2_int = [3, 2, 1, 3, -2],
                    x1_float = [1.2, missing, -1.0, 2.3, 10],
                    x2_float = [missing, missing, 3.0, missing, missing],
-                   x3_float = [missing, missing, -1.4, 3.0, -100.0])
+                   x3_float = [missing, mssing, -1.4, 3.0, -100.0])
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
      │ identity  identity  identity  identity   identity   identity
@@ -332,14 +332,13 @@ Grouped by: g
    5 │        2         2        -2       10.0  missing       -100.0
 
 julia> combine(ds, :x1_float => sum)
-2×2 Sorted Dataset
-Sorted by: g
- Row │ g         x1_float
+2×2 Dataset
+ Row │ g         x1_float_sum
      │ identity  identity
      │ Int64?    Float64?
-─────┼────────────────────
-   1 │        1       0.2
-   2 │        2      12.3
+─────┼────────────────────────
+   1 │        1           0.2
+   2 │        2          12.3
 ```
 
 # Joins
@@ -349,6 +348,8 @@ Sorted by: g
 `closejoin!` does the joining in-place. The in-place operation also can be done for `antijoin`, `semijoin`, and `leftjoin` where in the latter case there must not be more than one match from the right data set.
 
 > The joining functions use the formatted value for finding the match.
+> 
+> The joining functions always sort the second data set.
 
 ## Examples
 
@@ -367,7 +368,7 @@ julia> job = Dataset(ID = [1, 2, 4], Job = ["Lawyer", "Doctor", "Farmer"])
 3×2 Dataset
  Row │ ID        Job
      │ identity  identity
-     │ Int64?    Characte…?
+     │ Int64?   Characte…?
 ─────┼──────────────────────
    1 │        1  Lawyer
    2 │        2  Doctor
@@ -432,15 +433,17 @@ julia> grades = Dataset(mark = [0, 49.5, 59.5, 69.5, 79.5, 89.5, 95.5],
 
 julia> closejoin(classA, grades, on = :mark)
 5×3 Dataset
- Row │ id        mark      grade
-     │ identity  identity  identity
-     │ String?   Float64?  String?
-─────┼──────────────────────────────
-   1 │ id1           50.0  P
-   2 │ id2           69.5  B
-   3 │ id3           45.5  F
-   4 │ id4           88.0  A-
-   5 │ id5           98.5  A+
+ Row │ id          mark      grade
+     │ identity    identity  identity
+     │ Characte…?  Float64?  Characte…?
+─────┼──────────────────────────────────
+   1 │ id1             50.0  P
+   2 │ id2             69.5  B
+   3 │ id3             45.5  F
+   4 │ id4             88.0  A-
+   5 │ id5             98.5  A+
+
+
 ```
 
 Examples of using `closejoin` for financial data.
@@ -549,7 +552,7 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], border = :missing)
    5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100  missing     missing
 ```
 
-# Update a data set with another data set
+# Update a data set by values from another data set
 
 `update!` updates a data set with a given data set. The function uses the given keys (`on = ...`) to match the rows which need updating. By default the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true`  changes this behaviour. If there are multiple rows in the main data set which match the key using `mode = :all` causes all of them to be updated, and `mode = :missing` updates only the ones which are missing in the main data set. If there are multiple rows in the transaction data set which match the key only the last one will be used to update the main data set.
 
