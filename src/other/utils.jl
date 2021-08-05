@@ -15,6 +15,8 @@ function return_type(f::Function, x::AbstractVector)
 end
 
 
+Missings.allowmissing(a::PooledArray) = convert(PooledArray{Union{Missing, eltype(a)}}, a)
+
 function allocatecol(x::AbstractVector, len; addmissing = true)
     @assert len > 0 "cannot allocate a column with length zero"
     if DataAPI.refpool(x) !== nothing
@@ -26,6 +28,7 @@ function allocatecol(x::AbstractVector, len; addmissing = true)
         end
         resize!(_res, len)
         if addmissing
+            _res = allowmissing(_res)
             _res[1] = missing
         end
     else
