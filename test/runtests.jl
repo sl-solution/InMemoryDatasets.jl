@@ -16,7 +16,10 @@ if VERSION > v"1.3"
     end
 end
 
-my_tests = ["constructors.jl"
+my_tests = ["constructors.jl",
+            "characters.jl",
+            "join.jl",
+            "transpose.jl"
             ]
 
 println("Running tests:")

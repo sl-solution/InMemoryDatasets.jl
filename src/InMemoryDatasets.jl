@@ -42,6 +42,7 @@ export
       # functions
       nrow,
       ncol,
+      rename!,
       getformat,
       setformat!,
       removeformat!,
@@ -138,6 +139,9 @@ include("sort/sortperm.jl")
 include("sort/sort.jl")
 include("sort/groupby.jl")
 include("sort/gatherby.jl")
+
+# transpose
+include("dataset/transpose.jl")
 
 # joins
 include("join/join.jl")
