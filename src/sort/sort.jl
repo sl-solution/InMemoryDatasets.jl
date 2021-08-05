@@ -1,6 +1,10 @@
-Base.sortperm(ds::Dataset, cols; rev = false, mapformats::Bool = true) = _sortperm(ds, cols, rev, mapformats = mapformats)[2]
+function Base.sortperm(ds::Dataset, cols; rev = false, mapformats::Bool = true)
+    isempty(ds) && return []
+    _sortperm(ds, cols, rev, mapformats = mapformats)[2]
+end
 
 function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true)
+    isempty(ds) && return ds
     colsidx = index(ds)[cols]
     if length(rev) == 1
         revs = repeat([rev], length(colsidx))
@@ -38,6 +42,7 @@ end
 Base.sort!(ds::Dataset, col::ColumnIndex; rev::Bool = false, issorted::Bool = false, mapformats::Bool = true) = sort!(ds, [col], rev = rev, issorted = issorted, mapformats = mapformats)
 
 function unsort!(ds::Dataset)
+    isempty(ds) && return ds
     if isempty(index(ds).perm)
         return ds
     else

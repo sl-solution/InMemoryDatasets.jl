@@ -1,15 +1,8 @@
 function groupby!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true)
-    if issorted
-        sort!(ds, cols, rev = rev, issorted = issorted, mapformats = mapformats)
-        index(ds).grouped[] = true
-        _modified(_attributes(ds))
-        ds
-    else
-        sort!(ds, cols, rev = rev, issorted = issorted, mapformats = mapformats)
-        index(ds).grouped[] = true
-        _modified(_attributes(ds))
-        ds
-    end
+    sort!(ds, cols, rev = rev, issorted = issorted, mapformats = mapformats)
+    index(ds).grouped[] = true
+    _modified(_attributes(ds))
+    ds
 end
 
 groupby!(ds::Dataset, col::ColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true) = groupby!(ds, [col]; rev = rev, issorted = issorted, mapformats = mapformats)
@@ -22,8 +15,16 @@ struct GroupBy
     lastvalid
 end
 
+nrow(ds::GroupBy) = nrow(ds.parent)
+ncol(ds::GroupBy) = ncol(ds.parent)
+Base.names(ds::GroupBy, kwargs...) = names(ds.parent, kwargs...)
+_names(ds::GroupBy) = _names(ds.parent)
+_columns(ds::GroupBy) = _columns(ds.parent)
+index(ds::GroupBy) = index(ds.parent)
+Base.parent(ds::GroupBy) = ds.parent
+
 function groupby(ds::Dataset, cols::MultiColumnIndex; rev = false, mapformats::Bool = true)
-    @assert !isgrouped(ds) "`groupby` is not yet implemented for already grouped data sets"
+    # @assert !isgrouped(ds) "`groupby` is not yet implemented for already grouped data sets"
     colsidx = index(ds)[cols]
     a = _sortperm(ds, cols, rev, mapformats = mapformats)
     GroupBy(ds,colsidx, a[2], a[1], a[3])
@@ -62,7 +63,7 @@ function combine(gds::GroupBy, @nospecialize(args...))
     # result (which seems reasonable ??)
     _first_vector_res = _check_mutliple_rows_for_each_group(gds.parent, ms)
 
-    _is_groupingcols_modifed(gds.parent, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
+    _is_groupingcols_modifed(gds, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
     groupcols = gds.groupcols
     a = (gds.perm, gds.starts, gds.lastvalid)
@@ -80,7 +81,7 @@ function combine(gds::GroupBy, @nospecialize(args...))
         special_res = Vector{CT}(undef, ngroups)
         new_lengths = Vector{Int}(undef, ngroups)
         # _columns(ds)[ms[_first_vector_res].first]
-        _compute_the_mutli_row_trans!(special_res, new_lengths, view(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first]], a[1]), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+        _compute_the_mutli_row_trans!(special_res, new_lengths, _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first]], a[1]), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
         # special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
         cumsum!(new_lengths, new_lengths)
         total_lengths = new_lengths[end]
@@ -108,7 +109,7 @@ function combine(gds::GroupBy, @nospecialize(args...))
     curr_x = _columns(gds.parent)[1]
     for i in 1:length(ms)
         # TODO this needs a little work, we should permute a column once and reuse it as many times as possible
-        # this can be done by sorting the first argument of col=>fun=>dst between each byrow 
+        # this can be done by sorting the first argument of col=>fun=>dst between each byrow
         if i == 1
             curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1])
         else
@@ -182,4 +183,34 @@ function getindex_group(ds::Dataset, i::Integer)
     lo = index(ds).starts[i]
     i == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[i+1] - 1
     lo:hi
+end
+
+function _ngroups(ds::GroupBy)
+    ds.lastvalid
+end
+function _ngroups(ds::Dataset)
+    index(ds).ngroups[]
+end
+function _groupcols(ds::GroupBy)
+    ds.groupcols
+end
+function _groupcols(ds::Dataset)
+    if isgrouped(ds)
+        index(ds).sortedcols
+    else
+        Int[]
+    end
+end
+function _group_starts(ds::GroupBy)
+    ds.starts
+end
+function _group_starts(ds::Dataset)
+    index(ds).starts
+end
+
+function _get_perms(ds::Dataset)
+    1:nrow(ds)
+end
+function _get_perms(ds::GroupBy)
+    ds.perm
 end

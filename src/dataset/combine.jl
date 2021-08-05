@@ -269,7 +269,7 @@ function _check_mutliple_rows_for_each_group(ds, ms)
 end
 
 function _is_groupingcols_modifed(ds, ms)
-    groupcols::Vector{Int} = index(ds).sortedcols
+    groupcols::Vector{Int} = _groupcols(ds)
     idx = index(ds)
     all_names = _names(ds)
     for i in 1:length(ms)
@@ -477,7 +477,7 @@ end
 
 
 function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
- 
+
     if !(mssecond isa Expr)
         if !haskey(newds_lookup, mslast)
             T = _check_the_output_type(fromds, mssecond)
@@ -489,7 +489,7 @@ function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_look
             _update_one_col_combine!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds), newds_lookup[mslast])
             # _update_one_col_combine!(_columns(newds), _res, fromds, mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
         end
-        
+
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
         push!(_columns(newds), byrow(newds, mssecond.args[1], msfirst; mssecond.args[2]...))
     else
