@@ -43,7 +43,7 @@ makedocs(
 
 deploydocs(
     # options
-    repo = "github.com/sl-solution/InMemoryDatasets.jl.git",
+    repo = "github.com/sl-solution/InMemoryDatasets.jl",
     target = "build",
     deps = nothing,
     make = nothing,
