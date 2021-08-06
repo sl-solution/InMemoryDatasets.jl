@@ -2,6 +2,8 @@
 
 `InMemoryDatasets.jl` is a `Julia` package for working with tabular data sets.
 
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://sl-solution.github.io/InMemoryDatasets.jl/stable)
+
 # Examples
 
 ```julia
