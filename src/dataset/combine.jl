@@ -236,7 +236,7 @@ end
 function normalize_combine!(offset, outidx::Index, idx::Index, arg::AbstractVector)
     res = Any[]
     for i in 1:length(arg)
-        _res = normalize_combine!(offset, utidx::Index, idx::Index, arg[i])
+        _res = normalize_combine!(offset, outidx::Index, idx::Index, arg[i])
         if _res isa AbstractVector
             for j in 1:length(_res)
                 push!(res, _res[j])
