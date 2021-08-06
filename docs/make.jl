@@ -1,21 +1,21 @@
 using Documenter
 using InMemoryDatasets
 
-DocMeta.setdocmeta!(Datasets, :DocTestSetup, :(using InMemoryDatasets); recursive=true)
+# DocMeta.setdocmeta!(InMemoryDatasets, :DocTestSetup, :(using InMemoryDatasets); recursive=true)
 
 # Build documentation.
 # ====================
 
 makedocs(
     # options
-    modules = [Datasets],
-    doctest = true,
+    # modules = [InMemoryDatasets],
+    doctest = false,
     clean = false,
     sitename = "In Memory Datasets",
-    format = Documenter.HTML(
-        canonical = "https://sl-solution.github.io/InMemoryDataset.jl/stable/",
-        edit_link = "main"
-    ),
+    # format = Documenter.HTML(
+    #     canonical = "https://sl-solution.github.io/InMemoryDataset.jl/stable/",
+    #     edit_link = "main"
+    # ),
     pages = Any[
         "Introduction" => "index.md",
         "First Steps with InMemoryDatasets.jl" => "man/basics.md",
@@ -30,10 +30,10 @@ makedocs(
             "Aggregating over groups" => "man/aggregation.md",
             "Transposing Data" => "man/transpose.md",
             "Joins" => "man/joins.md"
-        ],
-        "API" => Any[
-            "Functions" => "lib/functions.md"
         ]
+        # "API" => Any[
+        #     "Functions" => "lib/functions.md"
+        # ]
     ],
     strict = true
 )

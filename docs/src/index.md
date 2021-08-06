@@ -110,7 +110,7 @@ that are a part of public API of the `InMemoryDatasets.jl` package using e.g. th
 `getfield` function. Whenever some operation on fields of defined types is
 considered allowed an appropriate exported function should be used instead.
 
-```@contents
+<!-- ```@contents
 Pages = ["lib/functions.md"]
 Depth = 2
 ```
@@ -119,4 +119,4 @@ Depth = 2
 
 ```@index
 Pages = ["lib/functions.md"]
-```
+``` -->

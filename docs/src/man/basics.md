@@ -22,8 +22,8 @@ julia> using InMemoryDatasets
 To create a data set, use `Dataset()`. For example
 
 ```jldoctest
-julia> ds = Dataset(var1 = [1, 2, 3], 
-                var2 = [1.2, 0.5, 3.3], 
+julia> ds = Dataset(var1 = [1, 2, 3],
+                var2 = [1.2, 0.5, 3.3],
                 var3 = ["C1", "C2", "C3"])
 3×3 Dataset
  Row │ var1      var2      var3
@@ -38,7 +38,7 @@ julia> ds = Dataset(var1 = [1, 2, 3],
 The first line of the output provides the general information about the data set.
  A data set is shown as a table in Julia, where each column represents a variable
  in the data set. The header section of the table shows three pieces of information
- for each variable (column), the variable's name, the variable's [`format`](@ref), and
+ for each variable (column), the variable's name, the variable's `format`, and
  the variable's data type. The `format` of a variable controls how the values
  of a variable should be shown or interpreted when working with a data set.
 
@@ -177,7 +177,7 @@ This information will be attached to the data set `ds`.
 To set a specific format for a column of a data set use `setformat!` function, e.g.
 
 ```jldoctest
-julia> ds = Dataset(x = 1:10, 
+julia> ds = Dataset(x = 1:10,
                     y = repeat(1:5, inner = 2),
                     z = repeat(1:2, 5))
 10×3 Dataset
@@ -215,7 +215,7 @@ julia> setformat!(ds, :y => sqrt)
 
 ```
 
-The first argument for `setformat!` is the data set which needs to be modified and the second argument is the name of variables, `=>` and a named function. In the above example, we assign `sqrt` function as a format for the column `:y`. 
+The first argument for `setformat!` is the data set which needs to be modified and the second argument is the name of variables, `=>` and a named function. In the above example, we assign `sqrt` function as a format for the column `:y`.
 
 > Note that `setformat!` doesn't check the validity of a format, so if a non valid format is assigned to a variable, for instance assigning `sqrt` to a variable which contains negative values, some functionality of data set will be parallelised (like `show`ing of the data set). In this cases, simply remove the non-valid format by using `removeformat!`.
 

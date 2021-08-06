@@ -1,4 +1,4 @@
-```@meta
+<!-- ```@meta
 CurrentModule = InMemoryDatasets
 ```
 
@@ -131,4 +131,4 @@ var
 std
 wmean
 wsum
-```
+``` -->
