@@ -11,7 +11,7 @@ makedocs(
     modules = [Datasets],
     doctest = true,
     clean = false,
-    sitename = "InMemoryDatasets.jl",
+    sitename = "In Memory Datasets",
     format = Documenter.HTML(
         canonical = "https://sl-solution.github.io/InMemoryDataset.jl/stable/",
         edit_link = "main"
