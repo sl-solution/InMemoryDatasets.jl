@@ -50,8 +50,8 @@ groupby(ds::Dataset, col::ColumnIndex; rev = false, mapformats::Bool = true) = g
 
 # TODO we need to take care of situations where gds.parent is already grouped, thus the grouping cols from that mess with new grouping cols of gds
 function combine(gds::GroupBy, @nospecialize(args...))
-    idx_cpy::Index = Index(copy(index(gds.parent).lookup), copy(index(gds.parent).names), Dict{Int, Function}())
-    ms = normalize_combine_multiple!(idx_cpy, index(gds.parent), args...)
+    idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
+    ms = normalize_combine_multiple!(length(_groupcols(gds)),idx_cpy, index(gds.parent), args...)
     # the rule is that in combine, byrow must only be used for already aggregated columns
     # so, we should check every thing pass to byrow has been assigned in args before it
     # if this is not the case, throw ArgumentError and ask user to use modify instead
