@@ -259,6 +259,7 @@ const ≅ = isequal
                  Union{Missing, Float64}[missing, missing, 4.0, 1.3, missing, missing],
                  Union{Missing, Float64}[missing, missing, missing, missing, 6.0, 2.0]], ["g1", "_variables_", "(\"id1_g1\", 3)", "(\"id2_g1\", 1)", "(\"id3_g1\", 4)", "(\"id2_g2\", 2)", "(\"id1_g2\", 5)", "(\"id4_g3\", 6)"])
         tds8 = Dataset([Union{Missing, Characters{2, UInt8}}["g1", "g1", "g2", "g2", "g3", "g3"],
+                 Union{Missing, Characters{2, UInt8}}["c1", "c1", "c1", "c1", "c1", "c1"],
                  Union{Missing, Characters{4, UInt8}}["val1", "val2", "val1", "val2", "val1", "val2"],
                  Union{Missing, Float64}[2.0, 2.1, missing, missing, missing, missing],
                  Union{Missing, Float64}[3.0, 0.5, missing, missing, missing, missing],
