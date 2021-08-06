@@ -1,16 +1,15 @@
-# First steps with InMemoryDatasets.jl
+# First steps with Datasets
 
 ## Setting up the environment
 
-If want to use the `InMemoryDatasets.jl` package you need to install it first.
-You can do it using the following commands:
+To install in memory datasets package , simply, use the following commands inside a Julia session:
 
 ```julia
 julia> using Pkg
 julia> Pkg.add("InMemoryDatasets")
 ```
 
-Throughout the rest of the tutorial we will assume that you have installed the `InMemoryDatasets.jl` package and
+Throughout the rest of the tutorial we will assume that you have installed the "In Memory Datasets" package and
 have already typed `using InMemoryDatasets` which loads the package:
 
 ```jldoctest
@@ -161,9 +160,9 @@ Variables information
 └──────────┴──────────┴─────────┘
 ```
 
-`content` shows that the data set has 5 rows and 6 columns. It also shows when the data set has been created and when is the last time it has been modified. The `content` function also reports the data type and formats of each variable.
+`content` shows that the data set has 5 rows and 6 columns. It also shows when the data set has been created and when is the last time that it has been modified. The `content` function also reports the data type and formats of each variable.
 
-The `Info` field is a string field which can contain any information related to the data set. To set an info for a data set, use `setinfo!`, e.g.
+The `Info` field is a string field which can contain any information related to the data set. To set an `Info` for a data set, use `setinfo!`, e.g.
 
 ```jldoctest
 julia> setinfo!(ds, "An example from the manual")
@@ -212,12 +211,11 @@ julia> setformat!(ds, :y => sqrt)
    8 │        8  2.0             2
    9 │        9  2.23607         1
   10 │       10  2.23607         2
-
 ```
 
 The first argument for `setformat!` is the data set which needs to be modified and the second argument is the name of variables, `=>` and a named function. In the above example, we assign `sqrt` function as a format for the column `:y`.
 
-> Note that `setformat!` doesn't check the validity of a format, so if a non valid format is assigned to a variable, for instance assigning `sqrt` to a variable which contains negative values, some functionality of data set will be parallelised (like `show`ing of the data set). In this cases, simply remove the non-valid format by using `removeformat!`.
+> Note that `setformat!` doesn't check the validity of a format, so if a non-valid format is assigned to a variable, for instance assigning `sqrt` to a variable which contains negative values, some functionality of data set will be parallelised (like `show`ing the data set). In this cases, simply remove the non-valid format by using `removeformat!`.
 
 Lets define a function as a new format for column `:z` in the above example,
 
@@ -227,7 +225,7 @@ julia> function gender(x)
        end
 ```
 
-The format `gender` accepts one value and if the value is equal to `1`, `gender` maps it to "Male", if the value is equal to `2`, it maps it to "Female", and for any other values it maps to `missing`.
+The format `gender` accepts one value and if the value is equal to `1`, `gender` maps it to "Male", if the value is equal to `2`, it maps it to "Female", and for any other values it maps them to `missing`.
 
 ```jldoctest
 julia> setformat!(ds, :z => gender)
@@ -246,7 +244,6 @@ julia> setformat!(ds, :z => gender)
    8 │        8  2.0      Female
    9 │        9  2.23607    Male
   10 │       10  2.23607  Female
-
 ```
 
 the `removeformat!` function should be used to remove a variable's format.
@@ -270,13 +267,13 @@ julia> removeformat!(ds, :y)
   10 │       10         5  Female
 ```
 
-Similar to `setformat!` the first argument is the name of data set and the second argument is the variable which the format is going to be removed. Note that assigning or removing a format doesn't change the actual value of the variable.
+Similar to `setformat!` the first argument is the name of the data set and the second argument is the name of the variable which we want to remove its format. Note that assigning or removing a format doesn't change the actual values of the variable.
 
 By default, formatted values of a variable will be used when operations like displaying, sorting, grouping, or merging are called.
 
 ### Accessing individual variable or observation
 
-`ds[:, col]`, `ds[i, col]` can be used to access a specific column and specific observation of a specific column of the data set, respectively. For example,
+`ds[:, col]`, `ds[i, col]` can be used to access a specific column or specific observation of a specific column of `ds`, respectively. For example,
 
 ```jldoctest
 julia> ds = Dataset(x = [4,6,3], y = [1,2,43]);
@@ -288,12 +285,11 @@ julia> ds[:, :x]
 
 julia> ds[3, :y]
 43
-
 ```
 
 Note that `ds[:, col]` extracts a column of a data set as a vector. Thus, this vector can be used as a normal vector in Julia.
 
-Also Note that, assigning a new value to `ds[3, :y]` will modify the data set, i.e.
+Also note that, assigning a new value to `ds[3, :y]` will modify the data set, i.e.
 
 ```jldoctest
 julia> ds[3, :y] = 3
@@ -324,7 +320,7 @@ Variables information
 └─────┴──────────┴────────┘
 ```
 
-The `content` function shows that the data set has been created on `2021-08-04T13:18:51.185`, and the last time when it has been modified is `2021-08-04T13:24:33.086`.
+The `content` function shows that the data set has been created on `2021-08-04T13:18:51.185`, and the last time that it has been modified is on `2021-08-04T13:24:33.086`.
 
 ### Adding a new variable
 
@@ -372,10 +368,9 @@ julia> ds
    1 │        1  val1             3.5
    2 │        2  val2             4.6
    3 │        3  val3            32.0
-
 ```
 
-Be aware that, when adding a new variable to a data set using the above syntax if the variable already exists in the data set it will be replaced by new one.
+Be aware that, when adding a new variable to a data set, using the above syntax, if the variable already exists in the data set it will be replaced by new one.
 
 ### Some useful functions
 
@@ -385,12 +380,12 @@ The following functions are very handy when working with a data set. Note that f
 * `size(ds)` prints the data set dimension, i.e. number of rows and number of columns
 * `nrow(ds)` returns the number of rows
 * `ncol(ds)` returns the number of columns
-* `first(ds, 3)` shows the first 3 rows of a data set
-* `last(ds, 3)` shows the last 3 rows of a data set
+* `first(ds, n)` shows the first `n` rows of a data set
+* `last(ds, n)` shows the last `n` rows of a data set
 * `rename!` can be used to rename variable names
 * `select!` can be used to drop, select, or rearrange variables
 * `delete!` deletes rows from a data set
-* `append!` add a secondary data set to the end of a data set
+* `append!(ds, tds)` appends `tds` at the end of `ds`
 
 ```jldoctest
 julia> test_data = Dataset(rand(1:10, 4, 3), :auto)
