@@ -57,7 +57,7 @@ Generally, `byrow` is very efficient for any `fun` which returns a single value 
 * `sum`
 * `var`
 
-The common syntax of `byrow` for all of these function except `nunique` is:
+The common syntax of `byrow` for all of these functions except `nunique` is:
 
 `byrow(ds, fun, cols; [by , threads = true])`
 
@@ -128,7 +128,7 @@ julia> byrow(ds, all, 1:3, by = x -> isless(0, x))
 
 Note that in Julia `isless(0, missing)` is `true`.
 
-To find rows which contains at least one missing value in any of the column we can use the following code, 
+To find rows which contain at least one missing value in any of the columns we can use the following code, 
 
 ```jldoctest
 julia> byrow(ds, any, :, by = ismissing)
@@ -140,7 +140,7 @@ julia> byrow(ds, any, :, by = ismissing)
  1
 ```
 
-It means that except the third row, all other rows contains missing values. Using `byrow` with `count` function, we can count the number of non-missing values in each row, 
+It means that except the third row, all other rows contain missing values. Using `byrow` with `count` function, we can count the number of non-missing values in each row, 
 
 ```jldoctest
 julia> byrow(ds, count, :, by = !ismissing)
@@ -154,14 +154,14 @@ julia> byrow(ds, count, :, by = !ismissing)
 
 ## User defined operations
 
-For user defined functions which return a single value, `byrow` treats each row as a vector of values, thus the user defined function must accept a vector and return a single value. For instance to calculate `1 * col1 + 2 * col2 + 3 * col3` for each row in `ds` we can define the following function:
+For user defined functions which return a single value, `byrow` treats each row as a vector of values, thus the user defined function must accept a vector and returns a single value. For instance to calculate `1 * col1 + 2 * col2 + 3 * col3` for each row in `ds` we can define the following function:
 
 ```jldoctest
 julia> avg(x) = 1 * x[1] + 2 * x[2] + 3 * x[3]
 avg (generic function with 1 method)
 ```
 
-and use this function in `byrow`, 
+and directly use it in `byrow`, 
 
 ```jldoctest
 julia> byrow(ds, avg, 1:3)
@@ -173,11 +173,11 @@ julia> byrow(ds, avg, 1:3)
   0
 ```
 
-Note that `avg` is missing if any of the values of `x` is missing.
+Note that `avg` is missing if any of the values in `x` is missing.
 
 ## Special operations
 
-`byrow` also support a few optimised operations which return a vector of values for each row. The `fun` argument for these operations are:
+`byrow` also supports a few optimised operations which return a vector of values for each row. The `fun` argument for these operations is one the followings:
 
 * `cumprod`
 * `cumprod!`
