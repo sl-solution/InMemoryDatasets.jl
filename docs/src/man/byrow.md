@@ -1,5 +1,6 @@
-# Row-wise operations
-## `byrow` function
+# Function `byrow`
+
+## Introduction
 
 The `byrow` function is a high performance (multi-threaded) function for row-wise operations. It is designed to make tasks like summing up each row simple, efficient, and lightening fast. The function can be used as a stand-alone function or inside `modify` or `combine` functions. The stand-alone syntax of the function is `byrow(ds, fun, cols, ...)`, where `ds` is a data set, `fun` is a function, and `cols`  is the list of columns which row-wise operation is going to be applied on their values in each row, e.g. the following code creates a data set with 100,000 rows and 100 columns, and adds the values in each row,
 
@@ -39,7 +40,7 @@ julia> @btime sum(m, dims = 2)
 
 When the data set has heterogeneous data types at each column, `byrow` will be even more efficient than `sum(m, dims = 2)`.
 
-### Optimised `fun`
+## Optimised operations
 
 Generally, `byrow` is very efficient for any `fun` which returns a single value for each row, however, it is fine tuned for the following functions:
 
@@ -64,7 +65,7 @@ The `by` keyword argument is for giving a function to call on each value before 
  
 The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique value of each row, and `count_missing = true` counts missings as a unique value. 
 
-#### Examples
+### Examples
 
 Let's first create an example data set which we will use for the rest of this section:
 
@@ -151,7 +152,7 @@ julia> byrow(ds, count, :, by = !ismissing)
  5
 ```
 
-### General `fun`
+## User defined operations
 
 For user defined functions which return a single value, `byrow` treats each row as a vector of values, thus the user defined function must accept a vector and return a single value. For instance to calculate `1 * col1 + 2 * col2 + 3 * col3` for each row in `ds` we can define the following function:
 
@@ -174,7 +175,7 @@ julia> byrow(ds, avg, 1:3)
 
 Note that `avg` is missing if any of the values of `x` is missing.
 
-### Special operations
+## Special operations
 
 `byrow` also support a few optimised operations which return a vector of values for each row. The `fun` argument for these operations are:
 

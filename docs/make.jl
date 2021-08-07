@@ -23,7 +23,7 @@ makedocs(
             "Getting Started" => "man/tutorial.md",
             "Formats" => "man/formats.md",
             "Call functions on each observation" => "man/map.md",
-            "Working with each row" => "man/byrow.md",
+            "Row-wise operations" => "man/byrow.md",
             "Filtering observations" => "man/filter.md",
             "Sorting" => "man/sorting.md",
             "Grouping" => "man/grouping.md",
