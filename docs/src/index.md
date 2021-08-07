@@ -5,7 +5,7 @@ Welcome to the InMemoryDatasets.jl documentation!
 This resource aims to teach you everything you need to know to get up and
 running with tabular data manipulation using the InMemoryDatasets.jl package.
 
-## What are In Memory Datasets?
+## What is Dataset?
 
 InMemoryDatasets.jl provides a set of tools for working with tabular data in Julia.
 Its design and functionality are similar to those of `DataFrames.jl` in Julia, `data manipulation` (in Base/SAS),
@@ -16,7 +16,7 @@ InMemoryDatasets.jl isn't the only tool for working with tabular data in Julia -
 there are some other great libraries for certain use-cases -- but it provides great data
 manipulations functionality through a flexible interface.
 
-## InMemoryDatasets.jl and the Julia Data Ecosystem
+## Julia data ecosystem
 
 The Julia data ecosystem can be a difficult space for new users to navigate, in
 part because the Julia ecosystem tends to distribute functionality across
@@ -38,7 +38,7 @@ along with a few notes about what makes each library special.
     - [VegaLite.jl](https://www.queryverse.org/VegaLite.jl/stable/): High-level
       plotting library that uses a different "grammar of graphics" syntax.
 
-### Other Julia Tabular Libraries
+### Other Julia tabular libraries
 
 In memory Datasets are great general purpose tool for data manipulation and
 wrangling. However, the following packages in Julia provide different approach for
@@ -75,7 +75,7 @@ documentation and function capabilities.
 Information on specific versions can be found on the [Release
 page](https://github.com/sl-solution/InMemoryDatasets.jl/releases).
 
-## Package Manual
+## Package manual
 
 ```@contents
 Pages = ["man/basics.md",
@@ -86,6 +86,7 @@ Pages = ["man/basics.md",
          "man/filter.md",
          "man/sorting.md",
          "man/grouping.md",
+         "man/modify.md"
          "man/aggregation",
          "man/transpose.md",
          "man/joins.md"]

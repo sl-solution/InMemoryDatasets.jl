@@ -87,10 +87,19 @@ Row │ customer age  first name
   3 │           25  Jule
 ```
 
-It is also possible to construct a data set from the values of a matrix, e.g.
+It is also possible to construct a data set from the values of a matrix or a vector of vectors, e.g.
 
 ```jldoctest
 julia> Dataset([1 0; 2 0], :auto)
+2×2 Dataset
+ Row │ x1        x2
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        2         0
+
+julia> Dataset([[1 ,2], [0, 0]], :auto)
 2×2 Dataset
  Row │ x1        x2
      │ identity  identity

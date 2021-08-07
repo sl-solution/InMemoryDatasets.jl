@@ -18,7 +18,7 @@ makedocs(
     # ),
     pages = Any[
         "Introduction" => "index.md",
-        "First Steps with InMemoryDatasets.jl" => "man/basics.md",
+        "First Steps" => "man/basics.md",
         "User Guide" => Any[
             "Getting Started" => "man/tutorial.md",
             "Formats" => "man/formats.md",
