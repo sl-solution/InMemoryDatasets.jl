@@ -86,7 +86,7 @@ Pages = ["man/basics.md",
          "man/filter.md",
          "man/sorting.md",
          "man/grouping.md",
-         "man/modify.md"
+         "man/modify.md",
          "man/aggregation",
          "man/transpose.md",
          "man/joins.md"]
