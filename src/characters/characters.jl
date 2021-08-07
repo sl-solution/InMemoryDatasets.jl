@@ -4,19 +4,25 @@ import Base: iterate, lastindex, getindex, sizeof, length, ncodeunits, codeunit,
 
 struct Characters{N, M} <: AbstractString
     data::NTuple{N, M}
-    Characters{N, M}(itr) where {N} where {M} = new(NTuple{N, M}(rpad(itr, N)))
+    function Characters{N, M}(itr) where {N} where {M}
+        isempty(itr) && return missing
+        new(NTuple{N, M}(rpad(itr, N)))
+    end
 end
 
-Characters{N}(itr) where {N} = Characters{N, UInt8}(itr)
+function Characters{N}(itr) where {N}
+    Characters{N, UInt8}(itr)
+end
 
 function Characters(s::AbstractString)
+    isempty(s) && return missing
     sl = cld(sizeof(s), length(s))
     if  sl == 1
         Characters{length(s), UInt8}(s)
     elseif sl == 2
         Characters{length(s), UInt16}(s)
     else
-        throw(ArgumentError("Characters only support UTF-8 and UTF-16"))
+        throw(ArgumentError("Characters only support UInt8 and UInt16"))
     end
 end
 

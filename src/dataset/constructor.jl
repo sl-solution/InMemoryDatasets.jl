@@ -216,13 +216,13 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
             if DataAPI.refpool(col) !== nothing
                 ml = hp_maximum(x->ismissing(x) ? 1 : length(x), DataAPI.refpool(col))
                 if ml < 17
-                    ul = hp_maximum(x->ismissing(x) ? 1 : cld(sizeof(x), length(x)), DataAPI.refpool(col))
-                    ul == 1 ? col = map(x->Characters{ml, UInt8}(x), col) : col = map(x->Characters{ml, UInt16}(x), col)
+                    ul = hp_maximum(x->ismissing(x)||isempty(x) ? 1 : cld(sizeof(x), length(x)), DataAPI.refpool(col))
+                    ul == 1 ? col = map(x->ifelse(isempty(x), missing, Characters{ml, UInt8}(x)), col) : col = map(x->ifelse(isempty(x), missing, Characters{ml, UInt16}(x)), col)
                 end
             else
                 ml = hp_maximum(x->ismissing(x) ? 1 : length(x), col)
                 if ml < 17
-                    ul = hp_maximum(x->ismissing(x) ? 1 : cld(sizeof(x), length(x)), col)
+                    ul = hp_maximum(x->ismissing(x)||isempty(x) ? 1 : cld(sizeof(x), length(x)), col)
                     if ul == 1
                         return allowmissing(Characters{ml, UInt8}.(col))
                     else
@@ -242,7 +242,7 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
                             "as a column of a data set is not allowed"))
     else
         if typeof(col) <: Union{Missing, AbstractString} && !(typeof(col) <: Union{Missing, Characters})
-            if length(col) < 17
+            if 0 < length(col) < 17
                 return fill!(Tables.allocatecolumn(Union{Missing, typeof(Characters(col))}, len), Characters(col))
             end
             return fill!(Tables.allocatecolumn(Union{Missing, typeof(Characters(col))}, len), col)
