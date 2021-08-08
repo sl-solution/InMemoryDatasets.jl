@@ -14,6 +14,8 @@ function Characters{N}(itr) where {N}
     Characters{N, UInt8}(itr)
 end
 
+Characters(s::Characters) = s
+
 function Characters(s::AbstractString)
     isempty(s) && return missing
     sl = cld(sizeof(s), length(s))
