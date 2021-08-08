@@ -248,13 +248,21 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
 end
 
 function _stablise_sort!(ranges, idx, last_valid_range)
-    Threads.@threads for i in 1:last_valid_range
+    for i in 1:last_valid_range
         rangestart = ranges[i]
         i == last_valid_range ? rangeend = length(idx) : rangeend = ranges[i+1] - 1
         if (rangeend - rangestart) == 0
             continue
         end
-        sort!(idx, rangestart, rangeend, QuickSort, Forward)
+        # FIXME it seems that QuickSort can trap some times (probably during partitioning??)
+        # idx is based on QuickSort, so, we avoid this trap(unknown bug) by using MergeSort
+        # maybe we should use Radixsort instead of MergeSort?
+        # 10^5 is arbitrary and we still use QuickSort because it doesn't allocate
+        if rangeend - rangestart + 1 > 1000
+            sort!(idx, rangestart, rangeend, MergeSort, Forward)
+        else
+            sort!(idx, rangestart, rangeend, QuickSort, Forward)
+        end
     end
 end
 
