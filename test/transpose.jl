@@ -38,12 +38,12 @@ const ≅ = isequal
                     bar = ['A', 'B', 'C', 'A', 'B', 'C'],
                     baz = [1, 2, 3, 4, 5, 6],
                     zoo = ['x', 'y', 'z', 'q', 'w', 't'])
-    ds2 = transpose(groupby(ds, :foo), :baz, id = :bar)
+    ds2 = transpose(groupby(ds, :foo, stable = true), :baz, id = :bar)
     ds3 = Dataset(foo = ["one", "two"], _variables_ = ["baz", "baz"], A = [1, 4], B = [2, 5], C = [3, 6])
 
-    @test transpose(groupby(ds, :foo), :baz, id = :bar) == transpose(groupby(ds, :foo), [:baz], id = :bar)
-    @test transpose(groupby(ds, :foo), :baz, id = :bar) == transpose(groupby(ds, :foo), [:baz], id = :bar)
-    @test transpose(groupby(ds, :foo), :baz, id = :bar) == transpose(groupby(ds, :foo), :baz, id = :bar)
+    @test transpose(groupby(ds, :foo, stable = true), :baz, id = :bar) == transpose(groupby(ds, :foo, stable = true), [:baz], id = :bar)
+    @test transpose(groupby(ds, :foo, stable = true), :baz, id = :bar) == transpose(groupby(ds, :foo, stable = true), [:baz], id = :bar)
+    @test transpose(groupby(ds, :foo, stable = true), :baz, id = :bar) == transpose(groupby(ds, :foo, stable = true), :baz, id = :bar)
     @test ds2 == ds3
 
     ds = Dataset(id = [1, 2, 3, 1], x1 = rand(4), x2 = rand(4))
@@ -55,7 +55,7 @@ const ≅ = isequal
     insertcols!(ds, 2, :id => repeat(1:10, 100))
     # duplicate and id within the last group
     ds[1000, :id] = 1
-    @test_throws AssertionError transpose(groupby(ds, :g), r"x", id = :id )
+    @test_throws AssertionError transpose(groupby(ds, :g, stable = true), r"x", id = :id )
 
 
     ds = Dataset(rand(1000, 100), :auto)
@@ -66,7 +66,7 @@ const ≅ = isequal
     ds = Dataset([[1, 2], [1.1, 2.0],[1.1, 2.1],[1.1, 2.0]]
                     ,[:person, Symbol("11/2020"), Symbol("12/2020"), Symbol("1/2021")])
 
-    groupby!(ds, :person)
+    groupby!(ds, :person, stable = true)
     dst = transpose(ds, Not(:person),
                         renamerowid = x -> Date(x, dateformat"m/y"),
                         variable_name = "Date",
@@ -75,7 +75,7 @@ const ≅ = isequal
                 Date = Date.(repeat(["2020-11-01","2020-12-01","2021-01-01"], 2)),
                 measurement = [1.1, 1.1, 1.1, 2.0, 2.1, 2.0])
     @test dst == dstm
-    dst = transpose(groupby(ds, :person), Not(:person),
+    dst = transpose(groupby(ds, :person, stable = true), Not(:person),
                         renamerowid = x -> Date(x, dateformat"m/y"),
                         variable_name = "Date",
                          renamecolid = x -> "measurement")
@@ -89,7 +89,7 @@ const ≅ = isequal
     insertcols!(ds, 1, :id => repeat(1:20, 5))
     insertcols!(ds, 1, :g => repeat(1:5, inner = 20))
 
-    dst = transpose(groupby(ds, [:g, :id]), r"x" , variable_name = "variable", renamecolid = x -> "value")
+    dst = transpose(groupby(ds, [:g, :id], stable = true), r"x" , variable_name = "variable", renamecolid = x -> "value")
 
 
 
@@ -101,7 +101,7 @@ const ≅ = isequal
     # allowmissing!(ds)
     ds[2, :b] = missing
     ds[4, :d] = missing
-    ds2 = transpose(groupby(ds, :group), 2:4, id = :e, filling = 0)
+    ds2 = transpose(groupby(ds, :group, stable = true), 2:4, id = :e, filling = 0)
 
     ds3 = Dataset(group = repeat(1:3, inner = 3),
                     _variables_ = string.(repeat('b':'d', 3)),
@@ -129,7 +129,7 @@ const ≅ = isequal
                             pop_2010 = [110, 120, 155, 160, 178, 200],
                             pop_2020 = [115, 130, 161, 165, 180, 203])
 
-    popt = transpose(groupby(pop, :country), r"pop_",
+    popt = transpose(groupby(pop, :country, stable = true), r"pop_",
                             id = :sex, variable_name = "year",
                             renamerowid = x -> match(r"[0-9]+",x).match, renamecolid = x -> x * "_pop")
     poptm = Dataset([["c1", "c1", "c1", "c2", "c2", "c2", "c3", "c3", "c3"],
@@ -139,11 +139,11 @@ const ≅ = isequal
             [:country,:year,:male_pop,:female_pop])
 
     @test popt == poptm
-    popt = transpose(groupby(pop, r"cou"), r"pop", id = r"sex",  variable_name = "year",
+    popt = transpose(groupby(pop, r"cou", stable = true), r"pop", id = r"sex",  variable_name = "year",
                             renamerowid = x -> match(r"[0-9]+",x).match, renamecolid = x -> x * "_pop")
     @test popt == poptm
     pop.country = PooledArray(pop.country)
-    popt = transpose(groupby(pop, r"cou"), r"pop", id = r"sex",  variable_name = "year",
+    popt = transpose(groupby(pop, r"cou", stable = true), r"pop", id = r"sex",  variable_name = "year",
                             renamerowid = x -> match(r"[0-9]+",x).match, renamecolid = x -> x * "_pop")
     @test popt.country == PooledArray(["c1", "c1", "c1", "c2", "c2", "c2", "c3", "c3", "c3"])
     ds =  Dataset(region = repeat(["North","North","South","South"],2),
@@ -152,7 +152,7 @@ const ≅ = isequal
                  time = [1,1,1,1,2,2,2,2],
                  )
 
-    ds2 = transpose(groupby(ds, :time), :load, id = 1:2)
+    ds2 = transpose(groupby(ds, :time, stable = true), :load, id = 1:2)
     ds3 = Dataset([ Union{Missing, Int64}[1, 2],
                  Characters{4, UInt8}["load", "load"],
                  Union{Missing, Float64}[0.1, 6.0],
@@ -165,8 +165,8 @@ const ≅ = isequal
                              B_2018=9:12, B_2019 = [missing,13,14,15],
                               ID = [1,2,3,4])
       f(x) =  match(r"[0-9]+",x).match
-      dsA = transpose(groupby(ds, :ID), r"A", renamerowid = f, variable_name = "Year", renamecolid = x->"A");
-      dsB = transpose(groupby(ds, :ID), r"B", renamerowid = f, variable_name = "Year", renamecolid = x->"B");
+      dsA = transpose(groupby(ds, :ID, stable = true), r"A", renamerowid = f, variable_name = "Year", renamecolid = x->"A");
+      dsB = transpose(groupby(ds, :ID, stable = true), r"B", renamerowid = f, variable_name = "Year", renamecolid = x->"B");
       ds2 = outerjoin(dsA, dsB, on = [:ID, :Year])
       ds3 = Dataset([[1, 1, 2, 2, 3, 3, 4, 4, 1, 2, 3, 4],
                  SubString{String}["2018", "2019", "2018", "2019", "2018", "2019", "2018", "2019", "2017", "2017", "2017", "2017"],
@@ -177,7 +177,7 @@ const ≅ = isequal
                                 color= ["red", "blue", "red", "blue", "red", "blue"],
                                 count= [3, 4, 3, 4, 3, 4],
                                 weight= [0.2, 0.3, 0.2, 0.3, 0.2, 0.2])
-        ds2 = transpose(groupby(transpose(groupby(ds, [:paddockId,:color]), [:count,:weight]), :paddockId),
+        ds2 = transpose(groupby(transpose(groupby(ds, [:paddockId,:color], stable = true), [:count,:weight]), :paddockId, stable = true),
                              :_c1, id = 2:3)
         ds3 = Dataset([Union{Missing, Int64}[0, 1, 2],
              Union{Missing, Characters{3, UInt8}}["_c1", "_c1", "_c1"],
@@ -210,11 +210,11 @@ const ≅ = isequal
         ds2 = transpose(ds, [:val1, :val2])
         ds3 = transpose(ds, [:val1, :val2], id = :id2)
         ds4 = transpose(ds, [:val1, :val2], id = [:id1, :id2])
-        ds5 = transpose(groupby(ds, 1), [:val1, :val2])
-        ds6 = transpose(groupby(ds, 1), [:val1, :val2], id = :id1)
-        ds7 = transpose(groupby(ds, 1), [:val1, :val2], id = [:id1, :id2])
-        ds8 = transpose(groupby(ds, 1:2), [:val1, :val2], id = :id2)
-        ds9 = transpose(groupby(ds, 1:2), [:val1], id = [:id2, :id1])
+        ds5 = transpose(groupby(ds, 1, stable = true), [:val1, :val2])
+        ds6 = transpose(groupby(ds, 1, stable = true), [:val1, :val2], id = :id1)
+        ds7 = transpose(groupby(ds, 1, stable = true), [:val1, :val2], id = [:id1, :id2])
+        ds8 = transpose(groupby(ds, 1:2, stable = true), [:val1, :val2], id = :id2)
+        ds9 = transpose(groupby(ds, 1:2, stable = true), [:val1], id = [:id2, :id1])
 
         tds2 = Dataset([Union{Missing, Characters{4, UInt8}}["val1", "val2"],
                  Union{Missing, Float64}[1.0, 1.1],
@@ -295,7 +295,7 @@ end
     levels!(ds[!, 1].val, ["XXX", "Bob", "Batman"])
     levels!(ds[!, 2].val, ["YYY", "Color", "Mass"])
 #     Not sure if it is relevant, however, we are doing it here
-    ds2 = transpose(groupby!(ds, :Fish), [:Value], id = :Key)
+    ds2 = transpose(groupby!(ds, :Fish, stable = true), [:Value], id = :Key)
     @test levels(ds[!, 1].val) == ["XXX", "Bob", "Batman"] # make sure we did not mess ds[!, 1] levels
     @test levels(ds[!, 2].val) == ["YYY", "Color", "Mass"] # make sure we did not mess ds[!, 2] levels
 #     duplicates
@@ -307,7 +307,7 @@ end
                    Value = Union{String, Missing}["12 g", "Red", "18 g", "Grey"])
     levels!(ds[!, 1].val, ["XXX", "Bob", "Batman"])
     levels!(ds[!, 2].val, ["YYY", "Color", "Mass"])
-    ds2 = transpose(groupby(ds, :Fish), [:Value], id = :Key, renamecolid=x->string("_", uppercase(string(x)), "_"))
+    ds2 = transpose(groupby(ds, :Fish, stable = true), [:Value], id = :Key, renamecolid=x->string("_", uppercase(string(x)), "_"))
     ds4 = Dataset(Fish = Union{String, Missing}["Bob", "Batman"],
                 _variables_ = String["Value", "Value"],
                 _MASS_ = Union{String, Missing}["12 g", "18 g"],
@@ -317,7 +317,7 @@ end
     ds = Dataset(Fish = ["Bob", "Bob", "Batman", "Batman"],
                    Key = ["Mass", "Color", "Mass", "Color"],
                    Value = ["12 g", "Red", "18 g", "Grey"])
-    ds2 = transpose(groupby(ds, :Fish), [:Value], id = :Key)
+    ds2 = transpose(groupby(ds, :Fish, stable = true), [:Value], id = :Key)
     ds4 = Dataset(Fish = ["Batman", "Bob"],
                     _variables_ = ["Value", "Value"],
                     Mass = ["18 g", "12 g"],
@@ -328,7 +328,7 @@ end
     #Make sure transpose works with missing values at the start of the value column
     # allowmissing!(ds, :Value)
     ds[1, :Value] = missing
-    ds2 = transpose(groupby(ds, :Fish), [:Value], id =  :Key)
+    ds2 = transpose(groupby(ds, :Fish, stable = true), [:Value], id =  :Key)
     #This changes the expected result
     # allowmissing!(ds4, :Mass)
     ds4[2, :Mass] = missing
@@ -337,8 +337,8 @@ end
 
     # test missing value in grouping variable
     mds = Dataset(RowID = 4:-1:1, id=[missing, 1, 2, 3], a=1:4, b=1:4)
-    @test select(transpose(groupby(transpose(groupby(mds, [:RowID, :id]), [:a,:b]), [:RowID, :id]), [:_c1], id = :_variables_), :RowID, :id, :a, :b) ≅ sort!(mds,1)
-    @test select(transpose(groupby(transpose(groupby(mds, [:RowID, :id]), Not(1,2)),[:RowID, :id]), [:_c1], id = :_variables_), :RowID, :id, :a, :b) ≅ sort!(mds,1)
+    @test select(transpose(groupby(transpose(groupby(mds, [:RowID, :id], stable = true), [:a,:b]), [:RowID, :id]), [:_c1], id = :_variables_), :RowID, :id, :a, :b) ≅ sort!(mds,1)
+    @test select(transpose(groupby(transpose(groupby(mds, [:RowID, :id], stable = true), Not(1,2)),[:RowID, :id]), [:_c1], id = :_variables_), :RowID, :id, :a, :b) ≅ sort!(mds,1)
 
     # test more than one grouping column
     wide = Dataset(id = 1:12,
@@ -348,13 +348,13 @@ end
                      d  = randn(12))
     w2 = wide[:, [1, 2, 4, 5]]
     InMemoryDatasets.rename!(w2, [:id, :a, :_C_, :_D_])
-    long = transpose(groupby(wide, [:id, :a, :b]), [:c, :d])
-    wide3 = transpose(groupby(long, [:id, :a, :b]), [:_c1], id = :_variables_)
+    long = transpose(groupby(wide, [:id, :a, :b], stable = true), [:c, :d])
+    wide3 = transpose(groupby(long, [:id, :a, :b], stable = true), [:_c1], id = :_variables_)
     @test select(wide3, Not(:_variables_)) == wide
     ds = Dataset([repeat(1:2, inner=4), repeat('a':'d', outer=2), collect(1:8)],
                        [:id, :variable, :value])
 
-    uds = transpose(groupby(ds, :id), [:value], id = :variable)
+    uds = transpose(groupby(ds, :id, stable = true), [:value], id = :variable)
     @test select(uds, Not(:_variables_)) == Dataset([Union{Int, Missing}[1, 2], Union{Int, Missing}[1, 5],
                                 Union{Int, Missing}[2, 6], Union{Int, Missing}[3, 7],
                                 Union{Int, Missing}[4, 8]], [:id, :a, :b, :c, :d])
@@ -368,7 +368,7 @@ end
                            categorical(repeat('a':'d', outer=2)), categorical(1:8)],
                        [:id, :variable, :value])
 
-    uds = transpose(groupby!(ds, :id), [:value], id = :variable)
+    uds = transpose(groupby!(ds, :id, stable = true), [:value], id = :variable)
     @test isa(uds[!, 1].val, CategoricalArray{Union{Missing, Int64},1,UInt32})
     @test isa(uds[!, :a].val, Vector{Union{Missing, CategoricalValue{Int64, UInt32}}})
     @test isa(uds[!, :b].val, Vector{Union{Missing, CategoricalValue{Int64, UInt32}}})
