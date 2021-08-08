@@ -257,7 +257,7 @@ function _stablise_sort!(ranges, idx, last_valid_range)
         # FIXME it seems that QuickSort can trap some times (probably during partitioning??)
         # idx is based on QuickSort, so, we avoid this trap(unknown bug) by using MergeSort
         # maybe we should use Radixsort instead of MergeSort?
-        # 10^5 is arbitrary and we still use QuickSort because it doesn't allocate
+        # 1000 is arbitrary and we still use QuickSort because it doesn't allocate
         if rangeend - rangestart + 1 > 1000
             sort!(idx, rangestart, rangeend, MergeSort, Forward)
         else
