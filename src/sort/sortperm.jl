@@ -247,7 +247,18 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
     return (ranges, idx, last_valid_range)
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; mapformats = true)
+function _stablise_sort!(ranges, idx, last_valid_range)
+    Threads.@threads for i in 1:last_valid_range
+        rangestart = ranges[i]
+        i == last_valid_range ? rangeend = length(idx) : rangeend = ranges[i+1] - 1
+        if (rangeend - rangestart) == 0
+            continue
+        end
+        sort!(idx, rangestart, rangeend, QuickSort, Forward)
+    end
+end
+
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; mapformats = true, stable = true)
     colsidx = index(ds)[cols]
     @assert length(colsidx) == length(rev) "`rev` argument must be the same as length of selected columns"
     by = Function[]
@@ -260,13 +271,23 @@ function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; mapfo
             push!(by, identity)
         end
     end
-    ds_sort_perm(ds, colsidx, by, rev, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+    ranges, idx, last_valid_range = ds_sort_perm(ds, colsidx, by, rev, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+    if stable
+        if length(idx) == last_valid_range
+            return ranges, idx, last_valid_range
+        else
+            _stablise_sort!(ranges, idx, last_valid_range)
+            return ranges, idx, last_valid_range
+        end
+    else
+        return ranges, idx, last_valid_range
+    end
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; mapformats = true)
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; mapformats = true, stable = true)
     colsidx = index(ds)[cols]
     revs = repeat([rev], length(colsidx))
-    _sortperm(ds, cols, revs; mapformats = mapformats)
+    _sortperm(ds, cols, revs; mapformats = mapformats, stable = stable)
 end
 
-_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; mapformats = true) = _sortperm(ds, [col], rev; mapformats = mapformats)
+_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; mapformats = true, stable = true) = _sortperm(ds, [col], rev; mapformats = mapformats, stable = stable)

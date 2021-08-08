@@ -114,13 +114,21 @@ function _fill_right_cols_table_inner!(_res, x, ranges, en, total)
     end
 end
 
-function _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+function _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, lmf, rmf, j)
     var_l = _columns(dsl)[oncols_left[j]]
     var_r = _columns(dsr)[oncols_right[j]]
     l_idx = oncols_left[j]
     r_idx = oncols_right[j]
-    format_l = getformat(dsl, l_idx)
-    format_r = getformat(dsr, r_idx)
+    if lmf
+        format_l = getformat(dsl, l_idx)
+    else
+        format_l = identity
+    end
+    if rmf
+        format_r = getformat(dsr, r_idx)
+    else
+        format_r = identity
+    end
     # TODO this is not very elegant code
     # the reason for this is that for Categorical array we need to translate Categorical values to actual values
     # but this is not a good idea for PooledArray (currently I just use a way to fix this)
@@ -158,7 +166,7 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, onc
 end
 
 
-function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
+function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, check = true) where T
     isempty(dsl) && return copy(dsl)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -167,11 +175,11 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right)
+    sort!(dsr, oncols_right, stable = stable)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
     new_ends = map(x -> max(1, length(x)), ranges)
     cumsum!(new_ends, new_ends)
@@ -211,7 +219,7 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
 
 end
 
-function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
+function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, check = true) where T
     isempty(dsl) && return dsl
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -221,11 +229,11 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     _current_dsr_modified_time = _attributes(dsr).meta.modified[]
-    sort!(dsr, oncols_right)
+    sort!(dsr, oncols_right, stable = stable)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
     if !all(x->length(x) <= 1, ranges)
@@ -260,7 +268,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     dsl
 end
 
-function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
+function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, check = true) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -269,11 +277,11 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right)
+    sort!(dsr, oncols_right, stable = stable)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
     new_ends = map(length, ranges)
     cumsum!(new_ends, new_ends)
@@ -310,20 +318,20 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
 
 end
 
-function _in(dsl::Dataset, dsrin::Dataset, ::Val{T}; onleft, onright) where T
+function _in(dsl::Dataset, dsrin::Dataset, ::Val{T}; onleft, onright, mapformats = [true, true], stable = false) where T
     isempty(dsl) && return Bool[]
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsrin)[onright]
     # right_cols = setdiff(1:length(index(dsr)), oncols_right)
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    dsrperm = sortperm(dsrin, oncols_right)
+    dsrperm = sortperm(dsrin, oncols_right, stable = stable)
     dsr = dsrin[dsrperm, oncols_right]
     # dsr = sort!(dsrin[!, oncols_right], :)
     oncols_right = 1:length(oncols_right)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
     map(x -> length(x) == 0 ? false : true, ranges)
 end
@@ -344,7 +352,7 @@ function _fill_oncols_left_table_left_outer!(res, x, notinleft, en, total)
 end
 
 
-function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, check = true) where T
+function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, check = true) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -353,11 +361,11 @@ function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right)
+    sort!(dsr, oncols_right, stable = stable)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
     new_ends = map(x -> max(1, length(x)), ranges)
     notinleft = _find_right_not_in_left(ranges, nrow(dsr))

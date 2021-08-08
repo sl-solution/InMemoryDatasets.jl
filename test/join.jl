@@ -102,6 +102,188 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
 
     @test innerjoin(ds1, ds2, on = [:A, :B]) == Dataset(A = 1, B = 2, C = 3, D = 4)
 
+    dsl = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+         Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+         Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+         Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]], ["x1", "x2", "x3", "row"])
+    dsr = Dataset(x1=[1, 3], y =[100.0, 200.0])
+    setformat!(dsl, 1=>iseven)
+    setformat!(dsr, 1=>isodd)
+
+    left1 = leftjoin(dsl, dsr, on = :x1)
+    left1_t = Dataset([Union{Missing, Int64}[10, 10, 3, 4, 4, 1, 5, 5, 6, 6, 7, 2, 2, 10, 10],
+           Union{Missing, Int64}[10, 10, 3, 4, 4, 1, 5, 5, 6, 6, 7, 2, 2, 10, 10],
+           Union{Missing, Int64}[3, 3, 6, 7, 7, 10, 10, 5, 10, 10, 9, 1, 1, 1, 1],
+           Union{Missing, Int64}[1, 1, 2, 3, 3, 4, 5, 6, 7, 7, 8, 9, 9, 10, 10],
+           Union{Missing, Float64}[100.0, 200.0, missing, 100.0, 200.0, missing, missing, missing, 100.0, 200.0, missing, 100.0, 200.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    left2 = leftjoin(dsl, dsr, on = :x1, mapformats = [true, false])
+    left2_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[100.0, missing, 100.0, missing, missing, missing, 100.0, missing, 100.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
+    left3 = leftjoin(dsl, dsr, on = :x1, mapformats = [false, true])
+    left3_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[missing, missing, missing, 100.0, 200.0, missing, missing, missing, missing, missing, missing]], ["x1", "x2", "x3", "row", "y"])
+    left4 = leftjoin(dsl, dsr, on = :x1, mapformats = [false, false])
+    left4_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[missing, 200.0, missing, 100.0, missing, missing, missing, missing, missing, missing]], ["x1", "x2", "x3", "row", "y"])
+    inner1 = innerjoin(dsl, dsr, on = :x1)
+    inner1_t = Dataset([Union{Missing, Int64}[10, 10, 4, 4, 6, 6, 2, 2, 10, 10],
+           Union{Missing, Int64}[10, 10, 4, 4, 6, 6, 2, 2, 10, 10],
+           Union{Missing, Int64}[3, 3, 7, 7, 10, 10, 1, 1, 1, 1],
+           Union{Missing, Int64}[1, 1, 3, 3, 7, 7, 9, 9, 10, 10],
+           Union{Missing, Float64}[100.0, 200.0, 100.0, 200.0, 100.0, 200.0, 100.0, 200.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    inner2 = innerjoin(dsl, dsr, on = :x1, mapformats = [true, false])
+    inner2_t = Dataset([ Union{Missing, Int64}[10, 4, 6, 2, 10],
+           Union{Missing, Int64}[10, 4, 6, 2, 10],
+           Union{Missing, Int64}[3, 7, 10, 1, 1],
+           Union{Missing, Int64}[1, 3, 7, 9, 10],
+           Union{Missing, Float64}[100.0, 100.0, 100.0, 100.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
+    inner3 = innerjoin(dsl, dsr, on = :x1, mapformats = [false, true])
+    inner3_t = Dataset([Union{Missing, Int64}[1, 1],
+           Union{Missing, Int64}[1, 1],
+           Union{Missing, Int64}[10, 10],
+           Union{Missing, Int64}[4, 4],
+           Union{Missing, Float64}[100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    inner4 = innerjoin(dsl, dsr, on = :x1, mapformats = [false, false])
+    inner4_t = Dataset([Union{Missing, Int64}[3, 1],
+           Union{Missing, Int64}[3, 1],
+           Union{Missing, Int64}[6, 10],
+           Union{Missing, Int64}[2, 4],
+           Union{Missing, Float64}[200.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
+    outer1 = outerjoin(dsl, dsr, on = :x1)
+    outer1_t = Dataset([Union{Missing, Int64}[10, 10, 3, 4, 4, 1, 5, 5, 6, 6, 7, 2, 2, 10, 10],
+           Union{Missing, Int64}[10, 10, 3, 4, 4, 1, 5, 5, 6, 6, 7, 2, 2, 10, 10],
+           Union{Missing, Int64}[3, 3, 6, 7, 7, 10, 10, 5, 10, 10, 9, 1, 1, 1, 1],
+           Union{Missing, Int64}[1, 1, 2, 3, 3, 4, 5, 6, 7, 7, 8, 9, 9, 10, 10],
+           Union{Missing, Float64}[100.0, 200.0, missing, 100.0, 200.0, missing, missing, missing, 100.0, 200.0, missing, 100.0, 200.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    outer2 = outerjoin(dsl, dsr, on = :x1, mapformats = [false, true])
+    outer2_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[missing, missing, missing, 100.0, 200.0, missing, missing, missing, missing, missing, missing]], ["x1", "x2", "x3", "row", "y"])
+    outer3 = outerjoin(dsl, dsr, on = :x1, mapformats = [true, false])
+    outer3_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10, 3],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10, missing],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1, missing],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, missing],
+           Union{Missing, Float64}[100.0, missing, 100.0, missing, missing, missing, 100.0, missing, 100.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    outer4 = outerjoin(dsl, dsr, on = :x1, mapformats = [false, false])
+    outer4_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[missing, 200.0, missing, 100.0, missing, missing, missing, missing, missing, missing]], ["x1", "x2", "x3", "row", "y"])
+    contains1 = contains(dsl, dsr, on = :x1)
+    contains1_t = Bool[1, 0, 1, 0, 0, 0, 1, 0, 1, 1]
+    contains2 = contains(dsl, dsr, on = :x1, mapformats = [true, false])
+    contains2_t = Bool[1, 0, 1, 0, 0, 0, 1, 0, 1, 1]
+    contains3 = contains(dsl, dsr, on = :x1, mapformats =[false, true])
+    contains3_t = Bool[0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
+    contains4 = contains(dsl, dsr, on = :x1, mapformats = [false, false])
+    contains4_t = Bool[0, 1, 0, 1, 0, 0, 0, 0, 0, 0]
+
+    close1 = closejoin(dsl, dsr, on = :x1)
+    close1_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[200.0, missing, 200.0, missing, missing, missing, 200.0, missing, 200.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    close2 = closejoin(dsl, dsr, on = :x1, direction = :forward)
+    close2_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
+    close3 = closejoin(dsl, dsr, on = :x1, border = :nearest)
+    close3_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[200.0, 100.0, 200.0, 100.0, 100.0, 100.0, 200.0, 100.0, 200.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    close4 = closejoin(dsl, dsr, on = :x1, mapformats = [true, false])
+    close4_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[100.0, missing, 100.0, missing, missing, missing, 100.0, missing, 100.0, 100.0]],  ["x1", "x2", "x3", "row", "y"])
+    close5 = closejoin(dsl, dsr, on = :x1, mapformats = [true, false], direction = :forward)
+    close5_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
+    close6 = closejoin(dsl, dsr, on = :x1, mapformats = [false, true])
+    close6_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    close7 = closejoin(dsl, dsr, on = :x1, mapformats = [false, true], direction = :forward)
+    close7_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[missing, missing, missing, 100.0, missing, missing, missing, missing, missing, missing]],["x1", "x2", "x3", "row", "y"])
+    close8 = closejoin(dsl, dsr, on = :x1, mapformats = [false, true], direction = :forward, border = :nearest)
+    close8_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[200.0, 200.0, 200.0, 100.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0]],["x1", "x2", "x3", "row", "y"])
+    close9 = closejoin(dsl, dsr, on = :x1, mapformats = [false, false])
+    close9_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[200.0, 200.0, 200.0, 100.0, 200.0, 200.0, 200.0, 200.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    close10 = closejoin(dsl, dsr, on = :x1, mapformats = false, direction = :forward)
+    close10_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[missing, 200.0, missing, 100.0, missing, missing, missing, missing, 200.0, missing]], ["x1", "x2", "x3", "row", "y"])
+    close11 = closejoin(dsl, dsr, on = :x1, mapformats = false, direction = :forward, border = :nearest)
+    close11_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+           Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+           Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+           Union{Missing, Float64}[200.0, 200.0, 200.0, 100.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
+    @test left1 == left1_t
+    @test left2 == left2_t
+    @test left3 == left3_t
+    @test left4 == left4_t
+    @test inner1 == inner1_t
+    @test inner2 == inner2_t
+    @test inner3 == inner3_t
+    @test inner4 == inner4_t
+    @test outer1 == outer1_t
+    @test outer2 == outer2_t
+    @test outer3 == outer3_t
+    @test outer4 == outer4_t
+    @test contains1 == contains1_t
+    @test contains2 == contains2_t
+    @test contains3 == contains3_t
+    @test contains4 == contains4_t
+    @test close1 == close1_t
+    @test close2 == close2_t
+    @test close3 == close3_t
+    @test close4 == close4_t
+    @test close5 == close5_t
+    @test close6 == close6_t
+    @test close7 == close7_t
+    @test close8 == close8_t
+    @test close9 == close9_t
+    @test close10 == close10_t
+    @test close11 == close11_t
 
 end
 

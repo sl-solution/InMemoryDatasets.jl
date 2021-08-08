@@ -26,13 +26,21 @@ function  _fill_right_cols_table_asof!(_res, x, ranges, total, bordervalue, fill
     end
 end
 
-function _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, direction, j)
+function _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, direction, lmf, rmf, j)
     var_l = _columns(dsl)[oncols_left[j]]
     var_r = _columns(dsr)[oncols_right[j]]
     l_idx = oncols_left[j]
     r_idx = oncols_right[j]
-    format_l = getformat(dsl, l_idx)
-    format_r = getformat(dsr, r_idx)
+    if lmf
+        format_l = getformat(dsl, l_idx)
+    else
+        format_l = identity
+    end
+    if rmf
+        format_r = getformat(dsr, r_idx)
+    else
+        format_r = identity
+    end
     # TODO this is not very elegant code
     # the reason for this is that for Categorical array we need to translate Categorical values to actual values
     # but this is not a good idea for PooledArray (currently I just use a way to fix this)
@@ -88,7 +96,7 @@ end
 
 
 # border = :nearest | :missing
-function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest) where T
+function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false) where T
     isempty(dsl) && return copy(dsl)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -97,18 +105,18 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right)
+    sort!(dsr, oncols_right, stable = stable)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
 
     # _fl = getformat(dsl, oncols_left[length(oncols_left)])
     # _fr = getformat(dsr, oncols_right[length(oncols_left)])
     # _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
-    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, :backward, length(oncols_left))
+    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, :backward, mapformats[1], mapformats[2], length(oncols_left))
 
     total_length = nrow(dsl)
 
@@ -135,7 +143,7 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
 
 end
 
-function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest) where T
+function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable =false) where T
     isempty(dsl) && return dsl
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -144,17 +152,17 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, 
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right)
+    sort!(dsr, oncols_right, stable = stable)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
     # _fl = getformat(dsl, oncols_left[length(oncols_left)])
     # _fr = getformat(dsr, oncols_right[length(oncols_left)])
     # _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
-    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, :backward, length(oncols_left))
+    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, :backward, mapformats[1], mapformats[2], length(oncols_left))
 
 
     total_length = nrow(dsl)
@@ -179,7 +187,7 @@ end
 
 
 
-function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest) where T
+function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false) where T
     isempty(dsl) && return copy(dsl)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -188,17 +196,17 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, ma
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right)
+    sort!(dsr, oncols_right, stable = stable)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
     # _fl = getformat(dsl, oncols_left[length(oncols_left)])
     # _fr = getformat(dsr, oncols_right[length(oncols_left)])
     # _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
-    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, :forward, length(oncols_left))
+    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, :forward, mapformats[1], mapformats[2], length(oncols_left))
 
 
     total_length = nrow(dsl)
@@ -227,7 +235,7 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, ma
     newds
 
 end
-function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest) where T
+function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false) where T
     isempty(dsl) && return dsl
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -236,17 +244,17 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right)
+    sort!(dsr, oncols_right, stable = stable)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
     # _fl = getformat(dsl, oncols_left[length(oncols_left)])
     # _fr = getformat(dsr, oncols_right[length(oncols_left)])
     # _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
-    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, :forward, length(oncols_left))
+    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, :forward, mapformats[1], mapformats[2], length(oncols_left))
 
 
     total_length = nrow(dsl)

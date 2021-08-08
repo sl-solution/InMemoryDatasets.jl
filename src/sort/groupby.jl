@@ -1,11 +1,11 @@
-function groupby!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true)
-    sort!(ds, cols, rev = rev, issorted = issorted, mapformats = mapformats)
+function groupby!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true, stable = true)
+    sort!(ds, cols, rev = rev, issorted = issorted, mapformats = mapformats, stable = stable)
     index(ds).grouped[] = true
     _modified(_attributes(ds))
     ds
 end
 
-groupby!(ds::Dataset, col::ColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true) = groupby!(ds, [col]; rev = rev, issorted = issorted, mapformats = mapformats)
+groupby!(ds::Dataset, col::ColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true, stable = true) = groupby!(ds, [col]; rev = rev, issorted = issorted, mapformats = mapformats, stable = stable)
 
 struct GroupBy
     parent::Dataset
@@ -23,12 +23,14 @@ _columns(ds::GroupBy) = _columns(ds.parent)
 index(ds::GroupBy) = index(ds.parent)
 Base.parent(ds::GroupBy) = ds.parent
 
-function groupby(ds::Dataset, cols::MultiColumnIndex; rev = false, mapformats::Bool = true)
+function groupby(ds::Dataset, cols::MultiColumnIndex; rev = false, mapformats::Bool = true, stable = true)
     # @assert !isgrouped(ds) "`groupby` is not yet implemented for already grouped data sets"
     colsidx = index(ds)[cols]
-    a = _sortperm(ds, cols, rev, mapformats = mapformats)
+    a = _sortperm(ds, cols, rev, mapformats = mapformats, stable = stable)
     GroupBy(ds,colsidx, a[2], a[1], a[3])
 end
+
+groupby(ds::Dataset, col::ColumnIndex; rev = false, mapformats::Bool = true, stable = true) = groupby(ds, [col], rev = rev, mapformats = mapformats, stable = stable)
 
 function _threaded_permute_for_groupby(x, perm)
     if DataAPI.refpool(x) !== nothing
@@ -45,8 +47,6 @@ function _threaded_permute_for_groupby(x, perm)
     end
     res
 end
-
-groupby(ds::Dataset, col::ColumnIndex; rev = false, mapformats::Bool = true) = groupby(ds, [col], rev = rev, mapformats = mapformats)
 
 # TODO we need to take care of situations where gds.parent is already grouped, thus the grouping cols from that mess with new grouping cols of gds
 function combine(gds::GroupBy, @nospecialize(args...))

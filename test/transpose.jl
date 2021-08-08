@@ -180,11 +180,11 @@ const ≅ = isequal
         ds2 = transpose(groupby(transpose(groupby(ds, [:paddockId,:color]), [:count,:weight]), :paddockId),
                              :_c1, id = 2:3)
         ds3 = Dataset([Union{Missing, Int64}[0, 1, 2],
-                 Union{Missing, Characters{3, UInt8}}["_c1", "_c1", "_c1"],
-                 Union{Missing, Float64}[0.2, 0.2, 0.2],
-                 Union{Missing, Float64}[3.0, 3.0, 3.0],
-                 Union{Missing, Float64}[0.3, 0.3, 0.2],
-                 Union{Missing, Float64}[4.0, 4.0, 4.0]], ["paddockId", "_variables_", "(\"red \", \"weight\")", "(\"red \", \"count \")", "(\"blue\", \"weight\")", "(\"blue\", \"count \")"])
+             Union{Missing, Characters{3, UInt8}}["_c1", "_c1", "_c1"],
+             Union{Missing, Float64}[4.0, 4.0, 4.0],
+             Union{Missing, Float64}[0.3, 0.3, 0.2],
+             Union{Missing, Float64}[3.0, 3.0, 3.0],
+             Union{Missing, Float64}[0.2, 0.2, 0.2]], ["paddockId", "_variables_", "(\"blue\", \"count \")", "(\"blue\", \"weight\")", "(\"red \", \"count \")", "(\"red \", \"weight\")"])
 
          @test ds2 == ds3
 
