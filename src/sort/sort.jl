@@ -41,6 +41,44 @@ end
 
 Base.sort!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, issorted::Bool = false, mapformats::Bool = true, stable =true) = sort!(ds, [col], rev = rev, alg = alg, issorted = issorted, mapformats = mapformats, stable = stable)
 
+
+function Base.sort(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, issorted::Bool = false, mapformats::Bool = true, stable = true)
+    isempty(ds) && return copy(ds)
+    colsidx = index(ds)[cols]
+    if length(rev) == 1
+        revs = repeat([rev], length(colsidx))
+    else
+        revs = rev
+    end
+
+    @assert length(colsidx) == length(revs) "the reverse argument must be the same length as the length of selected columns"
+    if issorted
+        index(ds).sortedcols == colsidx && index(ds).rev == revs && return copy(ds)
+        selected_columns, ranges, last_valid_index = _find_starts_of_groups(ds::Dataset, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+        newds = copy(ds)
+        _reset_grouping_info!(newds)
+        append!(index(newds).sortedcols, selected_columns)
+        append!(index(newds).rev, revs)
+        append!(index(newds).perm, collect(1:nrow(newds)))
+        append!(index(newds).starts, ranges)
+        index(newds).ngroups[] = last_valid_index
+    else
+        starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable)
+        newds = ds[perm, :]
+        _reset_grouping_info!(newds)
+        append!(index(newds).sortedcols, collect(colsidx))
+        append!(index(newds).rev, revs)
+        append!(index(newds).perm, perm)
+        append!(index(newds).starts, starts)
+        index(newds).ngroups[] = ngroups
+    end
+    newds
+end
+
+
+Base.sort(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, issorted::Bool = false, mapformats::Bool = true, stable =true) = sort(ds, [col], rev = rev, alg = alg, issorted = issorted, mapformats = mapformats, stable = stable)
+
+
 function unsort!(ds::Dataset)
     isempty(ds) && return ds
     if isempty(index(ds).perm)
