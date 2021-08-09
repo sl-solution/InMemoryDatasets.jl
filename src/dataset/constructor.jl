@@ -210,6 +210,7 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
     if col isa AbstractRange
         return allowmissing(collect(col))
     elseif col isa AbstractVector
+        col = identity.(col)
         if isa(col, BitVector)
             return convert(Vector{Union{Bool, Missing}}, col)
         elseif eltype(col) <: Union{Missing, AbstractString} && !(eltype(col) <: Union{Missing, Characters})
