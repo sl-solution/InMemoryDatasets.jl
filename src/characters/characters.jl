@@ -21,11 +21,12 @@ function Characters(s::AbstractString)
     sl = cld(sizeof(s), length(s))
     if  sl == 1
         Characters{length(s), UInt8}(s)
-    elseif sl == 2
-        Characters{length(s), UInt16}(s)
     else
-        throw(ArgumentError("Characters only support UInt8 and UInt16"))
+        Characters{length(s), UInt16}(s)
     end
+    # else
+    #     throw(ArgumentError("Characters only support UInt8 and UInt16"))
+    # end
 end
 
 macro c_str(str)
