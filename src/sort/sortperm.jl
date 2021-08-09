@@ -1,11 +1,11 @@
-function _sortperm_unstable!(idx, x, ranges, last_valid_range, ord)
+function _sortperm_unstable!(idx, x, ranges, last_valid_range, ord, a)
     Threads.@threads for i in 1:last_valid_range
         rangestart = ranges[i]
         i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
         if (rangeend - rangestart) == 0
             continue
         end
-        ds_sort!(x, idx, rangestart, rangeend, QuickSort, ord)
+        ds_sort!(x, idx, rangestart, rangeend, a, ord)
     end
 end
 
@@ -25,7 +25,7 @@ function _sortperm_pooledarray!(idx, idx_cpy, x, xpool, where, counts, ranges, l
 end
 
 
-function _sortperm_int!(idx, idx_cpy, x, ranges, where, last_valid_range, missingatleft, ord)
+function _sortperm_int!(idx, idx_cpy, x, ranges, where, last_valid_range, missingatleft, ord, a)
     Threads.@threads for i in 1:last_valid_range
         rangestart = ranges[i]
         i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
@@ -46,7 +46,7 @@ function _sortperm_int!(idx, idx_cpy, x, ranges, where, last_valid_range, missin
                 ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
             end
         else
-            ds_sort!(x, idx, rangestart, rangeend, QuickSort, ord)
+            ds_sort!(x, idx, rangestart, rangeend, a, ord)
         end
     end
 end
@@ -133,10 +133,8 @@ function _check_memory_availability_for_hp_sort(x)
     return 4*sizeof(x) < Base.Sys.free_memory()
 end
 # T is either Int32 or Int64 based on how many rows ds has
-function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, ::Val{T}) where T
+function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a::Base.Sort.Algorithm,  ::Val{T}) where T
     @assert length(colsidx) == length(by) == length(rev) "each col should have all information about lt, by, and rev"
-    # prv_gc = GC.enable(false)
-    # ordr = ord(lt,identity,rev,order)
 
     # arrary to keep the permutation of rows
     idx = Vector{T}(undef, nrow(ds))
@@ -186,18 +184,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
             _missat = :right
         else
             _tmp, _ordr, _missat, _needrev, intable=  _apply_by(x, idx, by[i], rev[i])
-        #     rangelen = length(DataAPI.refpool(_tmp))
-        #     for nt in 1:Threads.nthreads()
-        #         resize!(int_where[nt], rangelen + 2)
-        #         resize!(int_count[nt], rangelen + 2)
-        #     end
-        #     resize!(int_permcpy, length(idx))
-        #     copy!(int_permcpy, idx)
-        #     _ordr = ord(isless, identity, rev[i], Forward)
-        #     _sortperm_pooledarray!(idx, int_permcpy, DataAPI.refarray(_tmp), DataAPI.refpool(_tmp), int_where, int_count, ranges, last_valid_range, rev[i])
-        # else
-        #     _tmp, _ordr, _missat, _needrev, intable=  _apply_by(x, idx, by[i], rev[i])
-            # if _missat is :right it possible for fasttrack as long as lt = isless
+
         end
         if !_needrev && (eltype(_tmp) <: Union{Missing,Integer} || intable)
             # further check for fast integer sort
@@ -219,54 +206,49 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                     # if _missat == :left it means that we multiplied observations by -1 already and we should put missing at left
                     # note that -1 can not be applied to unsigned
                     if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
-                        hp_ds_sort_int!(_tmp, idx, int_permcpy, int_where, rangelen, minval, _missat == :left, QuickSort, _ordr)
+                        hp_ds_sort_int!(_tmp, idx, int_permcpy, int_where, rangelen, minval, _missat == :left, a, _ordr)
                     else
-                        _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr)
+                        _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr, a)
                     end
                 else
                     if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
-                        hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
+                        hp_ds_sort!(_tmp, idx, a, _ordr)
                     else
-                        _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
+                        _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr, a)
                     end
                 end
             end
         else
             if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
-                hp_ds_sort!(_tmp, idx, QuickSort, _ordr)
+                hp_ds_sort!(_tmp, idx, a, _ordr)
             else
-                _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr)
+                _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr, a)
             end
         end
         # last_valid_range = _fill_starts!(ranges, _tmp, rangescpy, last_valid_range, _ordr, Val(T))
         last_valid_range = _fill_starts_v2!(ranges, inbits, _tmp, last_valid_range, _ordr, Val(T))
-        # GC.enable(prv_gc)
-        # GC.gc(false)
         last_valid_range == nrow(ds) && return (ranges, idx, last_valid_range)
     end
     return (ranges, idx, last_valid_range)
 end
 
-function _stablise_sort!(ranges, idx, last_valid_range)
+function _stablise_sort!(ranges, idx, last_valid_range, a)
     for i in 1:last_valid_range
         rangestart = ranges[i]
         i == last_valid_range ? rangeend = length(idx) : rangeend = ranges[i+1] - 1
         if (rangeend - rangestart) == 0
             continue
         end
-        # FIXME it seems that QuickSort can trap some times (probably during partitioning??)
-        # idx is based on QuickSort, so, we avoid this trap(unknown bug) by using MergeSort
-        # maybe we should use Radixsort instead of MergeSort?
-        # 1000 is arbitrary and we still use QuickSort because it doesn't allocate
+        # if QuickSort is selected we make sure the worst case scenario is not that much bad
         if rangeend - rangestart + 1 > 1000
             sort!(idx, rangestart, rangeend, MergeSort, Forward)
         else
-            sort!(idx, rangestart, rangeend, QuickSort, Forward)
+            sort!(idx, rangestart, rangeend, a, Forward)
         end
     end
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; mapformats = true, stable = true)
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = HeapSortAlg(), mapformats = true, stable = true)
     colsidx = index(ds)[cols]
     @assert length(colsidx) == length(rev) "`rev` argument must be the same as length of selected columns"
     by = Function[]
@@ -279,12 +261,12 @@ function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; mapfo
             push!(by, identity)
         end
     end
-    ranges, idx, last_valid_range = ds_sort_perm(ds, colsidx, by, rev, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+    ranges, idx, last_valid_range = ds_sort_perm(ds, colsidx, by, rev, a, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
     if stable
         if length(idx) == last_valid_range
             return ranges, idx, last_valid_range
         else
-            _stablise_sort!(ranges, idx, last_valid_range)
+            _stablise_sort!(ranges, idx, last_valid_range, a)
             return ranges, idx, last_valid_range
         end
     else
@@ -292,10 +274,10 @@ function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; mapfo
     end
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; mapformats = true, stable = true)
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true)
     colsidx = index(ds)[cols]
     revs = repeat([rev], length(colsidx))
-    _sortperm(ds, cols, revs; mapformats = mapformats, stable = stable)
+    _sortperm(ds, cols, revs; a = a , mapformats = mapformats, stable = stable)
 end
 
-_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; mapformats = true, stable = true) = _sortperm(ds, [col], rev; mapformats = mapformats, stable = stable)
+_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true) = _sortperm(ds, [col], rev; a = a,  mapformats = mapformats, stable = stable)

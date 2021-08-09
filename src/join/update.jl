@@ -20,13 +20,13 @@ function _update_left_with_right!(x, y, ranges, allowmissing, mode)
     end
 end
 
-function _update!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all, mapformats = [true, true], stable = false) where T
+function _update!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort) where T
     isempty(dsl) && return dsl
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
 
-    sort!(dsr, oncols_right, stable = stable)
+    sort!(dsr, oncols_right, stable = stable, alg = alg)
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)

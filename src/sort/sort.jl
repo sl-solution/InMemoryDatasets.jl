@@ -1,9 +1,9 @@
-function Base.sortperm(ds::Dataset, cols; rev = false, mapformats::Bool = true, stable = true)
+function Base.sortperm(ds::Dataset, cols; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
     isempty(ds) && return []
-    _sortperm(ds, cols, rev, mapformats = mapformats, stable = stable)[2]
+    _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)[2]
 end
 
-function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted::Bool = false, mapformats::Bool = true, stable = true)
+function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, issorted::Bool = false, mapformats::Bool = true, stable = true)
     isempty(ds) && return ds
     colsidx = index(ds)[cols]
     if length(rev) == 1
@@ -25,7 +25,7 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted::
         _modified(_attributes(ds))
         ds
     else
-        starts, perm, ngroups = _sortperm(ds, cols, revs; mapformats = mapformats, stable = stable)
+        starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable)
         _reset_grouping_info!(ds)
         append!(index(ds).sortedcols, collect(colsidx))
         append!(index(ds).rev, revs)
@@ -39,7 +39,7 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; rev = false, issorted::
 end
 
 
-Base.sort!(ds::Dataset, col::ColumnIndex; rev::Bool = false, issorted::Bool = false, mapformats::Bool = true, stable =true) = sort!(ds, [col], rev = rev, issorted = issorted, mapformats = mapformats, stable = stable)
+Base.sort!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, issorted::Bool = false, mapformats::Bool = true, stable =true) = sort!(ds, [col], rev = rev, alg = alg, issorted = issorted, mapformats = mapformats, stable = stable)
 
 function unsort!(ds::Dataset)
     isempty(ds) && return ds

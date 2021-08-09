@@ -123,7 +123,7 @@ end
 
 # sorting a vector using parallel quick sort
 # it uses a simple algorithm for doing this, and to make it even simpler the number of threads must be in the form of 2^n
-function hp_ds_sort_int!(x, idx, idx_cpy, where, rangelen, minval, missatleft, a::QuickSortAlg, o::Ordering)
+function hp_ds_sort_int!(x, idx, idx_cpy, where, rangelen, minval, missatleft, a::Base.Sort.Algorithm, o::Ordering)
     cpucnt = Threads.nthreads()
     @assert cpucnt >= 2 "we need at least 2 cpus for parallel sorting"
     cpucnt = 2 ^ floor(Int, log2(cpucnt))

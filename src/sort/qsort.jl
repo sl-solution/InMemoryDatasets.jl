@@ -1,11 +1,13 @@
 
 midpoint(lo::T, hi::T) where T<:Integer = lo + ((hi - lo) >>> 0x01)
 midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
-
+struct HeapSortAlg  <: Base.Sort.Algorithm end
 const DEFAULT_UNSTABLE = QuickSort
 # const DEFAULT_STABLE   = MergeSort
 const SMALL_ALGORITHM  = InsertionSort
 const SMALL_THRESHOLD  = 20
+const HeapSort = HeapSortAlg()
+
 
 # Base on Julia sort
 
@@ -139,7 +141,7 @@ function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, m
 end
 
 # to simplify the problem we assume number_of_chunks is 2^n for some n
-function _sort_chunks!(x, idx::Vector{<:Integer}, number_of_chunks, a::QuickSortAlg, o::Ordering)
+function _sort_chunks!(x, idx::Vector{<:Integer}, number_of_chunks, a::Base.Sort.Algorithm, o::Ordering)
     cz = div(length(x), number_of_chunks)
     en = length(x)
     Threads.@threads for i in 1:number_of_chunks
@@ -151,7 +153,7 @@ function _sort_chunks!(x, idx::Vector{<:Integer}, number_of_chunks, a::QuickSort
     end
 end
 
-function _sort_multi_sorted_chunk!(x, idx::Vector{<:Integer}, number_of_chunks, a::QuickSortAlg, o::Ordering)
+function _sort_multi_sorted_chunk!(x, idx::Vector{<:Integer}, number_of_chunks, a::Base.Sort.Algorithm, o::Ordering)
     cz = div(length(x), number_of_chunks)
     en = length(x)
     current_numberof_chunks = number_of_chunks
@@ -177,10 +179,106 @@ end
 
 # sorting a vector using parallel quick sort
 # it uses a simple algorithm for doing this, and to make it even simpler the number of threads must be in the form of 2^n
-function hp_ds_sort!(x, idx, a::QuickSortAlg, o::Ordering)
+function hp_ds_sort!(x, idx, a::Base.Sort.Algorithm, o::Ordering)
     cpucnt = Threads.nthreads()
     @assert cpucnt >= 2 "we need at least 2 cpus for parallel sorting"
     cpucnt = 2 ^ floor(Int, log2(cpucnt))
     _sort_chunks!(x , idx, cpucnt, a, o)
     _sort_multi_sorted_chunk!(x, idx, cpucnt, a, o)
+end
+
+
+# Heapsort
+# modified from DataStructures.jl, SortingAlgorithms.jl
+# Binary heap indexing
+heapleft(i::Integer) = 2i
+heapright(i::Integer) = 2i + 1
+heapparent(i::Integer) = div(i, 2)
+
+# Binary min-heap percolate down.
+function percolate_down!(xs::AbstractArray, idx, i::Integer, x=xs[i], idval = idx[i], o::Ordering=Forward, len::Integer=length(xs))
+    @inbounds while (l = heapleft(i)) <= len
+        r = heapright(i)
+        j = r > len || lt(o, xs[l], xs[r]) ? l : r
+        if lt(o, xs[j], x)
+            xs[i] = xs[j]
+            idx[i] = idx[j]
+            i = j
+        else
+            break
+        end
+    end
+    xs[i] = x
+    idx[i] = idval
+end
+
+percolate_down!(xs::AbstractArray, idx, i::Integer, o::Ordering, len::Integer=length(xs)) = percolate_down!(xs, idx, i, xs[i], idx[i], o, len)
+
+function heapify!(xs::AbstractArray, idx, o::Ordering=Forward)
+    for i in heapparent(length(xs)):-1:1
+        percolate_down!(xs, idx, i, o)
+    end
+    return xs
+end
+
+function ds_sort!(v::AbstractVector, idx::AbstractVector{<:Integer}, lo::Integer, hi::Integer, a::HeapSortAlg, o::Ordering)
+    hi-lo <= SMALL_THRESHOLD && return ds_sort!(v, idx, lo, hi, SMALL_ALGORITHM, o)
+    if lo > 1 || hi < length(v)
+        return ds_sort!(view(v, lo:hi), view(idx, lo:hi), 1, length(v), a, o)
+    end
+    r = ReverseOrdering(o)
+    heapify!(v, idx, r)
+    @inbounds for i = length(v):-1:2
+        # Swap the root with i, the last unsorted position
+        x = v[i]
+        idxval = idx[i]
+        v[i] = v[1]
+        idx[i] = idx[1]
+        # The heap portion now ends at position i-1, but needs fixing up
+        # starting with the root
+        percolate_down!(v, idx, 1, x, idxval, r, i-1)
+    end
+    v
+end
+
+
+function percolate_down2!(xs::AbstractArray, i::Integer, x=xs[i], o::Ordering=Forward, len::Integer=length(xs))
+    @inbounds while (l = heapleft(i)) <= len
+        r = heapright(i)
+        j = r > len || lt(o, xs[l], xs[r]) ? l : r
+        if lt(o, xs[j], x)
+            xs[i] = xs[j]
+            i = j
+        else
+            break
+        end
+    end
+    xs[i] = x
+end
+
+percolate_down2!(xs::AbstractArray, i::Integer, o::Ordering, len::Integer=length(xs)) = percolate_down2!(xs, i, xs[i], o, len)
+
+function heapify2!(xs::AbstractArray, o::Ordering=Forward)
+    for i in heapparent(length(xs)):-1:1
+        percolate_down2!(xs, i, o)
+    end
+    return xs
+end
+
+function Base.sort!(v::AbstractVector, lo::Integer, hi::Integer, a::HeapSortAlg, o::Ordering = Forward)
+    hi-lo <= SMALL_THRESHOLD && return sort!(v, lo, hi, SMALL_ALGORITHM, o)
+    if lo > 1 || hi < length(v)
+        return sort!(view(v, lo:hi), 1, length(v), a, o)
+    end
+    r = ReverseOrdering(o)
+    heapify2!(v, r)
+    @inbounds for i = length(v):-1:2
+        # Swap the root with i, the last unsorted position
+        x = v[i]
+        v[i] = v[1]
+        # The heap portion now ends at position i-1, but needs fixing up
+        # starting with the root
+        percolate_down2!(v, 1, x, r, i-1)
+    end
+    v
 end
