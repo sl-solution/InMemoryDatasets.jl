@@ -1,6 +1,10 @@
 struct MultiCol
     x
 end
+
+struct splitter end
+
+# should we also define byrow as a structure?
 function byrow(@nospecialize(f); @nospecialize(args...))
     br = [:($f, $args)]
     br[1].head = :BYROW
@@ -11,6 +15,17 @@ function _check_ind_and_add!(outidx::Index, val)
     if !haskey(outidx, val)
         push!(outidx, val)
     end
+end
+
+function normalize_modify!(outidx::Index, idx::Index, @nospecialize(sel::Pair{<:ColumnIndex,
+                                                                <:Pair{<:splitter,
+                                                                    <:Vector{<:Union{Symbol, AbstractString}}}}))
+    src, (fun, dst) = sel
+    for i in 1:length(dst)
+        _check_ind_and_add!(outidx, Symbol(dst[i]))
+    end
+    return outidx[src] => fun => MultiCol(Symbol.(dst))
+
 end
 
 # col => fun => dst, the job is to create col => fun => :dst

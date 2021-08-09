@@ -1,22 +1,3 @@
-# function _restrict_byrow_left_handside(outidx, idx, cols)
-#     colsidx = outidx[cols]
-#     names_outidx = _names(outidx)[colsidx]
-#     if names_outidx isa Symbol
-#         names_outidx = [names_outidx]
-#     end
-#     # we shouldn't use the variables which exist in idx
-#     n_colsidx = Int[]
-
-#     for i in 1:length(colsidx)
-#         if !haskey(idx.lookup, names_outidx[i])
-#             push!(n_colsidx, colsidx[i])
-#         end
-#     end
-#     isempty(n_colsidx) && throw(ArgumentError("column selection returns an empty set for $(cols), modify the columns before continuing with operation"))
-#     return n_colsidx
-# end
-
-
 # col => fun => dst, the job is to create col => fun => :dst
 function normalize_combine!(offset, outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,

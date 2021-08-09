@@ -39,6 +39,7 @@ export
       Dataset,
       GatherBy,
       Between,
+      splitter,
       # functions
       nrow,
       ncol,
