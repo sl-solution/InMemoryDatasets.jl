@@ -224,7 +224,7 @@ julia> setformat!(ds, :y => sqrt)
 
 The first argument for `setformat!` is the data set which needs to be modified and the second argument is the name of variables, `=>` and a named function. In the above example, we assign `sqrt` function as a format for the column `:y`.
 
-> Note that `setformat!` doesn't check the validity of a format, so if a non-valid format is assigned to a variable, for instance assigning `sqrt` to a variable which contains negative values, some functionality of data set will be parallelised (like `show`ing the data set). In this cases, simply remove the non-valid format by using `removeformat!`.
+> Note that `setformat!` doesn't check the validity of a format, so if a invalid format is assigned to a variable, for instance assigning `sqrt` to a variable which contains negative values, some functionality of data set will be parallelised (like `show`ing the data set). In this cases, simply remove the invalid format by using `removeformat!`.
 
 Lets define a function as a new format for column `:z` in the above example,
 
