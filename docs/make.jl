@@ -24,6 +24,7 @@ makedocs(
             "Formats" => "man/formats.md",
             "Call functions on each observation" => "man/map.md",
             "Row-wise operations" => "man/byrow.md",
+            "Modifying data sets" => "man/modify.md",
             "Filtering observations" => "man/filter.md",
             "Sorting" => "man/sorting.md",
             "Grouping" => "man/grouping.md",
