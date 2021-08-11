@@ -2,7 +2,7 @@
 
 ## Setting up the environment
 
-To install in memory datasets package , simply, use the following commands inside a Julia session:
+To install in memory Datasets package , simply, use the following commands inside a Julia session:
 
 ```julia
 julia> using Pkg
@@ -37,9 +37,9 @@ julia> ds = Dataset(var1 = [1, 2, 3],
 The first line of the output provides the general information about the data set.
  A data set is shown as a table in Julia, where each column represents a variable
  in the data set. The header section of the table shows three pieces of information
- for each variable (column), the variable's name, the variable's `format`, and
- the variable's data type. The `format` of a variable controls how the values
- of a variable should be shown or interpreted when working with a data set.
+ for each column (variable), the column's name, the column's `format`, and
+ the column's data type. The `format` of a column controls how the values
+ of a column should be shown or interpreted when working with a data set.
 
 The following example shows how to create a data set by providing a range of values.
 
@@ -55,9 +55,9 @@ julia> Dataset(A=1:3, B=5:7, fixed=1)
    3 │        3         7         1
 ```
 
-Observe that using scalars for a variable, like `1` for the column `:fixed` get automatically broadcasted to fill all rows of the created `Dataset`.
+Observe that using scalars for a column, like `1` for the column `:fixed` get automatically broadcasted to fill all rows of the created `Dataset`.
 
-The missing values in Julia are declare as `missing`, and these values can also be an observation for a particular variable, e.g.
+The missing values in Julia are declare as `missing`, and these values can also be an observation for a particular column, e.g.
 
 ```jldoctest
 julia> Dataset(a = [1.1, -10.0, missing], b = 1:3)
@@ -71,8 +71,8 @@ julia> Dataset(a = [1.1, -10.0, missing], b = 1:3)
    3 │ missing           3
 ```
 
-Sometimes one needs to create a data set whose variable names are not valid Julia identifiers.
-In such a case the following form where variable names are passed as strings, and `=` is replaced by `=>` is handy:
+Sometimes one needs to create a data set whose column names are not valid Julia identifiers.
+In such a case the following form where column names are passed as strings, and `=` is replaced by `=>` is handy:
 
 ```jldoctest
 julia> Dataset("customer age" => [15, 20, 25],
@@ -109,10 +109,10 @@ julia> Dataset([[1 ,2], [0, 0]], :auto)
    2 │        2         0
 ```
 
-Note that the variable names are generated automatically when `:auto` is set as
+Note that the column names are generated automatically when `:auto` is set as
 the second argument.
 
-Alternatively you can pass a vector of variable names as a second argument to the
+Alternatively you can pass a vector of column names as a second argument to the
 `Dataset`:
 
 ```jldoctest
@@ -222,11 +222,11 @@ julia> setformat!(ds, :y => sqrt)
   10 │       10  2.23607         2
 ```
 
-The first argument for `setformat!` is the data set which needs to be modified and the second argument is the name of variables, `=>` and a named function. In the above example, we assign `sqrt` function as a format for the column `:y`.
+The first argument for `setformat!` is the data set which needs to be modified and the second argument is the name of column, `=>`, and a named function. In the above example, we assign `sqrt` function as a format for the column `:y`.
 
-> Note that `setformat!` doesn't check the validity of a format, so if a invalid format is assigned to a variable, for instance assigning `sqrt` to a variable which contains negative values, some functionality of data set will be parallelised (like `show`ing the data set). In this cases, simply remove the invalid format by using `removeformat!`.
+> Note that `setformat!` doesn't check the validity of a format, so if an invalid format is assigned to a column, for instance assigning `sqrt` to a column which contains negative values, some functionality of data set will be parallelised (like `show`ing the data set). In this cases, simply remove the invalid format by using `removeformat!`.
 
-Lets define a function as a new format for column `:z` in the above example,
+Let's define a function as a new format for column `:z` in the above example,
 
 ```jldoctest
 julia> function gender(x)
@@ -255,7 +255,7 @@ julia> setformat!(ds, :z => gender)
   10 │       10  2.23607  Female
 ```
 
-the `removeformat!` function should be used to remove a variable's format.
+the `removeformat!` function should be used to remove a column's format.
 
 ```jldoctest
 julia> removeformat!(ds, :y)
@@ -276,11 +276,11 @@ julia> removeformat!(ds, :y)
   10 │       10         5  Female
 ```
 
-Similar to `setformat!` the first argument is the name of the data set and the second argument is the name of the variable which we want to remove its format. Note that assigning or removing a format doesn't change the actual values of the variable.
+Similar to `setformat!` the first argument is the name of the data set and the second argument is the name of the column which we want to remove its format. Note that assigning or removing a format doesn't change the actual values of the column.
 
-By default, formatted values of a variable will be used when operations like displaying, sorting, grouping, or merging are called.
+By default, formatted values of a column will be used when operations like displaying, sorting, grouping, or joining are called.
 
-### Accessing individual variable or observation
+### Accessing individual column or observation
 
 `ds[:, col]`, `ds[i, col]` can be used to access a specific column or specific observation of a specific column of `ds`, respectively. For example,
 
@@ -296,7 +296,7 @@ julia> ds[3, :y]
 43
 ```
 
-Note that `ds[:, col]` extracts a column of a data set as a vector. Thus, this vector can be used as a normal vector in Julia.
+Note that `ds[:, col]` extracts (copy) a column of a data set as a vector. Thus, this vector can be used as a normal vector in Julia.
 
 Also note that, assigning a new value to `ds[3, :y]` will modify the data set, i.e.
 
@@ -331,9 +331,9 @@ Variables information
 
 The `content` function shows that the data set has been created on `2021-08-04T13:18:51.185`, and the last time that it has been modified is on `2021-08-04T13:24:33.086`.
 
-### Adding a new variable
+### Adding a new column
 
-To add a new variable (column) to a data set use `ds.newvar` or `ds[:, :newvar]` syntax,
+To add a new column (variable) to a data set use `ds.newvar` or `ds[:, :newvar]` syntax,
 
 ```jldoctest
 julia> ds = Dataset(var1 = [1, 2, 3])
@@ -379,20 +379,20 @@ julia> ds
    3 │        3  val3            32.0
 ```
 
-Be aware that, when adding a new variable to a data set, using the above syntax, if the variable already exists in the data set it will be replaced by new one.
+Be aware that, when adding a new column to a data set, using the above syntax, if the column already exists in the data set it will be replaced by new one.
 
 ### Some useful functions
 
 The following functions are very handy when working with a data set. Note that functions which end with `!` modify the original data set.
 
-* `names(ds)` gives the variable names as a vector of string.
+* `names(ds)` gives the column names as a vector of string.
 * `size(ds)` prints the data set dimension, i.e. number of rows and number of columns
 * `nrow(ds)` returns the number of rows
 * `ncol(ds)` returns the number of columns
 * `first(ds, n)` shows the first `n` rows of a data set
 * `last(ds, n)` shows the last `n` rows of a data set
-* `rename!` can be used to rename variable names
-* `select!` can be used to drop, select, or rearrange variables
+* `rename!` can be used to rename column names
+* `select!` can be used to drop, select, or rearrange columns
 * `delete!` deletes rows from a data set
 * `append!(ds, tds)` appends `tds` at the end of `ds`
 

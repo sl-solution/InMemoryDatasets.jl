@@ -27,7 +27,7 @@ julia> byrow(ds, sum, 1:100)
  50.47529543725829
 ```
 
-As it can be observed the function syntax is very straight forward, and to examine the efficiency of it, we use the `@btime` macro from the BenchmarkTools package,
+As it can be observed the function syntax is very straightforward, and to examine the efficiency of it, we use the `@btime` macro from the BenchmarkTools package,
 
 ```julia
 julia> using BenchmarkTools
@@ -38,7 +38,7 @@ julia> @btime sum(m, dims = 2)
   20.773 ms (7 allocations: 879.11 KiB)
 ```
 
-When the data set has heterogeneous data types at each column, `byrow` will be even more efficient than `sum(m, dims = 2)`.
+In the above benchmark, you should expect even more difference when the data set has a group of heterogeneous columns.
 
 ## Optimised operations
 
@@ -61,7 +61,7 @@ The common syntax of `byrow` for all of these functions except `nunique` is:
 
 `byrow(ds, fun, cols; [by , threads = true])`
 
-The `by` keyword argument is for giving a function to call on each value before calling `fun` to aggregate the values, and `threads = true` causes `byrow` to use all cores available to Julia for performing the computations. 
+The `by` keyword argument is for giving a function to call on each value before calling `fun` to aggregate the values, and `threads = true` causes `byrow` to exploit all cores available to Julia for performing the computations. 
  
 The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique value of each row, and `count_missing = true` counts missings as a unique value. 
 
@@ -88,7 +88,7 @@ julia> ds = Dataset(g = [1, 1, 1, 2, 2],
    5 │        2         2        -2       10.0  missing       -100.0
 ```
 
-To compute the mean of each row for the float variables, we simply call, 
+To compute the mean of each row for the float columns, we simply call, 
 
 ```jldoctest
 julia> byrow(ds, mean, r"_float")
@@ -102,7 +102,7 @@ julia> byrow(ds, mean, r"_float")
 
 Note that, since for the second row all values are `missing`, the result of mean is also `missing`.
 
-To calculate the mean of the absolute value of each row for the float variables we use the same code and add `by = abs` as the keyword argument,
+To calculate the mean of the absolute value of each row for the float columns we use the same code and add `by = abs` as the keyword argument,
 
 ```jldoctest
 julia> byrow(ds, mean, r"_float", by = abs)
@@ -206,6 +206,6 @@ julia> byrow(ds, cumsum, 1:3)
    5 │        2         4         2       10.0  missing       -100.0
 ```
 
-Note that `cumsum` treats `missing` as zero, and `cumprod` treats `missing` as one.
+Note that for these operations, `cumsum` treats `missing` as zero, and `cumprod` treats `missing` as one.
 
-The special operations don't change the variable names or the order of columns.
+The special operations don't change the columns names or their orders.
