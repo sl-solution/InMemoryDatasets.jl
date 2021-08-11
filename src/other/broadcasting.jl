@@ -190,6 +190,18 @@ function _copyto_helper!(dscol::AbstractVector, bc::Base.Broadcast.Broadcasted, 
     end
 end
 
+function _copyto_helper!(dscol::DatasetColumn, bc::Base.Broadcast.Broadcasted, col::Int)
+    if axes(dscol.val, 1) != axes(bc)[1]
+        # this should never happen unless data frame is corrupted (has unequal column lengths)
+        throw(DimensionMismatch("Dimension mismatch in broadcasting. The updated" *
+                                " data frame is invalid and should not be used"))
+    end
+    @inbounds for row in eachindex(dscol.val)
+        dscol[row] = bc[CartesianIndex(row, col)]
+    end
+    _modified(_attributes(dscol.ds))
+end
+
 function Base.Broadcast.broadcast_unalias(dest::AbstractDataset, src)
     for col in eachcol(dest)
         src = Base.Broadcast.unalias(col, src)
@@ -246,6 +258,10 @@ function _broadcast_unalias_helper(dest::AbstractDataset, scol::AbstractVector,
     end
     return src, wascopied
 end
+
+_broadcast_unalias_helper(dest::AbstractDataset, scol::DatasetColumn,
+                                   src::AbstractDataset, col2::Int, wascopied::Bool) = _broadcast_unalias_helper(dest, scol.val,
+                                                                      src, col2, wascopied)
 
 function Base.Broadcast.broadcast_unalias(dest::AbstractDataset, src::AbstractDataset)
     if size(dest, 2) != size(src, 2)

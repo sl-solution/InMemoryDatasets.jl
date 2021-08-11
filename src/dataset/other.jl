@@ -255,44 +255,51 @@ julia> map(ds, x -> x^2, :)
    4 │       16       196
 ```
 """
-function Base.map(ds::Dataset, f::Function, cols::MultiColumnIndex)
-    # Create Dataset
-    ncol(ds) == 0 && return ds # skip if no columns
+# function Base.map(ds::Dataset, f::Function, cols::MultiColumnIndex)
+#     # Create Dataset
+#     ncol(ds) == 0 && return ds # skip if no columns
+#     colsidx = index(ds)[cols]
+#     transfer_grouping_info = !any(colsidx .∈ Ref(index(ds).sortedcols))
+#     sorted_colsidx = sort(colsidx)
+#     vs = AbstractVector[]
+#     for j in 1:ncol(ds)
+#         if insorted(j, sorted_colsidx)
+#             _f = f
+#         else
+#             _f = identity
+#         end
+#         v = _columns(ds)[j]
+#         T = Core.Compiler.return_type(_f, (eltype(v), ))
+#         fv = Vector{T}(undef, length(v))
+#         _hp_map_a_function!(fv, _f, v)
+#         push!(vs, fv === v ? copy(fv) : fv)
+#     end
+#     if transfer_grouping_info
+#         newds_index = copy(index(ds))
+#     else
+#         newds_index = copy(index(ds))
+#         _reset_grouping_info!(newds_index)
+#     end
+#     # formats don't need to be transferred
+#     newds = Dataset(vs, newds_index, copycols=false)
+#     removeformat!(newds, cols)
+#     setinfo!(newds, _attributes(ds).meta.info[])
+#     return newds
+#
+# end
+# Base.map(ds::Dataset, f::Union{Function}, col::ColumnIndex) = map(ds, f, [col])
+# Base.map(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+
+function Base.map(ds::Dataset, f::Function, cols::MultiColumnIndex; threads = true)
     colsidx = index(ds)[cols]
-    transfer_grouping_info = !any(colsidx .∈ Ref(index(ds).sortedcols))
-    sorted_colsidx = sort(colsidx)
-    vs = AbstractVector[]
-    for j in 1:ncol(ds)
-        if insorted(j, sorted_colsidx)
-            _f = f
-        else
-            _f = identity
-        end
-        v = _columns(ds)[j]
-        T = Core.Compiler.return_type(_f, (eltype(v), ))
-        fv = Vector{T}(undef, length(v))
-        _hp_map_a_function!(fv, _f, v)
-        push!(vs, fv === v ? copy(fv) : fv)
-    end
-    if transfer_grouping_info
-        newds_index = copy(index(ds))
-    else
-        newds_index = copy(index(ds))
-        _reset_grouping_info!(newds_index)
-    end
-    # formats don't need to be transferred
-    newds = Dataset(vs, newds_index, copycols=false)
-    removeformat!(newds, cols)
-    setinfo!(newds, _attributes(ds).meta.info[])
-    return newds
-
+    fs = repeat([f], length(colsidx))
+    map(ds, fs, cols; threads = threads)
 end
-Base.map(ds::Dataset, f::Union{Function}, col::ColumnIndex) = map(ds, f, [col])
-Base.map(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
-Base.map(ds::Dataset, f::Vector{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+Base.map(ds::Dataset, f::Function, col::ColumnIndex; threads = true) = map(ds, f, [col]; threads = threads)
+Base.map(ds::Dataset, f::Vector{Function}; threads = true) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
 
-function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
+function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex; threads = true)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -310,8 +317,12 @@ function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
         end
         v = _columns(ds)[j]
         T = Core.Compiler.return_type(_f, (eltype(v), ))
-        fv = Vector{T}(undef, length(v))
-        _hp_map_a_function!(fv, _f, v)
+        if threads
+            fv = Vector{T}(undef, length(v))
+            _hp_map_a_function!(fv, _f, v)
+        else
+            fv = map(_f, v)
+        end
         push!(vs, fv === v ? copy(fv) : fv)
     end
     if transfer_grouping_info
@@ -364,47 +375,46 @@ julia> ds
    4 │       16       196
 ```
 """
-function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
-    # Create Dataset
-    ncol(ds) == 0 && return ds # skip if no columns
-    colsidx = index(ds)[cols]
-    _reset_group = false
-    # TODO needs function barrier
-    number_of_warnnings = 0
-    for j in 1:length(colsidx)
-        CT = eltype(_columns(ds)[colsidx[j]])
-        # Core.Compiler.return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of Core.Compiler.return_type is Union{Missing, Float64, Int64}
-        # we remove missing and then check the result,
-        # TODO is there any problem with this?
-        T = Core.Compiler.return_type(f, (nonmissingtype(CT),))
-        if CT >: Missing
-            T = Union{Missing, T}
-        end
-        if promote_type(T, CT) <: CT
-            _hp_map!_a_function!(_columns(ds)[colsidx[j]], f)
-            # map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
-            # removeformat!(ds, colsidx[j])
-            _modified(_attributes(ds))
-            if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
-                _reset_grouping_info!(ds)
-                _reset_group = true
-            end
-        else
-            if number_of_warnnings < 5
-                @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place, the selected column is $(CT) and the result of calculation is $(T)"
-                number_of_warnnings += 1
-            elseif number_of_warnnings == 5
-                @warn "more than 5 columns can not be replaced ...."
-                number_of_warnnings += 1
-            end
-            continue
-        end
-    end
-    return ds
-end
-
-Base.map!(ds::Dataset, f::Union{Function}, col::ColumnIndex) = map!(ds, f, [col])
-Base.map!(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
+# function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
+#     # Create Dataset
+#     ncol(ds) == 0 && return ds # skip if no columns
+#     colsidx = index(ds)[cols]
+#     _reset_group = false
+#     # TODO needs function barrier
+#     number_of_warnnings = 0
+#     for j in 1:length(colsidx)
+#         CT = eltype(_columns(ds)[colsidx[j]])
+#         # Core.Compiler.return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of Core.Compiler.return_type is Union{Missing, Float64, Int64}
+#         # we remove missing and then check the result,
+#         # TODO is there any problem with this?
+#         T = Core.Compiler.return_type(f, (nonmissingtype(CT),))
+#         if CT >: Missing
+#             T = Union{Missing, T}
+#         end
+#         if promote_type(T, CT) <: CT
+#             _hp_map!_a_function!(_columns(ds)[colsidx[j]], f)
+#             # map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
+#             # removeformat!(ds, colsidx[j])
+#             _modified(_attributes(ds))
+#             if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
+#                 _reset_grouping_info!(ds)
+#                 _reset_group = true
+#             end
+#         else
+#             if number_of_warnnings < 5
+#                 @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place, the selected column is $(CT) and the result of calculation is $(T)"
+#                 number_of_warnnings += 1
+#             elseif number_of_warnnings == 5
+#                 @warn "more than 5 columns can not be replaced ...."
+#                 number_of_warnnings += 1
+#             end
+#             continue
+#         end
+#     end
+#     return ds
+# end
+#
+# Base.map!(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
 
 """
     map!(ds::Dataset, f::Vector{Function}, cols)
@@ -440,7 +450,7 @@ julia> ds
    4 │       16        13
 ```
 """
-function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
+function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex; threads = true)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -454,11 +464,13 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
         # we remove missing and then check the result,
         # TODO is there any problem with this?
         T = Core.Compiler.return_type(f[j], (nonmissingtype(CT),))
-        if CT >: Missing
-            T = Union{Missing, T}
-        end
+        T = Union{Missing, CT}
         if promote_type(T, CT) <: CT
-            _hp_map!_a_function!(_columns(ds)[colsidx[j]], f[j])
+            if threads
+                _hp_map!_a_function!(_columns(ds)[colsidx[j]], f[j])
+            else
+                map!(f[j], _columns(ds)[colsidx[j]], _columns(ds)[colsidx[j]])
+            end
             # removeformat!(ds, colsidx[j])
             _modified(_attributes(ds))
             if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
@@ -478,7 +490,15 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex)
     end
     return ds
 end
-Base.map!(ds::Dataset, f::Vector{<:Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+
+function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex; threads = true)
+    colsidx = index(ds)[cols]
+    fs = repeat([f], length(colsidx))
+    map!(ds, fs, colsidx; threads = threads)
+end
+
+Base.map!(ds::Dataset, f::Union{Function}, col::ColumnIndex; threads = true) = map!(ds, f, [col]; threads = threads)
+Base.map!(ds::Dataset, f::Vector{<:Function}; threads = true) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
 
 # the order of argument in `mask` is based on map, should we make it mask(ds, cols, fun)
