@@ -96,8 +96,8 @@ export
 
 
 include("other/index.jl")
-include("other/utils.jl")
 include("characters/characters.jl")
+include("other/utils.jl")
 include("stat/non_hp_stat.jl")
 include("stat/hp_stat.jl")
 include("stat/stat.jl")
