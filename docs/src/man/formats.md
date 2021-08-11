@@ -52,7 +52,7 @@ There are two functions that are handy for manipulating the columns' `format`s, 
 
 > `removeformat!(ds, cols...)`
 
-For `setformat!` each `arg` in the argument must be of the `cols => fmt` form, where `fmt` is the named function and `cols` is either column(s) name(s), column(s) index(s), or regular expression, thus, expressions like `setformat!(ds, 1:10=>sqrt)`, `setformat!(ds, r"x"=>iseven", :y=>sqrt)` are valid in Datasets. When `cols` refers to more than one column, `fmt` will be assigned to all of those columns.
+For `setformat!` each `arg` in the argument must be of the `cols => fmt` form, where `fmt` is the named function and `cols` is either column(s) name(s), column(s) index(s), or regular expression, thus, expressions like `setformat!(ds, 1:10=>sqrt)`, `setformat!(ds, r"x"=>iseven, :y=>sqrt)` are valid in Datasets. When `cols` refers to more than one column, `fmt` will be assigned to all of those columns.
 
 For `removeformat!` each `cols` in the argument must be either column(s) name(s), column(s) index(s), or regular expression.
 
@@ -69,11 +69,11 @@ In the following example we assign user defined functions as the format for the 
 
 ```jldoctest
 julia> sale = Dataset(store = ["store1", "store1", "store2",
- 						"store2", "store3", "store3", "store3"],
-					   date = [Date("2020-05-01"), Date("2020-06-01"),
-					   	Date("2020-05-01"), Date("2020-06-01"),
-							Date("2020-05-01"), Date("2020-06-01"), Date("2020-07-01")],
-					   	sale = [10000, 10100, 20020, 21000, 20300, 20400, 5000])
+ 				"store2", "store3", "store3", "store3"],
+				date = [Date("2020-05-01"), Date("2020-06-01"),
+				Date("2020-05-01"), Date("2020-06-01"),
+				Date("2020-05-01"), Date("2020-06-01"), Date("2020-07-01")],
+				sale = [10000, 10100, 20020, 21000, 20300, 20400, 5000])
 7×3 Dataset
  Row │ store       date        sale
      │ identity    identity    identity
