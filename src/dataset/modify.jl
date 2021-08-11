@@ -17,14 +17,21 @@ function _check_ind_and_add!(outidx::Index, val)
     end
 end
 
+# splitting a column to multiple columns
 function normalize_modify!(outidx::Index, idx::Index, @nospecialize(sel::Pair{<:ColumnIndex,
-                                                                <:Pair{<:splitter,
+                                                                <:Pair{<:typeof(splitter),
                                                                     <:Vector{<:Union{Symbol, AbstractString}}}}))
     src, (fun, dst) = sel
     for i in 1:length(dst)
         _check_ind_and_add!(outidx, Symbol(dst[i]))
     end
     return outidx[src] => fun => MultiCol(Symbol.(dst))
+
+end
+function normalize_modify!(outidx::Index, idx::Index, @nospecialize(sel::Pair{<:ColumnIndex,
+                                                                <:splitter}
+                                                                    ))
+    throw(ArgumentError("for `splitter` the destinations must be specified"))
 
 end
 
@@ -38,18 +45,7 @@ function normalize_modify!(outidx::Index, idx::Index,
     _check_ind_and_add!(outidx, Symbol(dst))
     return outidx[src] => fun => Symbol(dst)
 end
-# col => fun => dst, the job is to create col => fun => :dst
-function normalize_modify!(outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Pair{<:Union{Base.Callable},
-                                                        <:Vector{<:Union{Symbol, AbstractString}}}})
-                                                        )
-    src, (fun, dst) = sel
-    for i in 1:length(dst)
-        _check_ind_and_add!(outidx, Symbol(dst[i]))
-    end
-    return outidx[src] => fun => MultiCol(Symbol.(dst))
-end
+
 # col => fun, the job is to create col => fun => :colname
 function normalize_modify!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
@@ -244,28 +240,24 @@ function normalize_modify_multiple!(outidx::Index, idx::Index, @nospecialize(arg
     res
 end
 
-modify(ds::Dataset) = copy(ds)
-function modify(origninal_ds::Dataset, @nospecialize(args...))
-    ds = copy(origninal_ds)
-    idx_cpy::Index = Index(copy(index(ds).lookup), copy(index(ds).names), Dict{Int, Function}())
-    if isgrouped(ds)
-        norm_var = normalize_modify_multiple!(idx_cpy, index(ds), args...)
-        all_new_var = map(x -> x.second.second, norm_var)
-        var_index = idx_cpy[unique(all_new_var)]
-        if any(index(ds).sortedcols .∈ Ref(var_index))
-            throw(ArgumentError("the grouping variables cannot be modified, first use `ungroup!(ds)` to ungroup the data set"))
-        end
-        _modify_grouped(ds, norm_var)
-    else
-        _modify(ds, normalize_modify_multiple!(idx_cpy, index(ds), args...))
-    end
-end
+modify(origninal_ds::Dataset, @nospecialize(args...)) = modify!(copy(origninal_ds), args...)
+
 modify!(ds::Dataset) = ds
 function modify!(ds::Dataset, @nospecialize(args...))
     idx_cpy = Index(copy(index(ds).lookup), copy(index(ds).names), copy(index(ds).format))
     if isgrouped(ds)
         norm_var = normalize_modify_multiple!(idx_cpy, index(ds), args...)
-        all_new_var = map(x -> x.second.second, norm_var)
+        allnewvars = map(x -> x.second.second, norm_var)
+        all_new_var = Symbol[]
+        for i in 1:length(allnewvars)
+            if typeof(allnewvars[i]) <: MultiCol
+                for j in 1:length(allnewvars[i].x)
+                    push!(all_new_var, allnewvars[i].x[j])
+                end
+            else
+                push!(all_new_var, allnewvars[i])
+            end
+        end
         var_index = idx_cpy[unique(all_new_var)]
         any(index(ds).sortedcols .∈ Ref(var_index)) && throw(ArgumentError("the grouping variables cannot be modified, first use `ungroup!(ds)` to ungroup the data set"))
         _modify_grouped(ds, norm_var)
@@ -313,14 +305,16 @@ function _modify_single_var!(ds, _f, x, dst)
     _resize_result!(ds, _res, dst)
 end
 
-function _modify_multiple_out!(ds, _f, x, dst)
-    _res = _f(x)
-    if _res isa Tuple
-        for j in 1:length(dst)
-            _resize_result!(ds, _res[j], dst[j])
+# the number of destination can be smaller or greater than the number of elements of Tuple,
+function _modify_multiple_out!(ds, x, dst)
+    !(nonmissingtype(eltype(x)) <: Tuple) && throw(ArgumentError("to use `splitter`, the source column must be a vector of Tuple"))
+    tb = Tables.columntable(x)
+    for j in 1:length(dst)
+        try
+            _resize_result!(ds, Tables.getcolumn(tb, j), dst[j])
+        catch
+            _resize_result!(ds, missings(nrow(ds)), dst[j])
         end
-    else
-        throw(ArgumentError("the function must return results as a tuple which each element of it corresponds to a new column"))
     end
 end
 
@@ -336,8 +330,8 @@ function _modify_f_barrier(ds, msfirst, mssecond, mslast)
             end
             rethrow(e)
         end
-    elseif  (mssecond isa Base.Callable) && (mslast isa MultiCol)
-        _modify_multiple_out!(ds, mssecond, _columns(ds)[msfirst], mslast.x)
+    elseif  (mssecond isa Base.Callable) && (mslast isa MultiCol) && (mssecond isa typeof(splitter))
+        _modify_multiple_out!(ds, _columns(ds)[msfirst], mslast.x)
     else
         @error "not yet know how to handle this situation $(msfirst => mssecond => mslast)"
     end
@@ -397,9 +391,8 @@ function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast)
         ds[!, mslast] = _res
     elseif (mssecond isa Expr)  && mssecond.head == :BYROW
         ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
-    elseif (mssecond isa Base.Callable) && (mslast isa MultiCol)
-
-        throw(ArgumentError("multi column output is not supported for grouped data set"))
+    elseif (mssecond isa Base.Callable) && (mslast isa MultiCol) && (mssecond isa typeof(splitter))
+        _modify_multiple_out!(ds, _columns(ds)[msfirst], mslast.x)
     else
                 # if something ends here, we should implement new functionality for it
         @error "not yet know how to handle the situation $(msfirst => mssecond => mslast)"
