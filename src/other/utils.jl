@@ -75,9 +75,12 @@ function _first_nonmiss(x)
     res
 end
 
+_tmp_hash_fun(x, y) = hash(x, y)
+_tmp_hash_fun(x::Characters, y) = hash(x.data, y)
+
 function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group)
     Threads.@threads for i in 1:length(v)
-        @inbounds rhashes[i] = hash(f(v[i]), prev_groups[i])
+        @inbounds rhashes[i] = _tmp_hash_fun(f(v[i]), prev_groups[i])
     end
     n = length(v)
     # sz = 2 ^ ceil(Int, log2(n)+1)
@@ -142,7 +145,12 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
         end
 
         if DataAPI.refpool(_columns(ds)[colidx[j]]) !== nothing
-            v = DataAPI.refarray(_columns(ds)[colidx[j]])
+            if _f == identity
+                v = DataAPI.refarray(_columns(ds)[colidx[j]])
+            else
+                v = DataAPI.refarray(map(_f, _columns(ds)[colidx[j]]))
+            end
+            _f = identity
         else
             v = _columns(ds)[colidx[j]]
         end

@@ -271,11 +271,11 @@ function _show(io::IO,
 
         show_row_number = false
     end
-    if isgrouped(df)
-        extrahlines = view(index(df).starts,1:index(df).ngroups[]) .- 1
-    else
+    # if isgrouped(df)
+    #     extrahlines = view(index(df).starts,1:index(df).ngroups[]) .- 1
+    # else
         extrahlines = [0]
-    end
+    # end
     # Print the table with the selected options.
     pretty_table(io, df;
                  alignment                   = alignment,
