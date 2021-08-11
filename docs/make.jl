@@ -20,7 +20,7 @@ makedocs(
         "Introduction" => "index.md",
         "First Steps" => "man/basics.md",
         "User Guide" => Any[
-            "Getting Started" => "man/tutorial.md",
+            "Tutorial" => "man/tutorial.md",
             "Formats" => "man/formats.md",
             "Call functions on each observation" => "man/map.md",
             "Row-wise operations" => "man/byrow.md",
