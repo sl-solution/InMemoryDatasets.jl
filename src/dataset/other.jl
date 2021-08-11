@@ -464,7 +464,7 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex; t
         # we remove missing and then check the result,
         # TODO is there any problem with this?
         T = Core.Compiler.return_type(f[j], (nonmissingtype(CT),))
-        T = Union{Missing, CT}
+        T = Union{Missing, T}
         if promote_type(T, CT) <: CT
             if threads
                 _hp_map!_a_function!(_columns(ds)[colsidx[j]], f[j])
