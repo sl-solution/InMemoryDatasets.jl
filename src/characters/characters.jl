@@ -4,10 +4,36 @@ import Base: iterate, lastindex, getindex, sizeof, length, ncodeunits, codeunit,
 
 struct Characters{N, M} <: AbstractString
     data::NTuple{N, M}
+    function Characters{N, M}(v::Vector{UInt8}) where N where M
+        new((v...,))
+    end
     function Characters{N, M}(itr) where {N} where {M}
         isempty(itr) && return missing
         new(NTuple{N, M}(rpad(itr, N)))
     end
+end
+
+function Characters{N, M}(v::Vector{UInt8}, v2) where N where M
+
+    for i in 1:min(N, length(v))
+        v2[i] = v[i]
+    end
+    for i in length(v)+1:N
+        v2[i] = 0x20
+    end
+
+    Characters{N, M}(v2)
+end
+function Characters{N, M}(v::Vector{UInt8}, v2, st, en) where N where M
+
+    for i in 1:min(N, en - st + 1)
+        v2[i] = v[i + st - 1]
+    end
+    for i in en - st + 2:N
+        v2[i] = 0x20
+    end
+
+    Characters{N, M}(v2)
 end
 
 function Characters{N}(itr) where {N}
