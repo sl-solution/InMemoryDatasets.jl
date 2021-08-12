@@ -77,7 +77,7 @@ julia> sale = Dataset(store = ["store1", "store1", "store2",
 7×3 Dataset
  Row │ store       date        sale
      │ identity    identity    identity
-     │ String?  Date?       Int64?
+     │ String?     Date?       Int64?
 ─────┼──────────────────────────────────
    1 │ store1      2020-05-01     10000
    2 │ store1      2020-06-01     10100
@@ -108,7 +108,7 @@ julia> setformat!(sale, 1 => storeid, :date => month, :sale => SALE)
 7×3 Dataset
  Row │ store       date   sale
      │ storeid     month  SALE
-     │ String?  Date?  Int64?
+     │ String?     Date?  Int64?
 ─────┼──────────────────────────────
    1 │ 1           5        average
    2 │ 1           6        average
@@ -129,7 +129,7 @@ julia> removeformat!(sale, [1,2])
 7×3 Dataset
  Row │ store       date        sale
      │ identity    identity    SALE
-     │ String?  Date?       Int64?
+     │ String?     Date?       Int64?
 ─────┼───────────────────────────────────
    1 │ store1      2020-05-01    average
    2 │ store1      2020-06-01    average
