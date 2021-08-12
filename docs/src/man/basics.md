@@ -372,7 +372,7 @@ julia> ds
 3×3 Dataset
  Row │ var1      var2        var3
      │ identity  identity    identity
-     │ Int64?    String?  Float64?
+     │ Int64?    String?     Float64?
 ─────┼────────────────────────────────
    1 │        1  val1             3.5
    2 │        2  val2             4.6
