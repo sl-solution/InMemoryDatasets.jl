@@ -1,3 +1,4 @@
+using WeakRefStrings
 # Initial Idea, far from usability
 # DO NOT use it
 struct LineBuffer <: AbstractString
@@ -41,12 +42,30 @@ function ourparser(res, lbuff, cc, nd, current_line, ::Type{Float32})
     (Ptr{UInt8},Csize_t,Csize_t), lbuff.data, cc-1, nd - cc +1)
     hasvalue ? res[current_line[]] = val : res[current_line[]] = missing
 end
-function ourparser(res, lbuff, cc, nd, current_line, char_buf, ::Type{T}) where T <: Characters
-    res[current_line[]] = Characters{8, UInt8}(lbuff.data, char_buf, cc, nd)
+function ourparser(res, lbuff, cc, nd, current_line, ::Type{String})
+    res[current_line[]] = unsafe_string(pointer(lbuff.data, cc), nd - cc + 1)
 end
 
+function (::Type{T})(buf::Vector{UInt8}, pos, len) where {T <: InlineString}
+   if T === InlineString1
+       sizeof(x) == 1 || WeakRefStrings.stringtoolong(T, sizeof(x))
+       return Base.bitcast(InlineString1, buf[pos])
+   else
+       length(buf) < len && WeakRefStrings.buftoosmall()
+       len < sizeof(T) || WeakRefStrings.stringtoolong(T, len)
+       y = GC.@preserve buf unsafe_load(convert(Ptr{T}, pointer(buf, pos)))
+       sz = 8 * (sizeof(T) - len)
+       return Base.or_int(Base.shl_int(Base.lshr_int(WeakRefStrings._bswap(y), sz), sz), Base.zext_int(T, UInt8(len)))
+   end
+end
+
+function ourparser(res, lbuff, cc, nd, current_line, ::Type{T}) where T <: InlineString
+    res[current_line[]] = T(lbuff.data, cc, nd-cc+1)
+end
+
+
 # this will allocate, we need to solve this
-function _process_one_line!(res, lbuff, types, dlm, charcount, current_line, char_buf)
+function _process_one_line!(res, lbuff, types, dlm, charcount, current_line)
     cc = 1
     # if current_line[] % 10000 == 0
     #     @show current_line[]
@@ -66,15 +85,31 @@ function _process_one_line!(res, lbuff, types, dlm, charcount, current_line, cha
             ourparser(res[j]::Vector{Union{Missing, Float64}}, lbuff, cc, en, current_line, Float64)
         elseif types[j] == Float32
             ourparser(res[j]::Vector{Union{Missing, Float32}}, lbuff, cc, en, current_line, Float32)
-        elseif types[j] <: AbstractString
-            ourparser(res[j]::Vector{Union{Missing, Characters{8, UInt8}}}, lbuff, cc, en, current_line, char_buf, Characters)
+        elseif types[j] <: InlineString1
+            ourparser(res[j]::Vector{Union{Missing,InlineString1}}, lbuff, cc, en, current_line,InlineString1)
+        elseif types[j] <: InlineString3
+            ourparser(res[j]::Vector{Union{Missing,InlineString3}}, lbuff, cc, en, current_line,InlineString3)
+        elseif types[j] <: InlineString7
+            ourparser(res[j]::Vector{Union{Missing,InlineString7}}, lbuff, cc, en, current_line,InlineString7)
+        elseif types[j] <: InlineString15
+            ourparser(res[j]::Vector{Union{Missing,InlineString15}}, lbuff, cc, en, current_line,InlineString15)
+        elseif types[j] <: InlineString31
+            ourparser(res[j]::Vector{Union{Missing,InlineString31}}, lbuff, cc, en, current_line,InlineString31)
+        elseif types[j] <: InlineString63
+            ourparser(res[j]::Vector{Union{Missing,InlineString63}}, lbuff, cc, en, current_line,InlineString63)
+        elseif types[j] <: InlineString127
+            ourparser(res[j]::Vector{Union{Missing,InlineString127}}, lbuff, cc, en, current_line,InlineString127)
+        elseif types[j] <: InlineString255
+            ourparser(res[j]::Vector{Union{Missing,InlineString255}}, lbuff, cc, en, current_line,InlineString255)
+        else # types[j] <: String
+            ourparser(res[j]::Vector{Union{Missing, String}}, lbuff, cc, en, current_line, String)
         end
 
         cc = en + 1 + length(dlm)
     end
 end
 
-function _process_iobuff!(res, iobuff, lbuff, types, dlm, eol, cnt_read_bytes, iobuffsize, lbuffsize, current_line, last_line_complete, last_line, last_valid_buff, char_buf)
+function _process_iobuff!(res, iobuff, lbuff, types, dlm, eol, cnt_read_bytes, iobuffsize, lbuffsize, current_line, last_line_complete, last_line, last_valid_buff)
     cnt = 1
     cnt_buff = 1
     lastvalid = 0
@@ -83,7 +118,7 @@ function _process_iobuff!(res, iobuff, lbuff, types, dlm, eol, cnt_read_bytes, i
             lbuff.data[cnt] = iobuff[cnt_buff]
             cnt += 1
         else
-            _process_one_line!(res, lbuff, types, dlm, cnt - 1, current_line, char_buf)
+            _process_one_line!(res, lbuff, types, dlm, cnt - 1, current_line)
             current_line[] += 1
             cnt = 1
         end
@@ -106,7 +141,6 @@ function readfile(path, types, n; header = true, delimeter = ',', linebreak = '\
     if header
         readline(f)
     end
-    char_buf = Vector{UInt8}(undef, 8)
     current_line = Ref{Int}(1)
     last_line_complete = true
     last_line = false
@@ -140,7 +174,7 @@ function readfile(path, types, n; header = true, delimeter = ',', linebreak = '\
                 last_valid_buff = cnt_read_bytes
             end
         end
-        _process_iobuff!(res, buffer, lbuff, types, dlm, eol, cnt_read_bytes, buffsize, lbuffsize, current_line, last_line_complete, last_line, last_valid_buff, char_buf)
+        _process_iobuff!(res, buffer, lbuff, types, dlm, eol, cnt_read_bytes, buffsize, lbuffsize, current_line, last_line_complete, last_line, last_valid_buff)
         # we need to break at some point
         last_line && break
     end
