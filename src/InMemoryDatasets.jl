@@ -163,6 +163,6 @@ include("other/tables.jl")
 include("missings/missings.jl")
 
 # precompile
-include("precompile/precompile.jl")
-_precompile_()
+# include("precompile/precompile.jl")
+# _precompile_()
 end
