@@ -27,7 +27,7 @@ julia> ds = Dataset(var1 = [1, 2, 3],
 3×3 Dataset
  Row │ var1      var2      var3
      │ identity  identity  identity
-     │ Int64?    Float64?  Characte…?
+     │ Int64?    Float64?  String?
 ─────┼────────────────────────────────
    1 │        1       1.2  C1
    2 │        2       0.5  C2
@@ -80,7 +80,7 @@ julia> Dataset("customer age" => [15, 20, 25],
 3×2 Dataset
 Row │ customer age  first name
     │ identity      identity
-    │ Int64?        Character…?
+    │ Int64?        String?
 ────┼───────────────────────────
   1 │           15  Ben
   2 │           20  Steve
@@ -356,7 +356,7 @@ julia> ds
 3×2 Dataset
  Row │ var1      var2
      │ identity  identity
-     │ Int64?    Characte…?
+     │ Int64?    String?
 ─────┼──────────────────────
    1 │        1  val1
    2 │        2  val2
@@ -372,7 +372,7 @@ julia> ds
 3×3 Dataset
  Row │ var1      var2        var3
      │ identity  identity    identity
-     │ Int64?    Characte…?  Float64?
+     │ Int64?    String?  Float64?
 ─────┼────────────────────────────────
    1 │        1  val1             3.5
    2 │        2  val2             4.6

@@ -61,10 +61,10 @@ quotes = Dataset(
              ["time", "ticker", "bid", "ask"]);
 modify!(quotes, 1 => byrow(x -> DateTime(x, dateformat"yyyymmdd HH:MM:SS.s")));
 closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.023"), DateTime("2016-05-25T13:30:00.038"), DateTime("2016-05-25T13:30:00.048"), DateTime("2016-05-25T13:30:00.048"), DateTime("2016-05-25T13:30:00.048")],
-     Union{Missing, Characters{4, UInt8}}["MSFT", "MSFT", "GOOG", "GOOG", "AAPL"],
+     Union{Missing, String}["MSFT", "MSFT", "GOOG", "GOOG", "AAPL"],
      Union{Missing, Float64}[51.95, 51.95, 720.77, 720.92, 98.0],
      Union{Missing, Int64}[75, 155, 100, 100, 100],
-     Union{Missing, Characters{4, UInt8}}["MSFT", "MSFT", "GOOG", "GOOG", "GOOG"],
+     Union{Missing, String}["MSFT", "MSFT", "GOOG", "GOOG", "GOOG"],
      Union{Missing, Float64}[51.95, 51.97, 720.5, 720.5, 720.5],
      Union{Missing, Float64}[51.96, 51.98, 720.93, 720.93, 720.93]],["time", "ticker", "price", "quantity", "ticker_1", "bid", "ask"])
 

@@ -5,7 +5,7 @@ import Base: iterate, lastindex, getindex, sizeof, length, ncodeunits, codeunit,
 struct Characters{N, M} <: AbstractString
     data::NTuple{N, M}
     function Characters{N, M}(v::Vector{UInt8}) where N where M
-        new((v...,))
+        new(NTuple{N, M}(v))
     end
     function Characters{N, M}(itr) where {N} where {M}
         isempty(itr) && return missing

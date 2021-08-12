@@ -154,11 +154,11 @@ const ≅ = isequal
 
     ds2 = transpose(groupby(ds, :time, stable = true), :load, id = 1:2)
     ds3 = Dataset([ Union{Missing, Int64}[1, 2],
-                 Characters{4, UInt8}["load", "load"],
+                 ["load", "load"],
                  Union{Missing, Float64}[0.1, 6.0],
                  Union{Missing, Float64}[0.2, 4.3],
                  Union{Missing, Float64}[0.5, 0.1],
-                 Union{Missing, Float64}[0.1, 6.0]], ["time", "_variables_", "(\"North\", \"gas \")", "(\"North\", \"coal\")", "(\"South\", \"gas \")", "(\"South\", \"coal\")"])
+                 Union{Missing, Float64}[0.1, 6.0]], ["time", "_variables_", "(\"North\", \"gas\")", "(\"North\", \"coal\")", "(\"South\", \"gas\")", "(\"South\", \"coal\")"])
 
      @test ds2 == ds3
      ds = Dataset(A_2018=1:4, A_2019=5:8, B_2017=9:12,
@@ -180,11 +180,11 @@ const ≅ = isequal
         ds2 = transpose(groupby(transpose(groupby(ds, [:paddockId,:color], stable = true), [:count,:weight]), :paddockId, stable = true),
                              :_c1, id = 2:3)
         ds3 = Dataset([Union{Missing, Int64}[0, 1, 2],
-             Union{Missing, Characters{3, UInt8}}["_c1", "_c1", "_c1"],
+             Union{Missing, String}["_c1", "_c1", "_c1"],
              Union{Missing, Float64}[4.0, 4.0, 4.0],
              Union{Missing, Float64}[0.3, 0.3, 0.2],
              Union{Missing, Float64}[3.0, 3.0, 3.0],
-             Union{Missing, Float64}[0.2, 0.2, 0.2]], ["paddockId", "_variables_", "(\"blue\", \"count \")", "(\"blue\", \"weight\")", "(\"red \", \"count \")", "(\"red \", \"weight\")"])
+             Union{Missing, Float64}[0.2, 0.2, 0.2]], ["paddockId", "_variables_", "(\"blue\", \"count\")", "(\"blue\", \"weight\")", "(\"red\", \"count\")", "(\"red\", \"weight\")"])
 
          @test ds2 == ds3
 
@@ -216,60 +216,60 @@ const ≅ = isequal
         ds8 = transpose(groupby(ds, 1:2, stable = true), [:val1, :val2], id = :id2)
         ds9 = transpose(groupby(ds, 1:2, stable = true), [:val1], id = [:id2, :id1])
 
-        tds2 = Dataset([Union{Missing, Characters{4, UInt8}}["val1", "val2"],
+        tds2 = Dataset([Union{Missing, String}["val1", "val2"],
                  Union{Missing, Float64}[1.0, 1.1],
                  Union{Missing, Float64}[2.0, 2.1],
                  Union{Missing, Float64}[3.0, 0.5],
                  Union{Missing, Float64}[4.0, 1.3],
                  Union{Missing, Float64}[5.0, 1.0],
                  Union{Missing, Float64}[6.0, 2.0]], ["_variables_", "_c1", "_c2", "_c3", "_c4", "_c5", "_c6"])
-        tds3 = Dataset([Union{Missing, Characters{4, UInt8}}["val1", "val2"],
+        tds3 = Dataset([Union{Missing, String}["val1", "val2"],
                  Union{Missing, Float64}[1.0, 1.1],
                  Union{Missing, Float64}[2.0, 2.1],
                  Union{Missing, Float64}[3.0, 0.5],
                  Union{Missing, Float64}[4.0, 1.3],
                  Union{Missing, Float64}[5.0, 1.0],
                  Union{Missing, Float64}[6.0, 2.0]], ["_variables_", "2", "3", "1", "5", "4", "6"])
-        tds4 = Dataset([Union{Missing, Characters{4, UInt8}}["val1", "val2"],
+        tds4 = Dataset([Union{Missing, String}["val1", "val2"],
                  Union{Missing, Float64}[1.0, 1.1],
                  Union{Missing, Float64}[2.0, 2.1],
                  Union{Missing, Float64}[3.0, 0.5],
                  Union{Missing, Float64}[4.0, 1.3],
                  Union{Missing, Float64}[5.0, 1.0],
                  Union{Missing, Float64}[6.0, 2.0]], ["_variables_", "(\"id2_g2\", 2)", "(\"id1_g1\", 3)", "(\"id2_g1\", 1)", "(\"id1_g2\", 5)", "(\"id3_g1\", 4)", "(\"id4_g3\", 6)"])
-        tds5 = Dataset([Union{Missing, Characters{2, UInt8}}["g1", "g1", "g2", "g2", "g3", "g3"],
-                 Union{Missing, Characters{4, UInt8}}["val1", "val2", "val1", "val2", "val1", "val2"],
+        tds5 = Dataset([Union{Missing, String}["g1", "g1", "g2", "g2", "g3", "g3"],
+                 Union{Missing, String}["val1", "val2", "val1", "val2", "val1", "val2"],
                  Union{Missing, Float64}[2.0, 2.1, 1.0, 1.1, 6.0, 2.0],
                  Union{Missing, Float64}[3.0, 0.5, 4.0, 1.3, missing, missing],
                  Union{Missing, Float64}[5.0, 1.0, missing, missing, missing, missing]], ["g1", "_variables_", "_c1", "_c2", "_c3"])
-        tds6 = Dataset([Union{Missing, Characters{2, UInt8}}["g1", "g1", "g2", "g2", "g3", "g3"],
-                 Union{Missing, Characters{4, UInt8}}["val1", "val2", "val1", "val2", "val1", "val2"],
+        tds6 = Dataset([Union{Missing, String}["g1", "g1", "g2", "g2", "g3", "g3"],
+                 Union{Missing, String}["val1", "val2", "val1", "val2", "val1", "val2"],
                  Union{Missing, Float64}[2.0, 2.1, missing, missing, missing, missing],
                  Union{Missing, Float64}[3.0, 0.5, missing, missing, missing, missing],
                  Union{Missing, Float64}[5.0, 1.0, missing, missing, missing, missing],
                  Union{Missing, Float64}[missing, missing, 1.0, 1.1, missing, missing],
                  Union{Missing, Float64}[missing, missing, 4.0, 1.3, missing, missing],
                  Union{Missing, Float64}[missing, missing, missing, missing, 6.0, 2.0]], ["g1", "_variables_", "id1_g1", "id2_g1", "id3_g1", "id2_g2", "id1_g2", "id4_g3"])
-        tds7 = Dataset([Union{Missing, Characters{2, UInt8}}["g1", "g1", "g2", "g2", "g3", "g3"],
-                 Union{Missing, Characters{4, UInt8}}["val1", "val2", "val1", "val2", "val1", "val2"],
+        tds7 = Dataset([Union{Missing, String}["g1", "g1", "g2", "g2", "g3", "g3"],
+                 Union{Missing, String}["val1", "val2", "val1", "val2", "val1", "val2"],
                  Union{Missing, Float64}[2.0, 2.1, missing, missing, missing, missing],
                  Union{Missing, Float64}[3.0, 0.5, missing, missing, missing, missing],
                  Union{Missing, Float64}[5.0, 1.0, missing, missing, missing, missing],
                  Union{Missing, Float64}[missing, missing, 1.0, 1.1, missing, missing],
                  Union{Missing, Float64}[missing, missing, 4.0, 1.3, missing, missing],
                  Union{Missing, Float64}[missing, missing, missing, missing, 6.0, 2.0]], ["g1", "_variables_", "(\"id1_g1\", 3)", "(\"id2_g1\", 1)", "(\"id3_g1\", 4)", "(\"id2_g2\", 2)", "(\"id1_g2\", 5)", "(\"id4_g3\", 6)"])
-        tds8 = Dataset([Union{Missing, Characters{2, UInt8}}["g1", "g1", "g2", "g2", "g3", "g3"],
-                 Union{Missing, Characters{2, UInt8}}["c1", "c1", "c1", "c1", "c1", "c1"],
-                 Union{Missing, Characters{4, UInt8}}["val1", "val2", "val1", "val2", "val1", "val2"],
+        tds8 = Dataset([Union{Missing, String}["g1", "g1", "g2", "g2", "g3", "g3"],
+                 Union{Missing, String}["c1", "c1", "c1", "c1", "c1", "c1"],
+                 Union{Missing, String}["val1", "val2", "val1", "val2", "val1", "val2"],
                  Union{Missing, Float64}[2.0, 2.1, missing, missing, missing, missing],
                  Union{Missing, Float64}[3.0, 0.5, missing, missing, missing, missing],
                  Union{Missing, Float64}[5.0, 1.0, missing, missing, missing, missing],
                  Union{Missing, Float64}[missing, missing, 1.0, 1.1, missing, missing],
                  Union{Missing, Float64}[missing, missing, 4.0, 1.3, missing, missing],
                  Union{Missing, Float64}[missing, missing, missing, missing, 6.0, 2.0]], ["g1", "c1", "_variables_", "3", "1", "4", "2", "5", "6"])
-        tds9 = Dataset([Union{Missing, Characters{2, UInt8}}["g1", "g2", "g3"],
-                 Union{Missing, Characters{2, UInt8}}["c1", "c1", "c1"],
-                 Union{Missing, Characters{4, UInt8}}["val1", "val1", "val1"],
+        tds9 = Dataset([Union{Missing, String}["g1", "g2", "g3"],
+                 Union{Missing, String}["c1", "c1", "c1"],
+                 Union{Missing, String}["val1", "val1", "val1"],
                  Union{Missing, Int64}[2, missing, missing],
                  Union{Missing, Int64}[3, missing, missing],
                  Union{Missing, Int64}[5, missing, missing],
@@ -324,7 +324,7 @@ end
                     Color = ["Grey", "Red"]
                     )
     @test ds2 ≅ ds4
-    @test eltype(ds2[!, :Fish]) <: Union{Characters, Missing}
+    @test eltype(ds2[!, :Fish]) <: Union{String, Missing}
     #Make sure transpose works with missing values at the start of the value column
     # allowmissing!(ds, :Value)
     ds[1, :Value] = missing
