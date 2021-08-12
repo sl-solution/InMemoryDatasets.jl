@@ -101,7 +101,7 @@ julia> ds = Dataset(g = [1, 1, 1, 2, 2],
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
      │ identity  identity  identity  identity   identity   identity
-    │ Int64?     Int64?    Int64?     Float64?   Float64?   Float64?
+     │ Int64?     Int64?    Int64?     Float64?   Float64?   Float64?
 ─────┼───────────────────────────────────────────────────────────────
    1 │        1         0         3        1.2  missing    missing
    2 │        1         0         2  missing    missing    missing
@@ -125,7 +125,7 @@ julia> map(ds, [sqrt, x->x^2], 2:3)
 5×6 Dataset
  Row │ g         x1_int         x2_int    x1_float   x2_float   x3_float
      │ identity  identity       identity  identity   identity   identity
-     │ Int64?     Float64?       Int64?     Float64?   Float64?   Float64?
+     │ Int64?     Float64?       Int64?    Float64?   Float64?   Float64?
 ─────┼────────────────────────────────────────────────────────────────────
    1 │        1        0.0             9        1.2  missing    missing
    2 │        1        0.0             4  missing    missing    missing
@@ -137,7 +137,7 @@ julia> map!(ds, x -> ismissing(x) ? 0 : x, r"x")
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float  x2_float  x3_float
      │ identity  identity  identity  identity  identity  identity
-     │ Int64?     Int64?    Int64?     Float64?  Float64?  Float64?
+     │ Int64?     Int64?    Int64?    Float64?  Float64?  Float64?
 ─────┼────────────────────────────────────────────────────────────
    1 │        1         0         3       1.2       0.0       0.0
    2 │        1         0         2       0.0       0.0       0.0
@@ -151,7 +151,7 @@ julia> map!(ds, [sqrt, x->x^2], 2:3)
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float  x2_float  x3_float
      │ identity  identity  identity  identity  identity  identity
-     │ Int64?     Int64?    Int64?     Float64?  Float64?  Float64?
+     │ Int64?     Int64?    Int64?    Float64?  Float64?  Float64?
 ─────┼────────────────────────────────────────────────────────────
    1 │        1         0         9       1.2       0.0       0.0
    2 │        1         0         4       0.0       0.0       0.0
@@ -360,7 +360,7 @@ julia> name = Dataset(ID = [1, 2, 3], Name = ["John Doe", "Jane Doe", "Joe Blogs
 3×2 Dataset
  Row │ ID        Name
      │ identity  identity
-     │ Int64?    Characte…?
+     │ Int64?    String?
 ─────┼──────────────────────
    1 │        1  John Doe
    2 │        2  Jane Doe
@@ -370,7 +370,7 @@ julia> job = Dataset(ID = [1, 2, 4], Job = ["Lawyer", "Doctor", "Farmer"])
 3×2 Dataset
  Row │ ID        Job
      │ identity  identity
-     │ Int64?   Characte…?
+     │ Int64?   String?
 ─────┼──────────────────────
    1 │        1  Lawyer
    2 │        2  Doctor
@@ -380,7 +380,7 @@ julia> leftjoin(name, job, on = :ID)
 3×3 Dataset
  Row │ ID        Name        Job
      │ identity  identity    identity
-     │ Int64?    Characte…?  Characte…?
+     │ Int64?    String?     String?
 ─────┼──────────────────────────────────
    1 │        1  John Doe    Lawyer
    2 │        2  Jane Doe    Doctor
@@ -390,7 +390,7 @@ julia> innerjoin(name, job, on = :ID)
 2×3 Dataset
  Row │ ID        Name        Job
      │ identity  identity    identity
-     │ Int64?    Characte…?  Characte…?
+     │ Int64?    String?     String?
 ─────┼──────────────────────────────────
    1 │        1  John Doe    Lawyer
    2 │        2  Jane Doe    Doctor
@@ -399,7 +399,7 @@ julia> outerjoin(name, job, on = :ID)
 4×3 Dataset
  Row │ ID        Name        Job
      │ identity  identity    identity
-     │ Int64?    Characte…?  Characte…?
+     │ Int64?    String?     String?
 ─────┼──────────────────────────────────
    1 │        1  John Doe    Lawyer
    2 │        2  Jane Doe    Doctor
@@ -411,7 +411,7 @@ julia> classA = Dataset(id = ["id1", "id2", "id3", "id4", "id5"],
 5×2 Dataset
  Row │ id          mark
      │ identity    identity
-     │ Characte…?  Float64?
+     │ String?     Float64?
 ─────┼──────────────────────
    1 │ id1             50.0
    2 │ id2             69.5
@@ -423,7 +423,7 @@ julia> grades = Dataset(mark = [0, 49.5, 59.5, 69.5, 79.5, 89.5, 95.5],
 7×2 Dataset
  Row │ mark      grade
      │ identity  identity
-     │ Float64?  Characte…?
+     │ Float64?  String?
 ─────┼──────────────────────
    1 │      0.0  F
    2 │     49.5  P
@@ -437,15 +437,13 @@ julia> closejoin(classA, grades, on = :mark)
 5×3 Dataset
  Row │ id          mark      grade
      │ identity    identity  identity
-     │ Characte…?  Float64?  Characte…?
+     │ String?     Float64?  String?
 ─────┼──────────────────────────────────
    1 │ id1             50.0  P
    2 │ id2             69.5  B
    3 │ id3             45.5  F
    4 │ id4             88.0  A-
    5 │ id5             98.5  A+
-
-
 ```
 
 Examples of using `closejoin` for financial data.
@@ -469,7 +467,7 @@ julia> modify!(trades, 1 => byrow(x -> DateTime(x, dateformat"yyyymmdd HH:MM:SS.
 5×4 Dataset
  Row │ time                     ticker      price     quantity
      │ identity                 identity    identity  identity
-     │ DateTime?                Characte…?  Float64?  Int64?
+     │ DateTime?                String?      Float64?  Int64?
 ─────┼─────────────────────────────────────────────────────────
    1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75
    2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155
@@ -498,7 +496,7 @@ julia> modify!(quotes, 1 => byrow(x -> DateTime(x, dateformat"yyyymmdd HH:MM:SS.
 8×4 Dataset
  Row │ time                     ticker      bid       ask
      │ identity                 identity    identity  identity
-     │ DateTime?                Characte…?  Float64?  Float64?
+     │ DateTime?                String?     Float64?  Float64?
 ─────┼─────────────────────────────────────────────────────────
    1 │ 2016-05-25T13:30:00.023  GOOG          720.5     720.93
    2 │ 2016-05-25T13:30:00.023  MSFT           51.95     51.96
@@ -513,7 +511,7 @@ julia> closejoin(trades, quotes, on = :time, makeunique = true)
 5×7 Dataset
  Row │ time                     ticker      price     quantity  ticker_1    bid       ask
      │ identity                 identity    identity  identity  identity    identity  identity
-     │ DateTime?                Characte…?  Float64?  Int64?    Characte…?  Float64?  Float64?
+     │ DateTime?                String?     Float64?  Int64?    String?     Float64?  Float64?
 ─────┼─────────────────────────────────────────────────────────────────────────────────────────
    1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75  MSFT           51.95     51.96
    2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155  MSFT           51.97     51.98
@@ -527,9 +525,9 @@ In the above example the close join for each `ticker` can be done by supplying `
 ```julia
 julia> closejoin(trades, quotes, on = [:ticker, :time], border = :nearest)
 5×6 Dataset
- Row │ time                     ticker      price     quantity  bid       ask
-     │ identity                 identity    identity  identity  identity  identity
-     │ DateTime?                Characte…?  Float64?  Int64?    Float64?  Float64?
+ Row │ time                     ticker      price       quantity  bid       ask
+     │ identity                 identity    identity    identity  identity  identity
+     │ DateTime?                String?     Float64?    Int64?    Float64?  Float64?
 ─────┼─────────────────────────────────────────────────────────────────────────────
    1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75     51.95     51.96
    2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155     51.97     51.98
@@ -543,9 +541,9 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], border = :nearest)
 ```julia
 julia> closejoin(trades, quotes, on = [:ticker, :time], border = :missing)
 5×6 Dataset
- Row │ time                     ticker      price     quantity  bid         ask
-     │ identity                 identity    identity  identity  identity    identity
-     │ DateTime?                Characte…?  Float64?  Int64?    Float64?    Float64?
+ Row │ time                     ticker       price     quantity  bid         ask
+     │ identity                 identity     identity  identity  identity    identity
+     │ DateTime?                String?      Float64?  Int64?    Float64?    Float64?
 ─────┼─────────────────────────────────────────────────────────────────────────────────
    1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75       51.95       51.96
    2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155       51.97       51.98
@@ -566,9 +564,9 @@ julia> main = Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
                       x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
                       x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
 7×4 Dataset
- Row │ group       id        x1         x2
-     │ identity    identity  identity   identity
-     │ Characte…?  Int64?    Float64?   Int64?
+ Row │ group         id        x1         x2
+     │ identity     identity  identity   identity
+     │ String?      Int64?   Float64?    Int64?
 ─────┼───────────────────────────────────────────
    1 │ G1                 1        1.2         5
    2 │ G1                 1        2.3         4
@@ -584,7 +582,7 @@ julia> transaction = Dataset(group = ["G1", "G2"], id = [2, 1],
 2×4 Dataset
  Row │ group       id        x1         x2
      │ identity    identity  identity   identity
-     │ Characte…?  Int64?    Float64?   Int64?
+     │ String?       Int64?    Float64?   Int64?
 ─────┼───────────────────────────────────────────
    1 │ G1                 2        2.5   missing
    2 │ G2                 1  missing           3
@@ -593,9 +591,9 @@ julia> transaction = Dataset(group = ["G1", "G2"], id = [2, 1],
 julia> update(main, transaction, on = [:group, :id], 
                allowmissing = false, mode = :missing)
 7×4 Dataset
- Row │ group       id        x1        x2
-     │ identity    identity  identity  identity
-     │ Characte…?  Int64?    Float64?  Int64?
+ Row │ group        id        x1        x2
+     │ identity     identity  identity  identity
+     │ String?       Int64?    Float64?  Int64?
 ─────┼──────────────────────────────────────────
    1 │ G1                 1       1.2         5
    2 │ G1                 1       2.3         4
@@ -611,7 +609,7 @@ julia> update(main, transaction, on = [:group, :id],
 7×4 Dataset
  Row │ group       id        x1        x2
      │ identity    identity  identity  identity
-     │ Characte…?  Int64?    Float64?  Int64?
+     │ String?       Int64?    Float64?  Int64?
 ─────┼──────────────────────────────────────────
    1 │ G1                 1       1.2         5
    2 │ G1                 1       2.3         4
