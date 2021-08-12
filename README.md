@@ -329,7 +329,6 @@ Grouped by: g
    1 │        1         0         3        1.2  missing    missing
    2 │        1         0         2  missing    missing    missing
    3 │        1         1         1       -1.0        3.0       -1.4
-─────┼───────────────────────────────────────────────────────────────
    4 │        2   missing         3        2.3  missing          3.0
    5 │        2         2        -2       10.0  missing       -100.0
 
