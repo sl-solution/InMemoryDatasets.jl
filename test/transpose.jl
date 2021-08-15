@@ -55,7 +55,7 @@ const ≅ = isequal
     insertcols!(ds, 2, :id => repeat(1:10, 100))
     # duplicate and id within the last group
     ds[1000, :id] = 1
-    @test_throws AssertionError transpose(groupby(ds, :g, stable = true), r"x", id = :id )
+    @test_throws AssertionError transpose(groupby(ds, :g, stable = true), r"x", id = :id, threads = false)
 
 
     ds = Dataset(rand(1000, 100), :auto)

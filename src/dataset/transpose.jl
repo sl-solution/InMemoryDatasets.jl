@@ -301,7 +301,7 @@ function _fill_one_col_transpose_id!(outputmat, xval, starts, perms, n_row_names
     end
 end
 function _fill_one_col_transpose_id_threaded!(outputmat, xval, starts, perms, n_row_names, _is_cell_filled, ids, row, ngrps)
-    for g in 1:ngrps
+    Threads.@threads for g in 1:ngrps
         lo = starts[g]
         g == ngrps ? hi = length(xval) : hi = starts[g+1] - 1
         counter = 1
