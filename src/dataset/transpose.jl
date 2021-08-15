@@ -418,6 +418,9 @@ function ds_transpose(ds::Union{Dataset, GroupBy}, cols::MultiColumnIndex, gcols
     g_array = AbstractArray[]
     _fill_gcol!(g_array, parent(ds), gcolsidx, colsidx, view(_get_perms(ds), view(_group_starts(ds), 1:_ngroups(ds))), _ngroups(ds), threads)
     outds = Dataset(g_array, _names(ds)[gcolsidx], copycols = false)
+    for j in 1:length(gcolsidx)
+        setformat!(outds, j => getformat(parent(ds), gcolsidx[j]))
+    end
 
     # _repeat_row_names = Vector{eltype(row_names)}(undef, _ngroups(ds)*length(colsidx))
     # _fill_row_names!(_repeat_row_names, row_names, _ngroups(ds))
