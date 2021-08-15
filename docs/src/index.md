@@ -14,7 +14,7 @@ If you are new to InMemoryDatasets.jl, probably **First steps with Datasets** or
 ```@contents
 Pages = ["man/basics.md",
          "man/tutorial.md",
-         "man/formats.jl",
+         "man/formats.md",
          "man/map.md",
          "man/byrow.md",
          "man/filter.md",
