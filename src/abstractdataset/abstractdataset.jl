@@ -182,7 +182,7 @@ function Base.names(ds::AbstractDataset, cols)
 end
 
 Base.names(ds::AbstractDataset, T::Type) =
-    [String(n) for (n, c) in pairs(eachcol(ds)) if eltype(c) <: T]
+    [String(n) for (n, c) in pairs(eachcol(ds)) if eltype(c) <: Union{Missing, T}]
 Base.names(ds::AbstractDataset, fun::Function) = filter!(fun, names(ds))
 
 # _names returns Vector{Symbol} without copying
