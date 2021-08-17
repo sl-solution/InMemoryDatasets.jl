@@ -1,7 +1,7 @@
 # col => fun => dst, the job is to create col => fun => :dst
 function normalize_combine!(offset, outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Pair{<:Union{Base.Callable},
+                                                    <:Pair{<:Union{Function},
                                                         <:Union{Symbol, AbstractString}}})
                                                         )
     src, (fun, dst) = sel
@@ -11,7 +11,7 @@ end
 # col => fun => dst, the job is to create col => fun => :dst
 function normalize_combine!(offset, outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Pair{<:Union{Base.Callable},
+                                                    <:Pair{<:Union{Function},
                                                         <:Vector{<:Union{Symbol, AbstractString}}}})
                                                         )
     src, (fun, dst) = sel
@@ -23,7 +23,7 @@ end
 # col => fun, the job is to create col => fun => :colname
 function normalize_combine!(offset, outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Union{Base.Callable}}))
+                                                    <:Union{Function}}))
 
     src, fun = sel
     _check_ind_and_add!(outidx, Symbol(_names(idx)[idx[src]], "_", funname(fun)))
@@ -116,7 +116,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
 end
 function normalize_combine!(offset, outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Union{Base.Callable,Expr}}))
+                                                    <:Union{Function,Expr}}))
     if sel.second isa Expr
         if sel.second.head == :BYROW
             if sel.first isa AbstractVector{<:Integer}
@@ -139,7 +139,7 @@ end
 # cols => funs which will be normalize as col1=>fun1, col2=>fun2, ...
 function normalize_combine!(offset, outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Vector{<:Base.Callable}}))
+                                                    <:Vector{<:Function}}))
     colsidx = idx[sel.first]
     if !(length(colsidx) == length(sel.second))
         throw(ArgumentError("The input number of columns and the length of the number of functions should match"))
@@ -201,7 +201,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
 end
 function normalize_combine!(offset, outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Pair{<:Union{Base.Callable},
+                                                    <:Pair{<:Union{Function},
                                                         <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
     colsidx = idx[sel.first]
     if !(length(colsidx) == length(sel.second.second))
