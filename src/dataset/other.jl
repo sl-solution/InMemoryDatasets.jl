@@ -782,7 +782,7 @@ function compare(ds1::Dataset, ds2::Dataset; on = nothing, eq = isequal)
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
 
-    nrow(ds1) != nrow(ds2) && thow(ArgumentError("the number of rows for both data sets should be the same"))
+    nrow(ds1) != nrow(ds2) && throw(ArgumentError("the number of rows for both data sets should be the same"))
     res = Dataset()
     for j in 1:length(left_col_idx)
         _res = allocatecol(Union{Bool, Missing}, nrow(ds1))
