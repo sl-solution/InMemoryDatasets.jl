@@ -767,3 +767,28 @@ function dropmissing!(ds::Dataset,
     delete!(ds, inds)
     ds
 end
+
+function compare(ds1::Dataset, ds2::Dataset; on = nothing, eq = isequal)
+    if on === nothing
+        left_col_idx = 1:ncol(ds1)
+        right_col_idx = index(ds2)[names(ds1)]
+    elseif typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
+        left_col_idx = index(ds1)[on]
+        right_col_idx = index(ds2)[names(ds1)[left_col_idx]]
+    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+        left_col_idx = index(ds1)[map(x->x.first, on)]
+        right_col_idx = index(ds2)[map(x->x.second, on)]
+    else
+        throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
+    end
+
+    nrow(ds1) != nrow(ds2) && thow(ArgumentError("the number of rows for both data sets should be the same"))
+    res = Dataset()
+    for j in 1:length(left_col_idx)
+        _res = allocatecol(Union{Bool, Missing}, nrow(ds1))
+        _res .= eq.(_columns(ds1)[left_col_idx[j]], _columns(ds2)[right_col_idx[j]])
+        push!(_columns(res), _res)
+        push!(index(res),  Symbol(names(ds1)[left_col_idx[j]]* "=>" * names(ds2)[right_col_idx[j]]))
+    end
+    res
+end
