@@ -15,22 +15,21 @@ end
 
 function Characters{N, M}(v::Vector{UInt8}, v2) where N where M
 
-    for i in 1:min(N, length(v))
-        v2[i] = v[i]
+    @simd for i in 1:min(N, length(v))
+        @inbounds v2[i] = v[i]
     end
-    for i in length(v)+1:N
-        v2[i] = 0x20
+    @simd for i in length(v)+1:N
+        @inbounds v2[i] = 0x20
     end
 
     Characters{N, M}(v2)
 end
 function Characters{N, M}(v::Vector{UInt8}, v2, st, en) where N where M
-
-    for i in 1:min(N, en - st + 1)
-        v2[i] = v[i + st - 1]
+    @simd for i in 1:min(N, en - st + 1)
+        @inbounds v2[i] = v[i + st - 1]
     end
-    for i in en - st + 2:N
-        v2[i] = 0x20
+    @simd for i in en - st + 2:N
+        @inbounds v2[i] = 0x20
     end
 
     Characters{N, M}(v2)
@@ -82,7 +81,8 @@ function Base.:(==)(s1::Characters, s2::Characters)
     #     s1.data[i] != s2.data[i] && return false
     # end
     # return true
-    return view(s1, 1:length(s1)) == view(s2, 1:length(s2))
+    # return view(s1, 1:length(s1)) == view(s2, 1:length(s2))
+    cmp(s1,s2) == 0
 end
 
 function Base.:(==)(s1::Characters, s2::AbstractString)
@@ -91,7 +91,7 @@ function Base.:(==)(s1::Characters, s2::AbstractString)
 end
 Base.:(==)(s1::AbstractString, s2::Characters) = s2 == s1
 
-Base.isequal(s1::Characters, s2::Characters) = s1 == s2
+Base.isequal(s1::Characters, s2::Characters) =  cmp(s1, s2) == 0#s1 == s2
 function Base.isequal(s1::Characters, s2::AbstractString)
     # M = max(N, length(s2))
     isequal(Characters(s1), Characters(s2))
@@ -107,7 +107,8 @@ function Base.isless(s1::Characters, s2::Characters)
     # @inbounds for i in length(s2):-1:1
     #     s2.data[i] == 0x20 ? s2end -= 1 : break
     # end
-    isless(view(s1, 1:length(s1)), view(s2, 1:length(s2)))
+    # isless(view(s1, 1:length(s1)), view(s2, 1:length(s2)))
+    cmp(s1,s2)<0
 end
 
 
@@ -121,8 +122,8 @@ function Base.isless(s1::AbstractString, s2::Characters)
 end
 
 function iterate(s::Characters{N}, i::Int = 1) where N
-    i > N && return nothing
-    return (Char(s.data[i]), i+1)
+    i > length(s) && return nothing
+    return (Char.(s.data[i]), i+1)
 end
 
 lastindex(s::Characters{N}) where {N} = length(s)
@@ -130,6 +131,7 @@ lastindex(s::Characters{N}) where {N} = length(s)
 getindex(s::Characters, i::Int) = Char(s.data[i])
 
 sizeof(s::Characters) = sizeof(s.data)
+sizeof(::Type{Characters{N}}) where N = N
 
 function length(s::Characters)
     s_end = length(s.data)
@@ -142,7 +144,8 @@ end
 
 ncodeunits(s::Characters) = length(s.data)
 
-codeunit(::Characters{N, M}) where N where M = M
+codeunit(::Type{Characters{N, M}}) where N where M = M
+codeunit(::Type{Characters{N}}) where N = UInt8
 codeunit(s::Characters, i::Integer) = s.data[i]
 
 isvalid(s::Characters, i::Int) = checkbounds(Bool, s, i)
@@ -159,4 +162,22 @@ end
 
 function write(io::IO, s::Characters{N, M}) where N where M
     return write(io, Ref(s))
+end
+
+# TODO I don't know how I should do this for UInt16
+function Base.hash(s::Characters{N, UInt8}, h::UInt) where N
+    h += Base.memhash_seed
+    ref = Ref(s.data)
+    ccall(Base.memhash, UInt, (Ptr{UInt8}, Csize_t, UInt32), ref, length(s), h % UInt32) + h
+end
+
+
+function Base.cmp(a::Characters, b::Characters)
+    a === b && return 0
+    a, b = Iterators.Stateful(a), Iterators.Stateful(b)
+    for (c, d) in zip(a, b)
+        c ≠ d && return ifelse(c < d, -1, 1)
+    end
+    isempty(a) && return ifelse(isempty(b), 0, -1)
+    return 1
 end
