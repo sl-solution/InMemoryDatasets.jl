@@ -89,14 +89,23 @@ end
 
 function Base.:(==)(s1::Characters, s2::AbstractString)
     # M = max(N, length(s2))
-    s1 == Characters(s2)
+    if codeunit(s1) == UInt8
+        return view(codeunits(s1), 1:length(s1)) == codeunits(s2)
+    else
+        s1 == Characters(s2)
+    end
 end
 Base.:(==)(s1::AbstractString, s2::Characters) = s2 == s1
 
 Base.isequal(s1::Characters, s2::Characters) =  cmp(s1, s2) == 0#s1 == s2
 function Base.isequal(s1::Characters, s2::AbstractString)
     # M = max(N, length(s2))
-    isequal(Characters(s1), Characters(s2))
+    if codeunit(s1) == UInt8
+        return isequal(view(codeunits(s1), 1:length(s1)), codeunits(s2))
+    else
+        isequal(s1, Characters(s2))
+    end
+
 end
 Base.isequal(s1::AbstractString, s2::Characters) = isequal(s2, s1)
 
@@ -116,11 +125,19 @@ end
 
 function Base.isless(s1::Characters, s2::AbstractString)
     # M = max(N, length(s2))
-    isless(s1, Characters(s2))
+    if codeunit(s1) == UInt8
+        return isless(view(codeunits(s1), 1:length(s1)), codeunits(s2))
+    else
+        isless(s1, Characters(s2))
+    end
 end
 function Base.isless(s1::AbstractString, s2::Characters)
     # M = max(N, length(s1))
-    isless(Characters(s1), s2)
+    if codeunit(s2) == UInt8
+        return isless(codeunits(s1), view(codeunits(s2), 1:length(s2)))
+    else
+        isless(Characters(s1), s2)
+    end
 end
 
 function iterate(s::Characters{N}, i::Int = 1) where N
@@ -147,6 +164,7 @@ end
 ncodeunits(s::Characters) = length(s.data)
 
 codeunit(::Type{Characters{N, M}}) where N where M = M
+codeunit(::Characters{N, M}) where N where M = M
 codeunit(::Type{Characters{N}}) where N = UInt8
 codeunit(s::Characters, i::Integer) = s.data[i]
 

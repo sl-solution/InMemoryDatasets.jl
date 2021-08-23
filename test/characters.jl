@@ -22,5 +22,5 @@ end
     @test !isless(c"12  ", c"12")
     @test isless("abc", c"xy    ")
     @test isless(c"abc", "x y z")
-    @test isless(c"1", "")
+    @test isless(c"1", missing)
 end
