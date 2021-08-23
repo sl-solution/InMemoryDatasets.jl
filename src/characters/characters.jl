@@ -25,10 +25,12 @@ function Characters{N, M}(v::Vector{UInt8}, v2) where N where M
     Characters{N, M}(v2)
 end
 function Characters{N, M}(v::Vector{UInt8}, v2, st, en) where N where M
-    @simd for i in 1:min(N, en - st + 1)
-        @inbounds v2[i] = v[i + st - 1]
-    end
-    @simd for i in en - st + 2:N
+    o1 = min(N, en-st+1)
+    copyto!(v2, 1, v, st, o1)
+    # for i in 1:o1
+    #     @inbounds v2[i] = v[st+i-1]
+    # end
+    @simd for i in o1+1:N
         @inbounds v2[i] = 0x20
     end
 
