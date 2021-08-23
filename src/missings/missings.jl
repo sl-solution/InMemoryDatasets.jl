@@ -1,3 +1,6 @@
+#Base
+Base.parse(::T, ::Missing, kwargs...) where T = missing
+
 # Dates.jl
 Dates.Date(::Missing, kwargs...) = missing
 Dates.DateTime(::Missing, kwargs...) = missing
