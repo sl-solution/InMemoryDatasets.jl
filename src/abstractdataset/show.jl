@@ -157,7 +157,7 @@ function compacttype(T::Type, maxwidth::Int=8)
 end
 
 function _show(io::IO,
-               df::AbstractDataset;
+               ds::AbstractDataset;
                allrows::Bool = !get(io, :limit, false),
                allcols::Bool = !get(io, :limit, false),
                rowlabel::Symbol = :Row,
@@ -167,13 +167,13 @@ function _show(io::IO,
                truncate::Int = 32,
                kwargs...)
 
-    _check_consistency(df)
+    _check_consistency(ds)
 
-    names_str = names(df)
-    if typeof(df) <: SubDataset
-        column_formats = _getformats_for_show(df)
+    names_str = names(ds)
+    if typeof(ds) <: SubDataset
+        column_formats = _getformats_for_show(ds)
     else
-        column_formats = _getformats(df)
+        column_formats = _getformats(ds)
     end
     names_format = fill("identity", length(names_str))
     _pt_formmatters_ = Function[]
@@ -186,7 +186,7 @@ function _show(io::IO,
     pt_formatter = ntuple(i->_pt_formmatters_[i], length(_pt_formmatters_))
     names_len = Int[textwidth(n) for n in names_str]
     maxwidth = Int[max(9, nl) for nl in names_len]
-    types = Any[eltype(c) for c in eachcol(df)]
+    types = Any[eltype(c) for c in eachcol(ds)]
     types_str = batch_compacttype(types, maxwidth)
 
     if allcols && allrows
@@ -202,7 +202,7 @@ function _show(io::IO,
     # For consistency, if `kwargs` has `compact_printng`, we must use it.
     compact_printing::Bool = get(kwargs, :compact_printing, get(io, :compact, true))
 
-    num_rows, num_cols = size(df)
+    num_rows, num_cols = size(ds)
 
     # By default, we align the columns to the left unless they are numbers,
     # which is checked in the following.
@@ -242,12 +242,12 @@ function _show(io::IO,
     # Check if the user wants to display a summary about the DataFrame that is
     # being printed. This will be shown using the `title` option of
     # `pretty_table`.
-    title = summary ? Base.summary(df) : ""
+    title = summary ? Base.summary(ds) : ""
 
     # If `rowid` is not `nothing`, then we are printing a data row. In this
     # case, we will add this information using the row name column of
     # PrettyTables.jl. Otherwise, we can just use the row number column.
-    if (rowid === nothing) || (ncol(df) == 0)
+    if (rowid === nothing) || (ncol(ds) == 0)
         show_row_number::Bool = get(kwargs, :show_row_number, true)
         row_names = nothing
 
@@ -255,7 +255,7 @@ function _show(io::IO,
         # display a vertical line after the first column.
         vlines = fill(1, show_row_number)
     else
-        nrow(df) != 1 &&
+        nrow(ds) != 1 &&
             throw(ArgumentError("rowid may be passed only with a single row data frame"))
 
         # In this case, if the user does not want to show the row number, then
@@ -271,13 +271,17 @@ function _show(io::IO,
 
         show_row_number = false
     end
-    # if isgrouped(df)
-    #     extrahlines = view(index(df).starts,1:index(df).ngroups[]) .- 1
+    # if isgrouped(ds)
+    #     extrahlines = view(index(ds).starts,1:index(ds).ngroups[]) .- 1
     # else
         extrahlines = [0]
     # end
     # Print the table with the selected options.
-    pretty_table(io, df;
+    # currently pretty_table is very slow for large tables, the workaround is to use only few rows
+    if allrows && nrow(ds)>1000
+        @warn "Datasets only shows maximum of 1000 rows"
+    end
+    pretty_table(io, view(ds, 1:min(1000, nrow(ds)), :);
                  alignment                   = alignment,
                  alignment_anchor_fallback   = :r,
                  alignment_anchor_regex      = alignment_anchor_regex,
@@ -302,7 +306,7 @@ function _show(io::IO,
                  row_number_column_title     = string(rowlabel),
                  show_row_number             = show_row_number,
                  title                       = title,
-                 vcrop_mode                  = :middle,
+                 # vcrop_mode                  = :middle,
                  vlines                      = vlines,
                  kwargs...)
 
@@ -310,7 +314,7 @@ function _show(io::IO,
 end
 
 """
-    show([io::IO, ]df::AbstractDataset;
+    show([io::IO, ]ds::AbstractDataset;
          allrows::Bool = !get(io, :limit, false),
          allcols::Bool = !get(io, :limit, false),
          allgroups::Bool = !get(io, :limit, false),
@@ -327,8 +331,8 @@ If `io` is omitted, the result is printed to `stdout`,
 and `allrows`, `allcols` and `allgroups` default to `false`.
 
 # Arguments
-- `io::IO`: The I/O stream to which `df` will be printed.
-- `df::AbstractDataset`: The data frame to print.
+- `io::IO`: The I/O stream to which `ds` will be printed.
+- `ds::AbstractDataset`: The data frame to print.
 - `allrows::Bool `: Whether to print all rows, rather than
   a subset that fits the device height. By default this is the case only if
   `io` does not have the `IOContext` property `limit` set.
@@ -336,7 +340,7 @@ and `allrows`, `allcols` and `allgroups` default to `false`.
   a subset that fits the device width. By default this is the case only if
   `io` does not have the `IOContext` property `limit` set.
 - `allgroups::Bool`: Whether to print all groups rather than
-  the first and last, when `df` is a `GroupedDataFrame`.
+  the first and last, when `ds` is a `GroupedDataFrame`.
   By default this is the case only if `io` does not have the `IOContext` property
   `limit` set.
 - `rowlabel::Symbol = :Row`: The label to use for the column containing row numbers.
@@ -352,9 +356,9 @@ and `allrows`, `allcols` and `allgroups` default to `false`.
 ```jldoctest
 julia> using DataFrames
 
-julia> df = DataFrame(A = 1:3, B = ["x", "y", "z"]);
+julia> ds = DataFrame(A = 1:3, B = ["x", "y", "z"]);
 
-julia> show(df, show_row_number=false)
+julia> show(ds, show_row_number=false)
 3×2 DataFrame
  A      B
  Int64  String
@@ -364,26 +368,28 @@ julia> show(df, show_row_number=false)
      3  z
 ```
 """
-Base.show(io::IO,
-          df::AbstractDataset;
+function Base.show(io::IO,
+          ds::AbstractDataset;
           allrows::Bool = !get(io, :limit, false),
           allcols::Bool = !get(io, :limit, false),
           rowlabel::Symbol = :Row,
           summary::Bool = true,
           eltypes::Bool = true,
           truncate::Int = 32,
-          kwargs...) =
-    _show(io, df; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
+          kwargs...)
+    _show(io, ds; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
           summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
+end
 
-Base.show(df::AbstractDataset;
+function Base.show(ds::AbstractDataset;
           allrows::Bool = !get(stdout, :limit, true),
           allcols::Bool = !get(stdout, :limit, true),
           rowlabel::Symbol = :Row,
           summary::Bool = true,
           eltypes::Bool = true,
           truncate::Int = 32,
-          kwargs...) =
-    show(stdout, df;
+          kwargs...)
+    show(stdout, ds;
          allrows=allrows, allcols=allcols, rowlabel=rowlabel, summary=summary,
          eltypes=eltypes, truncate=truncate, kwargs...)
+end
