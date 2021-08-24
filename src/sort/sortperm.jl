@@ -186,7 +186,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
             _tmp, _ordr, _missat, _needrev, intable=  _apply_by(x, idx, by[i], rev[i])
 
         end
-        if !_needrev && (eltype(_tmp) <: Union{Missing,Integer} || intable)
+        if !_needrev && (eltype(_tmp) <: Union{Missing,Integer} || intable) && eltype(_tmp) !== Missing
             # further check for fast integer sort
             n = length(_tmp)
             if n > 1
