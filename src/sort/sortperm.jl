@@ -57,7 +57,7 @@ _date_value(x::Period) = Dates.value(x)
 _date_value(x) = x
 
 
-function _apply_by_f_barrier(x::AbstractVector{T}, by, rev) where T
+function _apply_by_f_barrier(x, by, rev) where T
     needrev = rev
     missat = :right
     CT = Core.Compiler.return_type(by∘_date_value, (nonmissingtype(T), ))
@@ -79,7 +79,7 @@ missatleftless(::Missing, y) = true
 missatleftless(x, ::Missing) = false
 missatleftless(::Missing, ::Missing) = false
 
-function _apply_by!(_temp, x::Vector{T}, idx, _by, rev, needrev, missat) where T
+function _apply_by!(_temp, x, idx, _by, rev, needrev, missat) where T
     Threads.@threads for j in 1:length(x)
         # if by(x) is Date or DateTime only grab its value
         @inbounds _temp[j] = _by(x[idx[j]])
