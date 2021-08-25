@@ -156,7 +156,7 @@ julia> modify!(sale, 2:4 => byrow(sum) => :total)
    2 │ John Max           43        32        45       120
    3 │ Froon Moore        50        55        54       159
 
-julia> julia> function name_split(x)
+julia> function name_split(x)
            spl = split(x, " ")
            (string(spl[1]), string(spl[2]))
        end
