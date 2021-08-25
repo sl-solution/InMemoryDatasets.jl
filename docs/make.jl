@@ -24,12 +24,12 @@ makedocs(
             "Formats" => "man/formats.md",
             "Call functions on each observation" => "man/map.md",
             "Row-wise operations" => "man/byrow.md",
-            "Modifying data sets" => "man/modify.md",
-            "Filtering observations" => "man/filter.md",
-            "Sorting" => "man/sorting.md",
-            "Grouping" => "man/grouping.md",
-            "Aggregating over groups" => "man/aggregation.md",
-            "Transposing Data" => "man/transpose.md",
+            "Transform columns" => "man/modify.md",
+            "Filter observations" => "man/filter.md",
+            "Sort" => "man/sorting.md",
+            "Group observations" => "man/grouping.md",
+            "Aggregation" => "man/aggregation.md",
+            "Transpose data" => "man/transpose.md",
             "Joins" => "man/joins.md"
         ]
         # "API" => Any[
