@@ -1,12 +1,12 @@
 # Transforming data sets
 
-# Introduction
+## Introduction
 
 The `modify!` function can be used to transform and modify columns of a data set. Note that the function modifies the data set in-place and operates on actual values (rather than the formatted values). To modify a copy of data we should use the `modify` function. These two functions accept one column of data set and apply the provided functions on the fed column as a vector, this should be compared to `map!/map` functions which apply operations on individual observations.
 
 > Note that `modify!/modify` remove the format of columns as soon as their values are updated by a given transformation.
 
-# Specifying the transformation
+## Specifying the transformation
 
 The first argument of these two functions is the name of the data set which is going to be modified and the next arguments can be the transform specifications, i.e.
 
@@ -39,7 +39,7 @@ will be translated as:
 
 >`:x1 => sum => :x1_sum, :x1 => sort => :x1_sort`.
 
-## Examples
+### Examples
 
 ```jldoctest
 julia> ds = Dataset(x1 = 1:5, x2 = [-2, -1, missing, 1, 2],
@@ -80,16 +80,16 @@ julia> modify!(ds, :x1 => x -> x .- mean(x))
    5 │      2.0         0       0.7
 ```
 
-# Accessing to modified columns
+## Accessing to modified columns
 
 One of the key features of `modify!/modify` is that these functions have access to all modified/created variable in a single run of the function. It means, every transformation can be done on all columns that have been or updated by `args` arguments or any column which is created by `col => fun => :newname` syntax. In other words, for `args...` from left to right whenever a column is updated or created, the next operation has access to its value (either new or updated values). This will be particularly useful in conjunction with `byrow` which performs row-wise operations.
 
 
-# Specialised functions
+## Specialised functions
 
 There are two functions in Datasets which are very handy to modify a data set: `byrow`, and `splitter`.
 
-## `byrow`
+### `byrow`
 
 The `byrow` function is discussed in length in another section as a stand-alone function, however, it can also be used as the `fun` when we want to specify the transformation in `modify!/modify`. The syntax of `byrow` is different from its stand-alone usage in the way that when `byrow` is the `fun` part of `args` in the syntax of `modify!/modify` functions, we don't need to specify `ds` and `cols`, however, every other arguments are the same as the stand-alone usage.
 
@@ -101,7 +101,7 @@ The form of `args` when `byrow` is the function is similar to other functions wi
 * When `col` refers to a single column in `col => byrow(...)`, `modify!/modify` will apply operation on single values of the column and replace the column with the new values, i.e. it doesn't create a new column.
 * To use broadcasting with `byrow`, i.e. applying the same row-wise operation on multiple columns, the form must be `cols .=> byrow` where `cols` is a vector of column names or column indices (regular expression cannot be used for this purpose).
 
-## `splitter`
+### `splitter`
 
 `splitter` is also a specialised function which has a single job: splitting a single column which is a `Tuple` of values into multiple columns. It only operates on a single columns and the values inside the column which needs to be split must be in the form of `Tuples`. The form of `args` for `splitter` must be similar to:
 
@@ -111,7 +111,7 @@ which means we like to split `col` into two new columns; `:new_col_1` and `:new_
 
 > Note, `splitter` produces as many columns as the length of the given new names, i.e. if the user provides fewer names than needed, the output columns will only contain partial components of the input `Tuple`.
 
-## Examples
+### Examples
 
 ```jldoctest
 julia> body = Dataset(weight = [78.5, 59, 80], height = [160, 171, 183])
