@@ -1,76 +1,95 @@
 """
-    SubDataset{<:AbstractDataset, <:AbstractIndex, <:AbstractVector{Int}} <: AbstractDataset
+    SubDataset{<:Dataset, <:AbstractIndex, <:AbstractVector{Int}} <: Dataset
 
-A view of an `AbstractDataset`. It is returned by a call to the `view` function
-on an `AbstractDataset` if a collections of rows and columns are specified.
+A view of a `Dataset`. It is returned by a call to the `view` function
+on an `Dataset` if a collections of rows and columns are specified.
 
-A `SubDataset` is an `AbstractDataset`, so expect that most
-Dataset functions should work. Such methods include `describe`,
-`summary`, `nrow`, `size`, `by`, `stack`, and `join`.
-
-If the selection of columns in a parent data frame is passed as `:` (a colon)
-then `SubDataset` will always have all columns from the parent,
-even if they are added or removed after its creation.
+View of a data set preserves the `format` of columns.
 
 # Examples
 ```jldoctest
-julia> df = Dataset(a = repeat([1, 2, 3, 4], outer=[2]),
-                      b = repeat([2, 1], outer=[4]),
-                      c = 1:8)
+julia> ds = Dataset(a = repeat([1, 2, 3, 4], outer=[2]),
+                             b = repeat([2, 1], outer=[4]),
+                             c = 1:8)
 8×3 Dataset
- Row │ a      b      c
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      1
-   2 │     2      1      2
-   3 │     3      2      3
-   4 │     4      1      4
-   5 │     1      2      5
-   6 │     2      1      6
-   7 │     3      2      7
-   8 │     4      1      8
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         1
+   2 │        2         1         2
+   3 │        3         2         3
+   4 │        4         1         4
+   5 │        1         2         5
+   6 │        2         1         6
+   7 │        3         2         7
+   8 │        4         1         8
 
-julia> sdf1 = view(df, :, 2:3) # column subsetting
+julia> sds1 = view(ds, :, 2:3) # column subsetting
 8×2 SubDataset
- Row │ b      c
-     │ Int64  Int64
-─────┼──────────────
-   1 │     2      1
-   2 │     1      2
-   3 │     2      3
-   4 │     1      4
-   5 │     2      5
-   6 │     1      6
-   7 │     2      7
-   8 │     1      8
+Row │ b         c
+    │ identity  identity
+    │ Int64?    Int64?
+────┼────────────────────
+  1 │        2         1
+  2 │        1         2
+  3 │        2         3
+  4 │        1         4
+  5 │        2         5
+  6 │        1         6
+  7 │        2         7
+  8 │        1         8
 
-julia> sdf2 = @view df[end:-1:1, [1, 3]]  # row and column subsetting
+julia> sds2 = @view ds[end:-1:1, [1, 3]]
 8×2 SubDataset
- Row │ a      c
-     │ Int64  Int64
-─────┼──────────────
-   1 │     4      8
-   2 │     3      7
-   3 │     2      6
-   4 │     1      5
-   5 │     4      4
-   6 │     3      3
-   7 │     2      2
-   8 │     1      1
+Row │ a         c
+    │ identity  identity
+    │ Int64?    Int64?
+────┼────────────────────
+  1 │        4         8
+  2 │        3         7
+  3 │        2         6
+  4 │        1         5
+  5 │        4         4
+  6 │        3         3
+  7 │        2         2
+  8 │        1         1
 
-julia> sdf3 = groupby(df, :a)[1]  # indexing a GroupedDataset returns a SubDataset
-2×3 SubDataset
- Row │ a      b      c
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      1
-   2 │     1      2      5
+julia> setformat!(ds, 1=>iseven)
+8×3 Dataset
+ Row │ a       b         c
+     │ iseven  identity  identity
+     │ Int64?  Int64?    Int64?
+─────┼────────────────────────────
+   1 │  false         2         1
+   2 │   true         1         2
+   3 │  false         2         3
+   4 │   true         1         4
+   5 │  false         2         5
+   6 │   true         1         6
+   7 │  false         2         7
+   8 │   true         1         8
+
+julia> view(ds, 8:-1:1, [1,3])
+8×2 SubDataset
+ Row │ a       c
+     │ iseven  identity
+     │ Int64?  Int64?
+─────┼──────────────────
+   1 │   true         8
+   2 │  false         7
+   3 │   true         6
+   4 │  false         5
+   5 │   true         4
+   6 │  false         3
+   7 │   true         2
+   8 │  false         1
 ```
 """
 struct SubDataset{D<:AbstractDataset, S<:AbstractIndex, T<:AbstractVector{Int}} <: AbstractDataset
     parent::D
     colindex::S
-    rows::T # maps from subdf row indexes to parent row indexes
+    rows::T # maps from subds row indexes to parent row indexes
 end
 
 _attributes(sds::SubDataset) = getfield(parent(sds), :attributes)
@@ -78,8 +97,9 @@ _attributes(sds::SubDataset) = getfield(parent(sds), :attributes)
 # Experimental
 function _columns(sds::SubDataset)
     allcols = AbstractArray[]
-    for j in 1:ncol(parent(sds))
-        push!(allcols, view(_columns(parent(sds))[j], rows(sds)))
+    colsidx = parentcols(index(sds))
+    for j in 1:length(colsidx)
+        push!(allcols, view(_columns(parent(sds))[colsidx[j]], rows(sds)))
     end
     allcols
 end
@@ -148,9 +168,9 @@ function _getformats_for_show(ds::SubDataset)
 end
 
 
-rows(sdf::SubDataset) = getfield(sdf, :rows)
-Base.parent(sdf::SubDataset) = getfield(sdf, :parent)
-Base.parentindices(sdf::SubDataset) = (rows(sdf), parentcols(index(sdf)))
+rows(sds::SubDataset) = getfield(sds, :rows)
+Base.parent(sds::SubDataset) = getfield(sds, :parent)
+Base.parentindices(sds::SubDataset) = (rows(sds), parentcols(index(sds)))
 
 function Base.view(ds::Dataset, rowinds, colind::ColumnIndex)
     idx = index(ds)[colind]
@@ -184,7 +204,7 @@ Base.@propagate_inbounds Base.view(ads::AbstractDataset, rowinds::typeof(!),
     SubDataset(ads, :, colinds)
 Base.@propagate_inbounds Base.view(ads::AbstractDataset, rowinds::Not,
                                    colinds::MultiColumnIndex) =
-    SubDataset(ads, axes(adf, 1)[rowinds], colinds)
+    SubDataset(ads, axes(ads, 1)[rowinds], colinds)
 
 ##############################################################################
 ##
@@ -216,9 +236,9 @@ Base.@propagate_inbounds Base.getindex(sds::SubDataset, rowinds::Union{AbstractV
 Base.@propagate_inbounds Base.getindex(sds::SubDataset, ::Colon,
                                        colinds::MultiColumnIndex) =
     parent(sds)[rows(sds), parentcols(index(sds), colinds)]
-Base.@propagate_inbounds Base.getindex(df::SubDataset, row_ind::typeof(!),
+Base.@propagate_inbounds Base.getindex(ds::SubDataset, row_ind::typeof(!),
                                        col_inds::MultiColumnIndex) =
-    view(df, :,  col_inds)
+    view(ds, :,  col_inds)
 
 
 Base.@propagate_inbounds function Base.setindex!(sds::SubDataset, val::Any, idx::CartesianIndex{2})
@@ -240,11 +260,11 @@ Base.@propagate_inbounds Base.setindex!(sds::SubDataset, val::Any, rowinds::Bool
 
 Base.setproperty!(::SubDataset, ::Symbol, ::Any) =
     throw(ArgumentError("Replacing or adding of columns of a SubDataset is not allowed. " *
-                        "Instead use `df[:, col_ind] = v` or `df[:, col_ind] .= v` " *
+                        "Instead use `ds[:, col_ind] = v` or `ds[:, col_ind] .= v` " *
                         "to perform an in-place assignment."))
 Base.setproperty!(::SubDataset, ::AbstractString, ::Any) =
     throw(ArgumentError("Replacing or adding of columns of a SubDataset is not allowed. " *
-                        "Instead use `df[:, col_ind] = v` or `df[:, col_ind] .= v` " *
+                        "Instead use `ds[:, col_ind] = v` or `ds[:, col_ind] .= v` " *
                         "to perform an in-place assignment."))
 
 ##############################################################################
@@ -258,14 +278,11 @@ Base.copy(sds::SubDataset) = parent(sds)[rows(sds), parentcols(index(sds), :)]
 Base.delete!(ds::SubDataset, ind) =
     throw(ArgumentError("SubDataset does not support deleting rows"))
 
-function Dataset(sds::SubDataset; copycols::Bool=true)
-    if copycols
-        sds[:, :]
-    else
-        newds = Dataset(collect(eachcol(sds)), Index(parent(index(sds)).lookup, parent(index(sds)).names, parent(index(sds)).format), copycols=false)
-        setinfo!(newds, _attributes(sds).meta.info[])
-        newds
-    end
+function Dataset(sds::SubDataset)
+
+    newds = sds[:, :]
+    setinfo!(newds, _attributes(sds).meta.info[])
+    newds
 end
 
 Base.convert(::Type{Dataset}, sds::SubDataset) = Dataset(sds)
