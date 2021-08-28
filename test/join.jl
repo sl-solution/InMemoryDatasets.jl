@@ -401,6 +401,9 @@ end
 
     @test o(on) == Dataset(id = [1, 3, 5, 0, 2, 4], fid = [1, 3, 5, 0, 2, 4])
     @test typeof.(eachcol(o(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+    dsl = Dataset(x=[1,2], y=[3,4])
+    re = innerjoin(dsl, dsl, on = [:x=>:y], makeunique = true)
+    @test Dataset([[],[],[]], names(re)) == re
 end
 #
 # @testset "all joins with CategoricalArrays" begin

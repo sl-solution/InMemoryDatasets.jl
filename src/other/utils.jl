@@ -18,7 +18,9 @@ end
 Missings.allowmissing(a::PooledArray) = convert(PooledArray{Union{Missing, eltype(a)}}, a)
 
 function allocatecol(x::AbstractVector, len; addmissing = true)
-    @assert len > 0 "cannot allocate a column with length zero"
+    if addmissing
+        @assert len > 0 "cannot allocate a column with length zero"
+    end
     if DataAPI.refpool(x) !== nothing
         if x isa PooledArray
             _res = PooledArray(PooledArrays.RefArray(x.refs[1:1]), DataAPI.invrefpool(x), DataAPI.refpool(x), PooledArrays.refcount(x))
