@@ -12,7 +12,7 @@ The first argument of these two functions is the name of the data set which is g
 
 > `modify!(ds, args...)` or `modify(ds, args...)`
 
-The simplest form of `args` is `col => fun` which calls `fun` on `col` as a vector and replaces `col` with the output of the call. `col` can be a column index or a column name. Thus, to replace the value of a column which is called `:x` in a data set `ds` with their standardised values, we can use the following expression:
+The simplest form of `args` is `col => fun` which calls `fun` on `col` as a vector and replaces `col` with the output of the call. `col` can be a column index or a column name. Thus, to replace the value of a column which is called `:x1` in a data set `ds` with their standardised values, we can use the following expression:
 
 > `modify!(ds, :x1 => stdze)`
 
