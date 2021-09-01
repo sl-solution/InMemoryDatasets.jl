@@ -1,5 +1,5 @@
 """
-    Dataset.getmaxwidths(df::AbstractDataset,
+    Dataset.getmaxwidths(ds::AbstractDataset,
                             io::IO,
                             rowindices1::AbstractVector{Int},
                             rowindices2::AbstractVector{Int},
@@ -21,8 +21,8 @@ NOTE: The last entry of the result vector is the string width of the
 implicit row ID column contained in every `AbstractDataset`.
 
 # Arguments
-- `df::AbstractDataset`: The data frame whose columns will be printed.
-- `io::IO`: The `IO` to which `df` is to be printed
+- `ds::AbstractDataset`: The data frame whose columns will be printed.
+- `io::IO`: The `IO` to which `ds` is to be printed
 - `rowindices1::AbstractVector{Int}: A set of indices of the first
   chunk of the AbstractDataset that would be rendered to IO.
 - `rowindices2::AbstractVector{Int}: A set of indices of the second
@@ -36,7 +36,7 @@ implicit row ID column contained in every `AbstractDataset`.
    under the column name in the heading.
 - `buffer`: buffer passed around to avoid reallocations in `ourstrwidth`
 """
-function getmaxwidths(df::AbstractDataset,
+function getmaxwidths(ds::AbstractDataset,
                       io::IO,
                       rowindices1::AbstractVector{Int},
                       rowindices2::AbstractVector{Int},
@@ -45,13 +45,13 @@ function getmaxwidths(df::AbstractDataset,
                       show_eltype::Bool,
                       buffer::IOBuffer,
                       truncstring::Int)
-    maxwidths = Vector{Int}(undef, size(df, 2) + 1)
+    maxwidths = Vector{Int}(undef, size(ds, 2) + 1)
 
     undefstrwidth = ourstrwidth(io, "#undef", buffer, truncstring)
 
-    ct = show_eltype ? batch_compacttype(Any[eltype(c) for c in eachcol(df)]) : String[]
+    ct = show_eltype ? batch_compacttype(Any[eltype(c) for c in eachcol(ds)]) : String[]
     j = 1
-    for (col_idx, (name, col)) in enumerate(pairs(eachcol(df)))
+    for (col_idx, (name, col)) in enumerate(pairs(eachcol(ds)))
         # (1) Consider length of column name
         # do not truncate column name
         maxwidth = ourstrwidth(io, name, buffer, 0)
@@ -87,16 +87,16 @@ function getmaxwidths(df::AbstractDataset,
 end
 
 """
-    show(io::IO, mime::MIME, df::AbstractDataset)
+    show(io::IO, mime::MIME, ds::AbstractDataset)
 
 Render a data frame to an I/O stream in MIME type `mime`.
 
 # Arguments
-- `io::IO`: The I/O stream to which `df` will be printed.
+- `io::IO`: The I/O stream to which `ds` will be printed.
 - `mime::MIME`: supported MIME types are: `"text/plain"`, `"text/html"`, `"text/latex"`,
   `"text/csv"`, `"text/tab-separated-values"` (the last two MIME types do not support
    showing `#undef` values)
-- `df::AbstractDataset`: The data frame to print.
+- `ds::AbstractDataset`: The data frame to print.
 
 Additionally selected MIME types support passing the following keyword arguments:
 - MIME type `"text/plain"` accepts all listed keyword arguments and therir behavior
@@ -125,18 +125,18 @@ julia> show(stdout, MIME("text/csv"), DataFrame(A = 1:3, B = ["x", "y", "z"]))
 3,"z"
 ```
 """
-Base.show(io::IO, mime::MIME, df::AbstractDataset)
-Base.show(io::IO, mime::MIME"text/html", df::AbstractDataset;
+Base.show(io::IO, mime::MIME, ds::AbstractDataset)
+Base.show(io::IO, mime::MIME"text/html", ds::AbstractDataset;
           summary::Bool=true, eltypes::Bool=true) =
-    _show(io, mime, df, summary=summary, eltypes=eltypes)
-Base.show(io::IO, mime::MIME"text/latex", df::AbstractDataset; eltypes::Bool=true) =
-    _show(io, mime, df, eltypes=eltypes)
-Base.show(io::IO, mime::MIME"text/csv", df::AbstractDataset) =
-    printtable(io, df, header = true, separator = ',')
-Base.show(io::IO, mime::MIME"text/tab-separated-values", df::AbstractDataset) =
-    printtable(io, df, header = true, separator = '\t')
-Base.show(io::IO, mime::MIME"text/plain", df::AbstractDataset; kwargs...) =
-    show(io, df; kwargs...)
+    _show(io, mime, ds, summary=summary, eltypes=eltypes)
+Base.show(io::IO, mime::MIME"text/latex", ds::AbstractDataset; eltypes::Bool=true, mapformats = true, formats = true) =
+    _show(io, mime, ds, eltypes=eltypes, mapformats = mapformats, formats = formats)
+Base.show(io::IO, mime::MIME"text/csv", ds::AbstractDataset; mapformats = true) =
+    printtable(io, ds, header = true, separator = ',', mapformats = mapformats)
+Base.show(io::IO, mime::MIME"text/tab-separated-values", ds::AbstractDataset; mapformats = true) =
+    printtable(io, ds, header = true, separator = '\t', mapformats = mapformats)
+Base.show(io::IO, mime::MIME"text/plain", ds::AbstractDataset; kwargs...) =
+    show(io, ds; kwargs...)
 
 ##############################################################################
 #
@@ -277,27 +277,27 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
     write(io, "</table>")
 end
 
-# function Base.show(io::IO, mime::MIME"text/html", dfr::DataFrameRow;
+# function Base.show(io::IO, mime::MIME"text/html", dsr::DataFrameRow;
 #                    summary::Bool=true, eltypes::Bool=true)
-#     r, c = parentindices(dfr)
-#     summary && write(io, "<p>DataFrameRow ($(length(dfr)) columns)</p>")
-#     _show(io, mime, view(parent(dfr), [r], c), summary=false, eltypes=eltypes, rowid=r)
+#     r, c = parentindices(dsr)
+#     summary && write(io, "<p>DataFrameRow ($(length(dsr)) columns)</p>")
+#     _show(io, mime, view(parent(dsr), [r], c), summary=false, eltypes=eltypes, rowid=r)
 # end
 #
-# function Base.show(io::IO, mime::MIME"text/html", dfrs::DataFrameRows;
+# function Base.show(io::IO, mime::MIME"text/html", dsrs::DataFrameRows;
 #                    summary::Bool=true, eltypes::Bool=true)
-#     df = parent(dfrs)
-#     summary && write(io, "<p>$(nrow(df))×$(ncol(df)) DataFrameRows</p>")
-#     _show(io, mime, df, summary=false, eltypes=eltypes)
+#     ds = parent(dsrs)
+#     summary && write(io, "<p>$(nrow(ds))×$(ncol(ds)) DataFrameRows</p>")
+#     _show(io, mime, ds, summary=false, eltypes=eltypes)
 # end
 #
-# function Base.show(io::IO, mime::MIME"text/html", dfcs::DataFrameColumns;
+# function Base.show(io::IO, mime::MIME"text/html", dscs::DataFrameColumns;
 #                    summary::Bool=true, eltypes::Bool=true)
-#     df = parent(dfcs)
+#     ds = parent(dscs)
 #     if summary
-#         write(io, "<p>$(nrow(df))×$(ncol(df)) DataFrameColumns</p>")
+#         write(io, "<p>$(nrow(ds))×$(ncol(ds)) DataFrameColumns</p>")
 #     end
-#     _show(io, mime, df, summary=false, eltypes=eltypes)
+#     _show(io, mime, ds, summary=false, eltypes=eltypes)
 # end
 #
 # function Base.show(io::IO, mime::MIME"text/html", gd::GroupedDataFrame)
@@ -355,47 +355,56 @@ function latex_escape(cell::AbstractString)
     replace(cell, ['\\','~', '#', '$', '%', '&', '_', '^', '{', '}']=>latex_char_escape)
 end
 
-function _show(io::IO, ::MIME"text/latex", df::AbstractDataset;
-               eltypes::Bool=true, rowid=nothing)
-    _check_consistency(df)
+function _show(io::IO, ::MIME"text/latex", ds::AbstractDataset;
+               eltypes::Bool=true, rowid=nothing, formats::Bool = true, mapformats = true)
+    _check_consistency(ds)
 
     # we will pass around this buffer to avoid its reallocation in ourstrwidth
     buffer = IOBuffer(Vector{UInt8}(undef, 80), read=true, write=true)
 
     if rowid !== nothing
-        if size(df, 2) == 0
+        if size(ds, 2) == 0
             rowid = nothing
-        elseif size(df, 1) != 1
+        elseif size(ds, 1) != 1
             throw(ArgumentError("rowid may be passed only with a single row data frame"))
         end
     end
 
-    mxrow, mxcol = size(df)
+    mxrow, mxcol = size(ds)
     if get(io, :limit, false)
         tty_rows, tty_cols = get(io, :displaysize, displaysize(io))
         mxrow = min(mxrow, tty_rows)
-        maxwidths = getmaxwidths(df, io, 1:mxrow, 0:-1, :X, nothing, true, buffer, 0) .+ 2
+        maxwidths = getmaxwidths(ds, io, 1:mxrow, 0:-1, :X, nothing, true, buffer, 0) .+ 2
         mxcol = min(mxcol, searchsortedfirst(cumsum(maxwidths), tty_cols))
     end
 
-    cnames = _names(df)[1:mxcol]
+    cnames = _names(ds)[1:mxcol]
     alignment = repeat("c", mxcol)
     write(io, "\\begin{tabular}{r|")
     write(io, alignment)
-    mxcol < size(df, 2) && write(io, "c")
+    mxcol < size(ds, 2) && write(io, "c")
     write(io, "}\n")
     write(io, "\t& ")
     header = join(map(c -> latex_escape(string(c)), cnames), " & ")
     write(io, header)
-    mxcol < size(df, 2) && write(io, " & ")
+    mxcol < size(ds, 2) && write(io, " & ")
     write(io, "\\\\\n")
     write(io, "\t\\hline\n")
+    if formats
+        write(io, "\t& ")
+        ftm = Any[string(getformat(ds, idx)) for idx in 1:mxcol]
+        header = join(latex_escape.(ftm), " & ")
+        write(io, header)
+        mxcol < size(ds, 2) && write(io, " & ")
+        write(io, "\\\\\n")
+        write(io, "\t\\hline\n")
+    end
     if eltypes
         write(io, "\t& ")
-        ct = batch_compacttype(Any[eltype(df[!, idx]) for idx in 1:mxcol])
+        ct = batch_compacttype(Any[eltype(ds[!, idx]) for idx in 1:mxcol])
         header = join(latex_escape.(ct), " & ")
         write(io, header)
-        mxcol < size(df, 2) && write(io, " & ")
+        mxcol < size(ds, 2) && write(io, " & ")
         write(io, "\\\\\n")
         write(io, "\t\\hline\n")
     end
@@ -404,10 +413,14 @@ function _show(io::IO, ::MIME"text/latex", df::AbstractDataset;
         write(io, @sprintf("%d", rowid === nothing ? row : rowid))
         for col in 1:mxcol
             write(io, " & ")
-            if !isassigned(df[!, col], row)
+            if !isassigned(ds[!, col], row)
                 print(io, "\\emph{\\#undef}")
             else
-                cell = df[row, col]
+                if mapformats
+                    cell = getformat(ds, col)(ds[row, col])
+                else
+                    cell = ds[row, col]
+                end
                 if ismissing(cell)
                     print(io, "\\emph{missing}")
                 elseif cell isa Markdown.MD
@@ -425,29 +438,29 @@ function _show(io::IO, ::MIME"text/latex", df::AbstractDataset;
                 end
             end
         end
-        mxcol < size(df, 2) && write(io, " & \$\\dots\$")
+        mxcol < size(ds, 2) && write(io, " & \$\\dots\$")
         write(io, " \\\\\n")
     end
-    if size(df, 1) > mxrow
+    if size(ds, 1) > mxrow
         write(io, "\t\$\\dots\$")
         for col in 1:mxcol
             write(io, " & \$\\dots\$")
         end
-        mxcol < size(df, 2) && write(io, " & ")
+        mxcol < size(ds, 2) && write(io, " & ")
         write(io, " \\\\\n")
     end
     write(io, "\\end{tabular}\n")
 end
 
-# function Base.show(io::IO, mime::MIME"text/latex", dfr::DataFrameRow; eltypes::Bool=true)
-#     r, c = parentindices(dfr)
-#     _show(io, mime, view(parent(dfr), [r], c), eltypes=eltypes, rowid=r)
+# function Base.show(io::IO, mime::MIME"text/latex", dsr::DataFrameRow; eltypes::Bool=true)
+#     r, c = parentindices(dsr)
+#     _show(io, mime, view(parent(dsr), [r], c), eltypes=eltypes, rowid=r)
 # end
 #
-# Base.show(io::IO, mime::MIME"text/latex", dfrs::DataFrameRows; eltypes::Bool=true) =
-# 	_show(io, mime, parent(dfrs), eltypes=eltypes)
-# Base.show(io::IO, mime::MIME"text/latex", dfcs::DataFrameColumns; eltypes::Bool=true) =
-# 	_show(io, mime, parent(dfcs), eltypes=eltypes)
+# Base.show(io::IO, mime::MIME"text/latex", dsrs::DataFrameRows; eltypes::Bool=true) =
+# 	_show(io, mime, parent(dsrs), eltypes=eltypes)
+# Base.show(io::IO, mime::MIME"text/latex", dscs::DataFrameColumns; eltypes::Bool=true) =
+# 	_show(io, mime, parent(dscs), eltypes=eltypes)
 #
 # function Base.show(io::IO, mime::MIME"text/latex", gd::GroupedDataFrame)
 #     N = length(gd)
@@ -498,17 +511,18 @@ escapedprint(io::IO, x::AbstractString, escapes::AbstractString) =
     escape_string(io, x, escapes)
 
 function printtable(io::IO,
-                    df::AbstractDataset;
+                    ds::AbstractDataset;
                     header::Bool = true,
                     separator::Char = ',',
                     quotemark::Char = '"',
                     missingstring::AbstractString = "missing",
-                    nothingstring::AbstractString = "nothing")
-    _check_consistency(df)
-    n, p = size(df)
-    etypes = eltype.(eachcol(df))
+                    nothingstring::AbstractString = "nothing",
+                    mapformats = true)
+    _check_consistency(ds)
+    n, p = size(ds)
+    etypes = eltype.(eachcol(ds))
     if header
-        cnames = _names(df)
+        cnames = _names(ds)
         for j in 1:p
             print(io, quotemark)
             print(io, cnames[j])
@@ -523,7 +537,11 @@ function printtable(io::IO,
     quotestr = string(quotemark)
     for i in 1:n
         for j in 1:p
-            cell = df[i, j]
+            if mapformats
+                cell = getformat(ds, j)(ds[i, j])
+            else
+                cell = ds[i, j]
+            end
             if ismissing(cell)
                 print(io, missingstring)
             elseif isnothing(cell)
@@ -552,35 +570,35 @@ function printtable(io::IO,
     nothing
 end
 
-# function Base.show(io::IO, mime::MIME"text/csv", dfr::DataFrameRow)
-#     r, c = parentindices(dfr)
-#     show(io, mime, view(parent(dfr), [r], c))
+# function Base.show(io::IO, mime::MIME"text/csv", dsr::DataFrameRow)
+#     r, c = parentindices(dsr)
+#     show(io, mime, view(parent(dsr), [r], c))
 # end
 #
-# function Base.show(io::IO, mime::MIME"text/tab-separated-values", dfr::DataFrameRow)
-#     r, c = parentindices(dfr)
-#     show(io, mime, view(parent(dfr), [r], c))
+# function Base.show(io::IO, mime::MIME"text/tab-separated-values", dsr::DataFrameRow)
+#     r, c = parentindices(dsr)
+#     show(io, mime, view(parent(dsr), [r], c))
 # end
 #
 # Base.show(io::IO, mime::MIME"text/csv",
-#           dfs::Union{DataFrameRows, DataFrameColumns}) =
-#     show(io, mime, parent(dfs))
+#           dss::Union{DataFrameRows, DataFrameColumns}) =
+#     show(io, mime, parent(dss))
 # Base.show(io::IO, mime::MIME"text/tab-separated-values",
-#           dfs::Union{DataFrameRows, DataFrameColumns}) =
-#     show(io, mime, parent(dfs))
+#           dss::Union{DataFrameRows, DataFrameColumns}) =
+#     show(io, mime, parent(dss))
 #
 # function Base.show(io::IO, mime::MIME"text/csv", gd::GroupedDataFrame)
 #     isfirst = true
-#     for sdf in gd
-#         printtable(io, sdf, header = isfirst, separator = ',')
+#     for sds in gd
+#         printtable(io, sds, header = isfirst, separator = ',')
 #         isfirst && (isfirst = false)
 #     end
 # end
 #
 # function Base.show(io::IO, mime::MIME"text/tab-separated-values", gd::GroupedDataFrame)
 #     isfirst = true
-#     for sdf in gd
-#         printtable(io, sdf, header = isfirst, separator = '\t')
+#     for sds in gd
+#         printtable(io, sds, header = isfirst, separator = '\t')
 #         isfirst && (isfirst = false)
 #     end
 # end

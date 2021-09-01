@@ -92,9 +92,11 @@ Base.similar(col1::DatasetColumn, args...) = similar(__!(col1), args...)
 Base.copy(col1::DatasetColumn) = copy(__!(col1))
 Base.pairs(col1::DatasetColumn) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::DatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
-PooledArrays.PooledArray(col1::DatasetColumn) = PooledArray(col1.val)
+PooledArrays.PooledArray(col1::DatasetColumn; arg...) = PooledArray(col1.val, arg...)
 Base.convert(T, col1::DatasetColumn) = convert(T, __!(col1))
 Base.convert(::Type{Any}, col1::DatasetColumn) = convert(Any, __!(col1))
+DataAPI.refarray(col::DatasetColumn) = DataAPI.refarray(__!(col))
+DataAPI.refpool(col::DatasetColumn) = DataAPI.refpool(__!(col))
 
 __!(col1::SubDatasetColumn) =  view(col1.val, col1.selected_index)
 Base.:(==)(col1::SubDatasetColumn, col2::SubDatasetColumn) = isequal(__!(col1), __!(col2))
@@ -116,6 +118,8 @@ Base.pairs(col1::SubDatasetColumn) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::SubDatasetColumn, kwargs...) = iterate(__!(col1), kwargs...)
 Base.convert(T, col1::SubDatasetColumn) = convert(T, __!(col1))
 Base.convert(::Type{Any}, col1::SubDatasetColumn) = convert(Any, __!(col1))
+DataAPI.refarray(col::SubDatasetColumn) = DataAPI.refarray(__!(col))
+DataAPI.refpool(col::SubDatasetColumn) = DataAPI.refpool(__!(col))
 
 # Basic operation should work fine
 const SubOrDSCol = Union{SubDatasetColumn, DatasetColumn}
@@ -369,7 +373,7 @@ end
 """
     content(ds::AbstractDataset; output = false)
 
-prints the meta information about `ds` and its variables. Setting `output = true` return a vector of data sets which contains the printed information as data sets.
+prints the meta information about `ds` and its columns. Setting `output = true` return a vector of data sets which contains the printed information as data sets.
 """
 function content(ds::AbstractDataset; output = false)
     println(summary(ds))
@@ -388,10 +392,10 @@ function content(ds::AbstractDataset; output = false)
         push!(f_v[3], nonmissingtype(eltype(ds[!, i])))
     end
 
-    format_ds = Dataset(f_v, [:variable, :format, :eltype], copycols = false)
+    format_ds = Dataset(f_v, [:column, :format, :eltype], copycols = false)
     println("-----------------------------------")
-    println("Variables information ")
-    pretty_table(format_ds, header = (["var", "format", "eltype"]), alignment =:l)
+    println("Columns information ")
+    pretty_table(format_ds, header = (["col", "format", "eltype"]), alignment =:l)
     if output
         [Dataset(meta = ["created", "modified", "info"], value = [_attributes(ds).meta.created, _attributes(ds).meta.modified[], _attributes(ds).meta.info[]]), format_ds]
     end
