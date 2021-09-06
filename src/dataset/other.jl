@@ -545,15 +545,15 @@ julia> mask(ds, isodd, 1:3)
    3 │     true      true      true
 ```
 """
-mask(ds::AbstractDataset, f::Function, col::ColumnIndex; mapformats = false, threads = true) = mask(ds, f, [col]; mapformats = mapformats, threads = threads)
-function mask(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; mapformats = false, threads = true)
+mask(ds::AbstractDataset, f::Function, col::ColumnIndex; mapformats = true, threads = true, missings = false) = mask(ds, f, [col]; mapformats = mapformats, threads = threads, missings = missings)
+function mask(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; mapformats = true, threads = true, missings = false)
   colsidx = index(ds)[cols]
   v_f = Vector{Function}(undef, length(colsidx))
   fill!(v_f, f)
-  mask(ds, v_f, cols; mapformats = mapformats, threads = threads)
+  mask(ds, v_f, cols; mapformats = mapformats, threads = threads, missings = missings)
 end
 
-function mask(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex; mapformats = false, threads = true)
+function mask(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex; mapformats = true, threads = true, missings = false)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -562,37 +562,45 @@ function mask(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex
     for j in 1:length(colsidx)
         v = _columns(ds)[colsidx[j]]
         _col_f = getformat(ds, colsidx[j])
-        fv = Vector{Bool}(undef, nrow(ds))
+        fv = Vector{Union{Missing, Bool}}(undef, nrow(ds))
         if mapformats
-          _fill_mask!(fv, v, _col_f, f[j], threads)
+          _fill_mask!(fv, v, _col_f, f[j], threads, missings)
         else
-          _fill_mask!(fv, v, f[j], threads)
+          _fill_mask!(fv, v, f[j], threads, missings)
         end
         push!(vs, fv)
     end
     Dataset(vs, _names(ds)[colsidx], copycols=false)
 end
 
-function _fill_mask!(fv, v, format, fj, threads)
+function _fill_mask!(fv, v, format, fj, threads, missings)
   if threads
     Threads.@threads for i in 1:length(fv)
       fv[i] = _bool_mask(fj)(format(v[i]))
     end
+    Threads.@threads for i in 1:length(fv)
+      ismissing(fv[i]) ? fv[i] = missings : nothing
+    end
   else
     map!(_bool_mask(fj∘format), fv, v)
+    map!(x->ismissing(x) ? x = missings : x, fv, fv)
   end
 end
 # not using formats
-function _fill_mask!(fv, v, fj, threads)
+function _fill_mask!(fv, v, fj, threads, missings)
   if threads
     Threads.@threads for i in 1:length(fv)
       fv[i] = _bool_mask(fj)(v[i])
     end
+    Threads.@threads for i in 1:length(fv)
+      ismissing(fv[i]) ? fv[i] = missings : nothing
+    end
   else
     map!(_bool_mask(fj), fv, v)
+    map!(x->ismissing(x) ? x = missings : x, fv, fv)
   end
 end
-_bool_mask(f) = x->f(x)::Bool
+_bool_mask(f) = x->f(x)::Union{Bool, Missing}
 
 
 # Unique cases
