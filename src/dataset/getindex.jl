@@ -27,8 +27,8 @@ _onebased_check_error(i, col) =
                         "column $i has starting index equal to $(firstindex(col))"))
 
 # note: these type assertions are required to pass tests
-DataAPI.nrow(ds::Dataset) = ncol(ds) > 0 ? length(_columns(ds)[1])::Int : 0
-DataAPI.ncol(ds::Dataset) = length(index(ds))
+nrow(ds::Dataset) = ncol(ds) > 0 ? length(_columns(ds)[1])::Int : 0
+ncol(ds::Dataset) = length(index(ds))
 
 ##############################################################################
 ##
