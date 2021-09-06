@@ -23,6 +23,8 @@ import DataAPI,
        DataAPI.leftjoin,
        DataAPI.semijoin,
        DataAPI.antijoin,
+       DataAPI.nrow,
+       DataAPI.ncol,
        # DataAPI.crossjoin,
        Tables,
        Tables.columnindex
