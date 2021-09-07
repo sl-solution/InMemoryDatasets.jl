@@ -18,8 +18,8 @@ struct DatasetRows{D<:AbstractDataset} <: AbstractVector{DatasetRow}
     df::D
 end
 #
-# Base.summary(dfrs::DatasetRows) = "$(length(dfrs))-element DatasetRows"
-# Base.summary(io::IO, dfrs::DatasetRows) = print(io, summary(dfrs))
+Base.summary(dfrs::DatasetRows) = "$(length(dfrs))-element DatasetRows"
+Base.summary(io::IO, dfrs::DatasetRows) = print(io, summary(dfrs))
 
 Base.iterate(::AbstractDataset) =
     error("AbstractDataset is not iterable.")
@@ -72,23 +72,25 @@ julia> eachrow(view(df, [4, 3], [2, 1]))
    2 │    13      3
 ```
 """
-# eachrow(df::AbstractDataset) = DatasetRows(df)
+function Base.eachrow(df::AbstractDataset)
+    DatasetRows(df)
+end
 
-# Base.IndexStyle(::Type{<:DatasetRows}) = Base.IndexLinear()
-# Base.size(itr::DatasetRows) = (size(parent(itr), 1), )
+Base.IndexStyle(::Type{<:DatasetRows}) = Base.IndexLinear()
+Base.size(itr::DatasetRows) = (size(parent(itr), 1), )
 
-# Base.@propagate_inbounds Base.getindex(itr::DatasetRows, i::Int) = parent(itr)[i, :]
+Base.@propagate_inbounds Base.getindex(itr::DatasetRows, i::Int) = parent(itr)[i, :]
 
 # separate methods are needed due to dispatch ambiguity
-# Base.getproperty(itr::DatasetRows, col_ind::Symbol) =
-#     getproperty(parent(itr), col_ind)
-# Base.getproperty(itr::DatasetRows, col_ind::AbstractString) =
-#     getproperty(parent(itr), col_ind)
-# Compat.hasproperty(itr::DatasetRows, s::Symbol) = haskey(index(parent(itr)), s)
-# Compat.hasproperty(itr::DatasetRows, s::AbstractString) = haskey(index(parent(itr)), s)
+Base.getproperty(itr::DatasetRows, col_ind::Symbol) =
+    getproperty(parent(itr), col_ind)
+Base.getproperty(itr::DatasetRows, col_ind::AbstractString) =
+    getproperty(parent(itr), col_ind)
+Compat.hasproperty(itr::DatasetRows, s::Symbol) = haskey(index(parent(itr)), s)
+Compat.hasproperty(itr::DatasetRows, s::AbstractString) = haskey(index(parent(itr)), s)
 
 # Private fields are never exposed since they can conflict with column names
-# Base.propertynames(itr::DatasetRows, private::Bool=false) = propertynames(parent(itr))
+Base.propertynames(itr::DatasetRows, private::Bool=false) = propertynames(parent(itr))
 
 # Iteration by columns
 
@@ -261,45 +263,47 @@ Base.findall(f::Function, itr::DatasetColumns) =
     findall(f, values(itr))
 #
 Base.parent(itr::DatasetColumns) = getfield(itr, :df)
+Base.parent(itr::DatasetRows) = getfield(itr, :df)
+
 Base.names(itr::DatasetColumns) = names(parent(itr))
 Base.names(itr::DatasetColumns, cols) = names(parent(itr), cols)
 
-# function Base.show(io::IO, dfrs::DatasetRows;
-#                    allrows::Bool = !get(io, :limit, false),
-#                    allcols::Bool = !get(io, :limit, false),
-#                    rowlabel::Symbol = :Row,
-#                    summary::Bool = true,
-#                    eltypes::Bool = true,
-#                    truncate::Int = 32,
-#                    kwargs...)
-#     df = parent(dfrs)
-#     title = summary ? "$(nrow(df))×$(ncol(df)) DatasetRows" : ""
-#     _show(io, df; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
-#           summary=false, eltypes=eltypes, truncate=truncate, title=title,
-#           kwargs...)
-# end
+function Base.show(io::IO, dfrs::DatasetRows;
+                   allrows::Bool = !get(io, :limit, false),
+                   allcols::Bool = !get(io, :limit, false),
+                   rowlabel::Symbol = :Row,
+                   summary::Bool = true,
+                   eltypes::Bool = true,
+                   truncate::Int = 32,
+                   kwargs...)
+    df = parent(dfrs)
+    title = summary ? "$(nrow(df))×$(ncol(df)) DatasetRows" : ""
+    _show(io, df; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
+          summary=false, eltypes=eltypes, truncate=truncate, title=title,
+          kwargs...)
+end
 
-# Base.show(io::IO, mime::MIME"text/plain", dfrs::DatasetRows;
-#           allrows::Bool = !get(io, :limit, false),
-#           allcols::Bool = !get(io, :limit, false),
-#           rowlabel::Symbol = :Row,
-#           summary::Bool = true,
-#           eltypes::Bool = true,
-#           truncate::Int = 32,
-#           kwargs...) =
-#     show(io, dfrs; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
-#          summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
-#
-# Base.show(dfrs::DatasetRows;
-#           allrows::Bool = !get(stdout, :limit, true),
-#           allcols::Bool = !get(stdout, :limit, true),
-#           rowlabel::Symbol = :Row,
-#           summary::Bool = true,
-#           eltypes::Bool = true,
-#           truncate::Int = 32,
-#           kwargs...) =
-#     show(stdout, dfrs; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
-#          summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
+Base.show(io::IO, mime::MIME"text/plain", dfrs::DatasetRows;
+          allrows::Bool = !get(io, :limit, false),
+          allcols::Bool = !get(io, :limit, false),
+          rowlabel::Symbol = :Row,
+          summary::Bool = true,
+          eltypes::Bool = true,
+          truncate::Int = 32,
+          kwargs...) =
+    show(io, dfrs; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
+         summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
+
+Base.show(dfrs::DatasetRows;
+          allrows::Bool = !get(stdout, :limit, true),
+          allcols::Bool = !get(stdout, :limit, true),
+          rowlabel::Symbol = :Row,
+          summary::Bool = true,
+          eltypes::Bool = true,
+          truncate::Int = 32,
+          kwargs...) =
+    show(stdout, dfrs; allrows=allrows, allcols=allcols, rowlabel=rowlabel,
+         summary=summary, eltypes=eltypes, truncate=truncate, kwargs...)
 
 function Base.show(io::IO, dfcs::DatasetColumns;
                    allrows::Bool = !get(io, :limit, false),
