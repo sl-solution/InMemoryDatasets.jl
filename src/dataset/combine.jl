@@ -508,7 +508,7 @@ function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_look
 end
 
 function combine(ds::Dataset, @nospecialize(args...))
-    !isgrouped(ds) && throw(ArgumentError("`combine` is only for grouped data sets, use `modify` instead"))
+    !isgrouped(ds) &&  return combine_ds(ds, args...)#throw(ArgumentError("`combine` is only for grouped data sets, use `modify` instead"))
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
     ms = normalize_combine_multiple!(length(_groupcols(ds)), idx_cpy, index(ds), args...)
     # the rule is that in combine, byrow must only be used for already aggregated columns
@@ -584,5 +584,56 @@ function combine(ds::Dataset, @nospecialize(args...))
     # for i in 2:(length(new_lengths))
     #     index(newds).starts[i] = new_lengths[i - 1]+1
     # end
+    newds
+end
+
+
+
+function combine_ds(ds::Dataset, @nospecialize(args...))
+    idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
+    ms = normalize_combine_multiple!(length(_groupcols(ds)), idx_cpy, index(ds), args...)
+    newlookup, new_nm = _create_index_for_newds(ds, ms, index(ds).sortedcols)
+    !(_is_byrow_valid(Index(newlookup, new_nm, Dict{Int, Function}()), ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` otherwise"))
+    _first_vector_res = _check_mutliple_rows_for_each_group(ds, ms)
+
+
+    groupcols = index(ds).sortedcols
+    starts = 1
+    ngroups::Int = 1
+
+    # we will use new_lengths later for assigning the grouping info of the new ds
+    if _first_vector_res == 0
+        new_lengths = ones(Int, ngroups)
+        cumsum!(new_lengths, new_lengths)
+        total_lengths = ngroups
+    else
+        CT = return_type(ms[_first_vector_res].second.first,
+                 ds[!, ms[_first_vector_res].first].val)
+        special_res = Vector{CT}(undef, ngroups)
+        new_lengths = Vector{Int}(undef, ngroups)
+        _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+        cumsum!(new_lengths, new_lengths)
+        total_lengths = new_lengths[end]
+    end
+    all_names = _names(ds)
+
+    newds_idx = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Bool[], false, [], Int[], 1)
+
+    newds = Dataset([], newds_idx)
+    newds_lookup = index(newds).lookup
+    var_cnt = 1
+
+    for i in 1:length(ms)
+        if i == _first_vector_res
+            _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+        else
+            _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+        end
+        if !haskey(index(newds), ms[i].second.second)
+            push!(index(newds), ms[i].second.second)
+        end
+
+    end
+
     newds
 end
