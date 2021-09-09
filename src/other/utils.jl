@@ -5,9 +5,10 @@ function return_type(f::Function, x::AbstractVector)
     # workaround for SubArray type
     if T <: SubArray
         return Core.Compiler.return_type(f, (typeof(x), ))
-    end
-    if T <: AbstractVector
+    elseif T <: AbstractVector
         T = AbstractVector{Union{Missing, eltype(T)}}
+    elseif T <: Tuple
+        T = Union{Missing, Core.Compiler.return_type(f, (Vector{eltype(x)}, ))}
     else
         T = Union{Missing, T}
     end

@@ -95,7 +95,7 @@ end
 stat_minimum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_minimum(identity, x; lo = lo, hi = hi)
 
 function stat_sum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: Union{Missing, INTEGERS, FLOATS}
-    all(ismissing, x) && return missing
+    all(ismissing, view(x, lo:hi)) && return f(first(x))
     _dmiss(y) = ifelse(ismissing(f(y)),  zero(T), f(y))
     Base.mapreduce_impl(_dmiss, _stat_add_sum, x, lo, hi)
 end
@@ -113,7 +113,6 @@ function stat_wsum(f, x::AbstractVector{T}, w::AbstractVector) where T
     mapreduce(_dmiss, _stat_add_sum, zip(x,w))
 end
 stat_wsum(x::AbstractVector{T}, w::AbstractVector) where T  = stat_wsum(identity, x, w)
-
 function stat_mean(f, x::AbstractArray{T,1})::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     length(x) == 1 && return f(first(x))
     _op(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]))

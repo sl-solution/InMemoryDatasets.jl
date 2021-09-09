@@ -268,6 +268,8 @@ end
 
 # size() is better option for checking if the result is scalar,
 # it works for numbers and it won't work for strings and symbols
+_is_scalar(::Missing, sz) = true
+_is_scalar(::Tuple, sz) = true
 function _is_scalar(_res, sz)
      resize_col = false
     try
