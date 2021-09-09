@@ -166,11 +166,12 @@ end
 stat_std(x::AbstractArray{T,1}, df=true) where T = stat_std(identity, x, df)
 
 
-
+ISNAN(x::Any) = isnan(x)
+ISNAN(::Missing) = false
 function stat_median(v::AbstractArray{T,1}) where T
     isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))
     all(ismissing, v) && return missing
-    (nonmissingtype(eltype(v))<:AbstractFloat || nonmissingtype(eltype(v))>:AbstractFloat) && any(isnan, v) && return convert(eltype(v), NaN)
+    (nonmissingtype(eltype(v))<:AbstractFloat || nonmissingtype(eltype(v))>:AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
     nmis::Int = mapreduce(ismissing, +, v)
     n = length(v) - nmis
     mid = div(1+n,2)
