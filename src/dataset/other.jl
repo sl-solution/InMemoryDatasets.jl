@@ -800,3 +800,31 @@ function compare(ds1::Dataset, ds2::Dataset; on = nothing, eq = isequal)
     end
     res
 end
+
+
+function DataAPI.describe(ds::Dataset,
+                 stats::Base.Callable...;
+                 cols=:)
+        colsidx = index(ds)[cols]
+
+        n_stats = Vector{Base.Callable}(undef, length(stats))
+        for j in 1:length(n_stats)
+            n_stats[j] = x->try stats[j](x) catch  end
+        end
+        res = [Dataset() for _ in 1:length(colsidx)]
+        newds = Dataset()
+
+        Threads.@threads for j in 1:length(colsidx)
+            res[j] = combine_ds(ds, colsidx[j] .=> n_stats .=> Symbol.([stats...]))
+        end
+
+        for j in 1:length(colsidx)
+            append!(newds, res[j])
+        end
+        varnames = PooledArray(names(ds)[colsidx])
+        varnames = repeat(varnames, inner = _ngroups(ds))
+        insertcols!(newds, 1, :column => varnames)
+        newds
+end
+DataAPI.describe(ds::Dataset; cols = :) = describe(ds, length, nmissing, sum, mean, std, minimum, maximum; cols = :)
+nmissing(x) = count(ismissing, x)
