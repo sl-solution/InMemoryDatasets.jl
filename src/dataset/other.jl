@@ -826,5 +826,6 @@ function DataAPI.describe(ds::Dataset,
         insertcols!(newds, 1, :column => varnames)
         newds
 end
-DataAPI.describe(ds::Dataset; cols = :) = describe(ds, length, nmissing, sum, mean, std, minimum, maximum; cols = :)
+DataAPI.describe(ds::Dataset; cols = :) = describe(ds, n, nmissing, sum, mean, std, minimum, maximum; cols = :)
 nmissing(x) = count(ismissing, x)
+n(x) = count(!ismissing, x)
