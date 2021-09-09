@@ -233,7 +233,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
 end
 
 function _stablise_sort!(ranges, idx, last_valid_range, a)
-    for i in 1:last_valid_range
+    Threads.@threads for i in 1:last_valid_range
         rangestart = ranges[i]
         i == last_valid_range ? rangeend = length(idx) : rangeend = ranges[i+1] - 1
         if (rangeend - rangestart) == 0
