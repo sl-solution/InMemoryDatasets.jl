@@ -278,10 +278,8 @@ function _show(io::IO,
     # end
     # Print the table with the selected options.
     # currently pretty_table is very slow for large tables, the workaround is to use only few rows
-    if allrows && nrow(ds)>1000
-        @warn "Datasets only shows maximum of 1000 rows"
-    end
-    pretty_table(io, view(ds, 1:min(1000, nrow(ds)), :);
+    
+    pretty_table(io, ds;
                  alignment                   = alignment,
                  alignment_anchor_fallback   = :r,
                  alignment_anchor_regex      = alignment_anchor_regex,
