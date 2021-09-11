@@ -819,10 +819,10 @@ function DataAPI.describe(ds::Dataset,
         end
 
         for j in 1:length(colsidx)
-            append!(newds, res[j])
+            append!(newds, res[j], promote = true)
         end
-        varnames = PooledArray(names(ds)[colsidx])
-        varnames = repeat(varnames, inner = _ngroups(ds))
+        varnames = (names(ds)[colsidx])
+        # varnames = repeat(varnames, inner = _ngroups(ds))
         insertcols!(newds, 1, :column => varnames)
         newds
 end

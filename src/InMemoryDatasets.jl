@@ -29,8 +29,10 @@ import DataAPI,
        Tables,
        Tables.columnindex
 
+const IMD = InMemoryDatasets
 export
       # types
+      IMD,
       @c_str,
       Characters,
       AbstractDataset,
@@ -59,6 +61,8 @@ export
       mask,
       groupby!,
       groupby,
+      describe,
+      unsort!,
       # gatherby,
       ungroup!,
       modify,
@@ -91,7 +95,6 @@ export
       closejoin!,
       update,
       update!
-
 
 
 
@@ -165,5 +168,6 @@ include("missings/missings.jl")
 
 # precompile
 # include("precompile/precompile.jl")
+include("precompile/warmup.jl")
 # _precompile_()
 end
