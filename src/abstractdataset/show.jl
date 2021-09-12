@@ -278,7 +278,11 @@ function _show(io::IO,
     # end
     # Print the table with the selected options.
     # currently pretty_table is very slow for large tables, the workaround is to use only few rows
-    
+    if nrow(ds) > 10^7*5
+        vcm = :bottom
+    else
+        vcm = :middle
+    end
     pretty_table(io, ds;
                  alignment                   = alignment,
                  alignment_anchor_fallback   = :r,
@@ -304,7 +308,7 @@ function _show(io::IO,
                  row_number_column_title     = string(rowlabel),
                  show_row_number             = show_row_number,
                  title                       = title,
-                 # vcrop_mode                  = :middle,
+                 vcrop_mode                  = vcm,
                  vlines                      = vlines,
                  kwargs...)
 
