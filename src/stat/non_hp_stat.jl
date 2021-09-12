@@ -81,14 +81,14 @@ end
 lead(x::AbstractVector) = lead(x, 1)
 
 function stat_maximum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
-    all(ismissing, x) && return missing
+    all(ismissing, view(x, lo:hi)) && return missing
     _dmiss(x) = ismissing(f(x)) ? typemin(nonmissingtype(T)) : f(x)
     Base.mapreduce_impl(_dmiss, max, x, lo, hi)
 end
 stat_maximum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_maximum(identity, x; lo = lo, hi = hi)
 
 function stat_minimum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
-    all(ismissing, x) && return missing
+    all(ismissing, view(x, lo:hi)) && return missing
     @inline _dmiss(x) = ismissing(f(x)) ? typemax(nonmissingtype(T)) : f(x)
     Base.mapreduce_impl(_dmiss, min, x, lo, hi)
 end

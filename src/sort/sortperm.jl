@@ -32,9 +32,11 @@ function _sortperm_int!(idx, idx_cpy, x, ranges, where, last_valid_range, missin
         if (rangeend - rangestart + 1) == 1
             continue
         end
-        minval::Int = stat_minimum(x, lo = rangestart, hi = rangeend)
-        if ismissing(minval)
+        _minval = stat_minimum(x, lo = rangestart, hi = rangeend)
+        if ismissing(_minval)
             continue
+        else
+            minval::Int = _minval
         end
         maxval::Int = stat_maximum(x, lo = rangestart, hi = rangeend)
         # the overflow is check before calling _sortperm_int!
@@ -190,9 +192,11 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
             # further check for fast integer sort
             n = length(_tmp)
             if n > 1
-                minval::Integer = hp_minimum(_tmp)
-                if ismissing(minval)
+                _minval = hp_minimum(_tmp)
+                if ismissing(_minval)
                     continue
+                else
+                    minval::Integer = _minval
                 end
                 maxval::Integer = hp_maximum(_tmp)
                 (diff, o1) = sub_with_overflow(maxval, minval)
