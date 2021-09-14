@@ -42,6 +42,8 @@ function hp_sum(f, x::AbstractVector{T}) where T
 	cz = div(n, nt)
 	cz == 0 && return stat_sum(f, x)
 	CT = Core.Compiler.return_type(f, (nonmissingtype(eltype(x)), ))
+	CT <: Base.SmallSigned ? CT = Int : nothing
+	CT <: Base.SmallUnsigned ? CT = UInt : nothing
 	if T >: Missing
 		CT = Union{Missing, CT}
 	end
