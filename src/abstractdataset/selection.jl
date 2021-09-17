@@ -1,9 +1,19 @@
-function normalize_select(idx, @nospecialize(cols::Union{ColumnIndex, MultiColumnIndex}...))
+function normalize_select(idx, @nospecialize(cols...))
     selected_cols = Int[]
     for i in 1:length(cols)
-        push!(selected_cols, idx[cols[i]]...)
+        normalize_select!(selected_cols, idx, cols[i])
     end
     unique!(selected_cols)
+end
+function normalize_select!(selected_cols, idx, cols::ColumnIndex)
+    push!(selected_cols, idx[cols])
+end
+
+function normalize_select!(selected_cols, idx, cols::MultiColumnIndex)
+    colsidx = idx[cols]
+    for i in 1:length(colsidx)
+        push!(selected_cols, colsidx[i])
+    end
 end
 
 # sell and sell! will replace select and select!
