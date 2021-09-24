@@ -235,7 +235,7 @@ function fast_stack(T, ds, in_cols, colsidx, gcolsidx, colid, row_names, variabl
     # construct variable names column
     # _repeat_row_names = allocatecol(row_names, nrow(ds)*length(colsidx))
     # _fill_row_names!(_repeat_row_names, row_names, nrow(ds))
-    _repeat_row_names = PooledArray(row_names)
+    _repeat_row_names = allowmissing(PooledArray(row_names))
     _repeat_row_names.refs = repeat(_repeat_row_names.refs, nrow(ds))
     new_var_label = Symbol(variable_name)
     insertcols!(ds1, ncol(ds1)+1, new_var_label => _repeat_row_names, unsupported_copy_cols = false)
@@ -373,7 +373,6 @@ function ds_transpose(ds::Union{Dataset, GroupBy}, cols::MultiColumnIndex, gcols
     ECol = view(_columns(ds), colsidx)
 
     T = mapreduce(eltype, promote_type, ECol)
-
     need_fast_stack = false
     if _ngroups(ds) == nrow(ds)
         need_fast_stack = true
@@ -424,7 +423,7 @@ function ds_transpose(ds::Union{Dataset, GroupBy}, cols::MultiColumnIndex, gcols
 
     # _repeat_row_names = Vector{eltype(row_names)}(undef, _ngroups(ds)*length(colsidx))
     # _fill_row_names!(_repeat_row_names, row_names, _ngroups(ds))
-    _repeat_row_names = PooledArray(row_names)
+    _repeat_row_names = allowmissing(PooledArray(row_names))
     _repeat_row_names.refs = repeat(_repeat_row_names.refs, _ngroups(ds))
     insertcols!(outds, ncol(outds)+1, new_var_label => _repeat_row_names, unsupported_copy_cols = false)
     outds2 = Dataset(outputmat, new_col_names, copycols = false)

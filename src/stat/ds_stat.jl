@@ -22,7 +22,7 @@ function Base.sum(ds::Dataset, cols::MultiColumnIndex; by = identity, threads = 
         for i in 1:length(colsidx)
             _sum_ds_f_barrier!(res, ngroups, starts, _columns(ds)[colsidx[i]], ds, by, i)
         end
-        insertcols!(newds, :sum => res, copycols = false)
+        insertcols!(newds, ncol(newds)+1, :sum => res, unsupported_copy_cols = false)
 
     else
         insertcols!(newds, :var=>_names(ds)[colsidx])

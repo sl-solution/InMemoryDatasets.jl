@@ -123,8 +123,7 @@ include("byrow/util.jl")
 include("byrow/row_functions.jl")
 include("byrow/hp_row_functions.jl")
 include("byrow/byrow.jl")
-# ds stat
-include("stat/ds_stat.jl")
+
 # other functions
 include("dataset/other.jl")
 include("subdataset/subdataset.jl")
@@ -165,7 +164,8 @@ include("other/tables.jl")
 
 # taking care of missings in other packages
 include("missings/missings.jl")
-
+# ds stat
+include("stat/ds_stat.jl")
 # precompile
 # include("precompile/precompile.jl")
 include("precompile/warmup.jl")

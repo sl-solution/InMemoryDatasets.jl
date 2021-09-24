@@ -139,19 +139,18 @@ function stat_var(f, x::AbstractArray{T,1}, df=true)::Union{Float64, Missing} wh
     all(ismissing, x) && return missing
     length(x) == 1 && return zero(f(x[1]))
     _opvar(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]), _stat_add_sum(y1[3], y2[3]))
-    _dmiss(y) = ismissing(f(y)) ? zero(T) : f(y)
-    _varf(y) = (_dmiss(y) ^ 2, _dmiss(y) , _stat_notmissing(f(y)))
+    _dmiss(y) = ismissing(f(y)) ? 0.0 : f(y)
+    _varf(y) = (float(_dmiss(y)) ^ 2, float(_dmiss(y)) , _stat_notmissing(f(y)))
 
     ss, sval, n = mapreduce(_varf, _opvar, x)
-
     if n == 0
         return missing
     elseif n == 1
-        return zero(T)
+        return 0.0
     else
-        res = ss/n - (sval/n)*(sval/n)
+        res = ss/n - (sval/n)^2
         if df
-            return (n * res)/(n-1)
+            return (n /(n-1))*res
         else
             return res
         end
