@@ -16,6 +16,13 @@ _stat_max_fun(x, y) = max(x, y)
 _stat_max_fun(x, ::Missing) = x
 _stat_max_fun(::Missing, y) = y
 _stat_max_fun(::Missing, ::Missing) = missing
+_stat_realXcY(x, y) = Statistics.realXcY(x, y)
+_stat_realXcY(x, ::Missing) = x
+_stat_realXcY(::Missing, y) = y
+_stat_realXcY(::Missing,::Missing) = missing
+ISNAN(x::Any) = isnan(x)
+ISNAN(::Missing) = false
+
 _stat_bool(f) = x->f(x)::Bool
 
 _stat_ismissing(x::Any)::Int = 0
@@ -137,23 +144,22 @@ stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_w
 
 function stat_var(f, x::AbstractArray{T,1}, df=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     all(ismissing, x) && return missing
-    length(x) == 1 && return zero(f(x[1]))
-    _opvar(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]), _stat_add_sum(y1[3], y2[3]))
-    _dmiss(y) = ismissing(f(y)) ? 0.0 : f(y)
-    _varf(y) = (float(_dmiss(y)) ^ 2, float(_dmiss(y)) , _stat_notmissing(f(y)))
+    any(ISNAN, x) && return convert(eltype(x), NaN)
+    length(x) == 1 && return 0.0
+    meanval = stat_mean(f, x)
+    n = mapreduce(!ismissing, +, x)
 
-    ss, sval, n = mapreduce(_varf, _opvar, x)
+    ss = 0.0
+    for i in 1:length(x)
+        ss = _stat_add_sum(ss, abs2(f(x[i]) - meanval))
+    end
+
     if n == 0
         return missing
     elseif n == 1
         return 0.0
     else
-        res = ss/n - (sval/n)^2
-        if df
-            return (n /(n-1))*res
-        else
-            return res
-        end
+        return ss / (n - Int(df))
     end
 end
 
@@ -164,9 +170,6 @@ function stat_std(f , x::AbstractArray{T,1}, df=true)::Union{Float64, Missing} w
 end
 stat_std(x::AbstractArray{T,1}, df=true) where T = stat_std(identity, x, df)
 
-
-ISNAN(x::Any) = isnan(x)
-ISNAN(::Missing) = false
 function stat_median(v::AbstractArray{T,1}) where T
     isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))
     all(ismissing, v) && return missing
