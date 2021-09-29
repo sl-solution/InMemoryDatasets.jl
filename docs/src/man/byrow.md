@@ -46,6 +46,7 @@ Generally, `byrow` is very efficient for any `fun` which returns a single value 
 
 * `all`
 * `any`
+* `coalesce`
 * `count`
 * `hash`
 * `maximum`
@@ -57,13 +58,15 @@ Generally, `byrow` is very efficient for any `fun` which returns a single value 
 * `sum`
 * `var`
 
-The common syntax of `byrow` for all of these functions except `nunique` is:
+The common syntax of `byrow` for all of these functions except `nunique`, `coalesce` is:
 
 `byrow(ds, fun, cols; [by , threads = true])`
 
-The `by` keyword argument is for giving a function to call on each value before calling `fun` to aggregate the values, and `threads = true` causes `byrow` to exploit all cores available to Julia for performing the computations. 
- 
-The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique value of each row, and `count_missing = true` counts missings as a unique value. 
+The `by` keyword argument is for giving a function to call on each value before calling `fun` to aggregate the values, and `threads = true` causes `byrow` to exploit all cores available to Julia for performing the computations.
+
+The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique value of each row, and `count_missing = true` counts missings as a unique value.
+
+The `coalesce` function doesn't accept `by` argument.
 
 ### Examples
 
@@ -88,7 +91,7 @@ julia> ds = Dataset(g = [1, 1, 1, 2, 2],
    5 │        2         2        -2       10.0  missing       -100.0
 ```
 
-To compute the mean of each row for the float columns, we simply call, 
+To compute the mean of each row for the float columns, we simply call,
 
 ```jldoctest
 julia> byrow(ds, mean, r"_float")
@@ -114,7 +117,7 @@ julia> byrow(ds, mean, r"_float", by = abs)
  55.0
 ```
 
-To find rows which all their values are greater than 0 in the first three columns we can use the following code, 
+To find rows which all their values are greater than 0 in the first three columns we can use the following code,
 
 ```jldoctest
 julia> byrow(ds, all, 1:3, by = x -> isless(0, x))
@@ -128,7 +131,7 @@ julia> byrow(ds, all, 1:3, by = x -> isless(0, x))
 
 Note that in Julia `isless(0, missing)` is `true`.
 
-To find rows which contain at least one missing value in any of the columns we can use the following code, 
+To find rows which contain at least one missing value in any of the columns we can use the following code,
 
 ```jldoctest
 julia> byrow(ds, any, :, by = ismissing)
@@ -140,7 +143,7 @@ julia> byrow(ds, any, :, by = ismissing)
  1
 ```
 
-It means that except the third row, all other rows contain missing values. Using `byrow` with `count` function, we can count the number of non-missing values in each row, 
+It means that except the third row, all other rows contain missing values. Using `byrow` with `count` function, we can count the number of non-missing values in each row,
 
 ```jldoctest
 julia> byrow(ds, count, :, by = !ismissing)
@@ -161,7 +164,7 @@ julia> avg(x) = 1 * x[1] + 2 * x[2] + 3 * x[3]
 avg (generic function with 1 method)
 ```
 
-and directly use it in `byrow`, 
+and directly use it in `byrow`,
 
 ```jldoctest
 julia> byrow(ds, avg, 1:3)

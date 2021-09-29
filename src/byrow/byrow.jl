@@ -44,6 +44,9 @@ function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; b
 end
 byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; by = x->isequal(true, x), threads = true && nrow(ds)>1000) = byrow(ds, all, [col]; by = by, threads = threads)
 
+byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = true && nrow(ds)>1000) = threads ? hp_row_coalesce(ds, cols) : row_coalesce(ds, cols)
+
+
 byrow(ds::AbstractDataset, ::typeof(mean), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = true && nrow(ds)>1000) = threads ? hp_row_mean(ds, by, cols) : row_mean(ds, by, cols)
 byrow(ds::AbstractDataset, ::typeof(mean), col::ColumnIndex; by = identity, threads = true && nrow(ds)>1000) = byrow(ds, mean, [col]; by = by, threads = threads)
 
@@ -108,4 +111,10 @@ function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = tru
 		map!(f, res, ds[!, col].val)
 	end
 	res
+end
+
+
+function byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex; op = .+, kwargs...)
+	colsidx = index(ds)[cols]
+	mapreduce(identity, op, view(_columns(ds),colsidx); kwargs...)
 end

@@ -69,6 +69,13 @@ function row_all(ds::AbstractDataset, f::Function, cols = :)
 end
 row_all(ds::AbstractDataset, cols = :) = row_all(ds, isequal(true), cols)
 
+function row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}))
+    colsidx = index(ds)[cols]
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
+    _op_for_coalesce!(x, y) = x .= ifelse.(ismissing.(x), y, x)
+    init0 = fill!(Vector{Union{Missing, CT}}(undef, size(ds,1)), missing)
+    mapreduce(identity, _op_for_coalesce!, view(_columns(ds),colsidx), init = init0)
+end
 
 function row_mean(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     row_sum(ds, f, cols) ./ row_count(ds, x -> !ismissing(x), cols)
