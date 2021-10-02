@@ -2,7 +2,7 @@ module InMemoryDatasets
 
 
 
-# using TableTraits,IteratorInterfaceExtensions
+using TableTraits,IteratorInterfaceExtensions
 using Reexport
 using Compat
 using Printf

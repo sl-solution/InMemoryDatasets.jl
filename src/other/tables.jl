@@ -96,7 +96,7 @@ Tables.getcolumn(itr::Union{DatasetRows, DatasetColumns}, i::Int) =
 Tables.getcolumn(itr::Union{DatasetRows, DatasetColumns}, nm::Symbol) =
     Tables.getcolumn(parent(itr), nm)
 
-# IteratorInterfaceExtensions.getiterator(df::AbstractDataset) =
-#     Tables.datavaluerows(Tables.columntable(df))
-# IteratorInterfaceExtensions.isiterable(x::AbstractDataset) = true
-# TableTraits.isiterabletable(x::AbstractDataset) = true
+IteratorInterfaceExtensions.getiterator(df::AbstractDataset) =
+    Tables.datavaluerows(Tables.columntable(df))
+IteratorInterfaceExtensions.isiterable(x::AbstractDataset) = true
+TableTraits.isiterabletable(x::AbstractDataset) = true
