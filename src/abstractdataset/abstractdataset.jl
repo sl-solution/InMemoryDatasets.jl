@@ -29,13 +29,6 @@ The following are normally implemented for AbstractDatasets:
 * [`nonunique`](@ref) : indexes of duplicate rows
 * [`unique`](@ref) : remove duplicate rows
 * [`unique!`](@ref) : remove duplicate rows in-place
-* [`disallowmissing`](@ref) : drop support for missing values in columns
-* [`disallowmissing!`](@ref) : drop support for missing values in columns in-place
-* [`allowmissing`](@ref) : add support for missing values in columns
-* [`allowmissing!`](@ref) : add support for missing values in columns in-place
-* `similar` : a Dataset with similar columns as `d`
-* `filter` : remove rows
-* `filter!` : remove rows in-place
 
 # Indexing and broadcasting
 
@@ -402,26 +395,26 @@ function content(ds::AbstractDataset; output = false)
 end
 
 """
-    rename!(df::AbstractDataset, vals::AbstractVector{Symbol};
+    rename!(ds::AbstractDataset, vals::AbstractVector{Symbol};
             makeunique::Bool=false)
-    rename!(df::AbstractDataset, vals::AbstractVector{<:AbstractString};
+    rename!(ds::AbstractDataset, vals::AbstractVector{<:AbstractString};
             makeunique::Bool=false)
-    rename!(df::AbstractDataset, (from => to)::Pair...)
-    rename!(df::AbstractDataset, d::AbstractDict)
-    rename!(df::AbstractDataset, d::AbstractVector{<:Pair})
-    rename!(f::Function, df::AbstractDataset)
+    rename!(ds::AbstractDataset, (from => to)::Pair...)
+    rename!(ds::AbstractDataset, d::AbstractDict)
+    rename!(ds::AbstractDataset, d::AbstractVector{<:Pair})
+    rename!(f::Function, ds::AbstractDataset)
 
-Rename columns of `df` in-place.
+Rename columns of `ds` in-place.
 Each name is changed at most once. Permutation of names is allowed.
 
 # Arguments
-- `df` : the `AbstractDataset`
+- `ds` : the `AbstractDataset`
 - `d` : an `AbstractDict` or an `AbstractVector` of `Pair`s that maps
   the original names or column numbers to new names
 - `f` : a function which for each column takes the old name as a `String`
   and returns the new name that gets converted to a `Symbol`
 - `vals` : new column names as a vector of `Symbol`s or `AbstractString`s
-  of the same length as the number of columns in `df`
+  of the same length as the number of columns in `ds`
 - `makeunique` : if `false` (the default), an error will be raised
   if duplicate names are found; if `true`, duplicate names will be suffixed
   with `_i` (`i` starting at 1 for the first duplicate).
@@ -437,45 +430,51 @@ See also: [`rename`](@ref)
 
 # Examples
 ```jldoctest
-julia> df = Dataset(i = 1, x = 2, y = 3)
+julia> ds = Dataset(i = 1, x = 2, y = 3)
 1×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 
-julia> rename!(df, Dict(:i => "A", :x => "X"))
+julia> rename!(ds, Dict(:i => "A", :x => "X"))
 1×3 Dataset
- Row │ A      X      y
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ A         X         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 
-julia> rename!(df, [:a, :b, :c])
+julia> rename!(ds, [:a, :b, :c])
 1×3 Dataset
- Row │ a      b      c
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 
-julia> rename!(df, [:a, :b, :a])
+julia> rename!(ds, [:a, :b, :a])
 ERROR: ArgumentError: Duplicate variable names: :a. Pass makeunique=true to make them unique using a suffix automatically.
 
-julia> rename!(df, [:a, :b, :a], makeunique=true)
+julia> rename!(ds, [:a, :b, :a], makeunique=true)
 1×3 Dataset
- Row │ a      b      a_1
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ a         b         a_1
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 
-julia> rename!(uppercase, df)
+julia> rename!(uppercase, ds)
 1×3 Dataset
- Row │ A      B      A_1
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ A         B         A_1
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 ```
 """
+
 function rename!(ds::AbstractDataset, vals::AbstractVector{Symbol};
                  makeunique::Bool=false)
     # Modify Dataset
@@ -534,27 +533,27 @@ function rename!(f::Function, ds::AbstractDataset)
 end
 
 """
-    rename(df::AbstractDataset, vals::AbstractVector{Symbol};
+    rename(ds::AbstractDataset, vals::AbstractVector{Symbol};
            makeunique::Bool=false)
-    rename(df::AbstractDataset, vals::AbstractVector{<:AbstractString};
+    rename(ds::AbstractDataset, vals::AbstractVector{<:AbstractString};
            makeunique::Bool=false)
-    rename(df::AbstractDataset, (from => to)::Pair...)
-    rename(df::AbstractDataset, d::AbstractDict)
-    rename(df::AbstractDataset, d::AbstractVector{<:Pair})
-    rename(f::Function, df::AbstractDataset)
+    rename(ds::AbstractDataset, (from => to)::Pair...)
+    rename(ds::AbstractDataset, d::AbstractDict)
+    rename(ds::AbstractDataset, d::AbstractVector{<:Pair})
+    rename(f::Function, ds::AbstractDataset)
 
-Create a new data set that is a copy of `df` with changed column names.
+Create a new data set that is a copy of `ds` with changed column names.
 Each name is changed at most once. Permutation of names is allowed.
 
 # Arguments
-- `df` : the `AbstractDataset`; if it is a `SubDataset` then renaming is
+- `ds` : the `AbstractDataset`; if it is a `SubDataset` then renaming is
   only allowed if it was created using `:` as a column selector.
 - `d` : an `AbstractDict` or an `AbstractVector` of `Pair`s that maps
   the original names or column numbers to new names
 - `f` : a function which for each column takes the old name as a `String`
   and returns the new name that gets converted to a `Symbol`
 - `vals` : new column names as a vector of `Symbol`s or `AbstractString`s
-  of the same length as the number of columns in `df`
+  of the same length as the number of columns in `ds`
 - `makeunique` : if `false` (the default), an error will be raised
   if duplicate names are found; if `true`, duplicate names will be suffixed
   with `_i` (`i` starting at 1 for the first duplicate).
@@ -570,49 +569,56 @@ See also: [`rename!`](@ref)
 
 # Examples
 ```jldoctest
-julia> df = Dataset(i = 1, x = 2, y = 3)
+julia> ds = Dataset(i = 1, x = 2, y = 3)
 1×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 
-julia> rename(df, :i => :A, :x => :X)
+julia> rename(ds, :i => :A, :x => :X)
 1×3 Dataset
- Row │ A      X      y
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ A         X         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 
-julia> rename(df, :x => :y, :y => :x)
+julia> rename(ds, :x => :y, :y => :x)
 1×3 Dataset
- Row │ i      y      x
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ i         y         x
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 
-julia> rename(df, [1 => :A, 2 => :X])
+julia> rename(ds, [1 => :A, 2 => :X])
 1×3 Dataset
- Row │ A      X      y
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ A         X         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 
-julia> rename(df, Dict("i" => "A", "x" => "X"))
+julia> rename(ds, Dict("i" => "A", "x" => "X"))
 1×3 Dataset
- Row │ A      X      y
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ A         X         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 
-julia> rename(uppercase, df)
+julia> rename(uppercase, ds)
 1×3 Dataset
- Row │ I      X      Y
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      2      3
+ Row │ I         X         Y
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         2         3
 ```
 """
+
 rename(ds::AbstractDataset, vals::AbstractVector{Symbol};
        makeunique::Bool=false) = rename!(copy(ds), vals, makeunique=makeunique)
 rename(ds::AbstractDataset, vals::AbstractVector{<:AbstractString};
@@ -621,9 +627,9 @@ rename(ds::AbstractDataset, args...) = rename!(copy(ds), args...)
 rename(f::Function, ds::AbstractDataset) = rename!(f, copy(ds))
 
 """
-    size(df::AbstractDataset[, dim])
+    size(ds::AbstractDataset[, dim])
 
-Return a tuple containing the number of rows and columns of `df`.
+Return a tuple containing the number of rows and columns of `ds`.
 Optionally a dimension `dim` can be specified, where `1` corresponds to rows
 and `2` corresponds to columns.
 
@@ -631,12 +637,12 @@ See also: [`nrow`](@ref), [`ncol`](@ref)
 
 # Examples
 ```jldoctest
-julia> df = Dataset(a=1:3, b='a':'c');
+julia> ds = Dataset(a=1:3, b='a':'c');
 
-julia> size(df)
+julia> size(ds)
 (3, 2)
 
-julia> size(df, 1)
+julia> size(ds, 1)
 3
 ```
 """
@@ -793,89 +799,6 @@ Get a data set with the `n` last rows of `ds`.
 Base.last(ds::AbstractDataset, n::Integer) = ds[max(1, nrow(ds)-n+1):nrow(ds), :]
 
 
-"""
-    describe(ds::AbstractDataset; cols=:)
-    describe(ds::AbstractDataset, stats::Union{Symbol, Pair}...; cols=:)
-
-Return descriptive statistics for a data set as a new `Dataset`
-where each row represents a variable and each column a summary statistic.
-
-# Arguments
-- `ds` : the `AbstractDataset`
-- `stats::Union{Symbol, Pair}...` : the summary statistics to report.
-  Arguments can be:
-    - A symbol from the list `:mean`, `:std`, `:min`, `:q25`,
-      `:median`, `:q75`, `:max`, `:eltype`, `:nunique`, `:first`, `:last`, and
-      `:nmissing`. The default statistics used are `:mean`, `:min`, `:median`,
-      `:max`, `:nmissing`, and `:eltype`.
-    - `:all` as the only `Symbol` argument to return all statistics.
-    - A `function => name` pair where `name` is a `Symbol` or string. This will
-      create a column of summary statistics with the provided name.
-- `cols` : a keyword argument allowing to select only a subset or transformation
-  of columns from `ds` to describe. Can be any column selector or transformation
-  accepted by [`select`](@ref).
-
-# Details
-For `Real` columns, compute the mean, standard deviation, minimum, first
-quantile, median, third quantile, and maximum. If a column does not derive from
-`Real`, `describe` will attempt to calculate all statistics, using `nothing` as
-a fall-back in the case of an error.
-
-When `stats` contains `:nunique`, `describe` will report the
-number of unique values in a column. If a column's base type derives from `Real`,
-`:nunique` will return `nothing`s.
-
-Missing values are filtered in the calculation of all statistics, however the
-column `:nmissing` will report the number of missing values of that variable.
-
-If custom functions are provided, they are called repeatedly with the vector
-corresponding to each column as the only argument. For columns allowing for
-missing values, the vector is wrapped in a call to `skipmissing`: custom
-functions must therefore support such objects (and not only vectors), and cannot
-access missing values.
-
-# Examples
-```jldoctest
-julia> ds = Dataset(i=1:10, x=0.1:0.1:1.0, y='a':'j');
-
-julia> describe(ds)
-3×7 Dataset
- Row │ variable  mean    min  median  max  nmissing  eltype
-     │ Symbol    Union…  Any  Union…  Any  Int64     DataType
-─────┼────────────────────────────────────────────────────────
-   1 │ i         5.5     1    5.5     10          0  Int64
-   2 │ x         0.55    0.1  0.55    1.0         0  Float64
-   3 │ y                 a            j           0  Char
-
-julia> describe(ds, :min, :max)
-3×3 Dataset
- Row │ variable  min  max
-     │ Symbol    Any  Any
-─────┼────────────────────
-   1 │ i         1    10
-   2 │ x         0.1  1.0
-   3 │ y         a    j
-
-julia> describe(ds, :min, sum => :sum)
-3×3 Dataset
- Row │ variable  min  sum
-     │ Symbol    Any  Union…
-─────┼───────────────────────
-   1 │ i         1    55
-   2 │ x         0.1  5.5
-   3 │ y         a
-
-julia> describe(ds, :min, sum => :sum, cols=:x)
-1×3 Dataset
- Row │ variable  min      sum
-     │ Symbol    Float64  Float64
-─────┼────────────────────────────
-   1 │ x             0.1      5.5
-```
-"""
-
-
-
 ##############################################################################
 ##
 ## Miscellaneous
@@ -898,17 +821,18 @@ Use `findall(completecases(ds))` to get the indices of the rows.
 
 ```jldoctest
 julia> ds = Dataset(i = 1:5,
-                            x = [missing, 4, missing, 2, 1],
-                            y = [missing, missing, "c", "d", "e"])
+                x = [missing, 4, missing, 2, 1],
+                y = [missing, missing, "c", "d", "e"])
 5×3 Dataset
- Row │ i      x        y
-     │ Int64  Int64?   String?
-─────┼─────────────────────────
-   1 │     1  missing  missing
-   2 │     2        4  missing
-   3 │     3  missing  c
-   4 │     4        2  d
-   5 │     5        1  e
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    String?
+─────┼──────────────────────────────
+   1 │        1   missing  missing
+   2 │        2         4  missing
+   3 │        3   missing  c
+   4 │        4         2  d
+   5 │        5         1  e
 
 julia> completecases(ds)
 5-element BitVector:
@@ -938,40 +862,8 @@ julia> completecases(ds, [:x, :y])
 completecases(ds::AbstractDataset, cols::MultiColumnIndex = :) = byrow(ds, all, cols, by = !ismissing)
 completecases(ds::AbstractDataset, col::ColumnIndex) = byrow(ds, all, [col], by = !ismissing)
 
-# function completecases(ds::AbstractDataset, col::Colon=:)
-#     if ncol(ds) == 0
-#         throw(ArgumentError("Unable to compute complete cases of a " *
-#                             "data set with no columns"))
-#     end
-#     res = trues(size(ds, 1))
-#     aux = BitVector(undef, size(ds, 1))
-#     for i in 1:size(ds, 2)
-#         v = ds[!, i]
-#         if Missing <: eltype(v)
-#             # Disable fused broadcasting as it happens to be much slower
-#             aux .= .!ismissing.(v)
-#             res .&= aux
-#         end
-#     end
-#     return res
-# end
-
-# function completecases(ds::AbstractDataset, col::ColumnIndex)
-#     v = ds[!, col]
-#     if Missing <: eltype(v)
-#         res = BitVector(undef, size(ds, 1))
-#         res .= .!ismissing.(v)
-#         return res
-#     else
-#         return trues(size(ds, 1))
-#     end
-# end
-
-# completecases(ds::AbstractDataset, cols::MultiColumnIndex) =
-#     completecases(ds[!, cols])
-
 """
-    dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, disallowmissing::Bool=!view)
+    dropmissing(ds::AbstractDataset, cols=:; view::Bool=false)
 
 Return a data set excluding rows with missing values in `ds`.
 
@@ -979,12 +871,7 @@ If `cols` is provided, only missing values in the corresponding columns are cons
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
 If `view=false` a freshly allocated `Dataset` is returned.
-If `view=true` then a `SubDataset` view into `ds` is returned. In this case
-`disallowmissing` must be `false`.
-
-If `disallowmissing` is `true` (the default when `view` is `false`)
-then columns specified in `cols` will be converted so as not to allow for missing
-values using [`disallowmissing!`](@ref).
+If `view=true` then a `SubDataset` view into `ds` is returned.
 
 See also: [`completecases`](@ref) and [`dropmissing!`](@ref).
 
@@ -992,50 +879,46 @@ See also: [`completecases`](@ref) and [`dropmissing!`](@ref).
 
 ```jldoctest
 julia> ds = Dataset(i = 1:5,
-                      x = [missing, 4, missing, 2, 1],
-                      y = [missing, missing, "c", "d", "e"])
+                x = [missing, 4, missing, 2, 1],
+                y = [missing, missing, "c", "d", "e"])
 5×3 Dataset
- Row │ i      x        y
-     │ Int64  Int64?   String?
-─────┼─────────────────────────
-   1 │     1  missing  missing
-   2 │     2        4  missing
-   3 │     3  missing  c
-   4 │     4        2  d
-   5 │     5        1  e
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    String?
+─────┼──────────────────────────────
+   1 │        1   missing  missing
+   2 │        2         4  missing
+   3 │        3   missing  c
+   4 │        4         2  d
+   5 │        5         1  e
 
 julia> dropmissing(ds)
 2×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  String
-─────┼──────────────────────
-   1 │     4      2  d
-   2 │     5      1  e
-
-julia> dropmissing(ds, disallowmissing=false)
-2×3 Dataset
- Row │ i      x       y
-     │ Int64  Int64?  String?
-─────┼────────────────────────
-   1 │     4       2  d
-   2 │     5       1  e
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    String?
+─────┼──────────────────────────────
+   1 │        4         2  d
+   2 │        5         1  e
 
 julia> dropmissing(ds, :x)
 3×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  String?
-─────┼───────────────────────
-   1 │     2      4  missing
-   2 │     4      2  d
-   3 │     5      1  e
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    String?
+─────┼──────────────────────────────
+   1 │        2         4  missing
+   2 │        4         2  d
+   3 │        5         1  e
 
 julia> dropmissing(ds, [:x, :y])
 2×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  String
-─────┼──────────────────────
-   1 │     4      2  d
-   2 │     5      1  e
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    String?
+─────┼──────────────────────────────
+   1 │        4         2  d
+   2 │        5         1  e
 ```
 """
 @inline function dropmissing(ds::AbstractDataset,
@@ -1050,220 +933,6 @@ julia> dropmissing(ds, [:x, :y])
     end
 end
 
-"""
-    filter(fun, df::AbstractDataset; view::Bool=false)
-    filter(cols => fun, df::AbstractDataset; view::Bool=false)
-
-Return a data set containing only rows from `df` for which `fun`
-returns `true`.
-
-If `cols` is not specified then the predicate `fun` is passed `DatasetRow`s.
-
-If `cols` is specified then the predicate `fun` is passed elements of the
-corresponding columns as separate positional arguments, unless `cols` is an
-`AsTable` selector, in which case a `NamedTuple` of these arguments is passed.
-`cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR), and
-column duplicates are allowed if a vector of `Symbol`s, strings, or integers is
-passed.
-
-If `view=false` a freshly allocated `Dataset` is returned.
-If `view=true` then a `SubDataset` view into `df` is returned.
-
-Passing `cols` leads to a more efficient execution of the operation for large data sets.
-
-See also: [`filter!`](@ref)
-
-# Examples
-```jldoctest
-julia> df = Dataset(x = [3, 1, 2, 1], y = ["b", "c", "a", "b"])
-4×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-   2 │     1  c
-   3 │     2  a
-   4 │     1  b
-
-julia> filter(row -> row.x > 1, df)
-2×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-   2 │     2  a
-
-julia> filter(:x => x -> x > 1, df)
-2×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-   2 │     2  a
-
-julia> filter([:x, :y] => (x, y) -> x == 1 || y == "b", df)
-3×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-   2 │     1  c
-   3 │     1  b
-
-julia> filter(AsTable(:) => nt -> nt.x == 1 || nt.y == "b", df)
-3×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-   2 │     1  c
-   3 │     1  b
-```
-# """
-# @inline function Base.filter(f, ds::AbstractDataset; view::Bool=false)
-#     rowidxs = _filter_helper(f, eachrow(ds))
-#     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
-# end
-
-# @inline function Base.filter((cols, f)::Pair, ds::AbstractDataset; view::Bool=false)
-#     int_cols = index(ds)[cols] # it will be AbstractVector{Int} or Int
-#     if length(int_cols) == 0
-#         rowidxs = [f() for _ in axes(ds, 1)]
-#     else
-#         rowidxs = _filter_helper(f, (ds[!, i] for i in int_cols)...)
-#     end
-#     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
-# end
-
-# # this method is needed to allow for passing duplicate columns
-# @inline function Base.filter((cols, f)::Pair{<:Union{AbstractVector{<:Integer},
-#                                                      AbstractVector{<:AbstractString},
-#                                                      AbstractVector{<:Symbol}}},
-#                              ds::AbstractDataset; view::Bool=false)
-#     if length(cols) == 0
-#         rowidxs = [f() for _ in axes(ds, 1)]
-#     else
-#         rowidxs = _filter_helper(f, (ds[!, i] for i in cols)...)
-#     end
-#     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
-# end
-
-# _filter_helper(f, cols...)::BitVector = ((x...) -> f(x...)::Bool).(cols...)
-
-# @inline function Base.filter((cols, f)::Pair{AsTable}, df::AbstractDataset;
-#                              view::Bool=false)
-#     df_tmp = select(df, cols.cols, copycols=false)
-#     if ncol(df_tmp) == 0
-#         rowidxs = [f(NamedTuple()) for _ in axes(df, 1)]
-#     else
-#         rowidxs = _filter_helper_astable(f, Tables.namedtupleiterator(df_tmp))
-#     end
-#     return view ? Base.view(df, rowidxs, :) : df[rowidxs, :]
-# end
-
-# _filter_helper_astable(f, nti::Tables.NamedTupleIterator)::BitVector = (x -> f(x)::Bool).(nti)
-
-"""
-    filter!(fun, ds::AbstractDataset)
-    filter!(cols => fun, ds::AbstractDataset)
-
-Remove rows from data set `ds` for which `fun` returns `false`.
-
-If `cols` is not specified then the predicate `fun` is passed `DatasetRow`s.
-
-If `cols` is specified then the predicate `fun` is passed elements of the
-corresponding columns as separate positional arguments, unless `cols` is an
-`AsTable` selector, in which case a `NamedTuple` of these arguments is passed.
-`cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR), and
-column duplicates are allowed if a vector of `Symbol`s, strings, or integers is
-passed.
-
-Passing `cols` leads to a more efficient execution of the operation for large data sets.
-
-See also: [`filter`](@ref)
-
-# Examples
-```jldoctest
-julia> ds = Dataset(x = [3, 1, 2, 1], y = ["b", "c", "a", "b"])
-4×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-   2 │     1  c
-   3 │     2  a
-   4 │     1  b
-
-julia> filter!(row -> row.x > 1, ds)
-2×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-   2 │     2  a
-
-julia> filter!(:x => x -> x == 3, ds)
-1×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-
-julia> ds = Dataset(x = [3, 1, 2, 1], y = ["b", "c", "a", "b"]);
-
-julia> filter!([:x, :y] => (x, y) -> x == 1 || y == "b", ds)
-3×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-   2 │     1  c
-   3 │     1  b
-
-julia> ds = Dataset(x = [3, 1, 2, 1], y = ["b", "c", "a", "b"]);
-
-julia> filter!(AsTable(:) => nt -> nt.x == 1 || nt.y == "b", ds)
-3×2 Dataset
- Row │ x      y
-     │ Int64  String
-─────┼───────────────
-   1 │     3  b
-   2 │     1  c
-   3 │     1  b
-```
-"""
-# Base.filter!(f, ds::AbstractDataset) = delete!(ds, findall(!f, eachrow(ds)))
-# Base.filter!((col, f)::Pair{<:ColumnIndex}, ds::AbstractDataset) =
-#     _filter!_helper(ds, f, ds[!, col])
-# Base.filter!((cols, f)::Pair{<:AbstractVector{Symbol}}, ds::AbstractDataset) =
-#     filter!([index(ds)[col] for col in cols] => f, ds)
-# Base.filter!((cols, f)::Pair{<:AbstractVector{<:AbstractString}}, ds::AbstractDataset) =
-#     filter!([index(ds)[col] for col in cols] => f, ds)
-# Base.filter!((cols, f)::Pair, ds::AbstractDataset) =
-#     filter!(index(ds)[cols] => f, ds)
-# Base.filter!((cols, f)::Pair{<:AbstractVector{Int}}, ds::AbstractDataset) =
-#     _filter!_helper(ds, f, (ds[!, i] for i in cols)...)
-
-# function _filter!_helper(ds::AbstractDataset, f, cols...)
-#     if length(cols) == 0
-#         rowidxs = findall(x -> !f(), axes(ds, 1))
-#     else
-#         rowidxs = findall(((x...) -> !(f(x...)::Bool)).(cols...))
-#     end
-#     return delete!(ds, rowidxs)
-# end
-
-# function Base.filter!((cols, f)::Pair{<:AsTable}, df::AbstractDataset)
-#     dff = select(df, cols.cols, copycols=false)
-#     if ncol(dff) == 0
-#         return delete!(df, findall(x -> !f(NamedTuple()), axes(df, 1)))
-#     else
-#         return _filter!_helper_astable(df, Tables.namedtupleiterator(dff), f)
-#     end
-# end
-
-# _filter!_helper_astable(ds::AbstractDataset, nti::Tables.NamedTupleIterator, f) =
-    # delete!(ds, _findall((x -> !(f(x)::Bool)).(nti)))
 
 function Base.Matrix(ds::AbstractDataset)
     T = mapreduce(eltype, promote_type, _columns(ds))
@@ -1295,45 +964,48 @@ Base.Array(ds::AbstractDataset) = Matrix(ds)
 Base.Array{T}(ds::AbstractDataset) where {T} = Matrix{T}(ds)
 
 """
-    nonunique(ds::AbstractDataset)
-    nonunique(ds::AbstractDataset, cols)
+    nonunique(ds::AbstractDataset; [mapformats = false])
+    nonunique(ds::AbstractDataset, cols; [mapformats = false])
 
 Return a `Vector{Bool}` in which `true` entries indicate duplicate rows.
 A row is a duplicate if there exists a prior row with all columns containing
 equal values (according to `isequal`).
 
+If `mapformats = true` the values are checked based on their formatted values.
+
 See also [`unique`](@ref) and [`unique!`](@ref).
 
 # Arguments
 - `ds` : `AbstractDataset`
-- `cols` : a selector specifying the column(s) or their transformations to compare.
-  Can be any column selector or transformation accepted by [`select`](@ref).
+- `cols` : a selector specifying the column(s)
 
 # Examples
 ```jldoctest
 julia> ds = Dataset(i = 1:4, x = [1, 2, 1, 2])
 4×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
+ Row │ i         x
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         1
+   4 │        4         2
 
 julia> ds = vcat(ds, ds)
 8×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
-   5 │     1      1
-   6 │     2      2
-   7 │     3      1
-   8 │     4      2
+ Row │ i         x
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         1
+   4 │        4         2
+   5 │        1         1
+   6 │        2         2
+   7 │        3         1
+   8 │        4         2
 
 julia> nonunique(ds)
 8-element Vector{Bool}:
@@ -1367,102 +1039,13 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
     groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
-    # unique rows are the first encountered group representatives,
-    # nonunique are everything else
-    # @inbounds for g_row in gslots
-    #     (g_row > 0) && (res[g_row] = false)
-    # end
+
     @inbounds for i in 1:length(res)
         seen_groups[groups[i]] ? nothing : (seen_groups[groups[i]] = true; res[i] = false)
     end
     return res
 end
 nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false) = nonunique(ds, [col]; mapformats = mapformats)
-# nonunique(df::AbstractDataset, cols) = nonunique(select(df, cols, copycols=false))
-
-#
-#
-# """
-#     hcat(ds::AbstractDataset...;
-#          makeunique::Bool=false, copycols::Bool=true)
-#     hcat(ds::AbstractDataset..., vs::AbstractVector;
-#          makeunique::Bool=false, copycols::Bool=true)
-#     hcat(vs::AbstractVector, ds::AbstractDataset;
-#          makeunique::Bool=false, copycols::Bool=true)
-#
-# Horizontally concatenate `AbstractDatasets` and optionally `AbstractVector`s.
-#
-# If `AbstractVector` is passed then a column name for it is automatically generated
-# as `:x1` by default.
-#
-# If `makeunique=false` (the default) column names of passed objects must be unique.
-# If `makeunique=true` then duplicate column names will be suffixed
-# with `_i` (`i` starting at 1 for the first duplicate).
-#
-# If `copycols=true` (the default) then the `Dataset` returned by `hcat` will
-# contain copied columns from the source data sets.
-# If `copycols=false` then it will contain columns as they are stored in the
-# source (without copying). This option should be used with caution as mutating
-# either the columns in sources or in the returned `Dataset` might lead to
-# the corruption of the other object.
-#
-# # Example
-# ```jldoctest
-# julia> ds1 = Dataset(A=1:3, B=1:3)
-# 3×2 Dataset
-#  Row │ A      B
-#      │ Int64  Int64
-# ─────┼──────────────
-#    1 │     1      1
-#    2 │     2      2
-#    3 │     3      3
-#
-# julia> ds2 = Dataset(A=4:6, B=4:6)
-# 3×2 Dataset
-#  Row │ A      B
-#      │ Int64  Int64
-# ─────┼──────────────
-#    1 │     4      4
-#    2 │     5      5
-#    3 │     6      6
-#
-# julia> ds3 = hcat(ds1, ds2, makeunique=true)
-# 3×4 Dataset
-#  Row │ A      B      A_1    B_1
-#      │ Int64  Int64  Int64  Int64
-# ─────┼────────────────────────────
-#    1 │     1      1      4      4
-#    2 │     2      2      5      5
-#    3 │     3      3      6      6
-#
-# julia> ds3.A === ds1.A
-# false
-#
-# julia> ds3 = hcat(ds1, ds2, makeunique=true, copycols=false);
-#
-# julia> ds3.A === ds1.A
-# true
-# ```
-# """
-# Base.hcat(ds::AbstractDataset; makeunique::Bool=false, copycols::Bool=true) =
-#     Dataset(ds, copycols=copycols)
-# Base.hcat(ds::AbstractDataset, x; makeunique::Bool=false, copycols::Bool=true) =
-#     hcat!(Dataset(ds, copycols=copycols), x,
-#           makeunique=makeunique, copycols=copycols)
-# Base.hcat(x, ds::AbstractDataset; makeunique::Bool=false, copycols::Bool=true) =
-#     hcat!(x, ds, makeunique=makeunique, copycols=copycols)
-# Base.hcat(ds1::AbstractDataset, ds2::AbstractDataset;
-#           makeunique::Bool=false, copycols::Bool=true) =
-#     hcat!(Dataset(ds1, copycols=copycols), ds2,
-#           makeunique=makeunique, copycols=copycols)
-# Base.hcat(ds::AbstractDataset, x, y...;
-#           makeunique::Bool=false, copycols::Bool=true) =
-#     hcat!(hcat(ds, x, makeunique=makeunique, copycols=copycols), y...,
-#           makeunique=makeunique, copycols=copycols)
-# Base.hcat(ds1::AbstractDataset, ds2::AbstractDataset, dsn::AbstractDataset...;
-#           makeunique::Bool=false, copycols::Bool=true) =
-#     hcat!(hcat(ds1, ds2, makeunique=makeunique, copycols=copycols), dsn...,
-#           makeunique=makeunique, copycols=copycols)
 
 """
     vcat(dss::AbstractDataset...;
@@ -1510,108 +1093,117 @@ data set at the beginning of a loop and `vcat` onto it.
 ```jldoctest
 julia> ds1 = Dataset(A=1:3, B=1:3)
 3×2 Dataset
- Row │ A      B
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      3
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         3
 
 julia> ds2 = Dataset(A=4:6, B=4:6)
 3×2 Dataset
- Row │ A      B
-     │ Int64  Int64
-─────┼──────────────
-   1 │     4      4
-   2 │     5      5
-   3 │     6      6
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        4         4
+   2 │        5         5
+   3 │        6         6
 
 julia> ds3 = Dataset(A=7:9, C=7:9)
 3×2 Dataset
- Row │ A      C
-     │ Int64  Int64
-─────┼──────────────
-   1 │     7      7
-   2 │     8      8
-   3 │     9      9
+ Row │ A         C
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        7         7
+   2 │        8         8
+   3 │        9         9
 
 julia> ds4 = Dataset()
 0×0 Dataset
 
 julia> vcat(ds1, ds2)
 6×2 Dataset
- Row │ A      B
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      3
-   4 │     4      4
-   5 │     5      5
-   6 │     6      6
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         3
+   4 │        4         4
+   5 │        5         5
+   6 │        6         6
 
 julia> vcat(ds1, ds3, cols=:union)
 6×3 Dataset
- Row │ A      B        C
-     │ Int64  Int64?   Int64?
-─────┼─────────────────────────
-   1 │     1        1  missing
-   2 │     2        2  missing
-   3 │     3        3  missing
-   4 │     7  missing        7
-   5 │     8  missing        8
-   6 │     9  missing        9
+ Row │ A         B         C
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         1   missing
+   2 │        2         2   missing
+   3 │        3         3   missing
+   4 │        7   missing         7
+   5 │        8   missing         8
+   6 │        9   missing         9
 
 julia> vcat(ds1, ds3, cols=:intersect)
 6×1 Dataset
  Row │ A
-     │ Int64
-─────┼───────
-   1 │     1
-   2 │     2
-   3 │     3
-   4 │     7
-   5 │     8
-   6 │     9
+     │ identity
+     │ Int64?
+─────┼──────────
+   1 │        1
+   2 │        2
+   3 │        3
+   4 │        7
+   5 │        8
+   6 │        9
 
 julia> vcat(ds4, ds1)
 3×2 Dataset
- Row │ A      B
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      3
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         3
 
 julia> vcat(ds1, ds2, ds3, ds4, cols=:union, source="source")
 9×4 Dataset
- Row │ A      B        C        source
-     │ Int64  Int64?   Int64?   Int64
-─────┼─────────────────────────────────
-   1 │     1        1  missing       1
-   2 │     2        2  missing       1
-   3 │     3        3  missing       1
-   4 │     4        4  missing       2
-   5 │     5        5  missing       2
-   6 │     6        6  missing       2
-   7 │     7  missing        7       3
-   8 │     8  missing        8       3
-   9 │     9  missing        9       3
+ Row │ A         B         C         source
+     │ identity  identity  identity  identity
+     │ Int64?    Int64?    Int64?    Int64?
+─────┼────────────────────────────────────────
+   1 │        1         1   missing         1
+   2 │        2         2   missing         1
+   3 │        3         3   missing         1
+   4 │        4         4   missing         2
+   5 │        5         5   missing         2
+   6 │        6         6   missing         2
+   7 │        7   missing         7         3
+   8 │        8   missing         8         3
+   9 │        9   missing         9         3
 
 julia> vcat(ds1, ds2, ds4, ds3, cols=:union, source=:source => 'a':'d')
 9×4 Dataset
- Row │ A      B        C        source
-     │ Int64  Int64?   Int64?   Char
-─────┼─────────────────────────────────
-   1 │     1        1  missing  a
-   2 │     2        2  missing  a
-   3 │     3        3  missing  a
-   4 │     4        4  missing  b
-   5 │     5        5  missing  b
-   6 │     6        6  missing  b
-   7 │     7  missing        7  d
-   8 │     8  missing        8  d
-   9 │     9  missing        9  d
+ Row │ A         B         C         source
+     │ identity  identity  identity  identity
+     │ Int64?    Int64?    Int64?    Char?
+─────┼────────────────────────────────────────
+   1 │        1         1   missing  a
+   2 │        2         2   missing  a
+   3 │        3         3   missing  a
+   4 │        4         4   missing  b
+   5 │        5         5   missing  b
+   6 │        6         6   missing  b
+   7 │        7   missing         7  d
+   8 │        8   missing         8  d
+   9 │        9   missing         9  d
 ```
 """
 Base.vcat(dss::AbstractDataset...;
@@ -1640,57 +1232,62 @@ for [`vcat`](@ref) of `AbstractDataset`s.
 ```jldoctest
 julia> ds1 = Dataset(A=1:3, B=1:3)
 3×2 Dataset
- Row │ A      B
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      3
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         3
 
 julia> ds2 = Dataset(A=4:6, B=4:6)
 3×2 Dataset
- Row │ A      B
-     │ Int64  Int64
-─────┼──────────────
-   1 │     4      4
-   2 │     5      5
-   3 │     6      6
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        4         4
+   2 │        5         5
+   3 │        6         6
 
 julia> ds3 = Dataset(A=7:9, C=7:9)
 3×2 Dataset
- Row │ A      C
-     │ Int64  Int64
-─────┼──────────────
-   1 │     7      7
-   2 │     8      8
-   3 │     9      9
+ Row │ A         C
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        7         7
+   2 │        8         8
+   3 │        9         9
 
 julia> reduce(vcat, (ds1, ds2))
 6×2 Dataset
- Row │ A      B
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      3
-   4 │     4      4
-   5 │     5      5
-   6 │     6      6
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         3
+   4 │        4         4
+   5 │        5         5
+   6 │        6         6
 
 julia> reduce(vcat, [ds1, ds2, ds3], cols=:union, source=:source)
 9×4 Dataset
- Row │ A      B        C        source
-     │ Int64  Int64?   Int64?   Int64
-─────┼─────────────────────────────────
-   1 │     1        1  missing       1
-   2 │     2        2  missing       1
-   3 │     3        3  missing       1
-   4 │     4        4  missing       2
-   5 │     5        5  missing       2
-   6 │     6        6  missing       2
-   7 │     7  missing        7       3
-   8 │     8  missing        8       3
-   9 │     9  missing        9       3
+ Row │ A         B         C         source
+     │ identity  identity  identity  identity
+     │ Int64?    Int64?    Int64?    Int64?
+─────┼────────────────────────────────────────
+   1 │        1         1   missing         1
+   2 │        2         2   missing         1
+   3 │        3         3   missing         1
+   4 │        4         4   missing         2
+   5 │        5         5   missing         2
+   6 │        6         6   missing         2
+   7 │        7   missing         7         3
+   8 │        8   missing         8         3
+   9 │        9   missing         9         3
 ```
 """
 function Base.reduce(::typeof(vcat),
@@ -1834,36 +1431,33 @@ of rows is repeated.
 ```jldoctest
 julia> ds = Dataset(a = 1:2, b = 3:4)
 2×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      3
-   2 │     2      4
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         3
+   2 │        2         4
 
 julia> repeat(ds, inner = 2, outer = 3)
 12×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      3
-   2 │     1      3
-   3 │     2      4
-   4 │     2      4
-   5 │     1      3
-   6 │     1      3
-   7 │     2      4
-   8 │     2      4
-   9 │     1      3
-  10 │     1      3
-  11 │     2      4
-  12 │     2      4
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         3
+   2 │        1         3
+   3 │        2         4
+   4 │        2         4
+   5 │        1         3
+   6 │        1         3
+   7 │        2         4
+   8 │        2         4
+   9 │        1         3
+  10 │        1         3
+  11 │        2         4
+  12 │        2         4
 ```
 """
-# function Base.repeat(ds::AbstractDataset; inner::Integer=1, outer::Integer=1)
-    # inner < 0 && throw(ArgumentError("inner keyword argument must be non-negative"))
-#     outer < 0 && throw(ArgumentError("outer keyword argument must be non-negative"))
-#     return mapcols(x -> repeat(x, inner = Int(inner), outer = Int(outer)), ds)
-# end
 
 """
     repeat(ds::AbstractDataset, count::Integer)
@@ -1948,131 +1542,6 @@ julia> ncol(ds)
 """
 (nrow, ncol)
 
-"""
-    disallowmissing(ds::AbstractDataset, cols=:; error::Bool=false)
-
-Return a copy of data set `ds` with columns `cols` converted
-from element type `Union{T, Missing}` to `T` to drop support for missing values.
-
-`cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
-
-If `cols` is omitted all columns in the data set are converted.
-
-If `error=false` then columns containing a `missing` value will be skipped instead
-of throwing an error.
-
-**Examples**
-
-```jldoctest
-julia> ds = Dataset(a=Union{Int, Missing}[1, 2])
-2×1 Dataset
- Row │ a
-     │ Int64?
-─────┼────────
-   1 │      1
-   2 │      2
-
-julia> disallowmissing(ds)
-2×1 Dataset
- Row │ a
-     │ Int64
-─────┼───────
-   1 │     1
-   2 │     2
-
-julia> ds = Dataset(a=[1, missing])
-2×1 Dataset
- Row │ a
-     │ Int64?
-─────┼─────────
-   1 │       1
-   2 │ missing
-
-julia> disallowmissing(ds, error=false)
-2×1 Dataset
- Row │ a
-     │ Int64?
-─────┼─────────
-   1 │       1
-   2 │ missing
-```
-"""
-# function Missings.disallowmissing(ds::AbstractDataset,
-#                                   cols::Union{ColumnIndex, MultiColumnIndex}=:;
-#                                   error::Bool=false)
-#     # Create Dataset
-#     idxcols = Set(index(ds)[cols])
-#     newcols = AbstractVector[]
-#     for i in axes(ds, 2)
-#         x = _columns(ds)[i]
-#         if i in idxcols
-#             if !error && Missing <: eltype(x) && any(ismissing, x)
-#                 y = x
-#             else
-#                 y = disallowmissing(x)
-#             end
-#             push!(newcols, y === x ? copy(y) : y)
-#         else
-#             push!(newcols, copy(x))
-#         end
-#     end
-#     newds = Dataset(newcols, _names(ds), copycols=false)
-#     setformat!(newds, _getformats(ds))
-#     setinfo!(newds, _attributes(ds).meta.info[])
-#     _copy_grouping_info!(newds, ds)
-#     newds
-# end
-
-"""
-    allowmissing(ds::AbstractDataset, cols=:)
-
-Return a copy of data set `ds` with columns `cols` converted
-to element type `Union{T, Missing}` from `T` to allow support for missing values.
-
-`cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
-
-If `cols` is omitted all columns in the data set are converted.
-
-**Examples**
-
-```jldoctest
-julia> ds = Dataset(a=[1, 2])
-2×1 Dataset
- Row │ a
-     │ Int64
-─────┼───────
-   1 │     1
-   2 │     2
-
-julia> allowmissing(ds)
-2×1 Dataset
- Row │ a
-     │ Int64?
-─────┼────────
-   1 │      1
-   2 │      2
-```
-"""
-# function Missings.allowmissing(ds::AbstractDataset,
-#                                cols::Union{ColumnIndex, MultiColumnIndex}=:)
-#     # Create Dataset
-#     idxcols = Set(index(ds)[cols])
-#     newcols = AbstractVector[]
-#     for i in axes(ds, 2)
-#         x = _columns(ds)[i]
-#         if i in idxcols
-#             y = allowmissing(x)
-#             push!(newcols, y === x ? copy(y) : y)
-#         else
-#             push!(newcols, copy(x))
-#         end
-#     end
-#     newds = Dataset(newcols, _names(ds), copycols=false)
-#     setformat!(newds, _getformats(ds))
-#     setinfo!(newds, _attributes(ds).meta.info[])
-#     _copy_grouping_info!(newds, ds)
-#     newds
-# end
 
 """
     flatten(ds::AbstractDataset, cols)
@@ -2094,57 +1563,63 @@ returned `Dataset` will affect `ds`.
 ```jldoctest
 julia> ds1 = Dataset(a = [1, 2], b = [[1, 2], [3, 4]], c = [[5, 6], [7, 8]])
 2×3 Dataset
- Row │ a      b       c
-     │ Int64  Array…  Array…
-─────┼───────────────────────
-   1 │     1  [1, 2]  [5, 6]
-   2 │     2  [3, 4]  [7, 8]
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Array…?   Array…?
+─────┼──────────────────────────────
+   1 │        1  [1, 2]    [5, 6]
+   2 │        2  [3, 4]    [7, 8]
 
 julia> flatten(ds1, :b)
 4×3 Dataset
- Row │ a      b      c
-     │ Int64  Int64  Array…
-─────┼──────────────────────
-   1 │     1      1  [5, 6]
-   2 │     1      2  [5, 6]
-   3 │     2      3  [7, 8]
-   4 │     2      4  [7, 8]
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Any       Array…?
+─────┼──────────────────────────────
+   1 │        1  1         [5, 6]
+   2 │        1  2         [5, 6]
+   3 │        2  3         [7, 8]
+   4 │        2  4         [7, 8]
 
 julia> flatten(ds1, [:b, :c])
 4×3 Dataset
- Row │ a      b      c
-     │ Int64  Int64  Int64
-─────┼─────────────────────
-   1 │     1      1      5
-   2 │     1      2      6
-   3 │     2      3      7
-   4 │     2      4      8
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Any       Any
+─────┼──────────────────────────────
+   1 │        1  1         5
+   2 │        1  2         6
+   3 │        2  3         7
+   4 │        2  4         8
 
 julia> ds2 = Dataset(a = [1, 2], b = [("p", "q"), ("r", "s")])
 2×2 Dataset
- Row │ a      b
-     │ Int64  Tuple…
-─────┼───────────────────
-   1 │     1  ("p", "q")
-   2 │     2  ("r", "s")
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Tuple…?
+─────┼──────────────────────
+   1 │        1  ("p", "q")
+   2 │        2  ("r", "s")
 
 julia> flatten(ds2, :b)
 4×2 Dataset
- Row │ a      b
-     │ Int64  String
-─────┼───────────────
-   1 │     1  p
-   2 │     1  q
-   3 │     2  r
-   4 │     2  s
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Any
+─────┼────────────────────
+   1 │        1  p
+   2 │        1  q
+   3 │        2  r
+   4 │        2  s
 
 julia> ds3 = Dataset(a = [1, 2], b = [[1, 2], [3, 4]], c = [[5, 6], [7]])
 2×3 Dataset
- Row │ a      b       c
-     │ Int64  Array…  Array…
-─────┼───────────────────────
-   1 │     1  [1, 2]  [5, 6]
-   2 │     2  [3, 4]  [7]
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Array…?   Array…?
+─────┼──────────────────────────────
+   1 │        1  [1, 2]    [5, 6]
+   2 │        2  [3, 4]    [7]
 
 julia> flatten(ds3, [:b, :c])
 ERROR: ArgumentError: Lengths of iterables stored in columns :b and :c are not the same in row 2

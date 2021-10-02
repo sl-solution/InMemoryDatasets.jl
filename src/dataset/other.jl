@@ -802,6 +802,57 @@ function compare(ds1::Dataset, ds2::Dataset; on = nothing, eq = isequal)
 end
 
 
+
+"""
+    describe(ds::AbstractDataset; cols=:)
+    describe(ds::AbstractDataset, fun...; cols=:)
+
+Return descriptive statistics for a data set as a new `Dataset`
+where each row represents a variable and each column a summary statistic.
+
+# Arguments
+- `ds` : the `AbstractDataset`
+- `fun...` : functions which are going to summarise each column.
+- `cols` : a keyword argument allowing to select only a subset or transformation
+  of columns from `ds` to describe. Can be any column selector or transformation
+  accepted by [`select`](@ref).
+
+# Details
+`IMD.n` and `IMD.nmissing` are two special functions for reporting number of nonmissing and number of missing observations, respectively.
+
+# Examples
+```jldoctest
+julia> ds = Dataset(i=1:10, x=0.1:0.1:1.0, y='a':'j');
+
+julia> describe(ds)
+3×7 Dataset
+ Row │ column    n         nmissing  mean      std       minimum   maximum
+     │ identity  identity  identity  identity  identity  identity  identity
+     │ String?   Any       Any       Any       Any       Any       Any
+─────┼──────────────────────────────────────────────────────────────────────
+   1 │ i         10        0         5.5       3.02765   1         10
+   2 │ x         10        0         0.55      0.302765  0.1       1.0
+   3 │ y         10        0         nothing   nothing   a         j
+
+julia> describe(ds, minimum, maximum, IMD.n)
+3×4 Dataset
+ Row │ column    minimum   maximum   n
+     │ identity  identity  identity  identity
+     │ String?   Any       Any       Any
+─────┼────────────────────────────────────────
+   1 │ i         1         10        10
+   2 │ x         0.1       1.0       10
+   3 │ y         a         j         10
+
+julia> describe(ds, sum, cols=:x)
+1×2 Dataset
+ Row │ column    sum
+     │ identity  identity
+     │ String?   Union…?
+─────┼────────────────────
+   1 │ x         5.5
+```
+"""
 function DataAPI.describe(ds::Dataset,
                  stats::Base.Callable...;
                  cols=:)
@@ -826,6 +877,6 @@ function DataAPI.describe(ds::Dataset,
         insertcols!(newds, 1, :column => varnames)
         newds
 end
-DataAPI.describe(ds::Dataset; cols = :) = describe(ds, n, nmissing, sum, mean, std, minimum, maximum; cols = :)
+DataAPI.describe(ds::Dataset; cols = :) = describe(ds, n, nmissing, mean, std, minimum, maximum; cols = cols)
 nmissing(x) = count(ismissing, x)
 n(x) = count(!ismissing, x)
