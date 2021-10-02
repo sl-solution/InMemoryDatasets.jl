@@ -94,8 +94,12 @@ end
 hp_row_all(ds::AbstractDataset, cols = :) = hp_row_all(ds, isequal(true), cols)
 
 function hp_op_coalesce!(x, y)
-    Threads.@threads for i in 1:length(x)
-        @inbounds x[i] = ifelse(ismissing(x[i]), y[i], x[i])
+    if all(!ismissing, x) # TODO this for performance, is it ok for large ds?
+        x
+    else
+        Threads.@threads for i in 1:length(x)
+            @inbounds x[i] = ifelse(ismissing(x[i]), y[i], x[i])
+        end
     end
     x
 end
