@@ -16,9 +16,11 @@ function warmup()
     end
     for i in 1:ncol(ds)
         groupby(ds, i)
+        gatherby(ds, i)
     end
     for i in 1:ncol(ds)
         groupby(ds, 1:i)
+        gatherby(ds, 1:i)
     end
     byrow(ds, all, :, by = isequal(1))
     byrow(ds, sum)
