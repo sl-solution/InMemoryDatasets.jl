@@ -1,11 +1,11 @@
-function groupby!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, issorted::Bool = false, mapformats::Bool = true, stable = true)
-    sort!(ds, cols, alg = alg, rev = rev, issorted = issorted, mapformats = mapformats, stable = stable)
+function groupby!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+    sort!(ds, cols, alg = alg, rev = rev,  mapformats = mapformats, stable = stable)
     index(ds).grouped[] = true
     _modified(_attributes(ds))
     ds
 end
 
-groupby!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, issorted::Bool = false, mapformats::Bool = true, stable = true) = groupby!(ds, [col]; alg = alg, rev = rev, issorted = issorted, mapformats = mapformats, stable = stable)
+groupby!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby!(ds, [col]; alg = alg, rev = rev, mapformats = mapformats, stable = stable)
 
 struct GroupBy
     parent::Dataset
@@ -13,6 +13,7 @@ struct GroupBy
     perm
     starts
     lastvalid
+    mapformats::Bool
 end
 
 nrow(ds::GroupBy) = nrow(ds.parent)
@@ -23,19 +24,19 @@ _columns(ds::GroupBy) = _columns(ds.parent)
 index(ds::GroupBy) = index(ds.parent)
 Base.parent(ds::GroupBy) = ds.parent
 
-function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, issorted = false)
+function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
     # @assert !isgrouped(ds) "`groupby` is not yet implemented for already grouped data sets"
     colsidx = index(ds)[cols]
-    if issorted
-        selected_columns, ranges, last_valid_index = _find_starts_of_groups(ds::Dataset, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
-        return GroupBy(ds, colsidx, 1:nrow(ds), ranges, last_valid_index)
-    else
+    # if issorted
+    #     selected_columns, ranges, last_valid_index = _find_starts_of_groups(ds::Dataset, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+    #     return GroupBy(ds, colsidx, 1:nrow(ds), ranges, last_valid_index, mapformats)
+    # else
         a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)
-        GroupBy(ds,colsidx, a[2], a[1], a[3])
-    end
+        GroupBy(ds,colsidx, a[2], a[1], a[3], mapformats)
+    # end
 end
 
-groupby(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, issorted = false) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable, issorted = issorted)
+groupby(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)
 
 function _threaded_permute_for_groupby(x, perm)
     if DataAPI.refpool(x) !== nothing

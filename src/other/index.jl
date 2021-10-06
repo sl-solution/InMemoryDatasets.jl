@@ -29,6 +29,7 @@ struct Index <: AbstractIndex   # an OrderedDict would be nice here...
     perm::Vector{Int}
     starts::Vector{Int}
     ngroups::Ref{Int}
+    fmt::Ref{Bool} # if the sorting is based on formatted values
 end
 
 struct DatasetMeta
@@ -58,11 +59,11 @@ _modified(x::Attributes) = x.meta.modified[] = now()
 function Index(names::AbstractVector{Symbol}; makeunique::Bool=false)
     u = make_unique(names, makeunique=makeunique)
     lookup = Dict{Symbol, Int}(zip(u, 1:length(u)))
-    return Index(lookup, u, Dict{Int, Function}(), Int[], Int[], false, Int[], Int[], 1)
+    return Index(lookup, u, Dict{Int, Function}(), Int[], Int[], false, Int[], Int[], 1, false)
 end
 
-Index() = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Int[], false, Int[], Int[], 1)
-Index(lookup::Dict{Symbol, Int}, names::Vector{Symbol}, format::Dict{Int, Function}) = Index(lookup, names, format, Int[], Int[], false, Int[], Int[], 1)
+Index() = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Int[], false, Int[], Int[], 1, false)
+Index(lookup::Dict{Symbol, Int}, names::Vector{Symbol}, format::Dict{Int, Function}) = Index(lookup, names, format, Int[], Int[], false, Int[], Int[], 1, false)
 Base.length(x::Index) = length(x.names)
 Base.names(x::Index) = string.(x.names)
 Base.parent(x::Index) = x
@@ -70,7 +71,7 @@ Base.parent(x::Index) = x
 # _names returns Vector{Symbol}
 _names(x::Index) = x.names
 
-Base.copy(x::Index) = Index(copy(x.lookup), copy(x.names), copy(x.format), copy(x.sortedcols), copy(x.rev), x.grouped[], copy(x.perm), copy(x.starts), x.ngroups)
+Base.copy(x::Index) = Index(copy(x.lookup), copy(x.names), copy(x.format), copy(x.sortedcols), copy(x.rev), x.grouped[], copy(x.perm), copy(x.starts), x.ngroups[], x.fmt[])
 function _copy_grouping_info!(x::Index, y::AbstractIndex; yoffset = 0)
     append!(x.sortedcols, y.sortedcols .+ yoffset)
     append!(x.rev, y.rev)
@@ -78,6 +79,7 @@ function _copy_grouping_info!(x::Index, y::AbstractIndex; yoffset = 0)
     append!(x.perm, y.perm)
     append!(x.starts, y.starts)
     x.ngroups[] = y.ngroups[]
+    x.fmt[] = y.fmt[]
 end
 function _reset_grouping_info!(x::Index)
     empty!(x.sortedcols)
@@ -86,6 +88,7 @@ function _reset_grouping_info!(x::Index)
     empty!(x.perm)
     empty!(x.starts)
     x.ngroups[] = 1
+    x.fmt[] = false
 end
 
 # TODO should we check the formats?
@@ -186,6 +189,7 @@ function subset_and_rearrange(x::Index, y::AbstractVector{<:Integer})
         append!(newidx.perm, x.perm)
         append!(newidx.starts, x.starts)
         newidx.ngroups[] = x.ngroups[]
+        newidx.fmt[] = x.fmt[]
     end
     newidx
 end
@@ -257,6 +261,7 @@ function Base.empty!(x::Index)
     empty!(x.perm)
     empty!(x.starts)
     x.ngroups[] = 1
+    x.fmt[] = false
     return x
 end
 
@@ -611,7 +616,7 @@ function removeformat!(x::Index, idx::Integer)
         throw(ArgumentError("column index $idx not found in the data set"))
     end
     delete!(x.format, idx)
-    if idx ∈ x.sortedcols
+    if idx ∈ x.sortedcols && x.fmt[]
         _reset_grouping_info!(x)
     end
 end

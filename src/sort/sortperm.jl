@@ -255,6 +255,7 @@ end
 function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = HeapSortAlg(), mapformats = true, stable = true)
     colsidx = index(ds)[cols]
     @assert length(colsidx) == length(rev) "`rev` argument must be the same as length of selected columns"
+    _check_for_fast_sort(ds, colsidx, rev, mapformats) == 0 && return copy(index(ds).starts), copy(index(ds).perm), index(ds).ngroups[]
     by = Function[]
     if mapformats
         for j in 1:length(colsidx)
@@ -281,7 +282,25 @@ end
 function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true)
     colsidx = index(ds)[cols]
     revs = repeat([rev], length(colsidx))
+    _check_for_fast_sort(ds, colsidx, revs, mapformats) == 0 && return copy(index(ds).starts), copy(index(ds).perm), index(ds).ngroups[]
     _sortperm(ds, cols, revs; a = a , mapformats = mapformats, stable = stable)
 end
 
 _sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true) = _sortperm(ds, [col], rev; a = a,  mapformats = mapformats, stable = stable)
+
+
+function _check_for_fast_sort(ds, colsidx, rev, mapformats)
+    scols = index(ds).sortedcols
+    revs = index(ds).rev
+    fmt = index(ds).fmt[]
+
+    if colsidx == scols && rev == revs && mapformats == fmt
+        return 0
+    elseif length(colsidx) < length(scols)
+        if colsidx == view(scols, 1:length(colsidx)) && rev == view(revs, 1:length(colsidx)) && mapformats == fmt
+            return 1
+        end
+    else
+        return -1
+    end
+end
