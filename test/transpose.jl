@@ -39,6 +39,7 @@ const ≅ = isequal
                     baz = [1, 2, 3, 4, 5, 6],
                     zoo = ['x', 'y', 'z', 'q', 'w', 't'])
     ds2 = transpose(groupby(ds, :foo, stable = true), :baz, id = :bar)
+    @test sort(ds2, :) == sort(transpose(gatherby(ds, :foo), :baz, id = :bar), :)
     ds3 = Dataset(foo = ["one", "two"], _variables_ = ["baz", "baz"], A = [1, 4], B = [2, 5], C = [3, 6])
 
     @test transpose(groupby(ds, :foo, stable = true), :baz, id = :bar) == transpose(groupby(ds, :foo, stable = true), [:baz], id = :bar)
@@ -71,6 +72,10 @@ const ≅ = isequal
                         renamerowid = x -> Date(x, dateformat"m/y"),
                         variable_name = "Date",
                          renamecolid = x -> "measurement")
+   @test sort(dst, :) == sort(transpose(gatherby(ds, :person), Not(:person),
+                     renamerowid = x -> Date(x, dateformat"m/y"),
+                     variable_name = "Date",
+                      renamecolid = x -> "measurement"),:)
     dstm = Dataset(person = [1,1,1,2,2,2],
                 Date = Date.(repeat(["2020-11-01","2020-12-01","2021-01-01"], 2)),
                 measurement = [1.1, 1.1, 1.1, 2.0, 2.1, 2.0])
@@ -91,7 +96,7 @@ const ≅ = isequal
 
     dst = transpose(groupby(ds, [:g, :id], stable = true), r"x" , variable_name = "variable", renamecolid = x -> "value")
 
-
+    @test sort(dst, :) == sort(transpose(gatherby(ds, [:g, :id]), r"x" , variable_name = "variable", renamecolid = x -> "value"), :)
 
     ds = Dataset(group = repeat(1:3, inner = 2),
                                  b = repeat(1:2, inner = 3),

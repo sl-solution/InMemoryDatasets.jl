@@ -78,12 +78,10 @@ function _first_nonmiss(x)
     res
 end
 
-_tmp_hash_fun(x, y) = hash(x, y)
-_tmp_hash_fun(x::Characters, y) = hash(x.data, y)
 
 function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group)
     Threads.@threads for i in 1:length(v)
-        @inbounds rhashes[i] = _tmp_hash_fun(f(v[i]), prev_groups[i])
+        @inbounds rhashes[i] = hash(f(v[i]), hash(prev_groups[i])) #hash(prev_groups[i]) is used to prevent reduce probe, the question is: is it working?
     end
     n = length(v)
     # sz = 2 ^ ceil(Int, log2(n)+1)
@@ -118,22 +116,129 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
         end
         groups[i] = gix
     end
+    Threads.@threads for i in 1:length(rhashes)
+        @inbounds prev_groups[i] = groups[i]
+    end
     if ngroups == n
         flag = false
         return flag, ngroups
     end
-    Threads.@threads for i in 1:length(rhashes)
-        @inbounds prev_groups[i] = groups[i]
-    end
+
     # copy!(prev_groups, rhashes)
     return flag, ngroups
 end
+
+function _create_dictionary_int!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, minval, ::Val{T}) where T
+    offset = 1 - minval
+    n = length(v)
+    # sz = 2 ^ ceil(Int, log2(n)+1)
+    sz = length(gslots)
+    # fill!(gslots, 0)
+    Threads.@threads for i in 1:sz
+        @inbounds gslots[i] = 0
+    end
+    szm1 = sz - 1
+    ngroups = 0
+    flag = true
+    @inbounds for i in eachindex(rhashes)
+        slotix = f(v[i]) + offset
+        if ismissing(slotix)
+            slotix = sz
+        end
+        gix = -1
+        probe = 0
+        while true
+            g_row = gslots[slotix]
+            if g_row == 0
+                gslots[slotix] = i
+                gix = ngroups += 1
+                break
+            #check hash collision
+            else
+                gix = groups[g_row]
+                break
+            end
+        end
+        groups[i] = gix
+    end
+
+    remap = zeros(T, prev_max_group, ngroups)
+    ngroups_new = 0
+    for i in 1:length(groups)
+        if remap[prev_groups[i], groups[i]] == 0
+            ngroups_new += 1
+            remap[prev_groups[i], groups[i]] = ngroups_new
+            prev_groups[i] = remap[prev_groups[i], groups[i]]
+        else
+            prev_groups[i] = remap[prev_groups[i], groups[i]]
+        end
+    end
+
+    if ngroups_new == n
+        flag = false
+    end
+
+    return flag, ngroups_new
+end
+
 
 function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]
     _max_level = nrow(ds)
     prev_max_group = UInt(1)
-    prev_groups = zeros(UInt, nrow(ds))
+    prev_groups = ones(T, nrow(ds))
+    groups = Vector{T}(undef, nrow(ds))
+    rhashes = Vector{UInt}(undef, nrow(ds))
+    sz = max(1 + ((5 * _max_level) >> 2), 16)
+    sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
+    @assert 4 * sz >= 5 * _max_level
+    gslots = Vector{T}(undef, sz)
+
+    for j in 1:length(colidx)
+        _f = identity
+        if mapformats
+            _f = getformat(ds, colidx[j])
+        end
+
+        if DataAPI.refpool(_columns(ds)[colidx[j]]) !== nothing
+            if _f == identity
+                v = DataAPI.refarray(_columns(ds)[colidx[j]])
+            else
+                v = DataAPI.refarray(map(_f, _columns(ds)[colidx[j]]))
+            end
+            _f = identity
+        else
+            v = _columns(ds)[colidx[j]]
+        end
+        if Core.Compiler.return_type(_f, (eltype(v),)) <: Union{Missing, Integer}
+            _minval = hp_minimum(_f, v)
+            if ismissing(_minval)
+                continue
+            else
+                minval::Integer = _minval
+            end
+            maxval::Integer = hp_maximum(_f, v)
+            (diff, o1) = sub_with_overflow(maxval, minval)
+            (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
+            (outmult, o3) = mul_with_overflow(Int(rangelen), Int(prev_max_group))
+            if !o1 && !o2 && !o3 && maxval < typemax(Int) && (rangelen < div(length(v),2)) && prev_max_group*rangelen < 2*length(v)
+                flag, prev_max_group = _create_dictionary_int!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, minval, Val(T))
+            else
+                flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
+            end
+        else
+            flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
+        end
+        !flag && break
+    end
+    return prev_groups, gslots, prev_max_group
+end
+
+function _gather_groups_old_version(ds, cols, ::Val{T}; mapformats = false) where T
+    colidx = index(ds)[cols]
+    _max_level = nrow(ds)
+    prev_max_group = UInt(1)
+    prev_groups = ones(T, nrow(ds))
     groups = Vector{T}(undef, nrow(ds))
     rhashes = Vector{UInt}(undef, nrow(ds))
     sz = max(1 + ((5 * _max_level) >> 2), 16)

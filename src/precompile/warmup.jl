@@ -30,6 +30,8 @@ function warmup()
     byrow(ds, /, 1:2)
     combine(groupby(ds,1), Ref([1,2,3,7,8]) .=> [sum, mean, length, maximum, minimum, var, std, median, sort])
     ds2 = ds[1:2, [1,3]]
+    combine(gatherby(ds,1), Ref([1,2,3,7,8]) .=> [sum, mean, length, maximum, minimum, var, std, median, sort])
+    ds2 = ds[1:2, [1,3]]
     innerjoin(ds, ds2, on = [:x1, :x3])
     leftjoin(ds, ds2, on = [:x1, :x3])
     transpose(ds, 1:ncol(ds))

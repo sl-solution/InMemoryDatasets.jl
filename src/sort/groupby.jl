@@ -54,7 +54,7 @@ function _threaded_permute_for_groupby(x, perm)
 end
 
 # TODO we need to take care of situations where gds.parent is already grouped, thus the grouping cols from that mess with new grouping cols of gds
-function combine(gds::GroupBy, @nospecialize(args...))
+function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
     ms = normalize_combine_multiple!(length(_groupcols(gds)),idx_cpy, index(gds.parent), args...)
     # the rule is that in combine, byrow must only be used for already aggregated columns
@@ -71,7 +71,7 @@ function combine(gds::GroupBy, @nospecialize(args...))
     _is_groupingcols_modifed(gds, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
     groupcols = gds.groupcols
-    a = (gds.perm, gds.starts, gds.lastvalid)
+    a = (_get_perms(gds), _group_starts(gds), gds.lastvalid)
     starts = a[2]
     ngroups = gds.lastvalid
 
@@ -196,6 +196,11 @@ end
 function _ngroups(ds::Dataset)
     index(ds).ngroups[]
 end
+
+function _ngroups(ds::GatherBy)
+    ds.lastvalid
+end
+
 function _groupcols(ds::GroupBy)
     ds.groupcols
 end
@@ -206,6 +211,11 @@ function _groupcols(ds::Dataset)
         Int[]
     end
 end
+
+function _groupcols(ds::GatherBy)
+    ds.groupcols
+end
+
 function _group_starts(ds::GroupBy)
     ds.starts
 end
@@ -213,9 +223,35 @@ function _group_starts(ds::Dataset)
     index(ds).starts
 end
 
+function _group_starts(ds::GatherBy)
+    if ds.starts === nothing
+        a = compute_indices(ds.groups, ds.lastvalid, nrow(ds.parent) < typemax(Int32) ? Val(Int32) : Val(Int64))
+        ds.starts = a[2]
+        ds.perm = a[1]
+        # we overwrite groups in parallel compute_indices
+        ds.groups = nothing
+        ds.starts
+    else
+        ds.starts
+    end
+end
+
+
 function _get_perms(ds::Dataset)
     1:nrow(ds)
 end
 function _get_perms(ds::GroupBy)
     ds.perm
+end
+function _get_perms(ds::GatherBy)
+    if ds.perm === nothing
+        a = compute_indices(ds.groups, ds.lastvalid, nrow(ds.parent) < typemax(Int32) ? Val(Int32) : Val(Int64))
+        ds.starts = a[2]
+        ds.perm = a[1]
+        # we overwrite groups in parallel compute_indices
+        ds.groups = nothing
+        ds.perm
+    else
+        ds.perm
+    end
 end

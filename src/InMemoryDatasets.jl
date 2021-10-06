@@ -65,6 +65,7 @@ export
       mask,
       groupby!,
       groupby,
+      gatherby,
       describe,
       unsort!,
       # gatherby,
@@ -145,8 +146,9 @@ include("sort/int.jl")
 include("sort/pooled.jl")
 include("sort/sortperm.jl")
 include("sort/sort.jl")
-include("sort/groupby.jl")
 include("sort/gatherby.jl")
+include("sort/groupby.jl")
+
 
 # transpose
 include("dataset/transpose.jl")

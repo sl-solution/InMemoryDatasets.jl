@@ -367,7 +367,7 @@ function _fill_outputmat_withid(T, in_cols, ds, starts, perms, ids, new_col_name
     outputmat
 end
 
-function ds_transpose(ds::Union{Dataset, GroupBy}, cols::MultiColumnIndex, gcols::MultiColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", default_fill = missing, threads = true, mapformats = true)
+function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::MultiColumnIndex, gcols::MultiColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", default_fill = missing, threads = true, mapformats = true)
     colsidx = index(ds)[cols]
     gcolsidx = gcols
     ECol = view(_columns(ds), colsidx)
@@ -443,8 +443,8 @@ function Base.transpose(ds::Dataset, cols::MultiColumnIndex; id = nothing, renam
     end
 end
 
-Base.transpose(ds::GroupBy, cols::MultiColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", filling = missing, threads = true, mapformats = true) =
+Base.transpose(ds::Union{GroupBy, GatherBy}, cols::MultiColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", filling = missing, threads = true, mapformats = true) =
     ds_transpose(ds, cols, _groupcols(ds); id = id, renamecolid = renamecolid, renamerowid = renamerowid, variable_name = variable_name, threads = threads, default_fill = filling, mapformats = mapformats)
 
-Base.transpose(ds::Union{GroupBy, Dataset}, col::ColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", filling = missing, threads = true, mapformats = true) =
+Base.transpose(ds::Union{GatherBy, GroupBy, Dataset}, col::ColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", filling = missing, threads = true, mapformats = true) =
     transpose(ds, [col]; id = id, renamecolid = renamecolid, renamerowid = renamerowid, variable_name = variable_name, filling = filling, threads = threads, mapformats = mapformats)

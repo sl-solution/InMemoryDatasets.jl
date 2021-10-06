@@ -1,122 +1,37 @@
 using .Base: sub_with_overflow, add_with_overflow, mul_with_overflow
-# NOT READY YET
-function _create_dictionary_int!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, minval, ::Val{T}) where T
-    offset = 1 - minval
-    n = length(v)
-    # sz = 2 ^ ceil(Int, log2(n)+1)
-    sz = length(gslots)
-    # fill!(gslots, 0)
-    Threads.@threads for i in 1:sz
-        @inbounds gslots[i] = 0
-    end
-    szm1 = sz - 1
-    ngroups = 0
-    flag = true
-    @inbounds for i in eachindex(rhashes)
-        slotix = f(v[i]) + offset
-        if ismissing(slotix)
-            slotix = sz
-        end
-        gix = -1
-        probe = 0
-        while true
-            g_row = gslots[slotix]
-            if g_row == 0
-                gslots[slotix] = i
-                gix = ngroups += 1
-                break
-            #check hash collision
-            else
-                gix = groups[g_row]
-                break
-            end
-        end
-        groups[i] = gix
-    end
-    if ngroups == n
-        flag = false
-        return flag, ngroups
-    end
 
-    remap = zeros(T, prev_max_group, ngroups)
-    ngroups_new = 0
-    for i in 1:length(groups)
-        if remap[prev_groups[i], groups[i]] == 0
-            ngroups_new += 1
-            remap[prev_groups[i], groups[i]] = ngroups_new
-            prev_groups[i] = remap[prev_groups[i], groups[i]]
-        else
-            prev_groups[i] = remap[prev_groups[i], groups[i]]
-        end
+function _findstarts_for_indices(x)
+    _tmp = zeros(Bool, length(x))
+    _tmp[1] = true
+    Threads.@threads for i in 2:length(x)
+        !isequal(x[i-1], x[i]) ? _tmp[i]=true : nothing
     end
-    return flag, ngroups_new
+    findall(_tmp)
+end
+
+function _compute_indices_threaded(groups, ngroups, ::Val{T}; a = HeapSortAlg()) where T
+    idx = Vector{T}(undef, length(groups))
+    _fill_idx_for_sort!(idx)
+    minval = 1
+    maxval = ngroups
+    n = length(groups)
+    rangelen = ngroups
+    if rangelen < div(n,2)
+        int_where = [Vector{T}(undef, rangelen + 2) for _ in 1:Threads.nthreads()]
+        int_permcpy = copy(idx)
+        hp_ds_sort_int!(groups, idx, int_permcpy, int_where, rangelen, minval, false, a, Base.Order.Forward)
+
+    else
+        hp_ds_sort!(groups, idx, a, Base.Order.Forward)
+    end
+    idx, _findstarts_for_indices(groups)
 end
 
 
-function _gather_groups_v2(ds, cols, ::Val{T}; mapformats = false) where T
-    colidx = index(ds)[cols]
-    _max_level = nrow(ds)
-    prev_max_group = UInt(1)
-    prev_groups = ones(UInt, nrow(ds))
-    groups = Vector{T}(undef, nrow(ds))
-    rhashes = Vector{UInt}(undef, nrow(ds))
-    sz = max(1 + ((5 * _max_level) >> 2), 16)
-    sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
-    @assert 4 * sz >= 5 * _max_level
-    gslots = Vector{T}(undef, sz)
-
-    for j in 1:length(colidx)
-        _f = identity
-        if mapformats
-            _f = getformat(ds, colidx[j])
-        end
-
-        if DataAPI.refpool(_columns(ds)[colidx[j]]) !== nothing
-            if _f == identity
-                v = DataAPI.refarray(_columns(ds)[colidx[j]])
-            else
-                v = DataAPI.refarray(map(_f, _columns(ds)[colidx[j]]))
-            end
-            _f = identity
-        else
-            v = _columns(ds)[colidx[j]]
-        end
-        if Core.Compiler.return_type(_f, (eltype(v),)) <: Union{Missing, Integer}
-            _minval = hp_minimum(_f, v)
-            if ismissing(_minval)
-                continue
-            else
-                minval::Integer = _minval
-            end
-            maxval::Integer = hp_maximum(_f, v)
-            (diff, o1) = sub_with_overflow(maxval, minval)
-            (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-            (outmult, o3) = mul_with_overflow(Int(rangelen), Int(prev_max_group))
-            if !o1 && !o2 && !o3 && maxval < typemax(Int) && (rangelen < div(length(v),2)) && prev_max_group*rangelen < 2*length(v)
-                flag, prev_max_group = _create_dictionary_int!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, minval, Val(T))
-            else
-                flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
-            end
-        else
-            flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
-        end
-        !flag && break
-    end
-    return Int.(prev_groups), gslots, prev_max_group
-end
-
-
-function gatherby(ds, cols::MultiColumnIndex; mapformats = true)
-    final_res, gslots, prev_max_group = _gather_groups_v2(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64); mapformats = mapformats)
-    perms, starts = compute_indices(final_res, prev_max_group, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
-    colsidx = index(ds)[cols]
-    GroupBy(ds, colsidx, perms, starts, prev_max_group)
-end
-gatherby(ds, col::ColumnIndex; mapformats = true) = gatherby(ds, [col]; mapformats = mapformats)
 
 
 # TODO copied from DataFrames.jl, can we optimise it?
-function compute_indices(groups, ngroups, ::Val{T}) where T
+function _compute_indices(groups, ngroups, ::Val{T}) where T
     # count elements in each group
     stops = zeros(T, ngroups+1)
     @inbounds for gix in groups
@@ -145,4 +60,75 @@ function compute_indices(groups, ngroups, ::Val{T}) where T
     popfirst!(starts)
 
     return rperm, starts
+end
+
+
+function compute_indices(groups, ngroups, ::Val{T}) where T
+    if ngroups > 50_000_000
+        _compute_indices_threaded(groups, ngroups, Val(T))
+    else
+        _compute_indices(groups, ngroups, Val(T))
+    end
+end
+
+# fast combine for gatherby data
+
+mutable struct GatherBy
+    parent::Dataset
+    groupcols
+    groups
+    lastvalid
+    mapformats::Bool
+    perm
+    starts
+end
+
+
+nrow(ds::GatherBy) = nrow(ds.parent)
+ncol(ds::GatherBy) = ncol(ds.parent)
+Base.names(ds::GatherBy, kwargs...) = names(ds.parent, kwargs...)
+_names(ds::GatherBy) = _names(ds.parent)
+_columns(ds::GatherBy) = _columns(ds.parent)
+index(ds::GatherBy) = index(ds.parent)
+Base.parent(ds::GatherBy) = ds.parent
+
+
+Base.summary(gds::GatherBy) =
+        @sprintf("%d×%d View of GatherBy Dataset, Gathered by: %s", size(gds.parent)..., join(_names(gds.parent)[gds.groupcols], " ,"))
+
+
+function Base.show(io::IO, gds::GatherBy;
+
+                   kwargs...)
+     _show(io, view(gds.parent, _get_perms(gds), :); title = summary(gds), kwargs...)
+end
+
+Base.show(io::IO, mime::MIME"text/plain", gds::GatherBy;
+          kwargs...) =
+    show(io, gds; title = summary(gds), kwargs...)
+
+
+
+function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true)
+    colsidx = index(ds)[cols]
+    a = _gather_groups(ds, colsidx, nrow(ds)<typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
+    GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
+end
+gatherby(ds::Dataset, col::ColumnIndex; mapformats = true) = gatherby(ds, [col], mapformats = mapformats)
+
+function _fill_mapreduce_col!(x, f, op, init0, y, loc)
+    init = init0[1, 1]
+    Threads.@threads for i in 1:length(y)
+        init0[loc[i], Threads.threadid()] =  op(init0[loc[i],Threads.threadid()], f(y[i]))
+    end
+    Threads.@threads for i in 1:length(x)
+        x[i] = mapreduce(identity, op, init0[i, :], init = init)
+    end
+end
+
+function gatherby_mapreduce(gds::GatherBy, f, op, col::ColumnIndex, init::T) where T
+    init0 = fill(init, gds.lastvalid, Threads.nthreads())
+    res = Tables.allocatecolumn(Union{T, Missing}, gds.lastvalid)
+    _fill_mapreduce_col!(res, f, op, init0, _columns(gds.parent)[index(gds.parent)[col]], gds.groups)
+    res
 end
