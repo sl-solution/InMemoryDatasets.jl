@@ -63,6 +63,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
     # if this is not the case, throw ArgumentError and ask user to use modify instead
     newlookup, new_nm = _create_index_for_newds(gds.parent, ms, gds.groupcols)
     !(_is_byrow_valid(Index(newlookup, new_nm, Dict{Int, Function}()), ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` otherwise"))
+
     if _fast_gatherby_reduction(gds, ms)
         return _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm)
     end
