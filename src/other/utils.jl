@@ -164,31 +164,22 @@ function _create_dictionary_int!(prev_groups, groups, gslots, f, v, prev_max_gro
     szm1 = sz - 1
     ngroups = 0
     flag = true
-    @inbounds for i in eachindex(v)
+    @inbounds for i in 1:length(v)
         slotix = f(v[i]) + offset
         if ismissing(slotix)
             slotix = sz
         end
-        gix = -1
-        probe = 0
-        while true
-            g_row = gslots[slotix]
-            if g_row == 0
-                gslots[slotix] = i
-                gix = ngroups += 1
-                break
-            #check hash collision
-            else
-                gix = groups[g_row]
-                break
-            end
+        g_row = gslots[slotix]
+        if g_row == 0
+            gslots[slotix] = i
+            groups[i] = ngroups += 1
+        else
+            groups[i] = groups[g_row]
         end
-        groups[i] = gix
     end
-
     remap = zeros(T, prev_max_group, ngroups)
     ngroups_new = 0
-    for i in 1:length(groups)
+    @inbounds for i in 1:length(groups)
         if remap[prev_groups[i], groups[i]] == 0
             ngroups_new += 1
             remap[prev_groups[i], groups[i]] = ngroups_new
@@ -217,7 +208,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     sz = max(1 + ((5 * _max_level) >> 2), 16)
     sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
     @assert 4 * sz >= 5 * _max_level
-    gslots = Vector{T}(undef, sz)
+    gslots = Vector{T}(undef, nrow(ds))
 
     for j in 1:length(colidx)
         _f = _date_value
@@ -246,12 +237,13 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
             (diff, o1) = sub_with_overflow(maxval, minval)
             (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
             (outmult, o3) = mul_with_overflow(Int(rangelen), Int(prev_max_group))
-            if !o1 && !o2 && !o3 && maxval < typemax(Int) && prev_max_group*rangelen < 2*length(v)
+            if !o1 && !o2 && !o3 && maxval < typemax(Int) && rangelen < length(v) && prev_max_group*rangelen < 2*length(v)
                 flag, prev_max_group = _create_dictionary_int!(prev_groups, groups, gslots, _f, v, prev_max_group, minval, Val(T))
             else
                 if !seen_nonint
                     seen_nonint = true
                     resize!(rhashes, nrow(ds))
+                    resize!(gslots, sz)
                 end
                 flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
             end
@@ -259,6 +251,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
             if !seen_nonint
                 seen_nonint = true
                 resize!(rhashes, nrow(ds))
+                resize!(gslots, sz)
             end
             flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
         end
