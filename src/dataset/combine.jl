@@ -8,6 +8,17 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     _check_ind_and_add!(outidx, Symbol(dst))
     return _names(idx)[idx[src]] => fun => Symbol(dst)
 end
+
+function normalize_combine!(offset, outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:NTuple{2, ColumnIndex},
+                                                    <:Pair{<:Union{Function},
+                                                        <:Union{Symbol, AbstractString}}})
+                                                        )
+    src, (fun, dst) = sel
+    _check_ind_and_add!(outidx, Symbol(dst))
+    return (_names(idx)[idx[src[1]]], _names(idx)[idx[src[2]]]) => fun => Symbol(dst)
+end
+
 # col => fun => dst, the job is to create col => fun => :dst
 function normalize_combine!(offset, outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
@@ -29,6 +40,19 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     _check_ind_and_add!(outidx, Symbol(_names(idx)[idx[src]], "_", funname(fun)))
     return _names(idx)[idx[src]] => fun => Symbol(_names(idx)[idx[src]], "_", funname(fun))
 end
+
+function normalize_combine!(offset, outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:NTuple{2, ColumnIndex},
+                                                    <:Union{Function}}))
+
+    src, fun = sel
+    col1, col2 = idx[src[1]], idx[src[2]]
+    var1, var2 = _names(idx)[col1], _names(idx)[col2]
+    _check_ind_and_add!(outidx, Symbol(var1,"_", var2, "_", funname(fun)))
+    return (var1, var2) => fun => Symbol(var1,"_", var2, "_", funname(fun))
+end
+
+
 
 # col => byrow
 function normalize_combine!(offset, outidx::Index, idx::Index,
@@ -151,6 +175,18 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     return res
 end
 
+function normalize_combine!(offset, outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:ColumnIndex,
+                                                    <:Vector{<:Function}}))
+    colsidx = idx[sel.first]
+
+    res = Any[]
+    for i in 1:length(sel.second)
+        push!(res, normalize_combine!(offset, outidx, idx, _names(idx)[colsidx] => sel.second[i]))
+    end
+    return res
+end
+
 # special case cols => byrow(...) => :name
 function normalize_combine!(offset, outidx::Index, idx::Index,
     @nospecialize(sel::Pair{<:MultiColumnIndex,
@@ -266,7 +302,12 @@ end
 function _check_mutliple_rows_for_each_group(ds, ms)
     for i in 1:length(ms)
         # byrow are not checked since they are not going to modify the number of rows
-        if !(ms[i].second.first isa Expr) &&
+        if ms[i].first isa Tuple
+            T = return_type(ms[i].second.first, [ds[!, ms[i].first[1]].val, ds[!, ms[i].first[2]].val])
+            if T <: AbstractVector
+                return i
+            end
+        elseif !(ms[i].second.first isa Expr) &&
                  haskey(index(ds), ms[i].first) &&
                     !(ms[i].first ∈ map(x->x.second.second, view(ms, 1:(i-1))))
             T = return_type(ms[i].second.first, ds[!, ms[i].first].val)
@@ -296,6 +337,15 @@ function _compute_the_mutli_row_trans!(special_res, new_lengths, x, nrows, _f, _
         lo = starts[g]
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         special_res[g] = _f(view(x, lo:hi))
+        new_lengths[g] = length(special_res[g])
+    end
+end
+function _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, x, y, nrows, _f, _first_vector_res, starts, ngroups)
+    # _first_vector_var = ms[_first_vector_res].second.second
+    Threads.@threads for g in 1:ngroups
+        lo = starts[g]
+        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
+        special_res[g] = _f(view(x, lo:hi), view(y, lo:hi))
         new_lengths[g] = length(special_res[g])
     end
 end
@@ -424,6 +474,26 @@ function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths
     push!(res, _res)
     return _res
 end
+function _add_one_col_combine_tuple!(res, _res, in_x, in_y, _f, starts, ngroups, new_lengths, total_lengths, nrows)
+    # make sure lo and hi are not defined any where outside the following loop
+    Threads.@threads for g in 1:ngroups
+        counter::UnitRange{Int} = 1:1
+        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
+        lo = starts[g]
+        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
+        l1 = new_lengths[g] - length(counter) + 1
+        h1 = new_lengths[g]
+        _tmp_res = _f(view(in_x, lo:hi),view(in_y, lo:hi))
+        check_scalar = _is_scalar(_tmp_res, length(l1:h1))
+        if check_scalar
+            fill!(view(_res,l1:h1), _tmp_res)
+        else
+            copy!(view(_res, l1:h1), _tmp_res)
+        end
+    end
+    push!(res, _res)
+    return _res
+end
 function _update_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, col)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
@@ -484,7 +554,11 @@ function _combine_f_barrier_special(special_res, fromds, newds, msfirst, mssecon
         _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
         _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
 end
-
+function _combine_f_barrier_special_tuple(special_res, fromds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
+        T = _check_the_output_type(fromds, mssecond)
+        _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
+        _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
+end
 
 function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
 
@@ -505,6 +579,12 @@ function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_look
     else
         throw(ArgumentError("`combine` doesn't support $(msfirst=>mssecond=>mslast) combination"))
     end
+end
+function _combine_f_barrier_tuple(fromds1, fromds2, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+    T = _check_the_output_type([fromds1, fromds2], mssecond)
+    _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
+    _add_one_col_combine_tuple!(_columns(newds), _res, fromds1, fromds2, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds1))
+
 end
 
 function combine(ds::Dataset, @nospecialize(args...))
@@ -534,19 +614,28 @@ function combine(ds::Dataset, @nospecialize(args...))
         cumsum!(new_lengths, new_lengths)
         total_lengths = ngroups
     else
-        CT = return_type(ms[_first_vector_res].second.first,
+        if ms[_first_vector_res].first isa Tuple
+            CT = return_type(ms[_first_vector_res].second.first,
+                 [ds[!, ms[_first_vector_res].first[1]].val, ds[!, ms[_first_vector_res].first[2]].val])
+        else
+            CT = return_type(ms[_first_vector_res].second.first,
                  ds[!, ms[_first_vector_res].first].val)
+        end
         special_res = Vector{CT}(undef, ngroups)
         new_lengths = Vector{Int}(undef, ngroups)
         # _columns(ds)[ms[_first_vector_res].first]
-        _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+        if  ms[_first_vector_res].first isa Tuple
+            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first[1]]], _columns(ds)[index(ds)[ms[_first_vector_res].first[2]]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+        else
+            _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+        end
         # special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
         cumsum!(new_lengths, new_lengths)
         total_lengths = new_lengths[end]
     end
     all_names = _names(ds)
 
-    newds_idx = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Bool[], false, [], Int[], 1)
+    newds_idx = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Bool[], false, [], Int[], 1, false)
 
     newds = Dataset([], newds_idx)
     newds_lookup = index(newds).lookup
@@ -565,9 +654,17 @@ function combine(ds::Dataset, @nospecialize(args...))
     end
     for i in 1:length(ms)
         if i == _first_vector_res
-            _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+            if ms[i].first isa Tuple
+                _combine_f_barrier_special_tuple(special_res, [ds[!, ms[i].first[1]].val,ds[!, ms[i].first[2]].val], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+            else
+                _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+            end
         else
-            _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+            if ms[i].first isa Tuple
+                _combine_f_barrier_tuple(_columns(ds)[index(ds)[ms[i].first[1]]], _columns(ds)[index(ds)[ms[i].first[2]]] , newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+            else
+                _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+            end
         end
         if !haskey(index(newds), ms[i].second.second)
             push!(index(newds), ms[i].second.second)
@@ -617,7 +714,7 @@ function combine_ds(ds::Dataset, @nospecialize(args...))
     end
     all_names = _names(ds)
 
-    newds_idx = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Bool[], false, [], Int[], 1)
+    newds_idx = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}(), Int[], Bool[], false, [], Int[], 1, false)
 
     newds = Dataset([], newds_idx)
     newds_lookup = index(newds).lookup

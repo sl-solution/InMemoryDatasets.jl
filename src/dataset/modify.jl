@@ -46,6 +46,17 @@ function normalize_modify!(outidx::Index, idx::Index,
     return outidx[src] => fun => Symbol(dst)
 end
 
+# (col1, col2) => fun => dst, the job is to create (col1, col2) => fun => :dst
+function normalize_modify!(outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:NTuple{2, ColumnIndex},
+                                                    <:Pair{<:Union{Base.Callable},
+                                                        <:Union{Symbol, AbstractString}}})
+                                                        )
+    src, (fun, dst) = sel
+    _check_ind_and_add!(outidx, Symbol(dst))
+    return (outidx[src[1]], outidx[src[2]]) => fun => Symbol(dst)
+end
+
 # col => fun, the job is to create col => fun => :colname
 function normalize_modify!(outidx::Index, idx::Index,
                             @nospecialize(sel::Pair{<:ColumnIndex,
@@ -54,6 +65,19 @@ function normalize_modify!(outidx::Index, idx::Index,
     src, fun = sel
     return outidx[src] => fun => _names(outidx)[outidx[src]]
 end
+
+# (col1, col2) => fun, the job is to create (col1, col2) => fun => :colname
+function normalize_modify!(outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:NTuple{2, ColumnIndex},
+                                                    <:Union{Base.Callable}}))
+
+    src, fun = sel
+    col1, col2 = outidx[src[1]], outidx[src[2]]
+    var1, var2 = _names(outidx)[col1], _names(outidx)[col2]
+    _check_ind_and_add!(outidx, Symbol(funname(sel.second), "_", var1, "_", var2))
+    return (outidx[src[1]], outidx[src[2]]) => fun => Symbol(funname(sel.second), "_", var1, "_", var2)
+end
+
 
 # col => byrow
 function normalize_modify!(outidx::Index, idx::Index,
@@ -153,6 +177,18 @@ function normalize_modify!(outidx::Index, idx::Index,
     end
     return res
 end
+
+function normalize_modify!(outidx::Index, idx::Index,
+                            @nospecialize(sel::Pair{<:ColumnIndex,
+                                                    <:Vector{<:Base.Callable}}))
+    colsidx = outidx[sel.first]
+    res = Any[]
+    for i in 1:length(sel.second)
+        push!(res, normalize_modify!(outidx, idx, colsidx => sel.second[i]))
+    end
+    return res
+end
+
 # special case cols => byrow(...) => :name
 function normalize_modify!(outidx::Index, idx::Index,
     @nospecialize(sel::Pair{<:MultiColumnIndex,
@@ -306,6 +342,10 @@ function _modify_single_var!(ds, _f, x, dst)
     _res = _f(x)
     _resize_result!(ds, _res, dst)
 end
+function _modify_single_tuple_var!(ds, _f, x, y, dst)
+    _res = _f(x, y)
+    _resize_result!(ds, _res, dst)
+end
 
 # the number of destination can be smaller or greater than the number of elements of Tuple,
 function _modify_multiple_out!(ds, x, dst)
@@ -322,7 +362,11 @@ end
 
 function _modify_f_barrier(ds, msfirst, mssecond, mslast)
     if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
-        _modify_single_var!(ds, mssecond, _columns(ds)[msfirst], mslast)
+        if msfirst isa NTuple
+            _modify_single_tuple_var!(ds, mssecond, _columns(ds)[msfirst[1]], _columns(ds)[msfirst[2]], mslast)
+        else
+            _modify_single_var!(ds, mssecond, _columns(ds)[msfirst], mslast)
+        end
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
         try
             ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
@@ -348,7 +392,11 @@ function _modify(ds, ms)
 end
 
 function _check_the_output_type(ds::Dataset, ms)
-    CT = return_type(ms.second.first, ds[!, ms.first].val)
+    if ms.first isa Tuple
+        CT = return_type(ms.second.first, [ds[!, ms.first[1]].val,ds[!, ms.first[2]].val])
+    else
+        CT = return_type(ms.second.first, ds[!, ms.first].val)
+    end
     # TODO check other possibilities:
     # the result can be
     # * AbstractVector{T} where T
@@ -384,12 +432,31 @@ function _modify_grouped_fill_one_col!(_res, x, _f, starts, ngroups, nrows)
     _res
 end
 
+function _modify_grouped_fill_one_col_tuple!(_res, x, y, _f, starts, ngroups, nrows)
+    Threads.@threads for g in 1:ngroups
+        lo = starts[g]
+        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
+        _tmp_res = _f(view(x, lo:hi), view(y, lo:hi))
+        resize_col = _is_scalar(_tmp_res, length(lo:hi))
+        if resize_col
+            fill!(view(_res, lo:hi), _tmp_res)
+        else
+            copy!(view(_res, lo:hi), _tmp_res)
+        end
+    end
+    _res
+end
+
 
 function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast)
     if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
         T = _check_the_output_type(ds, msfirst=>mssecond=>mslast)
         _res = Tables.allocatecolumn(T, nrow(ds))
-        _modify_grouped_fill_one_col!(_res, _columns(ds)[msfirst], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
+        if msfirst isa Tuple
+            _modify_grouped_fill_one_col_tuple!(_res, _columns(ds)[msfirst[1]],  _columns(ds)[msfirst[2]], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
+        else
+            _modify_grouped_fill_one_col!(_res, _columns(ds)[msfirst], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
+        end
         ds[!, mslast] = _res
     elseif (mssecond isa Expr)  && mssecond.head == :BYROW
         ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
