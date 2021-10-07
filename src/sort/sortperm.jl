@@ -53,12 +53,6 @@ function _sortperm_int!(idx, idx_cpy, x, ranges, where, last_valid_range, missin
     end
 end
 
-# Date & Time should be treated as integer
-_date_value(x::TimeType) = Dates.value(x)
-_date_value(x::Period) = Dates.value(x)
-_date_value(x) = x
-
-
 function _apply_by_f_barrier(x::AbstractVector{T}, by, rev) where T
     needrev = rev
     missat = :right
