@@ -166,10 +166,10 @@ function gatherby_mapreduce(gds::GatherBy, f, op, col::ColumnIndex, init::T) whe
     T <: Base.SmallSigned ? CT = Int : nothing
 	T <: Base.SmallUnsigned ? CT = UInt : nothing
 	T <: Float64 ? CT = Float64 : nothing
-	# (outmult, o3) = mul_with_overflow(Int(gds.lastvalid), Int(Threads.nthreads()))
-	# if !o3 && gds.lastvalid*Threads.nthreads() <= 100
-	# 	return gatherby_mapreduce_threaded(gds, f, op, col, CT(init))
-	# end
+	(outmult, o3) = mul_with_overflow(Int(gds.lastvalid), Int(Threads.nthreads()))
+	if !o3 && gds.lastvalid*Threads.nthreads() <= 1_000_000 && nrow(gds.parent) > 50_000_000
+		return gatherby_mapreduce_threaded(gds, f, op, col, CT(init))
+	end
     res = Tables.allocatecolumn(Union{CT, Missing}, gds.lastvalid)
     fill!(res, init)
     _fill_mapreduce_col!(res, f, op, _columns(gds.parent)[index(gds.parent)[col]], gds.groups)
