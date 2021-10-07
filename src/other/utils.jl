@@ -1,6 +1,9 @@
 # modified return_type to suit for our purpose
 function return_type(f::Function, x::AbstractVector)
     CT = nonmissingtype(eltype(x))
+    if CT <: AbstractVector
+        return return_type_tuple(f, x)
+    end
     T = Core.Compiler.return_type(f, (Vector{CT}, ))
     # workaround for SubArray type
     if T <: SubArray
@@ -9,6 +12,23 @@ function return_type(f::Function, x::AbstractVector)
         T = AbstractVector{Union{Missing, eltype(T)}}
     elseif T <: Tuple
         T = Union{Missing, Core.Compiler.return_type(f, (Vector{eltype(x)}, ))}
+    else
+        T = Union{Missing, T}
+    end
+    T
+end
+
+function return_type_tuple(f::Function, x::AbstractVector)
+    CT1 = nonmissingtype(eltype(x[1]))
+    CT2 = nonmissingtype(eltype(x[2]))
+    T = Core.Compiler.return_type(f, (Vector{CT1}, Vector{CT2}, ))
+    # workaround for SubArray type
+    if T <: SubArray
+        return Core.Compiler.return_type(f, (typeof(x), ))
+    elseif T <: AbstractVector
+        T = AbstractVector{Union{Missing, eltype(T)}}
+    elseif T <: Tuple
+        T = Union{Missing, Core.Compiler.return_type(f, (Vector{eltype(x[1])}, Vector{eltype(x[2])}, ))}
     else
         T = Union{Missing, T}
     end
@@ -78,6 +98,10 @@ function _first_nonmiss(x)
     res
 end
 
+# Date & Time should be treated as integer
+_date_value(x::TimeType) = Dates.value(x)
+_date_value(x::Period) = Dates.value(x)
+_date_value(x) = x
 
 function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group)
     Threads.@threads for i in 1:length(v)
@@ -128,7 +152,7 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
     return flag, ngroups
 end
 
-function _create_dictionary_int!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, minval, ::Val{T}) where T
+function _create_dictionary_int!(prev_groups, groups, gslots, f, v, prev_max_group, minval, ::Val{T}) where T
     offset = 1 - minval
     n = length(v)
     # sz = 2 ^ ceil(Int, log2(n)+1)
@@ -140,7 +164,7 @@ function _create_dictionary_int!(prev_groups, groups, gslots, rhashes, f, v, pre
     szm1 = sz - 1
     ngroups = 0
     flag = true
-    @inbounds for i in eachindex(rhashes)
+    @inbounds for i in eachindex(v)
         slotix = f(v[i]) + offset
         if ismissing(slotix)
             slotix = sz
@@ -173,7 +197,6 @@ function _create_dictionary_int!(prev_groups, groups, gslots, rhashes, f, v, pre
             prev_groups[i] = remap[prev_groups[i], groups[i]]
         end
     end
-
     if ngroups_new == n
         flag = false
     end
@@ -188,20 +211,22 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
     prev_max_group = UInt(1)
     prev_groups = ones(T, nrow(ds))
     groups = Vector{T}(undef, nrow(ds))
-    rhashes = Vector{UInt}(undef, nrow(ds))
+    # rhashes = Vector{UInt}(undef, nrow(ds))
+    rhashes = UInt[]
+    seen_nonint = false
     sz = max(1 + ((5 * _max_level) >> 2), 16)
     sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
     @assert 4 * sz >= 5 * _max_level
     gslots = Vector{T}(undef, sz)
 
     for j in 1:length(colidx)
-        _f = identity
+        _f = _date_value
         if mapformats
-            _f = getformat(ds, colidx[j])
+            _f = _date_value∘getformat(ds, colidx[j])
         end
 
         if DataAPI.refpool(_columns(ds)[colidx[j]]) !== nothing
-            if _f == identity
+            if _f == _date_value∘identity || !mapformats
                 v = DataAPI.refarray(_columns(ds)[colidx[j]])
             else
                 v = DataAPI.refarray(map(_f, _columns(ds)[colidx[j]]))
@@ -221,12 +246,20 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
             (diff, o1) = sub_with_overflow(maxval, minval)
             (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
             (outmult, o3) = mul_with_overflow(Int(rangelen), Int(prev_max_group))
-            if !o1 && !o2 && !o3 && maxval < typemax(Int) && (rangelen < div(length(v),2)) && prev_max_group*rangelen < 2*length(v)
-                flag, prev_max_group = _create_dictionary_int!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, minval, Val(T))
+            if !o1 && !o2 && !o3 && maxval < typemax(Int) && prev_max_group*rangelen < 2*length(v)
+                flag, prev_max_group = _create_dictionary_int!(prev_groups, groups, gslots, _f, v, prev_max_group, minval, Val(T))
             else
+                if !seen_nonint
+                    seen_nonint = true
+                    resize!(rhashes, nrow(ds))
+                end
                 flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
             end
         else
+            if !seen_nonint
+                seen_nonint = true
+                resize!(rhashes, nrow(ds))
+            end
             flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
         end
         !flag && break
