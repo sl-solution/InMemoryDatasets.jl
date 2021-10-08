@@ -29,6 +29,8 @@ Statistics.std(f, x::AbstractArray{Union{T,Missing},1}, df = true) where T <: Un
 Statistics.std(x::AbstractArray{Union{T,Missing},1}, df = true) where T <: Union{INTEGERS, FLOATS}= stat_std(x, df)
 
 Statistics.median(x::AbstractArray{Union{T,Missing},1}) where T = stat_median(x)
+Statistics.median!(x::AbstractArray{Union{T,Missing},1}) where T = stat_median!(x)
+
 
 
 Base.extrema(f, x::AbstractArray{Union{T,Missing},1}; threads = false) where T <: Union{INTEGERS, FLOATS, TimeType} = threads ? (hp_minimum(f, x), hp_maximum(f, x)) : (stat_minimum(f, x), stat_maximum(f, x))

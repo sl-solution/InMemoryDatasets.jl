@@ -24,11 +24,7 @@ function warmup()
     end
     byrow(ds, all, :, by = isequal(1))
     byrow(ds, sum)
-    byrow(ds, +, 1:2)
-    byrow(ds, -, 1:2)
-    byrow(ds, *, 1:2)
-    byrow(ds, /, 1:2)
-    combine(groupby(ds,1), Ref([1,2,3,7,8]) .=> [sum, mean, length, maximum, minimum, var, std, median, sort])
+    combine(groupby(ds,1), Ref([1,2,3,7,8]) .=> [sum, mean, length, maximum, minimum, var, std, median, median!, sort])
     combine(groupby(ds,1), r"x1$" .=> [sum, mean, length, maximum, minimum, var, std, median, sort])
     ds2 = ds[1:2, [1,3]]
     combine(gatherby(ds,1), Ref([1,2,3,7,8]) .=> [median, sort])

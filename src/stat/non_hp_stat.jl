@@ -185,6 +185,21 @@ function stat_median(v::AbstractArray{T,1}) where T
     end
 end
 
+function stat_median!(v::AbstractArray{T,1}) where T
+    isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))
+    all(ismissing, v) && return missing
+    (nonmissingtype(eltype(v))<:AbstractFloat || nonmissingtype(eltype(v))>:AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
+    nmis::Int = mapreduce(ismissing, +, v)
+    n = length(v) - nmis
+    mid = div(1+n,2)
+    if isodd(n)
+        return middle(partialsort!(v,mid))
+    else
+        m = partialsort!(v, mid:mid+1)
+        return middle(m[1], m[2])
+    end
+end
+
 # finding k largest in an array with missing values
 swap!(x,i,j)=x[i],x[j]=x[j],x[i]
 
