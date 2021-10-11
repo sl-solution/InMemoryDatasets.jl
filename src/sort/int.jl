@@ -134,3 +134,117 @@ function hp_ds_sort_int!(x, idx, idx_cpy, where, rangelen, minval, missatleft, a
     end
     _sort_multi_sorted_chunk!(x, idx, cpucnt, a, o)
 end
+
+
+function _cleanup_starts!(starts, sz)
+    curloc=2
+    i = 1
+    @inbounds while true
+        if starts[curloc] == starts[i]
+            curloc += 1
+        else
+            i += 1
+            starts[i] = starts[curloc]
+
+        end
+        starts[i]>sz && break
+    end
+    return resize!(starts, i-1)
+end
+
+
+function _ds_sort_int_missatright_nopermx!(x, original_P, copy_P, lo, hi, rangelen, minval, ::Val{T}) where T
+    offs = 1 - minval
+    where = zeros(T, rangelen + 3)
+
+    # where = fill(0, rangelen+1)
+    where[1] = 1
+    where[2] = 1
+    @inbounds for i = lo:hi
+        ismissing(x[i]) ? where[rangelen+3] += 1 : where[Int(x[i]) + offs + 2] += 1
+    end
+
+    #cumsum!(where, where)
+    @inbounds for i = 3:rangelen+3
+        where[i] += where[i-1]
+    end
+
+    @inbounds for i = lo:hi
+        ismissing(x[i]) ? label = rangelen + 2 : label = Int(x[i]) + offs + 1
+        original_P[where[label] + lo - 1] = copy_P[i]
+        where[label] += 1
+    end
+    where
+end
+
+function _ds_sort_int_missatright_nopermx!(x, original_P, rangelen, minval, ::Val{T}) where T
+    offs = 1 - minval
+    where = zeros(T, rangelen + 3)
+
+    # where = fill(0, rangelen+1)
+    where[1] = 1
+    where[2] = 1
+    @inbounds for i = 1:length(x)
+        ismissing(x[i]) ? where[rangelen+3] += 1 : where[Int(x[i]) + offs + 2] += 1
+    end
+
+    #cumsum!(where, where)
+    @inbounds for i = 3:rangelen+3
+        where[i] += where[i-1]
+    end
+
+    @inbounds for i = 1:length(x)
+        ismissing(x[i]) ? label = rangelen + 2 : label = Int(x[i]) + offs + 1
+        original_P[where[label]] = i
+        where[label] += 1
+    end
+    where
+end
+
+function _ds_sort_int_missatleft_nopermx!(x, original_P, copy_P, lo, hi, rangelen, minval, ::Val{T}) where T
+    offs = 1 - minval
+    where = zeros(T, rangelen + 3)
+
+    # where = fill(0, rangelen+1)
+    where[1] = 1
+    where[2] = 1
+    @inbounds for i = lo:hi
+        ismissing(x[i]) ? where[3] += 1 : where[Int(x[i]) + offs + 3] += 1
+    end
+
+    #cumsum!(where, where)
+    @inbounds for i = 3:rangelen+3
+        where[i] += where[i-1]
+    end
+
+    @inbounds for i = lo:hi
+        ismissing(x[i]) ? label = 2 : label = Int(x[i]) + offs + 2
+        original_P[where[label] + lo - 1] = copy_P[i]
+        where[label] += 1
+    end
+    where
+end
+
+function _ds_sort_int_missatleft_nopermx!(x, original_P, rangelen, minval, ::Val{T}) where T
+    offs = 1 - minval
+    where = zeros(T, rangelen + 3)
+
+    # where = fill(0, rangelen+1)
+    where[1] = 1
+    where[2] = 1
+    @inbounds for i = 1:length(x)
+        ismissing(x[i]) ? where[3] += 1 : where[Int(x[i]) + offs + 3] += 1
+    end
+
+    #cumsum!(where, where)
+    @inbounds for i = 3:rangelen+3
+        where[i] += where[i-1]
+    end
+
+    @inbounds for i = 1:length(x)
+        ismissing(x[i]) ? label = 2 : label = Int(x[i]) + offs + 2
+        original_P[where[label]] = i
+        where[label] += 1
+    end
+    where
+end

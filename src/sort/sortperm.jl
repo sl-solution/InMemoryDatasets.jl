@@ -9,6 +9,36 @@ function _sortperm_unstable!(idx, x, ranges, last_valid_range, ord, a)
     end
 end
 
+# NOT OK
+# we should find starts here
+function fast_sortperm_int_threaded!(x, original_P, copy_P, ranges, rangelen, minval, misatleft, last_valid_range, ::Val{T}) where T
+    starts = [T[] for i in 1:Threads.nthreads()]
+    Threads.@threads for i in 1:last_valid_range
+        rangestart = ranges[i]
+        i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
+        if misatleft
+            _start_vals = _ds_sort_int_missatleft_nopermx!(x, original_P, copy_P, rangestart, rangeend, rangelen, minval, Val(T))
+        else
+            _start_vals = _ds_sort_int_missatright_nopermx!(x, original_P, copy_P, rangestart, rangeend, rangelen, minval, Val(T))
+        end
+        _cleanup_starts!(_start_vals, rangeend - rangestart + 1)
+        append!(starts[Threads.threadid()], _start_vals .+ rangestart .- 1)
+    end
+    cnt = 1
+    flag = false
+    @inbounds for i in 1:length(starts)
+        for j in 1:length(starts[i])
+            ranges[cnt] = starts[i][j]
+            if cnt > 1 && ranges[cnt] < ranges[cnt - 1]
+                flag = true
+            end
+            cnt += 1
+        end
+    end
+    flag && sort!(view(ranges, 1:cnt-1))
+    return cnt - 1
+end
+
 
 function _sortperm_pooledarray!(idx, idx_cpy, x, xpool, where, counts, ranges, last_valid_range, rev)
     ngroups = length(xpool)
@@ -128,6 +158,12 @@ end
 function _check_memory_availability_for_hp_sort(x)
     return 4*sizeof(x) < Base.Sys.free_memory()
 end
+
+function _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
+    for kk in 1:length(_starts_vals)
+        ranges[kk] = _starts_vals[kk] # TODO we don't need ranges here
+    end
+end
 # T is either Int32 or Int64 based on how many rows ds has
 function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a::Base.Sort.Algorithm,  ::Val{T}) where T
     @assert length(colsidx) == length(by) == length(rev) "each col should have all information about lt, by, and rev"
@@ -195,18 +231,49 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                 maxval::Integer = hp_maximum(_tmp)
                 (diff, o1) = sub_with_overflow(maxval, minval)
                 (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-                if !o1 && !o2 && maxval < typemax(Int) && (rangelen < div(n,2)/(i ==1 ? Threads.nthreads() : 1))
-                    for nt in 1:Threads.nthreads()
-                        resize!(int_where[nt], rangelen + 2)
-                    end
-                    resize!(int_permcpy, length(idx))
-                    copy!(int_permcpy, idx)
+                if !o1 && !o2 && maxval < typemax(Int) && (rangelen <= div(n,2))
+
                     # if _missat == :left it means that we multiplied observations by -1 already and we should put missing at left
                     # note that -1 can not be applied to unsigned
-                    if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
-                        hp_ds_sort_int!(_tmp, idx, int_permcpy, int_where, rangelen, minval, _missat == :left, a, _ordr)
+                    # if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
+                    #     hp_ds_sort_int!(_tmp, idx, int_permcpy, int_where, rangelen, minval, _missat == :left, a, _ordr)
+                    if i == 1
+                        #TODO for huge data set, parallel int sort still should be better (the condition to use it should be tuned)
+                        if Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads() && rangelen < div(n,2)/Threads.nthreads() && n > 50_000_000
+                            resize!(int_permcpy, length(idx))
+                            copy!(int_permcpy, idx)
+                            for nt in 1:Threads.nthreads()
+                                resize!(int_where[nt], rangelen + 2)
+                            end
+                            hp_ds_sort_int!(_tmp, idx, int_permcpy, int_where, rangelen, minval, _missat == :left, a, _ordr)
+                        else
+
+                            if _missat == :left
+                                _starts_vals = _ds_sort_int_missatleft_nopermx!(_tmp, idx, rangelen, minval, Val(T))
+                            else
+                                _starts_vals = _ds_sort_int_missatright_nopermx!(_tmp, idx, rangelen, minval, Val(T))
+                            end
+                            _cleanup_starts!(_starts_vals, n)
+                            last_valid_range = length(_starts_vals)
+                            _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
+
+                            continue
+                        end
                     else
-                        _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr, a)
+                        resize!(int_permcpy, length(idx))
+                        copy!(int_permcpy, idx)
+
+                        # NOT OK
+                        if  n/last_valid_range > rangelen # if rangelen is not that much
+                            last_valid_range = fast_sortperm_int_threaded!(_tmp, idx, int_permcpy, ranges, rangelen, minval, _missat == :left, last_valid_range, Val(T))
+                            continue
+                            # we shouldn't permute _tmp at all
+                        else
+                            for nt in 1:Threads.nthreads()
+                                resize!(int_where[nt], rangelen + 2)
+                            end
+                            _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr, a)
+                        end
                     end
                 else
                     if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
