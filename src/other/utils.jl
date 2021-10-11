@@ -98,6 +98,48 @@ function _first_nonmiss(x)
     res
 end
 
+
+# define a structure for gathered data
+mutable struct START_END
+	start::Bool
+	sz::Int
+	where
+end
+
+function _f_barrier_give_end!(y, sz)
+	for i in 1:length(y)-1
+		y[i] = y[i+1] - 1
+	end
+	y[end] = sz
+end
+function _f_barrier_give_start!(y)
+	for i in length(y):-1:2
+		y[i] = y[i-1] + 1
+	end
+	y[1] = 1
+end
+
+function Base.reverse!(x::START_END, sz)
+	if x.start
+		_f_barrier_give_end!(x.where, x.sz)
+		x.start = false
+		return x
+	else
+		_f_barrier_give_start!(x.where)
+		x.start = true
+		return x
+	end
+end
+
+function _calculate_ends(groups, ngroups, ::Val{T}) where T
+    where = zeros(T, ngroups)
+    @inbounds for i = 1:length(groups)
+        where[groups[i]] += 1
+    end
+    START_END(false, length(groups), cumsum!(where, where))
+end
+
+
 # Date & Time should be treated as integer
 _date_value(x::TimeType) = Dates.value(x)
 _date_value(x::Period) = Dates.value(x)
