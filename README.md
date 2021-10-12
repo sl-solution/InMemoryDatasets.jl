@@ -162,7 +162,7 @@ julia> map!(ds, [sqrt, x->x^2], 2:3)
 
 # Masking observations
 
-The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j])` is true. The `fun` is called on formatted values by default, however, using the option `mapformats = false` causes `fun` to be called on the formatted values.
+The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j])` is true. The `fun` is called on formatted values by default, however, using the option `mapformats = false` causes `fun` to be called on the actual values.
 
 ## Examples
 
