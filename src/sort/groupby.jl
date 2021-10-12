@@ -82,6 +82,24 @@ function _permute_for_group_gather(gds, x, perm, start_end)
 	res
 end
 
+#TODO is passing view better than passing the permuted vector?
+
+function _view_push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, perm)
+    if perm === nothing
+		x_topass = _permute_for_group_gather(gds, x, perm, starts)
+	else
+		x_topass = view(x, perm)
+	end
+	_push_groups_to_res_pa!(res, _tmpres, x_topass, starts, new_lengths, total_lengths, j, groupcols, ngroups)
+end
+function _view_push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, perm)
+    if perm === nothing
+		x_topass = _permute_for_group_gather(gds, x, perm, starts)
+	else
+		x_topass = view(x, perm)
+	end
+	_push_groups_to_res!(res, _tmpres, x_topass, starts, new_lengths, total_lengths, j, groupcols, ngroups)
+end
 
 # TODO we need to take care of situations where gds.parent is already grouped, thus the grouping cols from that mess with new grouping cols of gds
 function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
@@ -153,9 +171,9 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
         addmissing = false
         _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, total_lengths, addmissing = addmissing)
         if DataAPI.refpool(_tmpres) !== nothing
-            _push_groups_to_res_pa!(_columns(newds), _tmpres, _permute_for_group_gather(gds, _columns(gds.parent)[groupcols[j]], gds.perm, starts), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+            _view_push_groups_to_res_pa!(_columns(newds), _tmpres, _columns(gds.parent)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, gds.perm)
         else
-            _push_groups_to_res!(_columns(newds), _tmpres, _permute_for_group_gather(gds, _columns(gds.parent)[groupcols[j]], gds.perm, starts), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+            _view_push_groups_to_res!(_columns(newds), _tmpres, _columns(gds.parent)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, gds.perm)
         end
         push!(index(newds), new_nm[var_cnt])
         setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
