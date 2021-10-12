@@ -162,7 +162,7 @@ julia> map!(ds, [sqrt, x->x^2], 2:3)
 
 # Masking observations
 
-The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j])` is true. The `fun` is called on actual values by default, however, using the option `mapformats = true` causes `fun` to be called on the formatted values.
+The `mask(ds, fun, cols)` function can be used to return a Bool `Dataset` which the observation in row `i` and column `j` is true if `fun(ds[i, j])` is true. The `fun` is called on formatted values by default, however, using the option `mapformats = false` causes `fun` to be called on the formatted values.
 
 ## Examples
 
@@ -299,7 +299,7 @@ In the example above, the value of the first column has been updated and been us
 
 # Grouping Datasets
 
-The function `groupby!(ds, cols; rev = false, issorted = false)` groups a data set (sort `ds` based on `cols`). The sorting and grouping is done based on the formatted values of `cols` by default. However, using the option `mapformats = false`  changes this behaviour. `combine(ds, args...)` can be used to aggregate the result for each group. The syntax for `args...` is similar to `modify`, with the exception that in `combine` all `cols`  in  `cols=>fun` always refers to the original data set, and `cols`  in `cols=>byrow(fun...)`  always refers to variables in the output data set. When `new_name` is not provided, `combine`  attaches the name of the transformation at the end of the aggregated variable and creates a new name for the output column.
+The function `groupby!(ds, cols; [...])` groups a data set (sort `ds` based on `cols`). The sorting and grouping is done based on the formatted values of `cols` by default. However, using the option `mapformats = false`  changes this behaviour. `combine(ds, args...)` can be used to aggregate the result for each group. The syntax for `args...` is similar to `modify`, with the exception that in `combine` all `cols`  in  `cols=>fun` always refers to the original data set, and `cols`  in `cols=>byrow(fun...)`  always refers to variables in the output data set. When `new_name` is not provided, `combine`  attaches the name of the transformation at the end of the aggregated variable and creates a new name for the output column.
 
 ```julia
 julia> ds = Dataset(g = [1, 1, 1, 2, 2],
@@ -348,7 +348,7 @@ julia> combine(ds, :x1_float => sum)
 
 `closejoin!` does the joining in-place. The in-place operation also can be done for `antijoin`, `semijoin`, and `leftjoin` where in the latter case there must not be more than one match from the right data set.
 
-> The joining functions use the formatted value for finding the match.
+> The joining functions use the formatted value for finding the match, however, using `mapformats = false` changes this behaviour.
 > 
 > The joining functions always sort the second data set.
 
