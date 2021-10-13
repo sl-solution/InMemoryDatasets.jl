@@ -55,11 +55,29 @@ function _threaded_permute_for_groupby(x, perm)
 end
 
 function _f_barrier_for_permute_gatherby!(res, x, groups, where, dir)
-	for i in 1:length(x)
-		res[where[groups[i]]] = x[i]
-		where[groups[i]] += dir
+	nt = Threads.nthreads()
+	if length(groups) > 10^7
+		@sync for thid in 0:nt-1
+			Threads.@spawn for i in 1:length(x)
+				@inbounds if groups[i] % nt == thid
+					res[where[groups[i]]] = x[i]
+					where[groups[i]] += dir
+				end
+			end
+		end
+	else
+		@inbounds for i in 1:length(x)
+			res[where[groups[i]]] = x[i]
+			where[groups[i]] += dir
+		end
 	end
-	where .-= dir
+	if length(where) > 10^7
+		Threads.@threads for i in 1:length(where)
+			where[i] -= dir
+		end
+	else
+		where .-= dir
+	end
 	return res
 end
 function _permute_given_col_for_gatherby!(start_end::START_END, x, groups)
@@ -75,7 +93,11 @@ end
 
 function _permute_for_group_gather(gds, x, perm, start_end)
 	if perm === nothing
-		res = _permute_given_col_for_gatherby!(start_end, x, gds.groups)
+		if gds.lastvalid == length(x)
+			res = _threaded_permute_for_groupby(x, 1:length(x))
+		else
+			res = _permute_given_col_for_gatherby!(start_end, x, gds.groups)
+		end
 	else
 		res = _threaded_permute_for_groupby(x, perm)
 	end
@@ -86,7 +108,12 @@ end
 
 function _view_push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, perm)
     if perm === nothing
-		x_topass = _permute_for_group_gather(gds, x, perm, starts)
+		if gds.lastvalid == length(x)
+			x_topass = view(x, 1:length(x))
+		else
+			x_topass = _permute_for_group_gather(gds, x, perm, starts)
+		end
+
 	else
 		x_topass = view(x, perm)
 	end
@@ -94,7 +121,11 @@ function _view_push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, tota
 end
 function _view_push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, perm)
     if perm === nothing
-		x_topass = _permute_for_group_gather(gds, x, perm, starts)
+		if gds.lastvalid == length(x)
+			x_topass = x
+		else
+			x_topass = _permute_for_group_gather(gds, x, perm, starts)
+		end
 	else
 		x_topass = view(x, perm)
 	end

@@ -17,6 +17,9 @@ function compute_indices(groups, ngroups, ::Val{T}) where T
     # end
 	idx = Vector{T}(undef, length(groups))
     _fill_idx_for_sort!(idx)
+	if length(groups) == ngroups
+		return idx, copy(idx)
+	end
 	starts = _ds_sort_int_missatright_nopermx!(groups, idx, ngroups, 1, Val(T))
 	pop!(starts)
 	pop!(starts)
