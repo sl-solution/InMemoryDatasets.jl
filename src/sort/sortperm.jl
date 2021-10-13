@@ -39,6 +39,25 @@ function fast_sortperm_int_threaded!(x, original_P, copy_P, ranges, rangelen, mi
     return cnt - 1
 end
 
+function fast_sortperm_int_lm!(x, original_P, copy_P, ranges, rangelen, minval, misatleft, last_valid_range, ::Val{T}) where T
+    starts = T[]
+    for i in 1:last_valid_range
+        rangestart = ranges[i]
+        i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
+        if misatleft
+            _start_vals = _ds_sort_int_missatleft_nopermx_threaded_lm!(x, original_P, copy_P, rangestart, rangeend, rangelen, minval, Val(T))
+        else
+            _start_vals = _ds_sort_int_missatright_nopermx_threaded_lm!(x, original_P, copy_P, rangestart, rangeend, rangelen, minval, Val(T))
+        end
+        _cleanup_starts!(_start_vals, rangeend - rangestart + 1)
+        append!(starts, _start_vals .+ rangestart .- 1)
+    end
+    @inbounds for i in 1:length(starts)
+        ranges[i] = starts[i]
+    end
+    return length(starts)
+end
+
 function fast_sortperm_int!(x, original_P, copy_P, ranges, rangelen, minval, misatleft, last_valid_range, ::Val{T}) where T
     starts = T[]
     for i in 1:last_valid_range
@@ -251,79 +270,87 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                 (diff, o1) = sub_with_overflow(maxval, minval)
                 (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
                 if !o1 && !o2 && maxval < typemax(Int) && (rangelen <= div(n,2))
-
-                    # if _missat == :left it means that we multiplied observations by -1 already and we should put missing at left
-                    # note that -1 can not be applied to unsigned
-                    # if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
-                    #     hp_ds_sort_int!(_tmp, idx, int_permcpy, int_where, rangelen, minval, _missat == :left, a, _ordr)
                     if i == 1
-                        #for too many levels we use parallel version
-                        if Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads() && rangelen > 100_000
-                            # resize!(int_permcpy, length(idx))
-                            # copy!(int_permcpy, idx)
-                            # for nt in 1:Threads.nthreads()
-                            #     resize!(int_where[nt], rangelen + 2)
-                            # end
-                            if _missat == :left
-                                _starts_vals = _ds_sort_int_missatleft_nopermx_threaded!(_tmp, idx, rangelen, minval, Val(T))
-                            else
-                                _starts_vals = _ds_sort_int_missatright_nopermx_threaded!(_tmp, idx, rangelen, minval, Val(T))
-                            end
-                            _cleanup_starts!(_starts_vals, n)
-                            last_valid_range = length(_starts_vals)
-                            _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
-                            if length(colsidx) == 1
-                                stable = true
-                            end
-                            continue
-                        else
+                      #for many levels but not too many we use parallel version
+                      if Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads() && rangelen > 100_000 && rangelen*Threads.nthreads() < n
 
-                            if _missat == :left
-                                _starts_vals = _ds_sort_int_missatleft_nopermx!(_tmp, idx, rangelen, minval, Val(T))
-                            else
-                                _starts_vals = _ds_sort_int_missatright_nopermx!(_tmp, idx, rangelen, minval, Val(T))
-                            end
-                            _cleanup_starts!(_starts_vals, n)
-                            last_valid_range = length(_starts_vals)
-                            _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
-                            if length(colsidx) == 1
-                                stable = true
-                            end
-                            continue
-                        end
-                    else
-                        resize!(int_permcpy, length(idx))
-                        copy!(int_permcpy, idx)
-                        # TODO need tuning
-                        if last_valid_range < Threads.nthreads() && n/last_valid_range > rangelen
-                            last_valid_range = fast_sortperm_int_threaded!(_tmp, idx, int_permcpy, ranges, rangelen, minval, _missat == :left, last_valid_range, Val(T))
-                            continue
+                          if _missat == :left
+                              _starts_vals = _ds_sort_int_missatleft_nopermx_threaded!(_tmp, idx, rangelen, minval, Val(T))
+                          else
+                              _starts_vals = _ds_sort_int_missatright_nopermx_threaded!(_tmp, idx, rangelen, minval, Val(T))
+                          end
+                          _cleanup_starts!(_starts_vals, n)
+                          last_valid_range = length(_starts_vals)
+                          _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
+                          if length(colsidx) == 1
+                              stable = true
+                          end
+                          continue
+                      elseif Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads() && rangelen > 100_000
+                          if _missat == :left
+                              _starts_vals = _ds_sort_int_missatleft_nopermx_threaded_lm!(_tmp, idx, rangelen, minval, Val(T))
+                          else
+                              _starts_vals = _ds_sort_int_missatright_nopermx_threaded_lm!(_tmp, idx, rangelen, minval, Val(T))
+                          end
+                          _cleanup_starts!(_starts_vals, n)
+                          last_valid_range = length(_starts_vals)
+                          _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
+                          if length(colsidx) == 1
+                              stable = true
+                          end
+                          continue
+                      else
 
-                        else
-                            if  n/last_valid_range > rangelen # if rangelen is not that much
-                                last_valid_range = fast_sortperm_int!(_tmp, idx, int_permcpy, ranges, rangelen, minval, _missat == :left, last_valid_range, Val(T))
-                                continue
-                                # we shouldn't permute _tmp at all
-                            else
-                                for nt in 1:Threads.nthreads()
-                                    resize!(int_where[nt], rangelen + 2)
-                                end
-                                _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr, a)
-                            end
-                        end
-                    end
+                          if _missat == :left
+                              _starts_vals = _ds_sort_int_missatleft_nopermx!(_tmp, idx, rangelen, minval, Val(T))
+                          else
+                              _starts_vals = _ds_sort_int_missatright_nopermx!(_tmp, idx, rangelen, minval, Val(T))
+                          end
+                          _cleanup_starts!(_starts_vals, n)
+                          last_valid_range = length(_starts_vals)
+                          _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
+                          if length(colsidx) == 1
+                              stable = true
+                          end
+                          continue
+                      end
+                  else
+                      resize!(int_permcpy, length(idx))
+                      copy!(int_permcpy, idx)
+                      if last_valid_range < Threads.nthreads() && rangelen > 100_000
+
+                          last_valid_range = fast_sortperm_int_lm!(_tmp, idx, int_permcpy, ranges, rangelen, minval, _missat == :left, last_valid_range, Val(T))
+                          continue
+                      end
+                      # we should check if there are many observations in each group
+                      if n/last_valid_range > 2*rangelen && rangelen*Threads.nthreads() < n/2 # if rangelen is not that much
+
+                          last_valid_range = fast_sortperm_int_threaded!(_tmp, idx, int_permcpy, ranges, rangelen, minval, _missat == :left, last_valid_range, Val(T))
+                          continue
+                      else
+                          for nt in 1:Threads.nthreads()
+                              resize!(int_where[nt], rangelen + 2)
+                          end
+
+                          _sortperm_int!(idx, int_permcpy, _tmp, ranges, int_where, last_valid_range, _missat == :left, _ordr, a)
+                      end
+                  end
                 else
                     if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
+
                         hp_ds_sort!(_tmp, idx, a, _ordr)
                     else
+
                         _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr, a)
                     end
                 end
             end
         else
             if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
+
                 hp_ds_sort!(_tmp, idx, a, _ordr)
             else
+
                 _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr, a)
             end
         end
