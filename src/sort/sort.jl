@@ -15,20 +15,27 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), re
 
     @assert length(colsidx) == length(revs) "the reverse argument must be the same length as the length of selected columns"
     _check_for_fast_sort(ds, colsidx, revs, mapformats) == 0 && return ds
-
-    # if issorted
-    #     index(ds).sortedcols == colsidx && index(ds).rev == revs && return ds
-    #     selected_columns, ranges, last_valid_index = _find_starts_of_groups(ds::Dataset, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
-    #     _reset_grouping_info!(ds)
-    #     append!(index(ds).sortedcols, selected_columns)
-    #     append!(index(ds).rev, revs)
-    #     append!(index(ds).perm, collect(1:nrow(ds)))
-    #     append!(index(ds).starts, ranges)
-    #     index(ds).ngroups[] = last_valid_index
-    #     _modified(_attributes(ds))
-    #     ds
-    # else
-        starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable)
+    _use_ds_perm = false
+    if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 1
+        _use_ds_perm = true
+    end
+    skipcol = 0
+    if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 2
+        skipcol = length(index(ds).sortedcols)
+    end
+    starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = false)
+    if _use_ds_perm || skipcol>0 #index(ds).perm and index(ds).starts already been updated
+        empty!(index(ds).sortedcols)
+        empty!(index(ds).rev)
+        append!(index(ds).sortedcols, collect(colsidx))
+        append!(index(ds).rev, revs)
+        index(ds).ngroups[] = ngroups
+        index(ds).fmt[] = mapformats
+        if _use_ds_perm # current implementation needs to reset starts and use the computed one/ it should be optimised
+            empty!(index(ds).starts)
+            append!(index(ds).starts, starts)
+        end
+    elseif skipcol==0
         _reset_grouping_info!(ds)
         append!(index(ds).sortedcols, collect(colsidx))
         append!(index(ds).rev, revs)
@@ -36,9 +43,10 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), re
         append!(index(ds).starts, starts)
         index(ds).ngroups[] = ngroups
         index(ds).fmt[] = mapformats
-        _modified(_attributes(ds))
-        _permute_ds_after_sort!(ds, perm)
-    # end
+    end
+
+    _modified(_attributes(ds))
+    _permute_ds_after_sort!(ds, perm)
     ds
 end
 
@@ -57,28 +65,19 @@ function Base.sort(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev
 
     @assert length(colsidx) == length(revs) "the reverse argument must be the same length as the length of selected columns"
     _check_for_fast_sort(ds, colsidx, revs, mapformats) == 0 && return copy(ds)
-
-    # if issorted
-    #     index(ds).sortedcols == colsidx && index(ds).rev == revs && return copy(ds)
-    #     selected_columns, ranges, last_valid_index = _find_starts_of_groups(ds::Dataset, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
-    #     newds = copy(ds)
-    #     _reset_grouping_info!(newds)
-    #     append!(index(newds).sortedcols, selected_columns)
-    #     append!(index(newds).rev, revs)
-    #     append!(index(newds).perm, collect(1:nrow(newds)))
-    #     append!(index(newds).starts, ranges)
-    #     index(newds).ngroups[] = last_valid_index
-    # else
-        starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable)
-        newds = ds[perm, :]
-        _reset_grouping_info!(newds)
-        append!(index(newds).sortedcols, collect(colsidx))
-        append!(index(newds).rev, revs)
-        append!(index(newds).perm, perm)
-        append!(index(newds).starts, starts)
-        index(newds).ngroups[] = ngroups
-        index(newds).fmt[] = mapformats
-    # end
+    skipcol = 0
+    if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 2
+        skipcol = length(index(ds).sortedcols)
+    end
+    starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = true)
+    newds = ds[perm, :]
+    _reset_grouping_info!(newds)
+    append!(index(newds).sortedcols, collect(colsidx))
+    append!(index(newds).rev, revs)
+    append!(index(newds).perm, collect(perm))
+    append!(index(newds).starts, starts)
+    index(newds).ngroups[] = ngroups
+    index(newds).fmt[] = mapformats
     newds
 end
 
@@ -88,7 +87,12 @@ Base.sort(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false,
 
 function unsort!(ds::Dataset)
     isempty(ds) && return ds
-    if isempty(index(ds).perm)
+    if isempty(index(ds).perm) #if perm is empty everything else should be empty, here we just make sure
+        empty!(index(ds).sortedcols)
+        empty!(index(ds).rev)
+        empty!(index(ds).starts)
+        index(ds).ngroups[] = 1
+        index(ds).grouped[] = 1
         return ds
     else
         _permute_ds_after_sort!(ds, invperm(index(ds).perm))

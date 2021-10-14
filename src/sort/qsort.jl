@@ -102,22 +102,22 @@ end
 # the assumption is that x[lo:mid] is sorted and x[mid+1:hi] is also sorted,
 # the function uses this information to sort x[lo:hi]
 # x_cpy is a copy of the x, idx_cpy is a copy of idx
-function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, mid, hi, o)
+function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, mid, hi, o; cpy_offset = 0)
     st1 = lo
     en1 = mid
     st2 = mid+1
     en2 = hi
     cnt = lo
     @inbounds while true
-        if lt(o, x_cpy[st1], x_cpy[st2])
-            x[cnt] = x_cpy[st1]
-            idx[cnt] = idx_cpy[st1]
+        if lt(o, x_cpy[st1-cpy_offset], x_cpy[st2-cpy_offset])
+            x[cnt] = x_cpy[st1-cpy_offset]
+            idx[cnt] = idx_cpy[st1-cpy_offset]
             st1 += 1
             cnt += 1
             st1 > en1 && break
         else
-            x[cnt] = x_cpy[st2]
-            idx[cnt] = idx_cpy[st2]
+            x[cnt] = x_cpy[st2-cpy_offset]
+            idx[cnt] = idx_cpy[st2-cpy_offset]
             st2 += 1
             cnt += 1
             st2 > en2 && break
@@ -125,15 +125,15 @@ function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, m
     end
     @inbounds if st1 > en1
         while cnt <= hi
-            x[cnt] = x_cpy[st2]
-            idx[cnt] = idx_cpy[st2]
+            x[cnt] = x_cpy[st2-cpy_offset]
+            idx[cnt] = idx_cpy[st2-cpy_offset]
             st2 += 1
             cnt += 1
         end
     elseif st2 > en2
         while cnt <= hi
-            x[cnt] = x_cpy[st1]
-            idx[cnt] = idx_cpy[st1]
+            x[cnt] = x_cpy[st1-cpy_offset]
+            idx[cnt] = idx_cpy[st1-cpy_offset]
             st1 += 1
             cnt += 1
         end
@@ -141,50 +141,54 @@ function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, m
 end
 
 # to simplify the problem we assume number_of_chunks is 2^n for some n
-function _sort_chunks!(x, idx::Vector{<:Integer}, number_of_chunks, a::Base.Sort.Algorithm, o::Ordering)
-    cz = div(length(x), number_of_chunks)
-    en = length(x)
+function _sort_chunks!(x, idx::Vector{<:Integer}, lo, hi, number_of_chunks, a::Base.Sort.Algorithm, o::Ordering)
+    rangelen = hi - lo + 1
+    st_offset = lo - 1
+    cz = div(rangelen, number_of_chunks)
+    en = hi
     Threads.@threads for i in 1:number_of_chunks
-        ds_sort!(x, idx, (i-1)*cz+1, i*cz, a, o)
+        ds_sort!(x, idx, (i-1)*cz+1+st_offset, i*cz+st_offset, a, o)
     end
     # take care of the last few observations
-    if number_of_chunks*div(length(x), number_of_chunks) < en
-        ds_sort!(x, idx, number_of_chunks*div(length(x), number_of_chunks)+1, en, a, o)
+    if number_of_chunks*div(rangelen, number_of_chunks)+st_offset < en
+        ds_sort!(x, idx, number_of_chunks*div(rangelen, number_of_chunks)+1+st_offset, en, a, o)
     end
 end
 
-function _sort_multi_sorted_chunk!(x, idx::Vector{<:Integer}, number_of_chunks, a::Base.Sort.Algorithm, o::Ordering)
-    cz = div(length(x), number_of_chunks)
-    en = length(x)
+function _sort_multi_sorted_chunk!(x, idx::Vector{<:Integer}, lo, hi, number_of_chunks, a::Base.Sort.Algorithm, o::Ordering)
+    rangelen = hi - lo + 1
+    st_offset = lo - 1
+    cz = div(rangelen, number_of_chunks)
+    en = hi
     current_numberof_chunks = number_of_chunks
-    x_cpy = copy(x)
-    idx_cpy = copy(idx)
+    x_cpy = x[lo:hi]
+    idx_cpy = idx[lo:hi]
     while true
         Threads.@threads for i in 1:2:current_numberof_chunks
-            _sort_two_sorted_half!(x, x_cpy, idx, idx_cpy, (i-1)*cz+1, i*cz, (i+1)*cz, o)
+            _sort_two_sorted_half!(x, x_cpy, idx, idx_cpy, (i-1)*cz+1+st_offset, i*cz+st_offset, (i+1)*cz+st_offset, o; cpy_offset = lo-1)
         end
         cz *= 2
         current_numberof_chunks = current_numberof_chunks  >> 1
         current_numberof_chunks < 2 && break
-        copy!(x_cpy, x)
-        copy!(idx_cpy, idx)
+        copyto!(x_cpy, 1, x, lo, rangelen)
+        copyto!(idx_cpy, 1, idx, lo, rangelen)
     end
     # take care of the last few (less than number_of_chunks) observations
-    if number_of_chunks*div(length(x), number_of_chunks) < en
-        copy!(x_cpy, x)
-        copy!(idx_cpy, idx)
-        _sort_two_sorted_half!(x, x_cpy, idx, idx_cpy, 1, number_of_chunks*div(length(x), number_of_chunks), en, o)
+    if number_of_chunks*div(rangelen, number_of_chunks)+st_offset < en
+        copyto!(x_cpy, 1, x, lo, rangelen)
+        copyto!(idx_cpy, 1, idx, lo, rangelen)
+        _sort_two_sorted_half!(x, x_cpy, idx, idx_cpy, lo, number_of_chunks*div(rangelen, number_of_chunks)+st_offset, en, o; cpy_offset = lo-1)
     end
 end
 
 # sorting a vector using parallel quick sort
 # it uses a simple algorithm for doing this, and to make it even simpler the number of threads must be in the form of 2^n
-function hp_ds_sort!(x, idx, a::Base.Sort.Algorithm, o::Ordering)
+function hp_ds_sort!(x, idx, a::Base.Sort.Algorithm, o::Ordering; lo = 1, hi = length(x))
     cpucnt = Threads.nthreads()
     @assert cpucnt >= 2 "we need at least 2 cpus for parallel sorting"
     cpucnt = 2 ^ floor(Int, log2(cpucnt))
-    _sort_chunks!(x , idx, cpucnt, a, o)
-    _sort_multi_sorted_chunk!(x, idx, cpucnt, a, o)
+    _sort_chunks!(x , idx, lo, hi, cpucnt, a, o)
+    _sort_multi_sorted_chunk!(x, idx, lo, hi, cpucnt, a, o)
 end
 
 

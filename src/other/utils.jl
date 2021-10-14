@@ -297,7 +297,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
         else
             v = _columns(ds)[colidx[j]]
         end
-        if Core.Compiler.return_type(_f, (eltype(v),)) <: Union{Missing, Integer}
+        if nonmissingtype(Core.Compiler.return_type(_f, (eltype(v),))) <: Union{Missing, Integer}
             _minval = hp_minimum(_f, v)
             if ismissing(_minval)
                 continue

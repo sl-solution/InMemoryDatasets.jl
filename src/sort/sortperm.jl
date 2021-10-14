@@ -9,6 +9,22 @@ function _sortperm_unstable!(idx, x, ranges, last_valid_range, ord, a)
     end
 end
 
+function _sortperm_unstable_using_hpsort!(idx, x, ranges, last_valid_range, ord, a)
+    for i in 1:last_valid_range
+        rangestart = ranges[i]
+        i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
+        if (rangeend - rangestart) == 0
+            continue
+        end
+        if rangeend - rangestart + 1 > Threads.nthreads()*2
+            hp_ds_sort!(x, idx, a, ord; lo = rangestart, hi = rangeend)
+        else
+            ds_sort!(x, idx, rangestart, rangeend, a, ord)
+        end
+    end
+end
+
+
 # NOT OK
 # we should find starts here
 function fast_sortperm_int_threaded!(x, original_P, copy_P, ranges, rangelen, minval, misatleft, last_valid_range, ::Val{T}) where T
@@ -203,23 +219,40 @@ function _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
     end
 end
 # T is either Int32 or Int64 based on how many rows ds has
-function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a::Base.Sort.Algorithm,  ::Val{T}) where T
+function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a::Base.Sort.Algorithm,  ::Val{T}; skipcol = 0, skipcol_mkcopy = true) where T
     @assert length(colsidx) == length(by) == length(rev) "each col should have all information about lt, by, and rev"
     stable = false
     # arrary to keep the permutation of rows
-    idx = Vector{T}(undef, nrow(ds))
+    if skipcol>0 && !skipcol_mkcopy
+        # make use of ds.perm space
+        idx = index(ds).perm
+    else
+        idx = Vector{T}(undef, nrow(ds))
+    end
     _fill_idx_for_sort!(idx)
 
     # ranges keep the starts of blocks of sorted rows
     # rangescpy is a copy which will be help to rearrange ranges in place
-    ranges = Vector{T}(undef, nrow(ds))
+    if skipcol>0
+        if skipcol_mkcopy
+            ranges = resize!(copy(index(ds).starts), nrow(ds))
+        else # make use of ds.starts
+            ranges = resize!(index(ds).starts, nrow(ds))
+        end
+    else
+        ranges = Vector{T}(undef, nrow(ds))
+        ranges[1] = 1
+    end
     # FIXME there is no need for this rangescpy if there is only one column
     # rangescpy = Vector{T}(undef, nrow(ds))
     inbits = zeros(Bool, nrow(ds))
+    if skipcol>0
+        last_valid_range = index(ds).ngroups[]
+    else
+        last_valid_range::T = 1
+    end
 
-    last_valid_range::T = 1
 
-    ranges[1] = 1
     # rangescpy[1] = 1
     # in case we have integer columns with few distinct values
     int_permcpy = T[]
@@ -227,6 +260,9 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
     int_count = [T[] for _ in 1:Threads.nthreads()]
 
     for i in 1:length(colsidx)
+        if i <= skipcol
+            continue
+        end
         x = _columns(ds)[colsidx[i]]
         # pooledarray are treating differently (or general case of poolable data)
         if DataAPI.refpool(x) !== nothing
@@ -340,18 +376,24 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
 
                         hp_ds_sort!(_tmp, idx, a, _ordr)
                     else
-
-                        _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr, a)
+                        if last_valid_range < floor(Int, log2(Threads.nthreads()))/2
+                            _sortperm_unstable_using_hpsort!(idx, _tmp, ranges, last_valid_range, _ordr, a)
+                        else
+                            _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr, a)
+                        end
                     end
                 end
             end
         else
             if i == 1 && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads()
-
                 hp_ds_sort!(_tmp, idx, a, _ordr)
             else
-
-                _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr, a)
+                # log2(thcnt) is used because of the current parallel sorting algorithm
+                if last_valid_range < floor(Int, log2(Threads.nthreads()))/2
+                    _sortperm_unstable_using_hpsort!(idx, _tmp, ranges, last_valid_range, _ordr, a)
+                else
+                    _sortperm_unstable!(idx, _tmp, ranges, last_valid_range, _ordr, a)
+                end
             end
         end
         # last_valid_range = _fill_starts!(ranges, _tmp, rangescpy, last_valid_range, _ordr, Val(T))
@@ -377,10 +419,25 @@ function _stablise_sort!(ranges, idx, last_valid_range, a)
     end
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = HeapSortAlg(), mapformats = true, stable = true)
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true)
     colsidx = index(ds)[cols]
     @assert length(colsidx) == length(rev) "`rev` argument must be the same as length of selected columns"
-    _check_for_fast_sort(ds, colsidx, rev, mapformats) == 0 && return copy(index(ds).starts), copy(index(ds).perm), index(ds).ngroups[]
+    if _check_for_fast_sort(ds, colsidx, rev, mapformats) == 0
+        return copy(index(ds).starts), 1:nrow(ds), index(ds).ngroups[]
+    end
+    if _check_for_fast_sort(ds, colsidx, rev, mapformats) == 1
+        colsidx, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
+        if !skipcol_mkcopy
+            _fill_idx_for_sort!(index(ds).perm)
+            # make use of perm in original data (simply replace it with new one)
+            return ranges, index(ds).perm, last_valid_index
+        else
+            return ranges, 1:nrow(ds), last_valid_index
+        end
+    end
+    if skipcol == 0 && _check_for_fast_sort(ds, colsidx, rev, mapformats) == 2
+        skipcol = length(index(ds).sortedcols)
+    end
     by = Function[]
     if mapformats
         for j in 1:length(colsidx)
@@ -391,7 +448,7 @@ function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = H
             push!(by, identity)
         end
     end
-    ranges, idx, last_valid_range, isstable = ds_sort_perm(ds, colsidx, by, rev, a, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+    ranges, idx, last_valid_range, isstable = ds_sort_perm(ds, colsidx, by, rev, a, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64); skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy)
     if stable && !isstable
         if length(idx) == last_valid_range
             return ranges, idx, last_valid_range
@@ -404,14 +461,30 @@ function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = H
     end
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true)
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true)
     colsidx = index(ds)[cols]
     revs = repeat([rev], length(colsidx))
-    _check_for_fast_sort(ds, colsidx, revs, mapformats) == 0 && return copy(index(ds).starts), copy(index(ds).perm), index(ds).ngroups[]
-    _sortperm(ds, cols, revs; a = a , mapformats = mapformats, stable = stable)
+    if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 0
+        return copy(index(ds).starts), 1:nrow(ds), index(ds).ngroups[]
+    end
+    if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 1
+        colsidx, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
+
+        if !skipcol_mkcopy
+            _fill_idx_for_sort!(index(ds).perm)
+            # make use of perm in original data (simply replace it with new one)
+            return ranges, index(ds).perm, last_valid_index
+        else
+            return ranges, 1:nrow(ds), last_valid_index
+        end
+    end
+    if skipcol == 0 && _check_for_fast_sort(ds, colsidx, revs, mapformats) == 2
+        skipcol = length(index(ds).sortedcols)
+    end
+    _sortperm(ds, cols, revs; a = a , mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy)
 end
 
-_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true) = _sortperm(ds, [col], rev; a = a,  mapformats = mapformats, stable = stable)
+_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true) = _sortperm(ds, [col], rev; a = a,  mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy)
 
 
 function _check_for_fast_sort(ds, colsidx, rev, mapformats)
@@ -424,6 +497,10 @@ function _check_for_fast_sort(ds, colsidx, rev, mapformats)
     elseif length(colsidx) < length(scols)
         if colsidx == view(scols, 1:length(colsidx)) && rev == view(revs, 1:length(colsidx)) && mapformats == fmt
             return 1
+        end
+    elseif length(colsidx) > length(scols)
+        if view(colsidx, 1:length(scols)) == scols && view(rev, 1:length(scols)) == revs && mapformats == fmt
+            return 2
         end
     else
         return -1
