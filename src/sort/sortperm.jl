@@ -190,14 +190,14 @@ function _apply_by(x::AbstractVector, idx, by, rev)
 end
 
 function _modify_poolarray_to_integer!(refs, trans)
-    Threads.@threads for i in 1:length(refs)
+    @inbounds Threads.@threads for i in 1:length(refs)
         refs[i] = trans[refs[i]]
     end
 end
 
 
 function _fast_path_modify_to_integer!(xrefs, perm)
-    Threads.@threads for i in 1:length(xrefs)
+    @inbounds Threads.@threads for i in 1:length(xrefs)
         xrefs[i] = perm[xrefs[i]]
     end
 end

@@ -262,16 +262,6 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
         end
 
     end
-    # grouping information for the output dataset
-    # append!(index(newds).sortedcols, index(newds)[index(gds.parent).names[groupcols]])
-    # append!(index(newds).rev, index(gds.parent).rev)
-    # append!(index(newds).perm, collect(1:total_lengths))
-    # # index(newds).grouped[] = true
-    # index(newds).ngroups[] = ngroups
-    # append!(index(newds).starts, collect(1:total_lengths))
-    # for i in 2:(length(new_lengths))
-    #     index(newds).starts[i] = new_lengths[i - 1]+1
-    # end
     newds
 end
 
