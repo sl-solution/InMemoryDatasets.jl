@@ -18,6 +18,7 @@ end
 
 my_tests = ["constructors.jl",
             "characters.jl",
+            "sort.jl",
             "join.jl",
             "transpose.jl"
             ]
