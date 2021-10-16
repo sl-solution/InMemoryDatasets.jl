@@ -142,7 +142,7 @@ end
 stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_wmean(identity, x, w)
 
 
-function stat_var(f, x::AbstractArray{T,1}, df=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
+function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     all(ismissing, x) && return missing
     any(ISNAN, x) && return convert(eltype(x), NaN)
     length(x) == 1 && return 0.0
@@ -156,19 +156,19 @@ function stat_var(f, x::AbstractArray{T,1}, df=true)::Union{Float64, Missing} wh
 
     if n == 0
         return missing
-    elseif n == 1
-        return 0.0
+    elseif n == 1 && dof
+        return missing
     else
-        return ss / (n - Int(df))
+        return ss / (n - Int(dof))
     end
 end
 
-stat_var(x::AbstractArray{T,1}, df=true) where T = stat_var(identity, x, df)
+stat_var(x::AbstractArray{T,1}, dof=true) where T = stat_var(identity, x, dof)
 
-function stat_std(f , x::AbstractArray{T,1}, df=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
-    sqrt(stat_var(f, x,df))
+function stat_std(f , x::AbstractArray{T,1}, dof=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
+    sqrt(stat_var(f, x,dof))
 end
-stat_std(x::AbstractArray{T,1}, df=true) where T = stat_std(identity, x, df)
+stat_std(x::AbstractArray{T,1}, dof=true) where T = stat_std(identity, x, dof)
 
 function stat_median(v::AbstractArray{T,1}) where T
     isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))

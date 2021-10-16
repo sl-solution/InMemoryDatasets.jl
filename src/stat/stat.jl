@@ -22,11 +22,11 @@ wsum(x::AbstractVector, w::AbstractVector) = stat_wsum(identity, x, w)
 wmean(f, x::AbstractVector, w::AbstractVector) = stat_wmean(f, x, w)
 wmean(x::AbstractVector, w::AbstractVector) = stat_wmean(identity, x, w)
 
-Statistics.var(f, x::AbstractArray{Union{T,Missing},1}, df = true) where T <: Union{INTEGERS, FLOATS}= stat_var(f, x, df)
-Statistics.var(x::AbstractArray{Union{T,Missing},1}, df = true) where T <: Union{INTEGERS, FLOATS}= stat_var(x, df)
+Statistics.var(f, x::AbstractArray{Union{T,Missing},1}, dof = true) where T <: Union{INTEGERS, FLOATS}= stat_var(f, x, dof)
+Statistics.var(x::AbstractArray{Union{T,Missing},1}, dof = true) where T <: Union{INTEGERS, FLOATS}= stat_var(x, dof)
 
-Statistics.std(f, x::AbstractArray{Union{T,Missing},1}, df = true) where T <: Union{INTEGERS, FLOATS}= stat_std(f, x, df)
-Statistics.std(x::AbstractArray{Union{T,Missing},1}, df = true) where T <: Union{INTEGERS, FLOATS}= stat_std(x, df)
+Statistics.std(f, x::AbstractArray{Union{T,Missing},1}, dof = true) where T <: Union{INTEGERS, FLOATS}= stat_std(f, x, dof)
+Statistics.std(x::AbstractArray{Union{T,Missing},1}, dof = true) where T <: Union{INTEGERS, FLOATS}= stat_std(x, dof)
 
 Statistics.median(x::AbstractArray{Union{T,Missing},1}) where T = stat_median(x)
 Statistics.median!(x::AbstractArray{Union{T,Missing},1}) where T = stat_median!(x)

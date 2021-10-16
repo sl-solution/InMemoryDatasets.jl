@@ -134,7 +134,7 @@ function _row_wise_var(ss, sval, n, dof, T)
 end
 
 # TODO needs type stability
-
+# TODO need abs2 for calculations
 function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
@@ -143,10 +143,12 @@ function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missin
     ss = row_sum(ds, _sq_ ∘ f, cols)
     sval = row_sum(ds, f, cols)
     n = row_count(ds, x -> !ismissing(x), cols)
-    res = ss ./ n .- (sval ./ n) .^ 2
+    T2 = Core.Compiler.return_type(/, (eltype(ss), eltype(n)))
+    res = Vector{Union{Missing, T2}}(undef, length(ss))
+    res .= ss ./ n .- (sval ./ n) .^ 2
     if dof
         res .= (n .* res) ./ (n .- 1)
-        res .= ifelse.(n .== 1, zero(T), res)
+        res .= ifelse.(n .== 1, missing, res)
     end
     res
     # _row_wise_var(ss, sval, n, dof, T)

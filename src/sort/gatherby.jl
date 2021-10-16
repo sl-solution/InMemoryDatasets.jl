@@ -157,7 +157,7 @@ function _gatherby_mean(gds, col; threads = true)
 	res
 end
 
-function _fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std)
+function _fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std, dof)
 
 	@inbounds for i in 1:length(nval)
 		if cal_std
@@ -165,37 +165,37 @@ function _fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std)
 				res[i] = NaN
 			elseif nval[i] == 0
 				res[i] = missing
-			elseif nval[i] == 0
-				res[i] = 0.0
+			elseif nval[i] == 1 && dof
+				res[i] = missing
 			else
-				res[i] = sqrt(ss[i]/(nval[i]-1))
+				res[i] = sqrt(ss[i]/(nval[i]-Int(dof)))
 			end
 		else
 			if countnan[i] > 0
 				res[i] = NaN
 			elseif nval[i] == 0
 				res[i] = missing
-			elseif nval[i] == 0
-				res[i] = 0.0
+			elseif nval[i] == 1 && dof
+				res[i] = missing
 			else
-				res[i] = ss[i]/(nval[i]-1)
+				res[i] = ss[i]/(nval[i]-Int(dof))
 			end
 		end
 	end
 end
 
 # TODO directly calculating var should be a better approach
-function _gatherby_var(gds, col; df = true, cal_std = false, threads = true)
+function _gatherby_var(gds, col; dof = true, cal_std = false, threads = true)
     countnan = _gatherby_cntnan(gds, col; threads = threads)
     meanval = _gatherby_mean(gds, col; threads = threads)
     ss = gatherby_mapreduce(gds, [x->abs2(x - meanval[i]) for i in 1:length(meanval)], _stat_add_sum, col, 0.0, threads = threads)
     nval = _gatherby_n(gds, col; threads = threads)
 	T = Core.Compiler.return_type(/, (nonmissingtype(eltype(meanval)), nonmissingtype(eltype(nval))))
 	res = Vector{Union{Missing, T}}(undef, length(nval))
-	_fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std)
+	_fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std, dof)
 	res
 end
-_gatherby_std(gds, col; df = true, threads = true) = _gatherby_var(gds, col; df = df, cal_std = true, threads = threads)
+_gatherby_std(gds, col; dof = true, threads = true) = _gatherby_var(gds, col; dof = dof, cal_std = true, threads = threads)
 
 
 const FAST_GATHERBY_REDUCTION = [sum, length, minimum, maximum, mean, var, std, n, nmissing]
