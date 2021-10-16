@@ -141,8 +141,9 @@ end
 
 
 # Date & Time should be treated as integer
-_date_value(x::TimeType) = Dates.value(x)
-_date_value(x::Period) = Dates.value(x)
+_date_value(::Missing) = missing
+_date_value(x::TimeType) = Dates.value(x)::Int
+_date_value(x::Period) = Dates.value(x)::Int
 _date_value(x) = x
 
 function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group)
@@ -297,7 +298,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
         else
             v = _columns(ds)[colidx[j]]
         end
-        if nonmissingtype(Core.Compiler.return_type(_f, (eltype(v),))) <: Union{Missing, Integer}
+        if nonmissingtype(Core.Compiler.return_type(_f, (nonmissingtype(eltype(v)),))) <: Union{Missing, Integer}
             _minval = hp_minimum(_f, v)
             if ismissing(_minval)
                 continue
