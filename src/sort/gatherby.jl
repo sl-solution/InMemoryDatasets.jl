@@ -216,7 +216,8 @@ end
 
 
 function _fast_gatherby_groups_to_res!(outres, x, grp)
-    @inbounds for i in 1:length(x)
+	# the first element of each group is used for the output data set
+    @inbounds for i in length(x):-1:1
         outres[grp[i]] = x[i]
     end
 end
