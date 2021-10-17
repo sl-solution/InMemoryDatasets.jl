@@ -146,7 +146,75 @@ _date_value(x::TimeType) = Dates.value(x)::Int
 _date_value(x::Period) = Dates.value(x)::Int
 _date_value(x) = x
 
-function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group)
+
+function _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, ::Val{T}) where T
+	_which_to_process, offsets = _find_groups_with_more_than_one_observation(prev_groups, prev_max_group, Val(T))
+	_sum_of_which_to_process = sum(_which_to_process)
+	Threads.@threads for i in 1:length(v)
+		@inbounds if _which_to_process[prev_groups[i]]
+			rhashes[i] = hash(f(v[i]), hash(prev_groups[i]))
+		end
+	end
+
+    n = length(v)
+    # sz = 2 ^ ceil(Int, log2(n)+1)
+    sz = length(gslots)
+    # fill!(gslots, 0)
+    Threads.@threads for i in 1:sz
+        @inbounds gslots[i] = 0
+    end
+    szm1 = sz - 1
+    ngroups = prev_max_group - _sum_of_which_to_process
+    flag = true
+	@inbounds for i in eachindex(rhashes)
+		if _which_to_process[prev_groups[i]]
+        	slotix = rhashes[i] & szm1 + 1
+        	gix = -1
+        	probe = 0
+        	while true
+            	g_row = gslots[slotix]
+            	if g_row == 0
+                	gslots[slotix] = i
+                	gix = ngroups += 1
+                	break
+            #check hash collision
+            	elseif rhashes[i] == rhashes[g_row]
+                	if isequal(prev_groups[i],prev_groups[g_row]) && isequal(f(v[i]), f(v[g_row]))
+                    	gix = groups[g_row]
+                    	break
+                	end
+            	end
+            	slotix = slotix & szm1 + 1
+            	probe += 1
+            	@assert probe < sz
+        	end
+        	groups[i] = gix
+    	end
+	end
+
+	Threads.@threads for i in 1:length(rhashes)
+		@inbounds if !_which_to_process[prev_groups[i]]
+			pos = searchsortedlast(offsets, prev_groups[i])
+			prev_groups[i] -= pos
+		else
+			@inbounds _which_to_process[prev_groups[i]] ? prev_groups[i] = groups[i] : nothing
+		end
+    end
+	ngroups = hp_maximum(prev_groups)
+
+    if ngroups == n
+        flag = false
+        return flag, ngroups
+    end
+
+    # copy!(prev_groups, rhashes)
+    return flag, ngroups
+end
+
+function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, stable, ::Val{T}) where T
+	if !stable
+		return _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, Val(T))
+	end
     Threads.@threads for i in 1:length(v)
         @inbounds rhashes[i] = hash(f(v[i]), hash(prev_groups[i])) #hash(prev_groups[i]) is used to prevent reduce probe, the question is: is it working?
     end
@@ -268,7 +336,7 @@ function _create_dictionary_int_fast!(prev_groups, f, v, prev_max_group, minval,
 end
 
 
-function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
+function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) where T
     colidx = index(ds)[cols]
     _max_level = nrow(ds)
     prev_max_group = UInt(1)
@@ -308,7 +376,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
             maxval::Integer = hp_maximum(_f, v)
             (diff, o1) = sub_with_overflow(maxval, minval)
             (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-            (outmult, o3) = mul_with_overflow(Int(rangelen), Int(prev_max_group))
+            (outmult, o3) = mul_with_overflow(T(rangelen), T(prev_max_group))
             if !o1 && !o2 && !o3 && maxval < typemax(Int) &&  prev_max_group*rangelen < 2*length(v)
                 flag, prev_max_group = _create_dictionary_int_fast!(prev_groups, _f, v, prev_max_group, minval, rangelen, Val(T))
             else
@@ -318,7 +386,9 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
                     resize!(gslots, sz)
                     resize!(groups, nrow(ds))
                 end
-                flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
+
+                flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stable, Val(T))
+
             end
         else
             if !seen_nonint
@@ -327,12 +397,31 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false) where T
                 resize!(gslots, sz)
                 resize!(groups, nrow(ds))
             end
-            flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group)
+
+            flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stable, Val(T))
         end
         !flag && break
     end
     return prev_groups, gslots, prev_max_group
 end
+
+function _find_groups_with_more_than_one_observation(groups, ngroups, ::Val{T}) where T
+    res = trues(length(groups))
+    seen_groups = falses(ngroups)
+
+    @inbounds for i in 1:length(res)
+        seen_groups[groups[i]] ? nothing : (seen_groups[groups[i]] = true; res[i] = false)
+    end
+
+	fill!(seen_groups, false)
+    @inbounds for i in 1:length(res)
+		res[i] && !seen_groups[groups[i]] ? seen_groups[groups[i]] = true : nothing
+	end
+	seen_groups, findall(seen_groups)
+
+end
+
+
 
 function _gather_groups_old_version(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]
