@@ -14,7 +14,7 @@ In this section, we discuss the overall aspects of `format` and we postpone the 
 
 In this example, we create a simple data set and assign `iseven` function as the `format` for `:x1`, by using `setformat!(ds, 1 => iseven)`, note that we can also use the columns' names to assign `format`, i.e. the function can be called like `setformat!(ds, :x1 => iseven)`. After calling `setformat!`, the format of the column will be set, and from this point any operation which support `format` will use these formatted values. One of the operations which uses formatted values is `show`. For instance, in the following example, the printed data set shows the formatted values.
 
-```jldoctes
+```jldoctest
 julia> ds = Dataset(x1 = 1:5, x2 = [1,2,1,2,1])
 5×2 Dataset
  Row │ x1        x2
@@ -242,7 +242,7 @@ julia> ds
    3 │       1.0         2         3
 ```
 
-* **The function defined as format assumes the input argument is a vector**: In this example `custom_format` (defined earlier) is used for the third column. `custom_format` is defined in such a way that it assumes the input argument is a vector, but Datasets applies `format` to each value. 
+* **The function defined as format assumes the input argument is a vector**: In this example `custom_format` (defined earlier) is used for the third column. `custom_format` is defined in such a way that it assumes the input argument is a vector, but Datasets applies `format` to each value.
 
 ```jldoctest
 julia> setformat!(ds, 3=>custom_format)
