@@ -302,3 +302,5 @@ julia> unsort!(ds)
    7 │        4        50
    8 │        4        30
 ```
+
+## `issorted`
