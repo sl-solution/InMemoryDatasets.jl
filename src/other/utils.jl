@@ -374,9 +374,9 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                 minval::Integer = _minval
             end
             maxval::Integer = hp_maximum(_f, v)
-            (diff, o1) = sub_with_overflow(maxval, minval)
+            (diff, o1) = sub_with_overflow(Int(maxval), Int(minval))
             (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-            (outmult, o3) = mul_with_overflow(T(rangelen), T(prev_max_group))
+            (outmult, o3) = mul_with_overflow(rangelen, Int(prev_max_group))
             if !o1 && !o2 && !o3 && maxval < typemax(Int) &&  prev_max_group*rangelen < 2*length(v)
                 flag, prev_max_group = _create_dictionary_int_fast!(prev_groups, _f, v, prev_max_group, minval, rangelen, Val(T))
             else
