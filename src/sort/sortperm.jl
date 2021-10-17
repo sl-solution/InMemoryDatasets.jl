@@ -303,7 +303,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                     minval::Integer = _minval
                 end
                 maxval::Integer = hp_maximum(_tmp)
-                (diff, o1) = sub_with_overflow(maxval, minval)
+                (diff, o1) = sub_with_overflow(Int(maxval), Int(minval))
                 (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
                 if !o1 && !o2 && maxval < typemax(Int) && (rangelen <= div(n,2))
                     if i == 1
@@ -359,7 +359,7 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                           continue
                       end
                       # we should check if there are many observations in each group
-                      if n/last_valid_range > 2*rangelen && rangelen*Threads.nthreads() < n/2 # if rangelen is not that much
+                      if n/last_valid_range > 2.0*rangelen && rangelen*Threads.nthreads() < n/2 # if rangelen is not that much
 
                           last_valid_range = fast_sortperm_int_threaded!(_tmp, idx, int_permcpy, ranges, rangelen, minval, _missat == :left, last_valid_range, Val(T))
                           continue
