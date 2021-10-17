@@ -60,12 +60,12 @@ Base.show(io::IO, mime::MIME"text/plain", gds::GatherBy;
 
 
 
-function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true)
+function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true, stable = true)
     colsidx = index(ds)[cols]
-    a = _gather_groups(ds, colsidx, nrow(ds)<typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
+    a = _gather_groups(ds, colsidx, nrow(ds)<typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats, stable = stable)
     GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
 end
-gatherby(ds::Dataset, col::ColumnIndex; mapformats = true) = gatherby(ds, [col], mapformats = mapformats)
+gatherby(ds::Dataset, col::ColumnIndex; mapformats = true, stable = true) = gatherby(ds, [col], mapformats = mapformats, stable = stable)
 
 
 # mapreduce for gatherby data
@@ -237,9 +237,9 @@ function _fast_gatherby_combine_f_barrier(gds, col, newds, mssecond, mslast, new
         elseif mssecond == mean
             push!(_columns(newds), _gatherby_mean(gds, col))
         elseif mssecond == var
-            push!(_columns(newds), _gatherby_var(gds, col, df = true))
+            push!(_columns(newds), _gatherby_var(gds, col, dof = true))
         elseif mssecond == std
-            push!(_columns(newds), _gatherby_std(gds, col, df = true))
+            push!(_columns(newds), _gatherby_std(gds, col, dof = true))
         elseif mssecond == length
             push!(_columns(newds), _gatherby_length(gds, col))
         elseif mssecond == IMD.n
@@ -269,9 +269,9 @@ function _fast_gatherby_combine_f_barrier!(gds, col, res, mssecond, mslast, grp,
         elseif mssecond == mean
             res[i] =  _gatherby_mean(gds, col; threads = threads)
         elseif mssecond == var
-            res[i] =  _gatherby_var(gds, col; threads = threads, df = true)
+            res[i] =  _gatherby_var(gds, col; threads = threads, dof = true)
         elseif mssecond == std
-            res[i] =  _gatherby_std(gds, col; threads = threads, df = true)
+            res[i] =  _gatherby_std(gds, col; threads = threads, dof = true)
         elseif mssecond == length
             res[i] =  _gatherby_length(gds, col; threads = threads)
         elseif mssecond == IMD.n
