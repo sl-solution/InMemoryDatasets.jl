@@ -59,45 +59,35 @@ Base.show(io::IO, mime::MIME"text/plain", gds::GatherBy;
     show(io, gds; title = summary(gds), kwargs...)
 
 
+function _group_creator!(groups, starts, ngroups)
+	if ngroups == 1
+		fill!(groups, 1)
+		return
+	end
+  	for j in 1:ngroups
+		lo = starts[j]
+		j == ngroups ? hi = length(groups) : hi = starts[j + 1] - 1
+		fill!(view(groups, lo:hi), j)
+	end
+end
 
-function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true, stable = true)
+function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true, stable = true, isgathered = false)
     colsidx = index(ds)[cols]
-    a = _gather_groups(ds, colsidx, nrow(ds)<typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats, stable = stable)
-    GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
+	T = nrow(ds) < typemax(Int32) ? Int32 : Int64
+
+	if isgathered
+		# TODO _find_starts_of_groups() needs improvement
+		 colindex, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, Val(T); mapformats = mapformats)
+		 groups = Vector{T}(undef, nrow(ds))
+		 _group_creator!(groups, ranges, last_valid_index)
+		 return GatherBy(ds, colindex, groups, last_valid_index, mapformats, 1:nrow(ds), ranges)
+	else
+		a = _gather_groups(ds, colsidx, Val(T), mapformats = mapformats, stable = stable)
+    	return GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
+	end
 end
-gatherby(ds::Dataset, col::ColumnIndex; mapformats = true, stable = true) = gatherby(ds, [col], mapformats = mapformats, stable = stable)
+gatherby(ds::Dataset, col::ColumnIndex; mapformats = true, stable = true, isgathered = false) = gatherby(ds, [col], mapformats = mapformats, stable = stable, isgathered = isgathered)
 
-
-# mapreduce for gatherby data
-
-function _fill_mapreduce_col!(x, f, op, init0, y, loc)
-    init = init0[1, 1]
-    Threads.@threads for i in 1:length(y)
-        @inbounds init0[loc[i], Threads.threadid()] =  op(init0[loc[i],Threads.threadid()], f(y[i]))
-    end
-    Threads.@threads for i in 1:length(x)
-        @inbounds x[i] = mapreduce(identity, op, view(init0, i, :), init = init)
-    end
-end
-
-function _fill_mapreduce_col!(x, f::Vector, op, init0, y, loc)
-    init = init0[1, 1]
-    Threads.@threads for i in 1:length(y)
-        @inbounds init0[loc[i], Threads.threadid()] =  op(init0[loc[i],Threads.threadid()], f[loc[i]](y[i]))
-    end
-    Threads.@threads for i in 1:length(x)
-        @inbounds x[i] = mapreduce(identity, op, view(init0, i, :), init = init)
-    end
-end
-
-
-function gatherby_mapreduce_threaded(gds::GatherBy, f, op, col::ColumnIndex, init::T) where T
-    init0 = fill(init, gds.lastvalid, Threads.nthreads())
-    init0 = allowmissing(init0)
-    res = Tables.allocatecolumn(Union{T, Missing}, gds.lastvalid)
-    _fill_mapreduce_col!(res, f, op, init0, _columns(gds.parent)[index(gds.parent)[col]], gds.groups)
-    res
-end
 
 function _fill_mapreduce_col!(x, f, op, y, loc)
     @inbounds for i in 1:length(y)
@@ -112,28 +102,52 @@ function _fill_mapreduce_col!(x, f::Vector, op, y, loc)
 end
 
 
-function gatherby_mapreduce(gds::GatherBy, f, op, col::ColumnIndex, init::T; threads = true) where T
+function _fill_mapreduce_col_threaded!(x, f, op, y, loc, nt)
+	@sync for thid in 0:nt-1
+		Threads.@spawn for i in 1:length(y)
+        	@inbounds if loc[i] % nt == thid
+				# we need to do more complicated stuff here?
+				x[loc[i]] = op(x[loc[i]], f(y[i]))
+			end
+		end
+    end
+end
+
+function _fill_mapreduce_col_threaded!(x, f::Vector, op, y, loc, nt)
+	@sync for thid in 0:nt-1
+		Threads.@spawn for i in 1:length(y)
+        	@inbounds if loc[i] % nt == thid
+				x[loc[i]] = op(x[loc[i]], f[loc[i]](y[i]))
+			end
+		end
+    end
+end
+
+
+
+
+function gatherby_mapreduce(gds::GatherBy, f, op, col::ColumnIndex, nt, init::T) where T
 	CT = T
     T <: Base.SmallSigned ? CT = Int : nothing
 	T <: Base.SmallUnsigned ? CT = UInt : nothing
 	T <: Float64 ? CT = Float64 : nothing
-	(outmult, o3) = mul_with_overflow(Int(gds.lastvalid), Int(Threads.nthreads()))
-	if threads && !o3 && gds.lastvalid*Threads.nthreads() <= 1_000_000 && nrow(gds.parent) > 50_000_000
-		return gatherby_mapreduce_threaded(gds, f, op, col, CT(init))
-	end
-    res = Tables.allocatecolumn(Union{CT, Missing}, gds.lastvalid)
+	res = Tables.allocatecolumn(Union{CT, Missing}, gds.lastvalid)
     fill!(res, init)
-    _fill_mapreduce_col!(res, f, op, _columns(gds.parent)[index(gds.parent)[col]], gds.groups)
+	if Threads.nthreads() > 1 && gds.lastvalid > 100_000
+		_fill_mapreduce_col_threaded!(res, f, op, _columns(gds.parent)[index(gds.parent)[col]], gds.groups, nt)
+	else
+    	_fill_mapreduce_col!(res, f, op, _columns(gds.parent)[index(gds.parent)[col]], gds.groups)
+	end
     res
 end
 
-_gatherby_maximum(gds, col; f = identity, threads = true) = gatherby_mapreduce(gds, f, _stat_max_fun, col, typemin(nonmissingtype(eltype(gds.parent[!, col]))); threads = threads)
-_gatherby_minimum(gds, col; f = identity, threads = true) = gatherby_mapreduce(gds, f, _stat_min_fun, col, typemax(nonmissingtype(eltype(gds.parent[!, col]))); threads = threads)
-_gatherby_sum(gds, col; f = identity, threads = true) = gatherby_mapreduce(gds, f, _stat_add_sum, col, zero(Core.Compiler.return_type(f, (eltype(gds.parent[!, col]), ))); threads = threads)
-_gatherby_n(gds, col; threads = true) = _gatherby_sum(gds, col, f = _stat_notmissing, threads = threads)
-_gatherby_length(gds, col; threads = true) = _gatherby_sum(gds, col, f = x->1, threads = threads)
-_gatherby_cntnan(gds, col; threads = true) = _gatherby_sum(gds, col, f = ISNAN, threads = threads)
-_gatherby_nmissing(gds, col; threads = true) = _gatherby_sum(gds, col, f = _stat_ismissing, threads = threads)
+_gatherby_maximum(gds, col; f = identity, nt = Threads.nthreads()) = gatherby_mapreduce(gds, f, _stat_max_fun, col, nt, typemin(nonmissingtype(eltype(gds.parent[!, col]))))
+_gatherby_minimum(gds, col; f = identity, nt = Threads.nthreads()) = gatherby_mapreduce(gds, f, _stat_min_fun, col, nt, typemax(nonmissingtype(eltype(gds.parent[!, col]))))
+_gatherby_sum(gds, col; f = identity, nt = Threads.nthreads()) = gatherby_mapreduce(gds, f, _stat_add_sum, col, nt, zero(Core.Compiler.return_type(f, (eltype(gds.parent[!, col]), ))))
+_gatherby_n(gds, col; nt = Threads.nthreads()) = _gatherby_sum(gds, col, f = _stat_notmissing, nt = nt)
+_gatherby_length(gds, col; nt = Threads.nthreads()) = _gatherby_sum(gds, col, f = x->1, nt = nt)
+_gatherby_cntnan(gds, col; nt = Threads.nthreads()) = _gatherby_sum(gds, col, f = ISNAN, nt = nt)
+_gatherby_nmissing(gds, col; nt = Threads.nthreads()) = _gatherby_sum(gds, col, f = _stat_ismissing, nt = nt)
 
 
 function _fill_gatherby_mean_barrier!(res, sval, nval)
@@ -147,13 +161,17 @@ function _fill_gatherby_mean_barrier!(res, sval, nval)
 end
 
 
-function _gatherby_mean(gds, col; threads = true)
-    sval = _gatherby_sum(gds, col; threads = threads)
-    nval = _gatherby_n(gds, col; threads = threads)
+function _gatherby_mean(gds, col; nt = Threads.nthreads())
+	nt2 = max(div(nt, 2),1)
+
+	t1 = Threads.@spawn _gatherby_sum(gds, col, nt = nt2)
+	t2 = Threads.@spawn _gatherby_n(gds, col, nt = nt2)
+	sval = fetch(t1)
+	nval = fetch(t2)
+
 	T = Core.Compiler.return_type(/, (nonmissingtype(eltype(sval)), nonmissingtype(eltype(nval))))
 	res = Vector{Union{Missing, T}}(undef, length(nval))
 	_fill_gatherby_mean_barrier!(res, sval, nval)
-
 	res
 end
 
@@ -185,17 +203,23 @@ function _fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std, 
 end
 
 # TODO directly calculating var should be a better approach
-function _gatherby_var(gds, col; dof = true, cal_std = false, threads = true)
-    countnan = _gatherby_cntnan(gds, col; threads = threads)
-    meanval = _gatherby_mean(gds, col; threads = threads)
-    ss = gatherby_mapreduce(gds, [x->abs2(x - meanval[i]) for i in 1:length(meanval)], _stat_add_sum, col, 0.0, threads = threads)
-    nval = _gatherby_n(gds, col; threads = threads)
+function _gatherby_var(gds, col; dof = true, cal_std = false)
+	nt = Threads.nthreads()
+	nt2 = max(div(nt,2),1)
+	t1 = Threads.@spawn _gatherby_cntnan(gds, col, nt = nt2)
+	t2 = Threads.@spawn _gatherby_mean(gds, col, nt = nt2)
+	meanval = fetch(t2)
+	t3 = Threads.@spawn gatherby_mapreduce(gds, [x->abs2(x - meanval[i]) for i in 1:length(meanval)], _stat_add_sum, col, nt2, 0.0)
+	t4 = Threads.@spawn _gatherby_n(gds, col, nt = nt2)
+	countnan = fetch(t1)
+	ss = fetch(t3)
+	nval = fetch(t4)
 	T = Core.Compiler.return_type(/, (nonmissingtype(eltype(meanval)), nonmissingtype(eltype(nval))))
 	res = Vector{Union{Missing, T}}(undef, length(nval))
 	_fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std, dof)
 	res
 end
-_gatherby_std(gds, col; dof = true, threads = true) = _gatherby_var(gds, col; dof = dof, cal_std = true, threads = threads)
+_gatherby_std(gds, col; dof = true) = _gatherby_var(gds, col; dof = dof, cal_std = true)
 
 
 const FAST_GATHERBY_REDUCTION = [sum, length, minimum, maximum, mean, var, std, n, nmissing]
@@ -256,32 +280,6 @@ function _fast_gatherby_combine_f_barrier(gds, col, newds, mssecond, mslast, new
     end
 end
 
-function _fast_gatherby_combine_f_barrier!(gds, col, res, mssecond, mslast, grp, ngrps, i, threads)
-
-        if mssecond == sum
-            res[i] =  _gatherby_sum(gds, col; threads = threads)
-        elseif mssecond == maximum
-            res[i] =  _gatherby_maximum(gds, col; threads = threads)
-        elseif mssecond == minimum
-            res[i] =  _gatherby_minimum(gds, col; threads = threads)
-        elseif mssecond == mean
-            res[i] =  _gatherby_mean(gds, col; threads = threads)
-        elseif mssecond == mean
-            res[i] =  _gatherby_mean(gds, col; threads = threads)
-        elseif mssecond == var
-            res[i] =  _gatherby_var(gds, col; threads = threads, dof = true)
-        elseif mssecond == std
-            res[i] =  _gatherby_std(gds, col; threads = threads, dof = true)
-        elseif mssecond == length
-            res[i] =  _gatherby_length(gds, col; threads = threads)
-        elseif mssecond == IMD.n
-            res[i] =  _gatherby_n(gds, col; threads = threads)
-        else mssecond == IMD.nmissing
-            res[i] =  _gatherby_nmissing(gds, col; threads = threads)
-        end
-end
-
-
 function _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm)
     groupcols = gds.groupcols
     ngroups = gds.lastvalid
@@ -308,27 +306,12 @@ function _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm)
         setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
         var_cnt += 1
     end
-
-	if all(x->!(x.second.first isa Expr), ms)
-		all_res = Vector{Any}(undef, length(ms))
-		Threads.@threads for i in 1:length(ms)
-			_fast_gatherby_combine_f_barrier!(gds, ms[i].first, all_res, ms[i].second.first, ms[i].second.second, groups, ngroups, i, length(ms) < Threads.nthreads()/10)
-		end
-		for i in 1:length(ms)
-			push!(_columns(newds), all_res[i])
-			if !haskey(index(newds), ms[i].second.second)
-				push!(index(newds), ms[i].second.second)
-			end
+	for i in 1:length(ms)
+		_fast_gatherby_combine_f_barrier(gds, ms[i].first, newds, ms[i].second.first, ms[i].second.second, newds_lookup, groups, ngroups)
+		if !haskey(index(newds), ms[i].second.second)
+			push!(index(newds), ms[i].second.second)
 		end
 
-	else
-		for i in 1:length(ms)
-			_fast_gatherby_combine_f_barrier(gds, ms[i].first, newds, ms[i].second.first, ms[i].second.second, newds_lookup, groups, ngroups)
-			if !haskey(index(newds), ms[i].second.second)
-				push!(index(newds), ms[i].second.second)
-			end
-
-		end
 	end
-    newds
+	newds
 end
