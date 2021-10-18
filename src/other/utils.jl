@@ -386,8 +386,8 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                     resize!(gslots, sz)
                     resize!(groups, nrow(ds))
                 end
-
-                flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stable, Val(T))
+				j > 1 ? stablegather = stable : stablegather = false
+                flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T))
 
             end
         else
@@ -397,8 +397,8 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                 resize!(gslots, sz)
                 resize!(groups, nrow(ds))
             end
-
-            flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stable, Val(T))
+			j > 1 ? stablegather = stable : stablegather = false
+            flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T))
         end
         !flag && break
     end
