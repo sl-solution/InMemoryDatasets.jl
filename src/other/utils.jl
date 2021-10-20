@@ -263,50 +263,6 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
     return flag, ngroups
 end
 
-function _create_dictionary_int!(prev_groups, groups, gslots, f, v, prev_max_group, minval, ::Val{T}) where T
-    offset = 1 - minval
-    n = length(v)
-    # sz = 2 ^ ceil(Int, log2(n)+1)
-    sz = length(gslots)
-    # fill!(gslots, 0)
-    Threads.@threads for i in 1:sz
-        @inbounds gslots[i] = 0
-    end
-    szm1 = sz - 1
-    ngroups = 0
-    flag = true
-    @inbounds for i in 1:length(v)
-        slotix = f(v[i]) + offset
-        if ismissing(slotix)
-            slotix = sz
-        end
-        g_row = gslots[slotix]
-        if g_row == 0
-            gslots[slotix] = i
-            groups[i] = ngroups += 1
-        else
-            groups[i] = groups[g_row]
-        end
-    end
-    remap = zeros(T, prev_max_group, ngroups)
-    ngroups_new = 0
-    @inbounds for i in 1:length(groups)
-        if remap[prev_groups[i], groups[i]] == 0
-            ngroups_new += 1
-            remap[prev_groups[i], groups[i]] = ngroups_new
-            prev_groups[i] = remap[prev_groups[i], groups[i]]
-        else
-            prev_groups[i] = remap[prev_groups[i], groups[i]]
-        end
-    end
-    if ngroups_new == n
-        flag = false
-    end
-
-    return flag, ngroups_new
-end
-
-
 function _create_dictionary_int_fast!(prev_groups, f, v, prev_max_group, minval, rangelen, ::Val{T}) where T
     offset = 1 - minval
     n = length(v)
@@ -320,12 +276,13 @@ function _create_dictionary_int_fast!(prev_groups, f, v, prev_max_group, minval,
         if ismissing(slotix)
             slotix = rangelen + 1
         end
-        if remap[prev_groups[i], slotix] == 0
+		prv_grp = prev_groups[i]
+        if remap[prv_grp, slotix] == 0
             ngroups += 1
-            remap[prev_groups[i], slotix] = ngroups
-            prev_groups[i] = remap[prev_groups[i], slotix]
+            remap[prv_grp, slotix] = ngroups
+            prev_groups[i] = remap[prv_grp, slotix]
         else
-            prev_groups[i] = remap[prev_groups[i], slotix]
+            prev_groups[i] = remap[prv_grp, slotix]
         end
     end
     if ngroups == n
@@ -458,44 +415,6 @@ function _gather_groups_old_version(ds, cols, ::Val{T}; mapformats = false) wher
     return groups, gslots, prev_max_group
 end
 
-
-function _grouper_for_int_pool!(prev_group, groups, current_ngroups, y, f, minval, rangeval)
-    ngroups = current_ngroups * rangeval
-    flag = true
-
-    # seen = falses(rangeval, current_ngroups)
-    # TODO is it safe to thread it?
-    seen = fill(false, rangeval, current_ngroups)
-    Threads.@threads for i in 1:length(prev_group)
-        seen[(f(y[i]) - minval + 1), prev_group[i]] = true
-    end
-    if sum(seen) < ngroups
-        oldngroups = ngroups
-        remap = zeros(Int, rangeval, current_ngroups)
-        ngroups = 0
-        @inbounds for i in eachindex(seen)
-            ngroups += seen[i]
-            remap[i] = ngroups
-        end
-        @inbounds Threads.@threads for i in eachindex(prev_group)
-            gix = (f(y[i]) - minval + 1) + (prev_group[i] - 1)*rangeval
-            prev_group[i] = remap[gix]
-        end
-    else
-        @inbounds Threads.@threads for i in eachindex(prev_group)
-            gix = (f(y[i]) - minval + 1) + (prev_group[i] - 1)*rangeval
-            prev_group[i] = gix
-        end
-    end
-    if ngroups == length(prev_group)
-        flag = false
-    end
-    Threads.@threads for i in 1:length(groups)
-        @inbounds groups[i] = prev_group[i]
-    end
-    return flag, ngroups
-end
-
 # ds assumes is grouped based on cols and groups are gathered togther
 function  _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) where T
     colsidx = index(ds)[cols]
@@ -614,101 +533,6 @@ else
 end
 
 funname(c::ComposedFunction) = Symbol(funname(c.outer), :_, funname(c.inner))
-
-# Compute chunks of indices, each with at least `basesize` entries
-# This method ensures balanced sizes by avoiding a small last chunk
-function split_indices(len::Integer, basesize::Integer)
-    len′ = Int64(len) # Avoid overflow on 32-bit machines
-    @assert len′ > 0
-    @assert basesize > 0
-    np = Int64(max(1, len ÷ basesize))
-    return split_to_chunks(len′, np)
-end
-
-function split_to_chunks(len::Integer, np::Integer)
-    len′ = Int64(len) # Avoid overflow on 32-bit machines
-    np′ = Int64(np)
-    @assert len′ > 0
-    @assert 0 < np′ <= len′
-    return (Int(1 + ((i - 1) * len′) ÷ np):Int((i * len′) ÷ np) for i in 1:np)
-end
-
-if VERSION >= v"1.4"
-    function _spawn_for_chunks_helper(iter, lbody, basesize)
-        lidx = iter.args[1]
-        range = iter.args[2]
-        quote
-            let x = $(esc(range)), basesize = $(esc(basesize))
-                @assert firstindex(x) == 1
-
-                nt = Threads.nthreads()
-                len = length(x)
-                if nt > 1 && len > basesize
-                    tasks = [Threads.@spawn begin
-                                 for i in p
-                                     local $(esc(lidx)) = @inbounds x[i]
-                                     $(esc(lbody))
-                                 end
-                             end
-                             for p in split_indices(len, basesize)]
-                    foreach(wait, tasks)
-                else
-                    for i in eachindex(x)
-                        local $(esc(lidx)) = @inbounds x[i]
-                        $(esc(lbody))
-                    end
-                end
-            end
-            nothing
-        end
-    end
-else
-    function _spawn_for_chunks_helper(iter, lbody, basesize)
-        lidx = iter.args[1]
-        range = iter.args[2]
-        quote
-            let x = $(esc(range))
-                for i in eachindex(x)
-                    local $(esc(lidx)) = @inbounds x[i]
-                    $(esc(lbody))
-                end
-            end
-            nothing
-        end
-    end
-end
-
-"""
-    @spawn_for_chunks basesize for i in range ... end
-
-Parallelize a `for` loop by spawning separate tasks
-iterating each over a chunk of at least `basesize` elements
-in `range`.
-
-A number of task higher than `Threads.nthreads()` may be spawned,
-since that can allow for a more efficient load balancing in case
-some threads are busy (nested parallelism).
-"""
-macro spawn_for_chunks(basesize, ex)
-    if !(isa(ex, Expr) && ex.head === :for)
-        throw(ArgumentError("@spawn_for_chunks requires a `for` loop expression"))
-    end
-    if !(ex.args[1] isa Expr && ex.args[1].head === :(=))
-        throw(ArgumentError("nested outer loops are not currently supported by @spawn_for_chunks"))
-    end
-    return _spawn_for_chunks_helper(ex.args[1], ex.args[2], basesize)
-end
-
-function _nt_like_hash(v, h::UInt)
-    length(v) == 0 && return hash(NamedTuple(), h)
-
-    h = hash((), h)
-    for i in length(v):-1:1
-        h = hash(v[i], h)
-    end
-
-    return xor(objectid(Tuple(propertynames(v))), h)
-end
 
 _findall(B) = findall(B)
 
