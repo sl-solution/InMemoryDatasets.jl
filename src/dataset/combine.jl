@@ -332,54 +332,20 @@ function _is_groupingcols_modifed(ds, ms)
 end
 
 
-function _compute_the_mutli_row_trans_st!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts, ngroups)
-    Threads.@threads for g in 1:ngroups
-        lo = starts[g]
-        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
-        special_res[g] = _f(view(x, lo:hi))
-        new_lengths[g] = length(special_res[g])
-    end
-end
-function _compute_the_mutli_row_trans_en!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts, ngroups)
-    Threads.@threads for g in 1:ngroups
-        hi = starts[g]
-        g == 1 ? lo = 1 : lo = starts[g - 1] + 1
-        special_res[g] = _f(view(x, lo:hi))
-        new_lengths[g] = length(special_res[g])
-    end
-end
-
 function _compute_the_mutli_row_trans!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts, ngroups)
-    # _first_vector_var = ms[_first_vector_res].second.second
-    if starts.start
-        _compute_the_mutli_row_trans_st!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts.where, ngroups)
-    else
-        _compute_the_mutli_row_trans_en!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts.where, ngroups)
+    Threads.@threads for g in 1:ngroups
+        lo = starts[g]
+        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
+        special_res[g] = _f(view(x, lo:hi))
+        new_lengths[g] = length(special_res[g])
     end
 end
-
-function _compute_the_mutli_row_trans_tuple_st!(special_res, new_lengths, x, y, nrows, _f, _first_vector_res, starts, ngroups)
+function _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, x, y, nrows, _f, _first_vector_res, starts, ngroups)
     Threads.@threads for g in 1:ngroups
         lo = starts[g]
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         special_res[g] = _f(view(x, lo:hi), view(y, lo:hi))
         new_lengths[g] = length(special_res[g])
-    end
-end
-function _compute_the_mutli_row_trans_tuple_en!(special_res, new_lengths, x, y, nrows, _f, _first_vector_res, starts, ngroups)
-    Threads.@threads for g in 1:ngroups
-        hi = starts[g]
-        g == 1 ? lo = 1 : lo = starts[g - 1] + 1
-        special_res[g] = _f(view(x, lo:hi), view(y, lo:hi))
-        new_lengths[g] = length(special_res[g])
-    end
-end
-
-function _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, x, y, nrows, _f, _first_vector_res, starts, ngroups)
-    if starts.start
-        _compute_the_mutli_row_trans_tuple_st!(special_res, new_lengths, x, y, nrows, _f, _first_vector_res, starts.where, ngroups)
-    else
-        _compute_the_mutli_row_trans_tuple_en!(special_res, new_lengths, x, y, nrows, _f, _first_vector_res, starts.where, ngroups)
     end
 end
 
@@ -408,7 +374,7 @@ function _create_index_for_newds(ds, ms, groupcols)
     return (lookup, nm)
 end
 
-function _push_groups_to_res_pa_st!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
+function _push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
     y = DataAPI.refarray(x)
     Threads.@threads for i in 1:ngroups
         counter::UnitRange{Int} = 1:1
@@ -417,25 +383,8 @@ function _push_groups_to_res_pa_st!(res, _tmpres, x, starts, new_lengths, total_
     end
     push!(res, _tmpres)
 end
-function _push_groups_to_res_pa_en!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
-    y = DataAPI.refarray(x)
-    Threads.@threads for i in 1:ngroups
-        counter::UnitRange{Int} = 1:1
-        i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
-        i == 1 ? lo = 1 : lo = starts[i - 1] + 1
-        fill!(view(_tmpres.refs, (new_lengths[i] - length(counter) + 1):(new_lengths[i])),  y[lo])
-    end
-    push!(res, _tmpres)
-end
-function _push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
-    if starts.start
-        _push_groups_to_res_pa_st!(res, _tmpres, x, starts.where, new_lengths, total_lengths, j, groupcols, ngroups)
-    else
-        _push_groups_to_res_pa_en!(res, _tmpres, x, starts.where, new_lengths, total_lengths, j, groupcols, ngroups)
-    end
-end
 
-function _push_groups_to_res_st!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
+function _push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
     Threads.@threads for i in 1:ngroups
         counter::UnitRange{Int} = 1:1
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
@@ -443,24 +392,6 @@ function _push_groups_to_res_st!(res, _tmpres, x, starts, new_lengths, total_len
     end
     push!(res, _tmpres)
 end
-function _push_groups_to_res_en!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
-    Threads.@threads for i in 1:ngroups
-        counter::UnitRange{Int} = 1:1
-        i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
-        i == 1 ? lo = 1 : lo = starts[i - 1] + 1
-        fill!(view(_tmpres, (new_lengths[i] - length(counter) + 1):(new_lengths[i])),  x[lo])
-    end
-    push!(res, _tmpres)
-end
-
-function _push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
-    if starts.start
-        _push_groups_to_res_st!(res, _tmpres, x, starts.where, new_lengths, total_lengths, j, groupcols, ngroups)
-    else
-        _push_groups_to_res_en!(res, _tmpres, x, starts.where, new_lengths, total_lengths, j, groupcols, ngroups)
-    end
-end
-
 function _check_the_output_type(x, mssecond)
     CT = return_type(mssecond, x)
     # TODO check other possibilities:
@@ -499,75 +430,8 @@ function _update_one_col_combine!(res, _res, x, _f, ngroups, new_lengths, total_
     res[col] = _res
     return _res
 end
-#
-# function _add_one_col_combine_from_combine!(res, _res, x, _f, ngroups, new_lengths, total_lengths)
-#     # make sure lo and hi are not defined any where outside the following loop
-#     Threads.@threads for g in 1:ngroups
-#         counter::UnitRange{Int} = 1:1
-#         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
-#         lo = new_lengths[g] - length(counter) + 1
-#         hi = new_lengths[g]
-#         _tmp_res = _f(view(x, counter))
-#         check_scalar = _is_scalar(_tmp_res, length(lo:hi))
-#         if check_scalar
-#             fill!(view(_res,lo:hi), _tmp_res)
-#         else
-#             copy!(view(_res, lo:hi), _tmp_res)
-#         end
-#     end
-#     push!(res, _res)
-#     return _res
-# end
 
-
-function _add_one_col_combine_st!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows)
-    # make sure lo and hi are not defined any where outside the following loop
-    Threads.@threads for g in 1:ngroups
-        counter::UnitRange{Int} = 1:1
-        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
-        lo = starts[g]
-        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
-        l1 = new_lengths[g] - length(counter) + 1
-        h1 = new_lengths[g]
-        _tmp_res = _f(view(in_x, lo:hi))
-        check_scalar = _is_scalar(_tmp_res, length(l1:h1))
-        if check_scalar
-            fill!(view(_res,l1:h1), _tmp_res)
-        else
-            copy!(view(_res, l1:h1), _tmp_res)
-        end
-    end
-    push!(res, _res)
-    return _res
-end
-function _add_one_col_combine_en!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows)
-    # make sure lo and hi are not defined any where outside the following loop
-    Threads.@threads for g in 1:ngroups
-        counter::UnitRange{Int} = 1:1
-        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
-        hi = starts[g]
-        g == 1 ? lo = 1 : lo = starts[g - 1] + 1
-        l1 = new_lengths[g] - length(counter) + 1
-        h1 = new_lengths[g]
-        _tmp_res = _f(view(in_x, lo:hi))
-        check_scalar = _is_scalar(_tmp_res, length(l1:h1))
-        if check_scalar
-            fill!(view(_res,l1:h1), _tmp_res)
-        else
-            copy!(view(_res, l1:h1), _tmp_res)
-        end
-    end
-    push!(res, _res)
-    return _res
-end
 function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows)
-    if starts.start
-        _add_one_col_combine_st!(res, _res, in_x, _f, starts.where, ngroups, new_lengths, total_lengths, nrows)
-    else
-        _add_one_col_combine_en!(res, _res, in_x, _f, starts.where, ngroups, new_lengths, total_lengths, nrows)
-    end
-end
-function _add_one_col_combine_tuple_st!(res, _res, in_x, in_y, _f, starts, ngroups, new_lengths, total_lengths, nrows)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
@@ -576,27 +440,7 @@ function _add_one_col_combine_tuple_st!(res, _res, in_x, in_y, _f, starts, ngrou
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         l1 = new_lengths[g] - length(counter) + 1
         h1 = new_lengths[g]
-        _tmp_res = _f(view(in_x, lo:hi),view(in_y, lo:hi))
-        check_scalar = _is_scalar(_tmp_res, length(l1:h1))
-        if check_scalar
-            fill!(view(_res,l1:h1), _tmp_res)
-        else
-            copy!(view(_res, l1:h1), _tmp_res)
-        end
-    end
-    push!(res, _res)
-    return _res
-end
-function _add_one_col_combine_tuple_en!(res, _res, in_x, in_y, _f, starts, ngroups, new_lengths, total_lengths, nrows)
-    # make sure lo and hi are not defined any where outside the following loop
-    Threads.@threads for g in 1:ngroups
-        counter::UnitRange{Int} = 1:1
-        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
-        hi = starts[g]
-        g == 1 ? lo = 1 : lo = starts[g - 1] + 1
-        l1 = new_lengths[g] - length(counter) + 1
-        h1 = new_lengths[g]
-        _tmp_res = _f(view(in_x, lo:hi),view(in_y, lo:hi))
+        _tmp_res = _f(view(in_x, lo:hi))
         check_scalar = _is_scalar(_tmp_res, length(l1:h1))
         if check_scalar
             fill!(view(_res,l1:h1), _tmp_res)
@@ -608,14 +452,26 @@ function _add_one_col_combine_tuple_en!(res, _res, in_x, in_y, _f, starts, ngrou
     return _res
 end
 function _add_one_col_combine_tuple!(res, _res, in_x, in_y, _f, starts, ngroups, new_lengths, total_lengths, nrows)
-    if starts.start
-        _add_one_col_combine_tuple_st!(res, _res, in_x, in_y, _f, starts.where, ngroups, new_lengths, total_lengths, nrows)
-    else
-        _add_one_col_combine_tuple_en!(res, _res, in_x, in_y, _f, starts.where, ngroups, new_lengths, total_lengths, nrows)
+    # make sure lo and hi are not defined any where outside the following loop
+    Threads.@threads for g in 1:ngroups
+        counter::UnitRange{Int} = 1:1
+        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
+        lo = starts[g]
+        g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
+        l1 = new_lengths[g] - length(counter) + 1
+        h1 = new_lengths[g]
+        _tmp_res = _f(view(in_x, lo:hi),view(in_y, lo:hi))
+        check_scalar = _is_scalar(_tmp_res, length(l1:h1))
+        if check_scalar
+            fill!(view(_res,l1:h1), _tmp_res)
+        else
+            copy!(view(_res, l1:h1), _tmp_res)
+        end
     end
-
+    push!(res, _res)
+    return _res
 end
-function _update_one_col_combine_st!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, col)
+function _update_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, col)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
@@ -634,33 +490,6 @@ function _update_one_col_combine_st!(res, _res, in_x, _f, starts, ngroups, new_l
     end
     res[col] = _res
     return _res
-end
-function _update_one_col_combine_en!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, col)
-    # make sure lo and hi are not defined any where outside the following loop
-    Threads.@threads for g in 1:ngroups
-        counter::UnitRange{Int} = 1:1
-        g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
-        hi = starts[g]
-        g == 1 ? lo = 1 : lo = starts[g - 1] + 1
-        l1 = new_lengths[g] - length(counter) + 1
-        h1 = new_lengths[g]
-        _tmp_res = _f(view(in_x, lo:hi))
-        check_scalar = _is_scalar(_tmp_res, length(l1:h1))
-        if check_scalar
-            fill!(view(_res,l1:h1), _tmp_res)
-        else
-            copy!(view(_res, l1:h1), _tmp_res)
-        end
-    end
-    res[col] = _res
-    return _res
-end
-function _update_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, col)
-    if starts.start
-        _update_one_col_combine_st!(res, _res, in_x, _f, starts.where, ngroups, new_lengths, total_lengths, nrows, col)
-    else
-        _update_one_col_combine_en!(res, _res, in_x, _f, starts.where, ngroups, new_lengths, total_lengths, nrows, col)
-    end
 end
 
 function _special_res_fill_barrier!(_res, vals, nl_g, l_cnt)
@@ -755,7 +584,7 @@ function combine(ds::Dataset, @nospecialize(args...))
     _is_groupingcols_modifed(ds, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
     groupcols = index(ds).sortedcols
-    starts = START_END(true, nrow(ds), index(ds).starts)
+    starts = index(ds).starts
     ngroups::Int = index(ds).ngroups[]
 
     # we will use new_lengths later for assigning the grouping info of the new ds

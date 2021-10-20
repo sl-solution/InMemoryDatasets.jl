@@ -25,15 +25,9 @@ index(ds::GroupBy) = index(ds.parent)
 Base.parent(ds::GroupBy) = ds.parent
 
 function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
-    # @assert !isgrouped(ds) "`groupby` is not yet implemented for already grouped data sets"
     colsidx = index(ds)[cols]
-    # if issorted
-    #     selected_columns, ranges, last_valid_index = _find_starts_of_groups(ds::Dataset, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
-    #     return GroupBy(ds, colsidx, 1:nrow(ds), ranges, last_valid_index, mapformats)
-    # else
-        a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)
-        GroupBy(ds,colsidx, a[2], a[1], a[3], mapformats)
-    # end
+    a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)
+    GroupBy(ds,colsidx, a[2], a[1], a[3], mapformats)
 end
 
 groupby(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)
@@ -54,85 +48,6 @@ function _threaded_permute_for_groupby(x, perm)
     res
 end
 
-function _f_barrier_for_permute_gatherby!(res, x, groups, where, dir)
-	nt = Threads.nthreads()
-	if length(groups) > 10^7
-		@sync for thid in 0:nt-1
-			Threads.@spawn for i in 1:length(x)
-				@inbounds if groups[i] % nt == thid
-					res[where[groups[i]]] = x[i]
-					where[groups[i]] += dir
-				end
-			end
-		end
-	else
-		@inbounds for i in 1:length(x)
-			res[where[groups[i]]] = x[i]
-			where[groups[i]] += dir
-		end
-	end
-	if length(where) > 10^7
-		Threads.@threads for i in 1:length(where)
-			where[i] -= dir
-		end
-	else
-		where .-= dir
-	end
-	return res
-end
-function _permute_given_col_for_gatherby!(start_end::START_END, x, groups)
-	res = allocatecol(x, length(x); addmissing = false)
-	if DataAPI.refpool(x) !== nothing
-		_f_barrier_for_permute_gatherby!(res.refs, x.refs, groups, start_end.where, start_end.start ? 1 : -1)
-	else
-		_f_barrier_for_permute_gatherby!(res, x, groups, start_end.where, start_end.start ? 1 : -1)
-	end
-	start_end.start = !start_end.start
-	return res
-end
-
-function _permute_for_group_gather(gds, x, perm, start_end)
-	if perm === nothing
-		if gds.lastvalid == length(x)
-			res = _threaded_permute_for_groupby(x, 1:length(x))
-		else
-			res = _permute_given_col_for_gatherby!(start_end, x, gds.groups)
-		end
-	else
-		res = _threaded_permute_for_groupby(x, perm)
-	end
-	res
-end
-
-#TODO is passing view better than passing the permuted vector?
-
-function _view_push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, perm)
-    if perm === nothing
-		if gds.lastvalid == length(x)
-			x_topass = view(x, 1:length(x))
-		else
-			x_topass = _permute_for_group_gather(gds, x, perm, starts)
-		end
-
-	else
-		x_topass = view(x, perm)
-	end
-	_push_groups_to_res_pa!(res, _tmpres, x_topass, starts, new_lengths, total_lengths, j, groupcols, ngroups)
-end
-function _view_push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, perm)
-    if perm === nothing
-		if gds.lastvalid == length(x)
-			x_topass = x
-		else
-			x_topass = _permute_for_group_gather(gds, x, perm, starts)
-		end
-	else
-		x_topass = view(x, perm)
-	end
-	_push_groups_to_res!(res, _tmpres, x_topass, starts, new_lengths, total_lengths, j, groupcols, ngroups)
-end
-
-# TODO we need to take care of situations where gds.parent is already grouped, thus the grouping cols from that mess with new grouping cols of gds
 function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
     ms = normalize_combine_multiple!(length(_groupcols(gds)),idx_cpy, index(gds.parent), args...)
@@ -154,16 +69,8 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
     _is_groupingcols_modifed(gds, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
     groupcols = gds.groupcols
-    if gds isa GroupBy
-        starts = START_END(true, nrow(gds.parent), gds.starts)
-    elseif gds isa GatherBy
-        if gds.starts === nothing
-            starts = _calculate_ends(gds.groups, gds.lastvalid, nrow(gds.parent) < typemax(Int32) ? Val(Int32) : Val(Int64))
-        else
-            starts = START_END(true, nrow(gds.parent), gds.starts)
-        end
-    end
-
+	a = (_get_perms(gds), _group_starts(gds), gds.lastvalid)
+	starts = a[2]
     ngroups = gds.lastvalid
 
     # we will use new_lengths later for assigning the grouping info of the new ds
@@ -183,9 +90,9 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
         new_lengths = Vector{Int}(undef, ngroups)
         # _columns(ds)[ms[_first_vector_res].first]
         if ms[_first_vector_res].first isa Tuple
-            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, _permute_for_group_gather(gds, _columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first[1]]], gds.perm, starts),  _permute_for_group_gather(gds, _columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first[2]]], gds.perm, starts), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+             _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first[1]]], a[1]), _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first[2]]], a[1]), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
         else
-            _compute_the_mutli_row_trans!(special_res, new_lengths,  _permute_for_group_gather(gds, _columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first]], gds.perm, starts), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+             _compute_the_mutli_row_trans!(special_res, new_lengths, _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first]], a[1]), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
         end
         # special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
         cumsum!(new_lengths, new_lengths)
@@ -202,9 +109,9 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
         addmissing = false
         _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, total_lengths, addmissing = addmissing)
         if DataAPI.refpool(_tmpres) !== nothing
-            _view_push_groups_to_res_pa!(_columns(newds), _tmpres, _columns(gds.parent)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, gds.perm)
-        else
-            _view_push_groups_to_res!(_columns(newds), _tmpres, _columns(gds.parent)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups, gds, gds.perm)
+			_push_groups_to_res_pa!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+		else
+            _push_groups_to_res!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
         end
         push!(index(newds), new_nm[var_cnt])
         setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
@@ -217,27 +124,27 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
         # this can be done by sorting the first argument of col=>fun=>dst between each byrow
         if i == 1
             if ms[i].first isa Tuple
-                curr_x = _permute_for_group_gather(gds, _columns(gds.parent)[index(gds.parent)[ms[i].first[1]]], gds.perm, starts)
+                curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first[1]]], a[1])
             else
-                curr_x = _permute_for_group_gather(gds, _columns(gds.parent)[index(gds.parent)[ms[i].first]], gds.perm, starts)
+                curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1])
             end
         else
             if ms[i].first isa Tuple
                 if old_x !== ms[i].first[1]
                     if haskey(index(gds.parent).lookup, ms[i].first[1])
-                        curr_x = _permute_for_group_gather(gds, _columns(gds.parent)[index(gds.parent)[ms[i].first[1]]], gds.perm, starts)
+                        curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first[1]]], a[1])
                         old_x = ms[i].first
                     else
-                        curr_x = view(_columns(gds.parent)[1], 1:nrow(gds.parent))
+                        curr_x = view(_columns(gds.parent)[1], a[1])
                     end
                 end
             else
                 if old_x !== ms[i].first
                     if haskey(index(gds.parent).lookup, ms[i].first)
-                        curr_x = _permute_for_group_gather(gds, _columns(gds.parent)[index(gds.parent)[ms[i].first]], gds.perm, starts)
+                        curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1])
                         old_x = ms[i].first
                     else
-                        curr_x = view(_columns(gds.parent)[1], 1:nrow(gds.parent))
+                        curr_x = view(_columns(gds.parent)[1], a[1])
                     end
                 end
             end
@@ -246,15 +153,15 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
 
         if i == _first_vector_res
             if ms[i].first isa Tuple
-                _combine_f_barrier_special_tuple(special_res, [gds.parent[!, ms[i].first[1]].val, gds.parent[!, ms[i].first[2]].val], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+                 _combine_f_barrier_special_tuple(special_res, [view(gds.parent[!, ms[i].first[1]].val, a[1]), view(gds.parent[!, ms[i].first[2]].val, a[1])], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
             else
-                _combine_f_barrier_special(special_res, gds.parent[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+                 _combine_f_barrier_special(special_res, view(gds.parent[!, ms[i].first].val, a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
             end
         else
             if ms[i].first isa Tuple
-                _combine_f_barrier_tuple(curr_x, _permute_for_group_gather(gds, _columns(gds.parent)[index(gds.parent)[ms[i].first[2]]], gds.perm, starts), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+                 _combine_f_barrier_tuple(curr_x, _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first[2]]], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
             else
-                _combine_f_barrier(haskey(index(gds.parent).lookup, ms[i].first) ? curr_x : view(_columns(gds.parent)[1], 1:nrow(gds.parent)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+                _combine_f_barrier(haskey(index(gds.parent).lookup, ms[i].first) ? curr_x : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
             end
         end
         if !haskey(index(newds), ms[i].second.second)

@@ -15,7 +15,14 @@ function compute_indices(groups, ngroups, ::Val{T}) where T
 	if length(groups) == ngroups
 		return idx, copy(idx)
 	end
-	starts = _ds_sort_int_missatright_nopermx!(groups, idx, ngroups, 1, Val(T))
+	# TODO we have the same ifelse in sort, probably we need to clean up these into a new function
+	if Threads.nthreads() > 1 && length(groups) > Threads.nthreads() && ngroups > 100_000 && ngroups*Threads.nthreads() < length(groups)
+		starts = _ds_sort_int_missatright_nopermx_threaded!(groups, idx, ngroups, 1, Val(T))
+	elseif Threads.nthreads() > 1 && length(groups) > Threads.nthreads() && ngroups > 100_000
+		starts = _ds_sort_int_missatright_nopermx_threaded_lm!(groups, idx, ngroups, 1, Val(T))
+	else
+		starts = _ds_sort_int_missatright_nopermx!(groups, idx, ngroups, 1, Val(T))
+	end
 	pop!(starts)
 	pop!(starts)
 	pop!(starts)
