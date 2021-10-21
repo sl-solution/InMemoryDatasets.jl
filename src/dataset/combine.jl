@@ -674,7 +674,7 @@ function combine_ds(ds::Dataset, @nospecialize(args...))
 
 
     groupcols = index(ds).sortedcols
-    starts = START_END(true, nrow(ds), [1])
+    starts = [1]
     ngroups::Int = 1
 
     # we will use new_lengths later for assigning the grouping info of the new ds
