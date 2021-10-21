@@ -3,8 +3,7 @@
 
 Returns all rows from the left `ds`. If the `on` clause matches no records for some rows in the right `ds`, leave `missing` in the place.
 
-'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
+`mapformats` is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 
 See also: [`leftjoin!`](@ref)
 
@@ -120,8 +119,7 @@ The in-place version of `leftjoin`. The left table `dsl` will be changed after j
 
 `leftjoin!` can only be used when each observation in left data set matches at most one observation from right data set.
 
-'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
+`mapformats` is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 
 See also: [`leftjoin`](@ref)
 
@@ -235,10 +233,9 @@ end
 """
     innerjoin(dsl, dsr; on, mapformats)
 
-Returns all rows where matches values exist `on` the field for both `ds`s.
+Returns all rows where matches values exist `on` the field for both `ds`.
 
-'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
+`mapformats` is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 
 # Examples
 
@@ -347,8 +344,7 @@ end
 
 Returns all rows if there are matching values `on` the field either in the left `ds` or in the right `ds`.
 
-'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
+`mapformats` is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 
 # Examples
 
@@ -532,8 +528,7 @@ end
 
 Opposite to `semijoin`, returns only records in the left `ds` with rows that have `NO` matching values `on` the field in the right `ds`.
 
-'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
+`mapformats` is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 
 See also: [`antijoin!`](@ref)
 
@@ -637,8 +632,7 @@ end
 
 Returns only records in the left `ds` with rows that have matching values `on` the field in the right `ds`.
 
-'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
+`mapformats` is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 
 See also: [`semijoin!`](@ref)
 
@@ -727,8 +721,7 @@ end
 
 The in-place version of `antijoin`. The left table `dsl` will be changed after joining. 
 
-'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively. 
+`mapformats` is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively. 
 
 See also: [`antijoin`](@ref)
 
@@ -830,8 +823,7 @@ end
 
 The in-place version of `semijoin`. The left table `dsl` will be changed after joining. 
 
-'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively. 
+`mapformats` is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively. 
 
 See also: [`semijoin`](@ref)
 
@@ -1537,8 +1529,7 @@ The in-place version of `update`. The left `Dataset` `dsmain` will be changed af
 
 - `allowmissing`: is set to `false` in default, so `missing` values in `dsupdate` will not replace the values in `dsmain`. Change this to `true` can update `dsmain` using `missing` values in `dsupdate`.
 - `mode`: in default is set to `:all`, means that all matching rows based `on` keys will be updated. Can be changed to `:missing` so that only rows in `dsmain` with `missing` values will be updated.
-- `mapformats`: 'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
+- `mapformats`: 'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 
 See also: [`update`](@ref)
 
@@ -1634,8 +1625,7 @@ Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given k
 
 - `allowmissing`: is set to `false` in default, so `missing` values in `dsupdate` will not replace the values in `dsmain`. Change this to `true` can update `dsmain` using `missing` values in `dsupdate`.
 - `mode`: in default is set to `:all`, means that all matching rows based `on` keys will be updated. Can be changed to `:missing` so that only rows in `dsmain` with `missing` values will be updated.
-- `mapformats`: 'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals
- a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
+- `mapformats`: 'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 
 See also: [`update!`](@ref)
 
