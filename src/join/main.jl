@@ -119,7 +119,7 @@ function DataAPI.leftjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique =
     end
 end
 """
-    leftjoin!(dsl, dsr; on, makeunique, mapformats, stable, alg, check)
+    leftjoin!(dsl, dsr; on, makeunique, mapformats, stable, alg)
 
 The in-place version of `leftjoin`. The left table `dsl` will be changed after joining. 
 
@@ -131,7 +131,6 @@ The in-place version of `leftjoin`. The left table `dsl` will be changed after j
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 - `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
 - `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
-- `check`: to check whether the output is too large, is set to `true` in default. 
 
 See also: [`leftjoin`](@ref)
 
@@ -192,7 +191,7 @@ julia> dsl # The left table is changed to be the result.
    4 │ 2012        true  missing
 ```
 """
-function leftjoin!(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true)
+function leftjoin!(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -207,41 +206,15 @@ function leftjoin!(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false,
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
+        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = true)
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
+        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = true)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
 end
-
-function DataAPI.rightjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true)
-    on === nothing && throw(ArgumentError("`on` keyword must be specified"))
-    if !(on isa AbstractVector)
-        on = [on]
-    else
-        on = on
-    end
-    if !(mapformats isa AbstractVector)
-        mapformats = repeat([mapformats], 2)
-    else
-        length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
-    end
-    if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(dsl)[on]
-        onright = index(dsr)[on]
-        _join_left(dsr, dsl, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onright, onright = onleft, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(dsl)[map(x->x.first, on)]
-        onright = index(dsr)[map(x->x.second, on)]
-        _join_left(dsr, dsl, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onright, onright = onleft, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
-    else
-        throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
-    end
-end
-
 """
     innerjoin(dsl, dsr; on, makeunique, mapformats, stable, alg, check)
 
