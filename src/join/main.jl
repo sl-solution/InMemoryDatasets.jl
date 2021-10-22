@@ -10,7 +10,7 @@ See also: [`leftjoin!`](@ref)
 # Examples
 
 ```jldoctest
-julia> name = Dataset(ID = [1, 2, 3],Name = ["John Doe", "Jane Doe", "Joe Blogs"])
+julia> name = Dataset(ID = [1, 2, 3], Name = ["John Doe", "Jane Doe", "Joe Blogs"])
 3×2 Dataset
  Row │ ID        Name
      │ identity  identity
@@ -240,7 +240,7 @@ Returns all rows where matches values exist `on` the field for both `ds`.
 # Examples
 
 ```jldoctest
-julia> name = Dataset(ID = [1, 2, 3],Name = ["John Doe", "Jane Doe", "Joe Blogs"])
+julia> name = Dataset(ID = [1, 2, 3], Name = ["John Doe", "Jane Doe", "Joe Blogs"])
 3×2 Dataset
  Row │ ID        Name
      │ identity  identity
@@ -349,7 +349,7 @@ Returns all rows if there are matching values `on` the field either in the left 
 # Examples
 
 ```jldoctest
-julia> name = Dataset(ID = [1, 2, 3],Name = ["John Doe", "Jane Doe", "Joe Blogs"])
+julia> name = Dataset(ID = [1, 2, 3], Name = ["John Doe", "Jane Doe", "Joe Blogs"])
 3×2 Dataset
  Row │ ID        Name
      │ identity  identity
@@ -535,8 +535,8 @@ See also: [`antijoin!`](@ref)
 # Examples
 
 ```jldoctest
-julia> name = Dataset(ID = Union{Int, Missing}[1, 2, 3],
-                              Name = Union{String, Missing}["John Doe", "Jane Doe", "Joe Blogs"])
+julia> name = Dataset(ID = [1, 2, 3],
+                              Name = ["John Doe", "Jane Doe", "Joe Blogs"])
 3×2 Dataset
  Row │ ID        Name
      │ identity  identity
@@ -546,8 +546,8 @@ julia> name = Dataset(ID = Union{Int, Missing}[1, 2, 3],
    2 │        2  Jane Doe
    3 │        3  Joe Blogs
 
-julia> job = Dataset(ID = Union{Int, Missing}[1, 2, 2, 4],
-                              Job = Union{String, Missing}["Lawyer", "Doctor", "Florist", "Farmer"])
+julia> job = Dataset(ID = [1, 2, 2, 4],
+                              Job = ["Lawyer", "Doctor", "Florist", "Farmer"])
 4×2 Dataset
  Row │ ID        Job
      │ identity  identity
@@ -639,8 +639,8 @@ See also: [`semijoin!`](@ref)
 # Examples
 
 ```jldoctest
-julia> name = Dataset(ID = Union{Int, Missing}[1, 2, 3],
-                              Name = Union{String, Missing}["John Doe", "Jane Doe", "Joe Blogs"])
+julia> name = Dataset(ID = [1, 2, 3],
+                              Name = ["John Doe", "Jane Doe", "Joe Blogs"])
 3×2 Dataset
  Row │ ID        Name
      │ identity  identity
@@ -650,8 +650,8 @@ julia> name = Dataset(ID = Union{Int, Missing}[1, 2, 3],
    2 │        2  Jane Doe
    3 │        3  Joe Blogs
 
-julia> job = Dataset(ID = Union{Int, Missing}[1, 2, 2, 4],
-                              Job = Union{String, Missing}["Lawyer", "Doctor", "Florist", "Farmer"])
+julia> job = Dataset(ID = [1, 2, 2, 4],
+                              Job = ["Lawyer", "Doctor", "Florist", "Farmer"])
 4×2 Dataset
  Row │ ID        Job
      │ identity  identity
@@ -728,8 +728,8 @@ See also: [`antijoin`](@ref)
 # Examples
 
 ```jldoctest
-julia> name = Dataset(ID = Union{Int, Missing}[1, 2, 3],
-                              Name = Union{String, Missing}["John Doe", "Jane Doe", "Joe Blogs"])
+julia> name = Dataset(ID = [1, 2, 3],
+                              Name = ["John Doe", "Jane Doe", "Joe Blogs"])
 3×2 Dataset
  Row │ ID        Name
      │ identity  identity
@@ -739,8 +739,8 @@ julia> name = Dataset(ID = Union{Int, Missing}[1, 2, 3],
    2 │        2  Jane Doe
    3 │        3  Joe Blogs
 
-julia> job = Dataset(ID = Union{Int, Missing}[1, 2, 2, 4],
-                              Job = Union{String, Missing}["Lawyer", "Doctor", "Florist", "Farmer"])
+julia> job = Dataset(ID = [1, 2, 2, 4],
+                              Job = ["Lawyer", "Doctor", "Florist", "Farmer"])
 4×2 Dataset
  Row │ ID        Job
      │ identity  identity
@@ -830,8 +830,8 @@ See also: [`semijoin`](@ref)
 # Examples
 
 ```jldoctest
-julia> name = Dataset(ID = Union{Int, Missing}[1, 2, 3],
-                              Name = Union{String, Missing}["John Doe", "Jane Doe", "Joe Blogs"])
+julia> name = Dataset(ID = [1, 2, 3],
+                              Name = ["John Doe", "Jane Doe", "Joe Blogs"])
 3×2 Dataset
  Row │ ID        Name
      │ identity  identity
@@ -841,8 +841,8 @@ julia> name = Dataset(ID = Union{Int, Missing}[1, 2, 3],
    2 │        2  Jane Doe
    3 │        3  Joe Blogs
 
-julia> job = Dataset(ID = Union{Int, Missing}[1, 2, 2, 4],
-                              Job = Union{String, Missing}["Lawyer", "Doctor", "Florist", "Farmer"])
+julia> job = Dataset(ID = [1, 2, 2, 4],
+                              Job = ["Lawyer", "Doctor", "Florist", "Farmer"])
 4×2 Dataset
  Row │ ID        Job
      │ identity  identity
