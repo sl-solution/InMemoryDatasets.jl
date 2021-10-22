@@ -1,14 +1,14 @@
 """
     leftjoin(dsl, dsr; on, makeunique, mapformats, stable, alg, check)
 
-Returns all rows from the left `ds`. If the `on` clause matches no records for some rows in the right `ds`, leave `missing` in the place.
+Returns all rows from the left `ds`. If the `on` clause matches no records for some rows in the right `ds`, leave `missing` in the place. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: keys that the join function will based on.
 - `makeunique`: in default is set to `false`, and has to be `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 - `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 - `check`: to check whether the output is too large, is set to `true` in default. 
 
 See also: [`leftjoin!`](@ref)
@@ -123,14 +123,14 @@ end
 
 The in-place version of `leftjoin`. The left table `dsl` will be changed after joining. 
 
-`leftjoin!` can only be used when each observation in left data set matches at most one observation from right data set.
+`leftjoin!` can only be used when each observation in left data set matches at most one observation from right data set. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: keys that the join function will based on.
 - `makeunique`: in default is set to `false`, and has to be `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 - `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 
 See also: [`leftjoin`](@ref)
 
@@ -218,14 +218,14 @@ end
 """
     innerjoin(dsl, dsr; on, makeunique, mapformats, stable, alg, check)
 
-Returns all rows where matches values exist `on` the field for both `ds`.
+Returns all rows where matches values exist `on` the field for both `ds`. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: keys that the join function will based on.
 - `makeunique`: in default is set to `false`, and has to be `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 - `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 - `check`: to check whether the output is too large, is set to `true` in default. 
 
 # Examples
@@ -333,14 +333,14 @@ end
 """
     outerjoin(dsl, dsr; on, makeunique, mapformats, stable, alg, check)
 
-Returns all rows if there are matching values `on` the field either in the left `ds` or in the right `ds`.
+Returns all rows if there are matching values `on` the field either in the left `ds` or in the right `ds`. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: keys that the join function will based on.
 - `makeunique`: in default is set to `false`, and has to be `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 - `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 - `check`: to check whether the output is too large, is set to `true` in default. 
 
 # Examples
@@ -452,7 +452,7 @@ end
     contains(main, transaction; on)
 
 returns a boolean vector where is true when the key for the
-corresponding row in the `main` data set is found in the transaction data set.
+corresponding row in the `main` data set is found in the transaction data set. 
 
 # Examples
 
@@ -523,14 +523,14 @@ end
 """
     antijoin(dsl, dsr; on, makeunique, mapformats, stable, alg)
 
-Opposite to `semijoin`, returns only records in the left `ds` with rows that have `NO` matching values `on` the field in the right `ds`.
+Opposite to `semijoin`, returns only records in the left `ds` with rows that have `NO` matching values `on` the field in the right `ds`. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: keys that the join function will based on.
 - `makeunique`: in default is set to `false`, and has to be `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 - `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 
 See also: [`antijoin!`](@ref)
 
@@ -632,14 +632,14 @@ end
 """
     semijoin(dsl, dsr; on, makeunique, mapformats, stable, alg)
 
-Returns only records in the left `ds` with rows that have matching values `on` the field in the right `ds`.
+Returns only records in the left `ds` with rows that have matching values `on` the field in the right `ds`. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: keys that the join function will based on.
 - `makeunique`: in default is set to `false`, and has to be `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 - `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 
 See also: [`semijoin!`](@ref)
 
@@ -726,14 +726,14 @@ end
 """
     antijoin!(dsl, dsr; on, makeunique, mapformats, stable, alg)
 
-The in-place version of `antijoin`. The left table `dsl` will be changed after joining. 
+The in-place version of `antijoin`. The left table `dsl` will be changed after joining. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: keys that the join function will based on.
 - `makeunique`: in default is set to `false`, and has to be `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 - `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 
 See also: [`antijoin`](@ref)
 
@@ -833,14 +833,14 @@ end
 """
     semijoin!(dsl, dsr; on, makeunique, mapformats, stable, alg)
 
-The in-place version of `semijoin`. The left table `dsl` will be changed after joining. 
+The in-place version of `semijoin`. The left table `dsl` will be changed after joining. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: keys that the join function will based on.
 - `makeunique`: in default is set to `false`, and has to be `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
 - `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 
 See also: [`semijoin`](@ref)
 
@@ -949,16 +949,16 @@ end
 """
     closejoin(dsl, dsr; on, direction, makeunique, border, mapformats, stable, alg)
 
-Joins two data sets based on exact match on the key variable or the closest match when the exact match doesn't exist.
+Joins two data sets based on exact match on the key variable or the closest match when the exact match doesn't exist. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: if more than one variable is applied, the last one will be used for close join, and the rest are for exact matches.
-- `direction`: in default is `:backward`, which will set values below the smallest value to the `border`. If `:forward` is used, values above the largest value will be set to the `border`.
+- `direction`: direction of search in sorted `dsr` based on keys. In default, `:backward` is used and search direction are from the last row to the first row. Setting to `:forward` can search for matching values top down.
 - `makeunique`: is set to `false` in default, if there are duplicate column names, pass `makeunique` equals `true` can make them unique. 
 - `border`: `:missing` is used in default for the border value, `:nearest` can also be used to set border values to the nearest value rather than a `missing`.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
-- `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `stable`: in default is `true`, which means sorting for `dsr` has to be stable.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 
 See also: [`closejoin!`](@ref)
 
@@ -1257,16 +1257,16 @@ end
 """
     closejoin!(dsl, dsr; on, direction, makeunique, border, mapformats, stable, alg)
 
-The in-place version of `closejoin`. The left table `dsl` will be changed after joining. 
+The in-place version of `closejoin`. The left table `dsl` will be changed after joining. Order of output will be the same as the left table `dsl`.
 
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table.
 - `on`: if more than one variable is applied, the last one will be used for close join, and the rest are for exact matches.
-- `direction`: in default is `:backward`, which will set values below the smallest value to the `border`. If `:forward` is used, values above the largest value will be set to the `border`.
+- `direction`: direction of search in sorted `dsr` based on keys. In default, `:backward` is used and search direction are from the last row to the first row. Setting to `:forward` can search for matching values top down.
 - `makeunique`: is set to `false` in default, if there are duplicate column names, pass `makeunique` equals `true` can make them unique. 
 - `border`: `:missing` is used in default for the border value, `:nearest` can also be used to set border values to the nearest value rather than a `missing`.
 - `mapformats`: is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
-- `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `stable`: in default is `true`, which means sorting for `dsr` has to be stable.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 
 See also: [`closejoin`](@ref)
 
@@ -1548,7 +1548,7 @@ end
 """
     update!(dsmain, dsupdate; on, allowmissing, mode, mapformats, stable, alg)
 
-The in-place version of `update`. The left `Dataset` `dsmain` will be changed after updating. 
+The in-place version of `update`. The left `Dataset` `dsmain` will be changed after updating. Order of output will be the same as the main `Dataset` `dsmain`.
 
 - `dsmain`: the main `Dataset` to be updated.
 - `dsupdate`: the transaction `Dataset` used to update `dsmain`.
@@ -1556,8 +1556,8 @@ The in-place version of `update`. The left `Dataset` `dsmain` will be changed af
 - `allowmissing`: is set to `false` in default, so `missing` values in `dsupdate` will not replace the values in `dsmain`. Change this to `true` can update `dsmain` using `missing` values in `dsupdate`.
 - `mode`: in default is set to `:all`, means that all matching rows based `on` keys will be updated. Can be changed to `:missing` so that only rows in `dsmain` with `missing` values will be updated.
 - `mapformats`: 'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
-- `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `stable`: in default is `true`, which means sorting for `dsr` has to be stable.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 
 See also: [`update`](@ref)
 
@@ -1649,7 +1649,7 @@ end
 """
     update(dsmain, dsupdate; on, allowmissing, mode, mapformats, stable, alg)
 
-Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows. If there are multiple rows in `dsupdate` which match the key, then only the last one will be used to update the `dsmain`.
+Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows. If there are multiple rows in `dsupdate` which match the key, then only the last one will be used to update the `dsmain`. Order of output will be the same as the main `Dataset` `dsmain`.
 
 - `dsmain`: the main `Dataset` to be updated.
 - `dsupdate`: the transaction `Dataset` used to update `dsmain`.
@@ -1657,8 +1657,8 @@ Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given k
 - `allowmissing`: is set to `false` in default, so `missing` values in `dsupdate` will not replace the values in `dsmain`. Change this to `true` can update `dsmain` using `missing` values in `dsupdate`.
 - `mode`: in default is set to `:all`, means that all matching rows based `on` keys will be updated. Can be changed to `:missing` so that only rows in `dsmain` with `missing` values will be updated.
 - `mapformats`: 'mapformats' is set to `true` in default, which means formats are used for both `dsl` and `dsr`. By setting `mapformats` equals a `Bool Vector` of length 2, you can specify whether to use formats for `dsl` and `dsr`, respectively.
-- `stable`: in default is `false`, if it is set to `true`, then sort for `dsr` have to be stable.
-- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `InsertionSort`, `QuickSort`, `PartialQuickSort(k)` or `MergeSort`. Details can be found in `sort`.
+- `stable`: in default is `true`, which means sorting for `dsr` has to be stable.
+- `alg`: sorting algorithms used, is `HeapSort` in default. It can also be `QuickSort`.
 
 See also: [`update!`](@ref)
 
