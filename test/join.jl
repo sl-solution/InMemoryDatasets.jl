@@ -404,6 +404,20 @@ end
     dsl = Dataset(x=[1,2], y=[3,4])
     re = innerjoin(dsl, dsl, on = [:x=>:y], makeunique = true)
     @test Dataset([[],[],[]], names(re)) == re
+
+
+    dsl = Dataset(x1 = [1,2,3,4,5,6], x2= [1,1,1,2,2,2])
+    dsr = Dataset(x1 = [1,1,1,4,5,7],x2= [1,1,3,4,5,6], y = [343,54,54,464,565,7567])
+    cj = closejoin(dsl, dsr, on = [:x1, :x2])
+    cj_t = Dataset([Union{Missing, Int64}[1, 2, 3, 4, 5, 6],
+         Union{Missing, Int64}[1, 1, 1, 2, 2, 2],
+         Union{Missing, Int64}[54, missing, missing, missing, missing, missing]], ["x1", "x2", "y"])
+    @test cj == cj_t
+    cj = closejoin(dsl, dsr, on = [:x1, :x2], direction = :forward)
+    cj_t = Dataset([ Union{Missing, Int64}[1, 2, 3, 4, 5, 6],
+         Union{Missing, Int64}[1, 1, 1, 2, 2, 2],
+         Union{Missing, Int64}[343, missing, missing, 464, 565, missing]],["x1", "x2", "y"] )
+    @test cj == cj_t
 end
 #
 # @testset "all joins with CategoricalArrays" begin

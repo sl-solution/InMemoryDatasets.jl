@@ -1,27 +1,39 @@
 function _find_ranges_for_asofback!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}) where T1 where T2
     Threads.@threads for i in 1:length(x)
         curr_start = ranges[i].start
-        ranges[i] = 1:searchsortedlast_join(_fr, y, _fl(x[i])::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
-        if ranges[i].stop < curr_start
-            ranges[i] = 0:curr_start
+        if length(ranges[i]) == 0
+            ranges[i] = 0:0
+        else
+            ranges[i] = 1:searchsortedlast_join(_fr, y, _fl(x[i])::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+            if ranges[i].stop < curr_start
+                ranges[i] = 0:curr_start
+            end
         end
     end
 end
 function _find_ranges_for_asoffor!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}) where T1 where T2
     Threads.@threads for i in 1:length(x)
         cur_stop = ranges[i].stop
-        ranges[i] = 1:searchsortedfirst_join(_fr, y, _fl(x[i])::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
-        if ranges[i].stop > cur_stop
-            ranges[i] = 0:cur_stop
+        if length(ranges[i]) == 0
+            ranges[i] = 0:0
+        else
+            ranges[i] = 1:searchsortedfirst_join(_fr, y, _fl(x[i])::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+            if ranges[i].stop > cur_stop
+                ranges[i] = 0:cur_stop
+            end
         end
     end
 end
 
 function  _fill_right_cols_table_asof!(_res, x, ranges, total, bordervalue, fill_val)
     Threads.@threads for i in 1:length(ranges)
-        _res[i] = x[ranges[i].stop]
-        if !bordervalue && ranges[i].start == 0
+        if ranges[i] == 0:0
             _res[i] = missing
+        else
+            _res[i] = x[ranges[i].stop]
+            if !bordervalue && ranges[i].start == 0
+                _res[i] = missing
+            end
         end
     end
 end
@@ -112,12 +124,10 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
-
     # _fl = getformat(dsl, oncols_left[length(oncols_left)])
     # _fr = getformat(dsr, oncols_right[length(oncols_left)])
     # _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
     _change_refpool_find_range_for_asof!(ranges, dsl, dsr, oncols_left, oncols_right, :backward, mapformats[1], mapformats[2], length(oncols_left))
-
     total_length = nrow(dsl)
 
     res = []
