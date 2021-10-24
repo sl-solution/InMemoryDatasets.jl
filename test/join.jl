@@ -418,6 +418,34 @@ end
          Union{Missing, Int64}[1, 1, 1, 2, 2, 2],
          Union{Missing, Int64}[343, missing, missing, 464, 565, missing]],["x1", "x2", "y"] )
     @test cj == cj_t
+    dsl = Dataset(x1 = [Date(2020,11,6), Date(2021,2,24), Date(2021,1,17), Date(2013,5,12)], val = [66,77,88,99])
+    dsr = Dataset(x1 = [Date(2010,11,2), Date(2012, 5, 3), Date(2010, 2,2)], x2 = [1,2,3])
+    setformat!(dsl, 1=>month)
+    setformat!(dsr, 1=>month)
+    out_l1 = leftjoin(dsl, dsr, on = :x1, mapformats = false)
+    out_l2 = leftjoin(dsl, dsr, on = :x1, mapformats = true)
+    out_t1 = Dataset([Union{Missing, Date}[Date("2020-11-06"), Date("2021-02-24"), Date("2021-01-17"), Date("2013-05-12")],
+             Union{Missing, Int64}[66, 77, 88, 99],
+             Union{Missing, Int64}[missing, missing, missing, missing]], [:x1, :val, :x2])
+    out_t2 = Dataset([Union{Missing, Date}[Date("2020-11-06"), Date("2021-02-24"), Date("2021-01-17"), Date("2013-05-12")],
+             Union{Missing, Int64}[66, 77, 88, 99],
+             Union{Missing, Int64}[1, 3, missing, 2]], [:x1, :val, :x2])
+    @test out_l1 == out_t1
+    @test out_l2 == out_t2
+    dsl = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+         Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+         Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+         Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]], ["x1", "x2", "x3", "row"])
+    dsr = Dataset(x1=[1, 3, 2], y =[100.0, 200.0, 300.0])
+    setformat!(dsr, 1=>isodd)
+
+    left1 = leftjoin(dsl, dsr, on = :x1, mapformats = false)
+    left1_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+             Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
+             Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
+             Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+             Union{Missing, Float64}[missing, 200.0, missing, 100.0, missing, missing, missing, missing, 300.0, missing]], ["x1", "x2", "x3", "row", "y"])
+    @test left1 == left1_t
 end
 #
 # @testset "all joins with CategoricalArrays" begin

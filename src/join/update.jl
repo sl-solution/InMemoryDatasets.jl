@@ -26,7 +26,7 @@ function _update!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, check =
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
 
-    sort!(dsr, oncols_right, stable = stable, alg = alg)
+    sort!(dsr, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)

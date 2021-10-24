@@ -117,7 +117,7 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right, stable = stable, alg = alg)
+    sort!(dsr, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
@@ -162,7 +162,7 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, 
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right, stable = stable, alg = alg)
+    sort!(dsr, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
@@ -206,7 +206,7 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, ma
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right, stable = stable, alg = alg)
+    sort!(dsr, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)
@@ -254,7 +254,7 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right, stable = stable, alg = alg)
+    sort!(dsr, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:(length(oncols_left) - 1)

@@ -175,7 +175,7 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right, stable = stable, alg = alg)
+    sort!(dsr, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
@@ -229,7 +229,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
     _current_dsr_modified_time = _attributes(dsr).meta.modified[]
-    sort!(dsr, oncols_right, stable = stable, alg = alg)
+    sort!(dsr, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
@@ -277,7 +277,7 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right, stable = stable, alg = alg)
+    sort!(dsr, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
@@ -324,7 +324,7 @@ function _in(dsl::Dataset, dsrin::Dataset, ::Val{T}; onleft, onright, mapformats
     oncols_right = index(dsrin)[onright]
     # right_cols = setdiff(1:length(index(dsr)), oncols_right)
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    dsrperm = sortperm(dsrin, oncols_right, stable = stable, alg = alg)
+    dsrperm = sortperm(dsrin, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     dsr = dsrin[dsrperm, oncols_right]
     # dsr = sort!(dsrin[!, oncols_right], :)
     oncols_right = 1:length(oncols_right)
@@ -361,7 +361,7 @@ function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     # dsr_oncols = select(dsr, oncols, copycols = true)
-    sort!(dsr, oncols_right, stable = stable, alg = alg)
+    sort!(dsr, oncols_right, stable = stable, alg = alg, mapformats = mapformats[2])
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     fill!(ranges, 1:nrow(dsr))
     for j in 1:length(oncols_left)
