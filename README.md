@@ -204,7 +204,7 @@ julia> setformat!(ds, 2 => sqrt, 3 => gender)
    9 │        9  2.23607    Male
   10 │       10  2.23607  Female
 
-julia> mask(ds, [iseven, isequal("Male")], 2:3)
+julia> mask(ds, [iseven, isequal("Male")], 2:3, mapformats = false)
 10×2 Dataset
  Row │ y         z
      │ identity  identity
