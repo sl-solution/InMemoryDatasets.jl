@@ -307,7 +307,7 @@ julia> ds = Dataset(g = [1, 1, 1, 2, 2],
                    x2_int = [3, 2, 1, 3, -2],
                    x1_float = [1.2, missing, -1.0, 2.3, 10],
                    x2_float = [missing, missing, 3.0, missing, missing],
-                   x3_float = [missing, mssing, -1.4, 3.0, -100.0])
+                   x3_float = [missing, missing, -1.4, 3.0, -100.0])
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
      │ identity  identity  identity  identity   identity   identity
