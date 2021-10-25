@@ -241,13 +241,13 @@ julia> mask(ds, [val -> rem(val, 2) == 0, isequal("Male")], 2:3, mapformats = tr
 
 # Modifying a Dataset
 
-The `modify()` function can be used to modify columns or add a transformation of columns to a data set. The syntax of `modify` is 
+The `modify()` function can be used to modify columns or add a transformation of columns to a data set. The syntax of `modify` is
 
 ```julia
 modify(ds, op...)
 ```
 
-where `op` can be of the form `col => fun`, `cols=>fun`, `col=>fun=>:new_name`, `cols=>fun=>:new_names`. Here `fun` is a function which can be applied to one column, i.e. `fun` accepts one column of `ds` and return values by calling `fun` on the selected `col`. When no new names is given the `col` is replaced by the new values. The  feature of `modify` is that from left to right when ever a column is updated or created, the next operation has access to its value (either new or updated values). 
+where `op` can be of the form `col => fun`, `cols=>fun`, `col=>fun=>:new_name`, `cols=>fun=>:new_names`. Here `fun` is a function which can be applied to one column, i.e. `fun` accepts one column of `ds` and return values by calling `fun` on the selected `col`. When no new names is given the `col` is replaced by the new values. The  feature of `modify` is that from left to right when ever a column is updated or created, the next operation has access to its value (either new or updated values).
 
 When a row operation is needed to be done, `byrow` can be used instead of `fun`, i.e. `cols => byrow(f, kwargs...)` or `cols => byrow(f, kwargs...)=>:new_name`. In this case `f` is applied to each row of `cols`.
 
@@ -273,7 +273,7 @@ julia> ds = Dataset(x = 1:10, y = repeat(1:5, inner = 2), z = repeat(1:2, 5))
    9 │        9         5         1
   10 │       10         5         2
 
-julia> modify(ds, 
+julia> modify(ds,
                  1 => x -> x .^ 2,
                  2:3 => byrow(sqrt) => [:sq_y, :sq_z],
                  [:x, :sq_y] => byrow(-)
@@ -349,9 +349,6 @@ julia> combine(ds, :x1_float => sum)
 `closejoin!` does the joining in-place. The in-place operation also can be done for `antijoin`, `semijoin`, and `leftjoin` where in the latter case there must not be more than one match from the right data set.
 
 > The joining functions use the formatted value for finding the match, however, using `mapformats = false` changes this behaviour.
-> 
-> The joining functions always sort the second data set.
-
 ## Examples
 
 ```julia
@@ -417,7 +414,7 @@ julia> classA = Dataset(id = ["id1", "id2", "id3", "id4", "id5"],
    3 │ id3             45.5
    4 │ id4             88.0
    5 │ id5             98.5
-julia> grades = Dataset(mark = [0, 49.5, 59.5, 69.5, 79.5, 89.5, 95.5], 
+julia> grades = Dataset(mark = [0, 49.5, 59.5, 69.5, 79.5, 89.5, 95.5],
                         grade = ["F", "P", "C", "B", "A-", "A", "A+"])
 7×2 Dataset
  Row │ mark      grade
@@ -576,7 +573,7 @@ julia> main = Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
    7 │ G2                 2        0.0         2
 
 
-julia> transaction = Dataset(group = ["G1", "G2"], id = [2, 1], 
+julia> transaction = Dataset(group = ["G1", "G2"], id = [2, 1],
                         x1 = [2.5, missing], x2 = [missing, 3])
 2×4 Dataset
  Row │ group       id        x1         x2
@@ -587,7 +584,7 @@ julia> transaction = Dataset(group = ["G1", "G2"], id = [2, 1],
    2 │ G2                 1  missing           3
 
 
-julia> update(main, transaction, on = [:group, :id], 
+julia> update(main, transaction, on = [:group, :id],
                allowmissing = false, mode = :missing)
 7×4 Dataset
  Row │ group        id        x1        x2

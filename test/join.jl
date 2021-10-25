@@ -446,7 +446,141 @@ end
              Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
              Union{Missing, Float64}[missing, 200.0, missing, 100.0, missing, missing, missing, missing, 300.0, missing]], ["x1", "x2", "x3", "row", "y"])
     @test left1 == left1_t
+
+
+    A = Dataset(a = [1, 2, 3], b = ["a", "b", "c"])
+    B = Dataset(b = ["a", "b", "c"], c = CategoricalVector(["a", "b", "b"]))
+    levels!(B.c.val, ["b", "a"])
+    @test levels(innerjoin(A, B, on=:b).c) == ["b", "a"]
+    @test levels(innerjoin(B, A, on=:b).c) == ["b", "a"]
+    @test levels(leftjoin(A, B, on=:b).c) == ["b", "a"]
+    @test levels(outerjoin(A, B, on=:b).c) == ["b", "a"]
+    @test levels(semijoin(B, A, on=:b).c) == ["b", "a"]
+
+    dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = 1:5)
+    dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = PooledArray([22,missing,33,44]))
+    ds_left = leftjoin(dsl, dsr, on = :x)
+    ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
+                 Union{Missing, Int64}[1, 2, 3, 4, 5],
+                 Union{Missing, Int64}[44, missing, missing, 33, 44]],[:x, :y, :z])
+    @test ds_left == ds_left_t
+    ds_left = leftjoin(dsr, dsl, on = :x)
+    ds_left_t = Dataset([categorical(["a", "f", "e", "c", "c"]),
+                 Union{Missing, Int64}[22, missing, 33, 44, 44],
+                 Union{Missing, Int64}[missing, missing, 4, 1, 5]],[:x, :z, :y])
+    ds_inner = innerjoin(dsl, dsr, on = :x)
+    ds_inner_t = Dataset([categorical(["c", "e", "c"]),
+                 Union{Missing, Int64}[1, 4, 5],
+                 Union{Missing, Int64}[44, 33, 44]], [:x, :y, :z])
+    @test ds_inner == ds_inner_t
+    for i in 1:20 # when we fix the issue with Threads we can make sure it is ok
+        ds_outer = outerjoin(dsl, dsr, on = :x)
+        ds_outer_t = Dataset([categorical(["c", "d", missing, "e", "c", "a", "f"]),
+                 Union{Missing, Int64}[1, 2, 3, 4, 5, missing, missing],
+                 Union{Missing, Int64}[44, missing, missing, 33, 44, 22, missing]], [:x, :y, :z])
+        @test ds_outer == ds_outer_t
+    end
+    dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = 1:5)
+    dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = PooledArray([2,missing,3,4]))
+    for i in 1:20
+        ds_left = leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
+                     Union{Missing, Int64}[1, 2, 3, 4, 5],
+                     categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
+        @test ds_left == ds_left_t
+        ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_outer_t = Dataset([ categorical(["c", "d", missing, "e", "c", missing]),
+                     Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
+                     categorical([missing, "a", "e", "c", missing, "f"])], [:x, :y, :x_1])
+        @test ds_outer == ds_outer_t
+    end
+    dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = PooledArray(1:5))
+    dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = PooledArray([2,missing,3,4]))
+    for i in 1:20
+        ds_left = leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
+                     Union{Missing, Int64}[1, 2, 3, 4, 5],
+                    categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
+        @test ds_left == ds_left_t
+        ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_outer_t = Dataset([ categorical(["c", "d", missing, "e", "c", missing]),
+                     Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
+                     categorical([missing, "a", "e", "c", missing, "f"])], [:x, :y, :x_1])
+        @test ds_outer == ds_outer_t
+    end
+    dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = PooledArray(1:5))
+    dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = [2,missing,3,4])
+    for i in 1:20
+        ds_left = leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
+                     [1, 2, 3, 4, 5],
+                     categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
+        @test ds_left == ds_left_t
+        ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_outer_t = Dataset([categorical(["c", "d", missing, "e", "c", missing]),
+                     Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
+                     categorical([missing, "a", "e", "c", missing, "f"])], [:x, :y, :x_1])
+        @test ds_outer == ds_outer_t
+    end
+
 end
+
+
+
+@testset "joins with categorical columns and no matching rows - from DataFrames test sets" begin
+    l = Dataset(a=1:3, b=categorical(["a", "b", "c"]))
+    r = Dataset(a=4:5, b=categorical(["d", "e"]))
+    nl = size(l, 1)
+    nr = size(r, 1)
+
+    CS = eltype(l.b.val)
+
+    # joins by a and b
+    @test innerjoin(l, r, on=[:a, :b]) == Dataset(a=Int[], b=similar(l.a.val, 0))
+    @test eltype.(eachcol(innerjoin(l, r, on=[:a, :b]))) == [Union{Missing, Int}, CS]
+
+    @test leftjoin(l, r, on=[:a, :b]) == Dataset(a=l.a.val, b=l.b.val)
+    @test eltype.(eachcol(leftjoin(l, r, on=[:a, :b]))) == [Union{Int, Missing}, CS]
+
+    @test outerjoin(l, r, on=[:a, :b]) ==
+        Dataset(a=vcat(l.a.val, r.a.val), b=vcat(l.b.val, r.b.val))
+    @test eltype.(eachcol(outerjoin(l, r, on=[:a, :b]))) == [Union{Int, Missing}, CS]
+
+    # joins by a
+    @test innerjoin(l, r, on=:a, makeunique=true) ==
+        Dataset(a=Int[], b=similar(l.b.val, 0), b_1=similar(r.b.val, 0))
+    @test eltype.(eachcol(innerjoin(l, r, on=:a, makeunique=true))) == [Union{Missing, Int}, CS, CS]
+
+    @test leftjoin(l, r, on=:a, makeunique=true) ==
+        Dataset(a=l.a.val, b=l.b.val, b_1=similar(r.b.val, nl))
+    @test eltype.(eachcol(leftjoin(l, r, on=:a, makeunique=true))) ==
+        [Union{Missing, Int}, CS, Union{CS, Missing}]
+
+    @test outerjoin(l, r, on=:a, makeunique=true) ==
+        Dataset(a=vcat(l.a.val, r.a.val),
+                  b=vcat(l.b.val, fill(missing, nr)),
+                  b_1=vcat(fill(missing, nl), r.b.val))
+    @test eltype.(eachcol(outerjoin(l, r, on=:a, makeunique=true))) ==
+        [Union{Missing, Int}, Union{CS, Missing}, Union{CS, Missing}]
+
+    # joins by b
+    @test innerjoin(l, r, on=:b, makeunique=true) ==
+        Dataset(a=Int[], b=similar(l.b.val, 0), a_1=similar(r.b.val, 0))
+    @test eltype.(eachcol(innerjoin(l, r, on=:b, makeunique=true))) == [Union{Missing, Int}, CS, Union{Missing, Int}]
+
+    @test leftjoin(l, r, on=:b, makeunique=true) ==
+        Dataset(a=l.a.val, b=l.b.val, a_1=fill(missing, nl))
+    @test eltype.(eachcol(leftjoin(l, r, on=:b, makeunique=true))) ==
+        [Union{Missing, Int}, CS, Union{Int, Missing}]
+
+    @test outerjoin(l, r, on=:b, makeunique=true) ==
+        Dataset(a=vcat(l.a.val, fill(missing, nr)),
+                  b=vcat(l.b.val, r.b.val),
+                  a_1=vcat(fill(missing, nl), r.a.val))
+    @test eltype.(eachcol(outerjoin(l, r, on=:b, makeunique=true))) ==
+        [Union{Int, Missing}, CS, Union{Int, Missing}]
+end
+
 #
 # @testset "all joins with CategoricalArrays" begin
 #     ds1 = Dataset(Any[CategoricalArray([1, 3, 5]),

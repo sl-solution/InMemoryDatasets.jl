@@ -5,7 +5,8 @@ Perform a left join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` c
 
 If the `on` clause matches no records for some rows in the right table `ds`, leave `missing` in the place.
 
-The order of rows will be the same as the left table `dsl`.
+The order of rows will be the same as the left table `dsl`. When multiple matches exist in the right table, their order
+will be as they appear if the `stable = true`, otherwise no specific rule is followed.
 
 # Arguments
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
@@ -140,7 +141,8 @@ containing all rows from the original left table `dsl`.
 
 If the `on` clause matches no records for some rows in the right table `ds`, leave `missing` in the place.
 
-The order of rows will be the same as the left table `dsl`.
+The order of rows will be the same as the left table `dsl`. When multiple matches exist in the right table, their order
+will be as they appear if the `stable = true`, otherwise no specific rule is followed.
 
 # Arguments
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
@@ -248,8 +250,9 @@ end
 Perform a inner join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` 
 containing all rows where matching values exist `on` the keys for both `dsl` and `dsr`.
 
-The order of rows will be the same as the left table `dsl`,
-rows that have values in `dsl` while do not have matching values `on` keys in `dsr` will be removed.
+The order of rows will be the same as the left table `dsl`, 
+rows that have values in `dsl` while do not have matching values `on` keys in `dsr` will be removed. When multiple matches exist in the right table, their order
+will be as they appear if the `stable = true`, otherwise no specific rule is followed.
 
 # Arguments
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
@@ -380,7 +383,7 @@ containing all rows where keys appear in either `dsl` or `dsr`.
 The output contains two part.
 For the first part, the order of rows will be the same as the left table `dsl` if keys appear in `dsl`;
 for the second part, some other rows that have values in `dsr` while do not have matching values `on` keys in `dsl`
-will be added after the first part. Those added rows will have the same order as in the right table `dsr`.
+will be added after the first part. No rule governs the order of observation for the second part.
 
 # Arguments
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
@@ -506,7 +509,7 @@ function DataAPI.outerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique 
 end
 
 """
-    contains(main, transaction; on)
+    contains(main, transaction; on, mapformats, alg, stable)
 
 returns a boolean vector where is true when the key for the
 corresponding row in the `main` data set is found in the transaction data set.
@@ -681,24 +684,8 @@ julia> antijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
 ```
 """
 function DataAPI.antijoin(dsl::Dataset, dsr::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort)
-    # on === nothing && throw(ArgumentError("`on` keyword must be specified"))
-    # if !(on isa AbstractVector)
-    #     on = [on]
-    # else
-    #     on = on
-    # end
-    # if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-    #     onleft = index(dsl)[on]
-    #     onright = index(dsr)[on]
-        dsl[.!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg), :]
-        # _join_anti(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, check = check)
-    # elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-    #     onleft = index(dsl)[map(x->x.first, on)]
-    #     onright = index(dsr)[map(x->x.second, on)]
-        # _join_anti(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, check = check)
-    # else
-    #     throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
-    # end
+    
+    dsl[.!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg), :]
 end
 """
     semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
@@ -1065,7 +1052,8 @@ end
 Perform a close join for two `Datasets` `dsl` & `dsr` and return a `Dataset` based on exact matches on the key variable
 or the closest matches when the exact match doesn't exist.
 
-The order of rows will be the same as the left table `dsl`.
+The order of rows will be the same as the left table `dsl`. When there are multiple matches 
+in the close match phase, only one of them will be selected, and the selected one depends on the stability of sort and direction of match. 
 
 # Arguments
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
@@ -1388,7 +1376,8 @@ end
 Perform a close join for two `Datasets` `dsl` & `dsr` and change the left table into a `Dataset`
 based on exact matches on the key variable or the closest matches when the exact match doesn't exist.
 
-The order of rows will be the same as the original left table `dsl`.
+The order of rows will be the same as the original left table `dsl`.  When there are multiple matches 
+in the close match phase, only one of them will be selected, and the selected one depends on the stability of sort and direction of match. 
 
 # Arguments
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
@@ -1694,7 +1683,8 @@ end
 Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows, 
 and change the left `Dataset` after updating. 
 
-Order of output will be the same as the main `Dataset` `dsmain`.
+Order of output will be the same as the main `Dataset` `dsmain`. In case of multiple match, the `stable` argument governs 
+the order of selected observation from the right table.
 
 # Arguments
 - `dsmain`: the main `Dataset` to be updated.
@@ -1808,7 +1798,9 @@ end
 Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows.
 If there are multiple rows in `dsupdate` which match the key, then only the last one will be used to update the `dsmain`.
 
-Order of output will be the same as the main `Dataset` `dsmain`.
+Order of output will be the same as the main `Dataset` `dsmain`. In case of multiple match, the `stable` argument governs 
+the order of selected observation from the right table.
+
 
 # Arguments
 - `dsmain`: the main `Dataset` to be updated.
