@@ -219,7 +219,7 @@ function _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
     end
 end
 # T is either Int32 or Int64 based on how many rows ds has
-function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a::Base.Sort.Algorithm,  ::Val{T}; skipcol = 0, skipcol_mkcopy = true) where T
+function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a::Base.Sort.Algorithm,  ::Val{T}; skipcol = 0, skipcol_mkcopy = true, notsortpaforjoin = false) where T
     @assert length(colsidx) == length(by) == length(rev) "each col should have all information about lt, by, and rev"
     stable = false
     # arrary to keep the permutation of rows
@@ -275,16 +275,23 @@ function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{
                 _tmp.refs .= _threaded_permute(_tmp.refs, idx)
             end
             # collect here is to handle Categorical array.
-            if _tmp isa PooledArray
-                _fast_path_modify_to_integer!(_tmp.refs, invperm(sortperm(Dataset(x = DataAPI.refpool(_tmp), copycols = false), :, rev = rev[i], stable = false, alg = a)))
-            else
-                # This path is for Categorical array and must be optimised
-                aaa = map(x->get(DataAPI.invrefpool(_tmp), x, missing), sort!(Dataset(x = collect(DataAPI.refpool(_tmp))), :, rev = rev[i]).x.val)
-                trans = Dict{eltype(aaa), Int32}(aaa .=> 1:length(aaa))
-                _modify_poolarray_to_integer!(_tmp.refs, trans)
+            if !notsortpaforjoin
+                if _tmp isa PooledArray
+                    _fast_path_modify_to_integer!(_tmp.refs, invperm(sortperm(Dataset(x = DataAPI.refpool(_tmp), copycols = false), :, rev = rev[i], stable = false, alg = a)))
+                else
+                    # This path is for Categorical array and must be optimised
+                    levs = allowmissing(DataAPI.levels(_tmp))
+                    push!(levs, missing)
+                    rev[i] ? reverse!(levs) : nothing
+                    aaa = map(x->get(DataAPI.invrefpool(_tmp), x, missing), levs)
+                    trans = Dict{eltype(aaa), Int32}(aaa .=> 1:length(aaa))
+                    _modify_poolarray_to_integer!(_tmp.refs, trans)
+                end
+                _tmp = _tmp.refs
+            else # this path is used for sorting (not correct sorting) refs which will be used in joining functions
+                _tmp = _tmp.refs
             end
             _ordr = ord(isless, identity, false, Forward)
-            _tmp = _tmp.refs
             _needrev = false
             intable = false
             _missat = :right
@@ -419,13 +426,13 @@ function _stablise_sort!(ranges, idx, last_valid_range, a)
     end
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true)
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true, notsortpaforjoin = false)
     colsidx = index(ds)[cols]
     @assert length(colsidx) == length(rev) "`rev` argument must be the same as length of selected columns"
-    if _check_for_fast_sort(ds, colsidx, rev, mapformats) == 0
+    if _check_for_fast_sort(ds, colsidx, rev, mapformats; notsortpaforjoin = notsortpaforjoin) == 0
         return copy(index(ds).starts), 1:nrow(ds), index(ds).ngroups[]
     end
-    if _check_for_fast_sort(ds, colsidx, rev, mapformats) == 1
+    if _check_for_fast_sort(ds, colsidx, rev, mapformats; notsortpaforjoin = notsortpaforjoin) == 1
         colsidx, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
         if !skipcol_mkcopy
             _fill_idx_for_sort!(index(ds).perm)
@@ -435,7 +442,7 @@ function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = H
             return ranges, 1:nrow(ds), last_valid_index
         end
     end
-    if skipcol == 0 && _check_for_fast_sort(ds, colsidx, rev, mapformats) == 2
+    if skipcol == 0 && _check_for_fast_sort(ds, colsidx, rev, mapformats; notsortpaforjoin = notsortpaforjoin) == 2
         skipcol = length(index(ds).sortedcols)
     end
     by = Function[]
@@ -448,7 +455,7 @@ function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = H
             push!(by, identity)
         end
     end
-    ranges, idx, last_valid_range, isstable = ds_sort_perm(ds, colsidx, by, rev, a, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64); skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy)
+    ranges, idx, last_valid_range, isstable = ds_sort_perm(ds, colsidx, by, rev, a, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64); skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy, notsortpaforjoin = notsortpaforjoin)
     if stable && !isstable
         if length(idx) == last_valid_range
             return ranges, idx, last_valid_range
@@ -461,13 +468,13 @@ function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Vector{Bool}; a = H
     end
 end
 
-function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true)
+function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true, notsortpaforjoin = false)
     colsidx = index(ds)[cols]
     revs = repeat([rev], length(colsidx))
-    if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 0
+    if _check_for_fast_sort(ds, colsidx, revs, mapformats; notsortpaforjoin = notsortpaforjoin) == 0
         return copy(index(ds).starts), 1:nrow(ds), index(ds).ngroups[]
     end
-    if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 1
+    if _check_for_fast_sort(ds, colsidx, revs, mapformats; notsortpaforjoin = notsortpaforjoin) == 1
         colsidx, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
 
         if !skipcol_mkcopy
@@ -478,20 +485,20 @@ function _sortperm(ds::Dataset, cols::MultiColumnIndex, rev::Bool = false; a = H
             return ranges, 1:nrow(ds), last_valid_index
         end
     end
-    if skipcol == 0 && _check_for_fast_sort(ds, colsidx, revs, mapformats) == 2
+    if skipcol == 0 && _check_for_fast_sort(ds, colsidx, revs, mapformats; notsortpaforjoin = notsortpaforjoin) == 2
         skipcol = length(index(ds).sortedcols)
     end
-    _sortperm(ds, cols, revs; a = a , mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy)
+    _sortperm(ds, cols, revs; a = a , mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy, notsortpaforjoin = notsortpaforjoin)
 end
 
-_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true) = _sortperm(ds, [col], rev; a = a,  mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy)
+_sortperm(ds::Dataset, col::ColumnIndex, rev::Bool = false; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true, notsortpaforjoin = false) = _sortperm(ds, [col], rev; a = a,  mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy, notsortpaforjoin = notsortpaforjoin)
 
 
-function _check_for_fast_sort(ds, colsidx, rev, mapformats)
+function _check_for_fast_sort(ds, colsidx, rev, mapformats; notsortpaforjoin = false)
     scols = index(ds).sortedcols
     revs = index(ds).rev
     fmt = index(ds).fmt[]
-
+    notsortpaforjoin && return -1
     if colsidx == scols && rev == revs && mapformats == fmt
         return 0
     elseif length(colsidx) < length(scols)

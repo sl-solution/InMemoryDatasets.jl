@@ -84,4 +84,50 @@ using InMemoryDatasets, PooledArrays, Random, Test, CategoricalArrays
     sort!(ds, 5)
     @test issorted(ds.col5)
     @test issorted(sort(ds, 5, rev = true).col5, rev = true)
+
+
+    dv1 = [9, 1, 8, missing, 3, 3, 7, missing]
+    dv2 = [9, 1, 8, missing, 3, 3, 7, missing]
+    dv3 = Vector{Union{Int, Missing}}(1:8)
+    cv1 = CategoricalArray(dv1, ordered=true)
+
+    d = Dataset(dv1 = dv1, dv2 = dv2, dv3 = dv3, cv1 = cv1)
+
+    @test sortperm(d, :) == sortperm(dv1)
+    @test sortperm(d[:, [:dv3, :dv1]], :) == sortperm(dv3)
+    @test sort(d, :dv1)[!, :dv3] == sort(d, "dv1")[!, "dv3"] == sortperm(dv1)
+    @test sort(d, :dv2)[!, :dv3] == sortperm(dv1)
+    @test sort(d, :cv1)[!, :dv3] == sortperm(dv1)
+    @test sort(d, [:dv1, :cv1])[!, :dv3] == sortperm(dv1)
+    @test sort(d, [:dv1, :dv3])[!, :dv3] == sortperm(dv1)
+
+
+    x = CategoricalArray{Union{Characters{6, UInt8}, String}}(["Old", "Young", "Middle", "Young"])
+    levels!(x, ["Young", "Middle", "Old"])
+    ds = Dataset(x = x)
+    ds_s = sort(ds, :x)
+    @test ds_s.x == ["Young", "Young", "Middle", "Old"]
+    ordered!(x, true)
+    ds = Dataset(x = x)
+    ds_s = sort(ds, :x)
+    @test ds_s.x == ["Young", "Young", "Middle", "Old"]
+    a = rand(1:3, 1000)
+    c = rand(1:10, 1000)
+    f = rand(1:2, 1000)
+    pc = PooledArray(c)
+    pa = PooledArray(a)
+    pf = categorical(f)
+    ds = Dataset(a = a, c = c, f = f)
+    ds_pa = Dataset(a = pa, c = pc, f = pf)
+    ds2 = copy(ds)
+    for j in ncol(ds2):-1:1
+        r = sortperm(ds2[!, j].val)
+        for i in 1:ncol(ds2)
+            ds2[!, i] = ds2[r, i]
+        end
+    end
+    for i in 1:20
+        @test sort(ds, :) == sort(ds_pa, :) == ds2
+    end
+
 end
