@@ -523,6 +523,37 @@ end
         @test ds_outer == ds_outer_t
     end
 
+    dsl = Dataset(x = PooledArray([1, 7, 19, missing]), y = 1:4)
+    dsr = Dataset(x = [missing,5, 19, 1], z = ["a", "b", "c", "d"])
+    for i in 1:20
+        res = contains(dsl, dsr, on = :x)
+        @test res == Bool[1,0,1,1]
+    end
+    for i in 1:20
+        res = contains(dsr, dsl, on = :x)
+        @test res == Bool[1,0,1,1]
+    end
+    dsl = Dataset(x = PooledArray([1, 7, 19, missing]), y = 1:4)
+    dsr = Dataset(x = categorical([missing,5, 19, 1]), z = ["a", "b", "c", "d"])
+    for i in 1:20
+        res = contains(dsl, dsr, on = :x)
+        @test res == Bool[1,0,1,1]
+    end
+    for i in 1:20
+        res = contains(dsr, dsl, on = :x)
+        @test res == Bool[1,0,1,1]
+    end
+    dsl = Dataset(x = categorical([1, 7, 19, missing]), y = 1:4)
+    dsr = Dataset(x = categorical([missing,5, 19, 1]), z = ["a", "b", "c", "d"])
+    for i in 1:20
+        res = contains(dsl, dsr, on = :x)
+        @test res == Bool[1,0,1,1]
+    end
+    for i in 1:20
+        res = contains(dsr, dsl, on = :x)
+        @test res == Bool[1,0,1,1]
+    end
+
 end
 
 

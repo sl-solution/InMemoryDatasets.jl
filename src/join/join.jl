@@ -146,9 +146,9 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_
 
     if DataAPI.refpool(var_r) !== nothing
         # sort already taking care of applying _fr on PA values and its refs is refering to modified values
-        T2 = eltype(var_r.refs)
+        T2 = eltype(DataAPI.refarray(var_r))
         # we should use invpool right column
-        _find_ranges_for_join_pa!(ranges, var_l, DataAPI.invrefpool(var_r), view(var_r.refs, r_perms), _fl, _fr, Val(T1), Val(T2))
+        _find_ranges_for_join_pa!(ranges, var_l, DataAPI.invrefpool(var_r), view(DataAPI.refarray(var_r), r_perms), _fl, _fr, Val(T1), Val(T2))
     else
         T2 = Core.Compiler.return_type(_fr, (eltype(var_r), ))
         _find_ranges_for_join!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2))
