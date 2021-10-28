@@ -21,7 +21,7 @@ function _find_ranges_for_asofback_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1
             if ismissing(revmap_paval_ref)
                 ranges[i] = 0:0
             else
-                ranges[i] = 1:searchsortedlast_join(_fr, y, revmap_paval_ref, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+                ranges[i] = 1:searchsortedlast_join(identity, y, revmap_paval_ref, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
                 if ranges[i].stop < curr_start
                     ranges[i] = 0:curr_start
                 end
@@ -94,12 +94,19 @@ function _change_refpool_find_range_for_asof!(ranges, dsl, dsr, r_perms, oncols_
     T1 = Core.Compiler.return_type(_fl, (eltype(var_l), ))
 
     if DataAPI.refpool(var_r) !== nothing
-        # sort already taking care of applying _fr on PA values and its refs is refering to modified values
-        T2 = eltype(var_r.refs)
+        # sort taken care for refs ordering of modified values, but we still need to change refs
+        if _fr == identity
+            var_r_cpy = var_r
+        else
+            var_r_cpy = map(_fr, var_r)
+        end
+
+        T2 = eltype(var_r_cpy.refs)
+        _fr = identity
         if direction == :backward
-            _find_ranges_for_asofback_pa!(ranges, var_l.refs, DataAPI.invrefpool(var_r), view(var_r.refs, r_perms), _fl, _fr, Val(T1), Val(T2))
+            _find_ranges_for_asofback_pa!(ranges, var_l.refs, DataAPI.invrefpool(var_r_cpy), view(var_r_cpy.refs, r_perms), _fl, _fr, Val(T1), Val(T2))
         elseif direction == :forward
-            _find_ranges_for_asoffor_pa!(ranges, var_l.refs, DataAPI.invrefpool(var_r), view(var_r.refs, r_perms), _fl, _fr, Val(T1), Val(T2))
+            _find_ranges_for_asoffor_pa!(ranges, var_l.refs, DataAPI.invrefpool(var_r_cpy), view(var_r_cpy.refs, r_perms), _fl, _fr, Val(T1), Val(T2))
         end
     else
         T2 = Core.Compiler.return_type(_fr, (eltype(var_r), ))
