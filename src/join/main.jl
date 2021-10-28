@@ -1,7 +1,7 @@
 """
     leftjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true)
 
-Perform a left join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` containing all rows from the left table `dsl`. 
+Perform a left join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` containing all rows from the left table `dsl`.
 
 If the `on` clause matches no records for some rows in the right table `ds`, leave `missing` in the place.
 
@@ -16,7 +16,7 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -107,7 +107,7 @@ julia> leftjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.leftjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true)
+function DataAPI.leftjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -124,11 +124,11 @@ function DataAPI.leftjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique =
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
+        _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate)
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
+        _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
@@ -137,7 +137,7 @@ end
     leftjoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
 
 Perform a left join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
-containing all rows from the original left table `dsl`. 
+containing all rows from the original left table `dsl`.
 
 If the `on` clause matches no records for some rows in the right table `ds`, leave `missing` in the place.
 
@@ -152,7 +152,7 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -219,7 +219,7 @@ julia> dsl # The left table is changed to be the result.
    4 │ 2012        true  missing
 ```
 """
-function leftjoin!(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort)
+function leftjoin!(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -234,11 +234,11 @@ function leftjoin!(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false,
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = true)
+        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = true, accelerate = accelerate)
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = true)
+        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = true, accelerate = accelerate)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
@@ -247,10 +247,10 @@ end
 """
     innerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true)
 
-Perform a inner join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` 
+Perform a inner join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing all rows where matching values exist `on` the keys for both `dsl` and `dsr`.
 
-The order of rows will be the same as the left table `dsl`, 
+The order of rows will be the same as the left table `dsl`,
 rows that have values in `dsl` while do not have matching values `on` keys in `dsr` will be removed. When multiple matches exist in the right table, their order
 will be as they appear if the `stable = true`, otherwise no specific rule is followed.
 
@@ -262,7 +262,7 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -349,7 +349,7 @@ julia> innerjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for data
    3 │ 2020        true  A
 ```
 """
-function DataAPI.innerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true)
+function DataAPI.innerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -364,11 +364,11 @@ function DataAPI.innerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
+        _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate)
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
+        _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
@@ -377,7 +377,7 @@ end
 """
     outerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true)
 
-Perform an outer join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` 
+Perform an outer join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing all rows where keys appear in either `dsl` or `dsr`.
 
 The output contains two part.
@@ -393,7 +393,7 @@ will be added after the first part. No rule governs the order of observation for
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -483,7 +483,7 @@ julia> outerjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for data
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.outerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true)
+function DataAPI.outerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -498,11 +498,11 @@ function DataAPI.outerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        _join_outer(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
+        _join_outer(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate)
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        _join_outer(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check)
+        _join_outer(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
@@ -554,7 +554,7 @@ julia> contains(main, tds, on = :g1 => :group)
  1
 ```
 """
-function Base.contains(main::Dataset, transaction::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort)
+function Base.contains(main::Dataset, transaction::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -569,11 +569,11 @@ function Base.contains(main::Dataset, transaction::Dataset; on = nothing,  mapfo
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(main)[on]
         onright = index(transaction)[on]
-        _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, mapformats = mapformats, stable = stable, alg = alg)
+        _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(main)[map(x->x.first, on)]
         onright = index(transaction)[map(x->x.second, on)]
-        _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, mapformats = mapformats, stable = stable, alg = alg)
+        _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
@@ -583,7 +583,7 @@ end
 """
     antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
 
-Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` 
+Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
 The resulting `Dataset` will only contain columns in the left table `dsl`.
 
@@ -598,7 +598,7 @@ rows that have key values appear in `dsr` will be removed.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -683,14 +683,14 @@ julia> antijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    1 │ 2012        true
 ```
 """
-function DataAPI.antijoin(dsl::Dataset, dsr::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort)
-    
-    dsl[.!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg), :]
+function DataAPI.antijoin(dsl::Dataset, dsr::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+
+    dsl[.!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :]
 end
 """
     semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
 
-Perform a semi join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` 
+Perform a semi join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
 The resulting `Dataset` will only contain columns in the left table `dsl`.
 
@@ -705,7 +705,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -792,13 +792,13 @@ julia> semijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    3 │ 2020        true
 ```
 """
-function DataAPI.semijoin(dsl::Dataset, dsr::Dataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort)
-    dsl[contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg), :]
+function DataAPI.semijoin(dsl::Dataset, dsr::Dataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+    dsl[contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :]
 end
 """
     antijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
 
-Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset` 
+Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
 The resulting `Dataset` will only contain columns in the original left table `dsl`.
 
@@ -813,7 +813,7 @@ rows that have key values appear in `dsr` will be removed.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -913,13 +913,13 @@ julia> dsl
    1 │ 2012        true
 ```
 """
-function antijoin!(dsl::Dataset, dsr::Dataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort)
-    delete!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg))
+function antijoin!(dsl::Dataset, dsr::Dataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+    delete!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate))
 end
 """
     semijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
 
-Perform a semi join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset` 
+Perform a semi join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
 The resulting `Dataset` will only contain columns in the original left table `dsl`.
 
@@ -934,7 +934,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -1041,8 +1041,8 @@ julia> dsl
    3 │ 2020        true
 ```
 """
-function semijoin!(dsl::Dataset, dsr::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort)
-    delete!(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg))
+function semijoin!(dsl::Dataset, dsr::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+    delete!(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate))
 end
 
 
@@ -1052,8 +1052,8 @@ end
 Perform a close join for two `Datasets` `dsl` & `dsr` and return a `Dataset` based on exact matches on the key variable
 or the closest matches when the exact match doesn't exist.
 
-The order of rows will be the same as the left table `dsl`. When there are multiple matches 
-in the close match phase, only one of them will be selected, and the selected one depends on the stability of sort and direction of match. 
+The order of rows will be the same as the left table `dsl`. When there are multiple matches
+in the close match phase, only one of them will be selected, and the selected one depends on the stability of sort and direction of match.
 
 # Arguments
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
@@ -1068,7 +1068,7 @@ in the close match phase, only one of them will be selected, and the selected on
 - `border`: `:missing` is used by default for the border value,
   `:nearest` can also be used to set border values to the nearest value rather than a `missing`.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -1376,8 +1376,8 @@ end
 Perform a close join for two `Datasets` `dsl` & `dsr` and change the left table into a `Dataset`
 based on exact matches on the key variable or the closest matches when the exact match doesn't exist.
 
-The order of rows will be the same as the original left table `dsl`.  When there are multiple matches 
-in the close match phase, only one of them will be selected, and the selected one depends on the stability of sort and direction of match. 
+The order of rows will be the same as the original left table `dsl`.  When there are multiple matches
+in the close match phase, only one of them will be selected, and the selected one depends on the stability of sort and direction of match.
 
 # Arguments
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
@@ -1392,7 +1392,7 @@ in the close match phase, only one of them will be selected, and the selected on
 - `border`: `:missing` is used by default for the border value,
   `:nearest` can also be used to set border values to the nearest value rather than a `missing`.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -1680,10 +1680,10 @@ end
 """
     update!(dsmain, dsupdate; on=nothing, allowmissing=false, mode=:all, mapformats=true, alg=HeapSort, stable=true)
 
-Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows, 
-and change the left `Dataset` after updating. 
+Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows,
+and change the left `Dataset` after updating.
 
-Order of output will be the same as the main `Dataset` `dsmain`. In case of multiple match, the `stable` argument governs 
+Order of output will be the same as the main `Dataset` `dsmain`. In case of multiple match, the `stable` argument governs
 the order of selected observation from the right table.
 
 # Arguments
@@ -1697,7 +1697,7 @@ the order of selected observation from the right table.
 - `mode`: by default is set to `:all`, means that all matching rows based `on` keys will be updated;
   can be changed to `:missing` so that only rows in `dsmain` with `missing` values will be updated.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -1798,7 +1798,7 @@ end
 Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows.
 If there are multiple rows in `dsupdate` which match the key, then only the last one will be used to update the `dsmain`.
 
-Order of output will be the same as the main `Dataset` `dsmain`. In case of multiple match, the `stable` argument governs 
+Order of output will be the same as the main `Dataset` `dsmain`. In case of multiple match, the `stable` argument governs
 the order of selected observation from the right table.
 
 
@@ -1813,7 +1813,7 @@ the order of selected observation from the right table.
 - `mode`: by default is set to `:all`, means that all matching rows based `on` keys will be updated;
   can be changed to `:missing` so that only rows in `dsmain` with `missing` values will be updated.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format; 
+  you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;

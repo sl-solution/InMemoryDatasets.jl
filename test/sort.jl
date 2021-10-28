@@ -129,5 +129,16 @@ using InMemoryDatasets, PooledArrays, Random, Test, CategoricalArrays
     for i in 1:20
         @test sort(ds, :) == sort(ds_pa, :) == ds2
     end
-
+    x1 = -rand(1:1000, 5000)
+    x2 = -rand(1:100, 5000)
+    dsl = Dataset(x1 = Characters{6, UInt8}.(c"id" .* string.(-x1)), x2 = Characters{5, UInt8}.(c"id" .* string.(-x2)))
+    dsr = Dataset(x1 = x1, x2 = x2)
+    for i in 1:2
+        dsl[!, i] = PooledArray(dsl[!, i])
+        dsr[!, i] = PooledArray(dsr[!, i])
+    end
+    fmtfun3(x) = @views -parse(Int, x[3:end])
+    setformat!(dsl, 1:2=>fmtfun3)
+    @test sortperm(dsl, :)==sortperm(dsr, :)
+    @test sortperm(dsl, :, rev=true)==sortperm(dsr, :, rev=true)
 end
