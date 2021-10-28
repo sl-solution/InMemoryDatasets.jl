@@ -119,7 +119,7 @@ function _f_barrier_give_start!(y)
 	y[1] = 1
 end
 
-function Base.reverse!(x::START_END, sz)
+function Base.reverse!(x::START_END)
 	if x.start
 		_f_barrier_give_end!(x.where, x.sz)
 		x.start = false
@@ -130,6 +130,66 @@ function Base.reverse!(x::START_END, sz)
 		return x
 	end
 end
+
+struct GIVENRANGE
+    idx
+    starts
+	starts_loc
+end
+
+function _sortitout!(res, starts, x)
+    fill!(starts, 0)
+    starts[1] = 1
+    for i in 1:length(x)
+        starts[x[i] + 1] += 1
+    end
+	starts_normalised = map(>(0), starts)
+    cumsum!(starts, starts)
+    for i in 1:length(x)
+        label = x[i]
+        res[starts[label]] = i
+        starts[label] += 1
+    end
+	starts .-= 1
+	reverse!(START_END(false, length(x), starts))
+	return starts_normalised[2:end]
+end
+
+function _divide_for_fast_join_barrier!(res, starts, x, f, ::Val{T}) where T
+    nc = length(starts) - 1
+    _hashed = Vector{T}(undef, length(x))
+    Threads.@threads for i in 1:length(x)
+        _hashed[i] = hash(f(x[i])) % nc + 1
+    end
+    starts_normalised = _sortitout!(res, starts, _hashed)
+    return starts_normalised
+end
+
+function _remove_unwantedstarts!(starts, sz)
+    curloc=2
+    i = 1
+    while true
+        if starts[curloc] == starts[i]
+            curloc += 1
+        else
+            i += 1
+            starts[i] = starts[curloc]
+        end
+        starts[i]>sz && break
+    end
+    return resize!(starts, i-1)
+end
+
+
+function _divide_for_fast_join(x, f, chunk) # chunk = 2^10 then data are divided to 1024 pieces
+    T = length(x) < typemax(Int32) ? Int32 : Int64
+    res = Vector{T}(undef, length(x))
+    starts = Vector{T}(undef, chunk + 1)
+    starts_loc = _divide_for_fast_join_barrier!(res, starts, x, f, chunk < typemax(UInt8) ? Val(UInt8) : chunk < typemax(UInt16) ? Val(UInt16) : Val(UInt32))
+	starts = _remove_unwantedstarts!(starts, length(x))
+	GIVENRANGE(res, starts, starts_loc)
+end
+
 
 function _calculate_ends(groups, ngroups, ::Val{T}) where T
     where = zeros(T, ngroups)
