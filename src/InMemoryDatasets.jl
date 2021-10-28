@@ -63,6 +63,7 @@ export
       select!,
       insertcols!,
       mask,
+      compare,
       groupby!,
       groupby,
       gatherby,

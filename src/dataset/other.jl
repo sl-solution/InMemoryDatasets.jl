@@ -776,7 +776,70 @@ function dropmissing!(ds::Dataset,
     ds
 end
 
-function compare(ds1::Dataset, ds2::Dataset; on = nothing, eq = isequal)
+function _compare_barrier_function_threaded!(_res, xl, xr, fl, fr, eq_fun)
+    Threads.@threads for i in 1:length(xl)
+        _res[i] = eq_fun(fl(xl[i]), fr(xr[i]))
+    end
+    _res
+end
+function _compare_barrier_function!(_res, xl, xr, fl, fr, eq_fun)
+    for i in 1:length(xl)
+        _res[i] = eq_fun(fl(xl[i]), fr(xr[i]))
+    end
+    _res
+end
+
+
+"""
+    compare(ds1, ds2; [on = nothing, eq = isequal, mapformats = false, threads = true])
+
+compares values of two data sets column by column and returns a boolean data set which is the result of calling  `eq` on each value of
+corresponding columns. the `on` keyword can be used to specifiy the pair of columns which is needed to be compared. The `mapformats` keyword
+controls whether the actual values or the formatted values should be compared.
+
+```julia
+julia> ds1 = Dataset(x = 1:9, y = 9:-1:1);
+julia> ds2 = Dataset(x = 1:9, y2 = 9:-1:1, y3 = 1:9);
+julia> compare(ds1, ds2, on = [:x=>:x, :y=>:y2])
+9×2 Dataset
+ Row │ x=>x      y=>y2
+     │ identity  identity
+     │ Bool?     Bool?
+─────┼────────────────────
+   1 │     true      true
+   2 │     true      true
+   3 │     true      true
+   4 │     true      true
+   5 │     true      true
+   6 │     true      true
+   7 │     true      true
+   8 │     true      true
+   9 │     true      true
+
+julia> compare(ds1, ds2, on = [:x=>:x, :y=>:y3])
+9×2 Dataset
+ Row │ x=>x      y=>y3
+     │ identity  identity
+     │ Bool?     Bool?
+─────┼────────────────────
+   1 │     true     false
+   2 │     true     false
+   3 │     true     false
+   4 │     true     false
+   5 │     true      true
+   6 │     true     false
+   7 │     true     false
+   8 │     true     false
+   9 │     true     false
+
+```
+"""
+function compare(ds1::Dataset, ds2::Dataset; on = nothing, eq = isequal, mapformats = false, threads = true)
+    if !(mapformats isa AbstractVector)
+        mapformats = repeat([mapformats], 2)
+    else
+        length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
+    end
     if on === nothing
         left_col_idx = 1:ncol(ds1)
         right_col_idx = index(ds2)[names(ds1)]
@@ -794,7 +857,19 @@ function compare(ds1::Dataset, ds2::Dataset; on = nothing, eq = isequal)
     res = Dataset()
     for j in 1:length(left_col_idx)
         _res = allocatecol(Union{Bool, Missing}, nrow(ds1))
-        _res .= eq.(_columns(ds1)[left_col_idx[j]], _columns(ds2)[right_col_idx[j]])
+        fl = identity
+        if mapformats[1]
+            fl = getformat(ds1, left_col_idx[j])
+        end
+        fr = identity
+        if mapformats[2]
+            fr = getformat(ds2, right_col_idx[j])
+        end
+        if threads
+            _compare_barrier_function_threaded!(_res, _columns(ds1)[left_col_idx[j]], _columns(ds2)[right_col_idx[j]], fl, fr, eq)
+        else
+            _compare_barrier_function!(_res, _columns(ds1)[left_col_idx[j]], _columns(ds2)[right_col_idx[j]], fl, fr, eq)
+        end
         push!(_columns(res), _res)
         push!(index(res),  Symbol(names(ds1)[left_col_idx[j]]* "=>" * names(ds2)[right_col_idx[j]]))
     end
@@ -812,10 +887,9 @@ where each row represents a variable and each column a summary statistic.
 
 # Arguments
 - `ds` : the `AbstractDataset`
-- `fun...` : functions which are going to summarise each column.
-- `cols` : a keyword argument allowing to select only a subset or transformation
-  of columns from `ds` to describe. Can be any column selector or transformation
-  accepted by [`select`](@ref).
+- `fun...` : list of functions for summarising each column.
+- `cols` : a keyword argument allowing to select only a subset
+  of columns from `ds` to describe.
 
 # Details
 `IMD.n` and `IMD.nmissing` are two special functions for reporting number of nonmissing and number of missing observations, respectively.
