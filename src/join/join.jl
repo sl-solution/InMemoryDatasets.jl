@@ -55,11 +55,9 @@ function searchsorted_join(_f, v::AbstractVector, x, ilo::T, ihi::T, o::Ordering
     return (lo + 1) : (hi - 1)
 end
 
-# NOT ok yet, when starts is length(x) for many of starts then we should do something, since st:en is wrong
-# may I should use a dictionary for starts, thus we can remove zero length ranges(this must happen in _divide_for_fast_join)
 function _fill_range_for_accelerated_join!(ranges, starts, loc, x, f, sz, chunk)
     loc_cumsum = cumsum(loc)
-    for i in 1:length(x)
+    Threads.@threads for i in 1:length(x)
         _index_ = hash(f(x[i])) % chunk + 1
         if loc[_index_]
             actual_start = loc_cumsum[_index_]
