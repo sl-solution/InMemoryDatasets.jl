@@ -40,6 +40,7 @@ mutable struct GatherBy
     perm
     starts
 end
+Base.copy(gds::GatherBy) = GatherBy(copy(gds.parent), copy(gds.groupcols), copy(gds.groups), gds.lastvalid, gds.mapformats, gds.perm === nothing ? nothing : copy(gds.perm), gds.starts === nothing ? nothing : copy(gds.starts))
 
 
 nrow(ds::GatherBy) = nrow(ds.parent)

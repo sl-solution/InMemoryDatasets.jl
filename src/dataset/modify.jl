@@ -278,7 +278,7 @@ end
 
 modify(origninal_ds::Dataset, @nospecialize(args...)) = modify!(copy(origninal_ds), args...)
 
-modify!(ds::Dataset) = ds
+modify!(ds::Dataset) = parent(ds)
 function modify!(ds::Dataset, @nospecialize(args...))
     idx_cpy = Index(copy(index(ds).lookup), copy(index(ds).names), copy(index(ds).format))
     if isgrouped(ds)
@@ -473,5 +473,5 @@ function _modify_grouped(ds, ms)
     for i in 1:length(ms)
         _modify_grouped_f_barrier(ds, ms[i].first, ms[i].second.first, ms[i].second.second)
     end
-    return ds
+    return parent(ds)
 end

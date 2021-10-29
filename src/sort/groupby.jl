@@ -16,6 +16,8 @@ struct GroupBy
     mapformats::Bool
 end
 
+Base.copy(gds::GroupBy) = GroupBy(copy(gds.parent), copy(gds.groupcols), copy(gds.perm), copy(gds.starts), gds.lastvalid, gds.mapformats)
+
 nrow(ds::GroupBy) = nrow(ds.parent)
 ncol(ds::GroupBy) = ncol(ds.parent)
 Base.names(ds::GroupBy, kwargs...) = names(ds.parent, kwargs...)
@@ -47,6 +49,53 @@ function _threaded_permute_for_groupby(x, perm)
     end
     res
 end
+
+modify(origninal_gds::Union{GroupBy, GatherBy}, @nospecialize(args...)) = modify!(copy(origninal_gds), args...)
+function modify!(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
+    idx_cpy = Index(copy(index(parent(gds)).lookup), copy(index(parent(gds)).names), copy(index(parent(gds)).format))
+    norm_var = normalize_modify_multiple!(idx_cpy, index(parent(gds)), args...)
+    allnewvars = map(x -> x.second.second, norm_var)
+    all_new_var = Symbol[]
+    for i in 1:length(allnewvars)
+        if typeof(allnewvars[i]) <: MultiCol
+            for j in 1:length(allnewvars[i].x)
+                push!(all_new_var, allnewvars[i].x[j])
+            end
+        else
+            push!(all_new_var, allnewvars[i])
+        end
+    end
+    var_index = idx_cpy[unique(all_new_var)]
+    any(index(parent(gds)).sortedcols .∈ Ref(var_index)) && throw(ArgumentError("the grouping variables cannot be modified, first use `ungroup!(ds)` to ungroup the data set"))
+    _modify_grouped(gds, norm_var)
+end
+
+
+function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssecond, mslast)
+	perm = _get_perms(gds)
+	starts = _group_starts(gds)
+	ngroups = gds.lastvalid
+	iperm = invperm(perm)
+    if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
+        T = _check_the_output_type(parent(gds), msfirst=>mssecond=>mslast)
+        _res = Tables.allocatecolumn(T, nrow(parent(gds)))
+        if msfirst isa Tuple
+            _modify_grouped_fill_one_col_tuple!(_res, view(_columns(parent(gds))[msfirst[1]], perm),  view(_columns(parent(gds))[msfirst[2]], perm), mssecond, starts, ngroups, nrow(parent(gds)))
+        else
+            _modify_grouped_fill_one_col!(_res, view(_columns(parent(gds))[msfirst], perm), mssecond, starts, ngroups, nrow(parent(gds)))
+        end
+        parent(gds)[!, mslast] = _res[iperm]
+    elseif (mssecond isa Expr)  && mssecond.head == :BYROW
+        parent(gds)[!, mslast] = byrow(parent(gds), mssecond.args[1], msfirst; mssecond.args[2]...)
+    elseif (mssecond isa Base.Callable) && (mslast isa MultiCol) && (mssecond isa typeof(splitter))
+        _modify_multiple_out!(parent(ds), _columns(parent(gds))[msfirst], mslast.x)
+    else
+                # if something ends here, we should implement new functionality for it
+        @error "not yet know how to handle the situation $(msfirst => mssecond => mslast)"
+    end
+end
+
+
 
 function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgroupcols = false)
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
