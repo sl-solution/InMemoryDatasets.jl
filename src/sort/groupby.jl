@@ -48,7 +48,7 @@ function _threaded_permute_for_groupby(x, perm)
     res
 end
 
-function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
+function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgroupcols = false)
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
     ms = normalize_combine_multiple!(length(_groupcols(gds)),idx_cpy, index(gds.parent), args...)
     # the rule is that in combine, byrow must only be used for already aggregated columns
@@ -58,7 +58,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
     !(_is_byrow_valid(Index(newlookup, new_nm, Dict{Int, Function}()), ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` otherwise"))
 
     if _fast_gatherby_reduction(gds, ms)
-        return _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm)
+        return _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm; dropgroupcols = dropgroupcols)
     end
     # _check_mutliple_rows_for_each_group return the first transformation which causes multiple
     # rows or 0 if all transformations return scalar for each group
@@ -105,18 +105,20 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
     newds = Dataset([], newds_idx)
     newds_lookup = index(newds).lookup
     var_cnt = 1
-    for j in 1:length(groupcols)
-        addmissing = false
-        _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, total_lengths, addmissing = addmissing)
-        if DataAPI.refpool(_tmpres) !== nothing
-			_push_groups_to_res_pa!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
-		else
-            _push_groups_to_res!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
-        end
-        push!(index(newds), new_nm[var_cnt])
-        setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
-        var_cnt += 1
-    end
+	if !dropgroupcols
+	    for j in 1:length(groupcols)
+	        addmissing = false
+	        _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, total_lengths, addmissing = addmissing)
+	        if DataAPI.refpool(_tmpres) !== nothing
+				_push_groups_to_res_pa!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+			else
+	            _push_groups_to_res!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+	        end
+	        push!(index(newds), new_nm[var_cnt])
+	        setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
+	        var_cnt += 1
+	    end
+	end
     old_x = ms[1].first
     curr_x = _columns(gds.parent)[1]
     for i in 1:length(ms)

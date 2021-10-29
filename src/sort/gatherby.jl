@@ -287,7 +287,7 @@ function _fast_gatherby_combine_f_barrier(gds, col, newds, mssecond, mslast, new
     end
 end
 
-function _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm)
+function _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm; dropgroupcols = false)
     groupcols = gds.groupcols
     ngroups = gds.lastvalid
     groups = gds.groups
@@ -299,20 +299,22 @@ function _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm)
     newds = Dataset([], newds_idx)
     newds_lookup = index(newds).lookup
     var_cnt = 1
-    for j in 1:length(groupcols)
-        addmissing = false
-        _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, ngroups, addmissing = addmissing)
-        if DataAPI.refpool(_tmpres) !== nothing
-            _fast_gatherby_groups_to_res!(_tmpres.refs, _columns(gds.parent)[groupcols[j]].refs, groups)
-            push!(_columns(newds), _tmpres)
-        else
-            _fast_gatherby_groups_to_res!(_tmpres, _columns(gds.parent)[groupcols[j]], groups)
-            push!(_columns(newds), _tmpres)
-        end
-        push!(index(newds), new_nm[var_cnt])
-        setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
-        var_cnt += 1
-    end
+	if !dropgroupcols
+	    for j in 1:length(groupcols)
+	        addmissing = false
+	        _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, ngroups, addmissing = addmissing)
+	        if DataAPI.refpool(_tmpres) !== nothing
+	            _fast_gatherby_groups_to_res!(_tmpres.refs, _columns(gds.parent)[groupcols[j]].refs, groups)
+	            push!(_columns(newds), _tmpres)
+	        else
+	            _fast_gatherby_groups_to_res!(_tmpres, _columns(gds.parent)[groupcols[j]], groups)
+	            push!(_columns(newds), _tmpres)
+	        end
+	        push!(index(newds), new_nm[var_cnt])
+	        setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
+	        var_cnt += 1
+	    end
+	end
 	for i in 1:length(ms)
 		_fast_gatherby_combine_f_barrier(gds, ms[i].first, newds, ms[i].second.first, ms[i].second.second, newds_lookup, groups, ngroups)
 		if !haskey(index(newds), ms[i].second.second)

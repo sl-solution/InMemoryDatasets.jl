@@ -566,7 +566,7 @@ function _combine_f_barrier_tuple(fromds1, fromds2, newds, msfirst, mssecond, ms
 
 end
 
-function combine(ds::Dataset, @nospecialize(args...))
+function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false)
     !isgrouped(ds) &&  return combine_ds(ds, args...)#throw(ArgumentError("`combine` is only for grouped data sets, use `modify` instead"))
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
     ms = normalize_combine_multiple!(length(_groupcols(ds)), idx_cpy, index(ds), args...)
@@ -619,17 +619,20 @@ function combine(ds::Dataset, @nospecialize(args...))
     newds = Dataset([], newds_idx)
     newds_lookup = index(newds).lookup
     var_cnt = 1
-    for j in 1:length(groupcols)
-        _tmpres = allocatecol(ds[!, groupcols[j]].val, total_lengths)
-        if DataAPI.refpool(_tmpres) !== nothing
-            _push_groups_to_res_pa!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
-        else
-            _push_groups_to_res!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
-        end
-        push!(index(newds), new_nm[var_cnt])
-        setformat!(newds, new_nm[var_cnt] => get(index(ds).format, groupcols[j], identity))
-        var_cnt += 1
+    if !dropgroupcols
 
+        for j in 1:length(groupcols)
+            _tmpres = allocatecol(ds[!, groupcols[j]].val, total_lengths)
+            if DataAPI.refpool(_tmpres) !== nothing
+                _push_groups_to_res_pa!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
+            else
+                _push_groups_to_res!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
+            end
+            push!(index(newds), new_nm[var_cnt])
+            setformat!(newds, new_nm[var_cnt] => get(index(ds).format, groupcols[j], identity))
+            var_cnt += 1
+
+        end
     end
     for i in 1:length(ms)
         if i == _first_vector_res
