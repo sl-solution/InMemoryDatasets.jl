@@ -80,20 +80,13 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 	if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
 		T = _check_the_output_type(parent(gds), msfirst=>mssecond=>mslast)
 		_res = Tables.allocatecolumn(T, nrow(parent(gds)))
-		if ngroups < 1000
-			if msfirst isa Tuple
-				_modify_grouped_fill_one_col_tuple!(_res, view(_columns(parent(gds))[msfirst[1]], perm),  view(_columns(parent(gds))[msfirst[2]], perm), mssecond, starts, ngroups, nrow(parent(gds)))
-			else
-				_modify_grouped_fill_one_col!(_res, view(_columns(parent(gds))[msfirst], perm), mssecond, starts, ngroups, nrow(parent(gds)))
-			end
+		
+		if msfirst isa Tuple
+			_modify_grouped_fill_one_col_tuple!(_res, _threaded_permute_for_groupby(_columns(parent(gds))[msfirst[1]], perm),  _threaded_permute_for_groupby(_columns(parent(gds))[msfirst[2]], perm), mssecond, starts, ngroups, nrow(parent(gds)))
 		else
-			if msfirst isa Tuple
-				_modify_grouped_fill_one_col_tuple!(_res, _threaded_permute_for_groupby(_columns(parent(gds))[msfirst[1]], perm),  _threaded_permute_for_groupby(_columns(parent(gds))[msfirst[2]], perm), mssecond, starts, ngroups, nrow(parent(gds)))
-			else
-				_modify_grouped_fill_one_col!(_res, _threaded_permute_for_groupby(_columns(parent(gds))[msfirst], perm), mssecond, starts, ngroups, nrow(parent(gds)))
-			end
+			_modify_grouped_fill_one_col!(_res, _threaded_permute_for_groupby(_columns(parent(gds))[msfirst], perm), mssecond, starts, ngroups, nrow(parent(gds)))
 		end
-
+	
 		parent(gds)[!, mslast] = _threaded_permute_for_groupby(_res, iperm)
 	elseif (mssecond isa Expr)  && mssecond.head == :BYROW
 		parent(gds)[!, mslast] = byrow(parent(gds), mssecond.args[1], msfirst; mssecond.args[2]...)
