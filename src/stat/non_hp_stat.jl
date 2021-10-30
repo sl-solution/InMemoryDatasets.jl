@@ -108,12 +108,12 @@ function stat_sum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: U
 end
 stat_sum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: Union{Missing, INTEGERS, FLOATS} = stat_sum(identity, x; lo = lo, hi = hi)
 
-function stat_wsum(f, x::AbstractArray{Union{T,Missing},1}, w) where T
-    all(ismissing, x) && return missing
-    _dmiss(y) = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])
-    mapreduce(_dmiss, _stat_add_sum, zip(x,w))
-end
-stat_wsum(x::AbstractArray{Union{T,Missing},1}, w) where T  = stat_wsum(identity, x, w)
+# function stat_wsum(f, x::AbstractArray{Union{T,Missing},1}, w) where T
+#     all(ismissing, x) && return missing
+#     _dmiss(y) = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])
+#     mapreduce(_dmiss, _stat_add_sum, zip(x,w))
+# end
+# stat_wsum(x::AbstractArray{Union{T,Missing},1}, w) where T  = stat_wsum(identity, x, w)
 function stat_wsum(f, x::AbstractVector{T}, w::AbstractVector) where T
     all(ismissing, x) && return missing
     _dmiss(y) = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])
