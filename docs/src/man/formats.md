@@ -149,6 +149,57 @@ The following rules administrate how a column format will automatically be chang
 
 - The `format` of a column will be preserved during some operations where a new data set is created. For example, the `combine` function preserve the format of grouping variables. This feature will be discussed, in more details, when those operations are introduced in later sections.
 
+## Using Dictionary
+
+One way to recode values of a data set is by using `format` which picks the formatted values from a dictionary. Since it is not possible to feed `format` with any extra positional argument rather than the actual values of observations, the dictionary that defines recoded values must be placed with a default value or must be set as keyword argument with a default value which refers to the actual dictionary that has been defined for this purpose. This argument should be type annotated to avoid any unnecessary allocation.
+
+### Example
+
+```jldoctest
+julia> ds = Dataset(rand(1:2, 10, 3), :auto)
+10×3 Dataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         2         1
+   2 │        1         2         2
+   3 │        1         2         2
+   4 │        2         1         1
+   5 │        1         1         2
+   6 │        1         2         2
+   7 │        2         2         1
+   8 │        2         1         2
+   9 │        2         1         1
+  10 │        1         1         1
+
+julia> dict = Dict(1=>"yes", 2=>"no")
+Dict{Int64, String} with 2 entries:
+  2 => "no"
+  1 => "yes"
+
+julia> fmt1(x, dict::Dict{Int, String} = dict) = get(dict, x, missing)
+fmt1 (generic function with 2 methods)
+
+julia> setformat!(ds, 1:3 => fmt1)
+10×3 Dataset
+ Row │ x1      x2      x3     
+     │ fmt1    fmt1    fmt1   
+     │ Int64?  Int64?  Int64?
+─────┼────────────────────────
+   1 │    yes      no     yes
+   2 │    yes      no      no
+   3 │    yes      no      no
+   4 │     no     yes     yes
+   5 │    yes     yes      no
+   6 │    yes      no      no
+   7 │     no      no     yes
+   8 │     no     yes      no
+   9 │     no     yes     yes
+  10 │    yes     yes     yes
+
+```
+
 ## `format` validation
 
 Datasets doesn't validate the supplied `format` until it needs to use the formatted values for an operation, in that case, if the supplied `format` is not a valid `format`, Datasets will throw errors.
