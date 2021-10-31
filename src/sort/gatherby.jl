@@ -58,8 +58,12 @@ Base.summary(gds::GatherBy) =
 
 function Base.show(io::IO, gds::GatherBy;
 
-                   kwargs...)
-     _show(io, view(gds.parent, _get_perms(gds), :); title = summary(gds), kwargs...)
+	kwargs...)
+	if length(_get_perms(gds)) > 200
+		_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+	else
+		_show(io, view(gds.parent, gds.perm, :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+	end
 end
 
 Base.show(io::IO, mime::MIME"text/plain", gds::GatherBy;

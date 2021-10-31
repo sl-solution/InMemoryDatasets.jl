@@ -80,13 +80,13 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 	if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
 		T = _check_the_output_type(parent(gds), msfirst=>mssecond=>mslast)
 		_res = Tables.allocatecolumn(T, nrow(parent(gds)))
-		
+
 		if msfirst isa Tuple
 			_modify_grouped_fill_one_col_tuple!(_res, _threaded_permute_for_groupby(_columns(parent(gds))[msfirst[1]], perm),  _threaded_permute_for_groupby(_columns(parent(gds))[msfirst[2]], perm), mssecond, starts, ngroups, nrow(parent(gds)))
 		else
 			_modify_grouped_fill_one_col!(_res, _threaded_permute_for_groupby(_columns(parent(gds))[msfirst], perm), mssecond, starts, ngroups, nrow(parent(gds)))
 		end
-	
+
 		parent(gds)[!, mslast] = _threaded_permute_for_groupby(_res, iperm)
 	elseif (mssecond isa Expr)  && mssecond.head == :BYROW
 		parent(gds)[!, mslast] = byrow(parent(gds), mssecond.args[1], msfirst; mssecond.args[2]...)
@@ -234,7 +234,12 @@ Base.summary(gds::GroupBy) =
 function Base.show(io::IO, gds::GroupBy;
 
 	kwargs...)
-	_show(io, view(gds.parent, gds.perm, :); title = summary(gds), kwargs...)
+	#TODO pretty_table is very slow for large views, temporary workaround, later we should fix this
+	if length(gds.perm) > 200
+		_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+	else
+		_show(io, view(gds.parent, gds.perm, :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+	end
 end
 
 Base.show(io::IO, mime::MIME"text/plain", gds::GroupBy;
