@@ -14,6 +14,8 @@ The `sort!` function accepts a Dataset and a set of columns and sorts the given 
 
 * Like Julia Base, the missing values are treated larger than any other values.
 
+* `sort` creates a copy of data and permutes each column of it and attaches some attributes to the new data set. To sort a data set without creating a new data set or modifying the original data set, someone may use the `groupby` function. The `groupby` function sorts and then creates a meta information about the sorted data set. The `groupby` function will be discussed in another section in detail.
+
 ### Examples
 
 ```jldoctest
