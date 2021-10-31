@@ -491,33 +491,25 @@ function  _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) 
         else
             _f = identity
         end
-        last_valid_index = _find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , ranges, ranges_cpy, last_valid_index)
+        _find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , ranges_cpy)
     end
-    return colsidx, ranges, last_valid_index
+    @inbounds for i in 1:length(ranges_cpy)
+        if ranges_cpy[i] == 1
+            ranges[last_valid_index] = i
+            last_valid_index += 1
+        end
+    end
+    return colsidx, ranges, (last_valid_index - 1)
 end
 
 _find_starts_of_groups(ds, col::ColumnIndex, ::Val{T}; mapformats = true) where T = _find_starts_of_groups(ds, [col], Val(T), mapformats = mapformats)
 _find_starts_of_groups(ds, cols::UnitRange, ::Val{T}; mapformats = true) where T = _find_starts_of_groups(ds, collect(cols), Val(T), mapformats = mapformats)
 
 
-function _find_starts_of_groups!(x, format, ranges, ranges_cpy, last_valid_index)
-    cnt = 1
-    @inbounds for j in 1:last_valid_index
-        lo = ranges_cpy[j]
-        j == last_valid_index ? hi = length(x) : hi = ranges_cpy[j + 1] - 1
-        ranges[cnt] = lo
-        cnt += 1
-        @inbounds for i in lo:(hi - 1)
-            if !isequal(format(x[i]), format(x[i+1]))
-                ranges[cnt] = i + 1
-                cnt += 1
-            end
-        end
+function _find_starts_of_groups!(x, format, ranges_cpy)
+    Threads.@threads for j in 2:length(ranges_cpy)
+        @inbounds ranges_cpy[j] = ranges_cpy[j]==1 ? 1 : !isequal(format(x[j]), format(x[j-1]))
     end
-    @inbounds for j in 1:(cnt - 1)
-        ranges_cpy[j] = ranges[j]
-    end
-    return cnt - 1
 end
 
 function make_unique!(names::Vector{Symbol}, src::AbstractVector{Symbol};
