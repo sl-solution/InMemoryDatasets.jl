@@ -426,19 +426,21 @@ function _find_groups_with_more_than_one_observation(groups, ngroups, ::Val{T}) 
     res = trues(length(groups))
     seen_groups = falses(ngroups)
 
-    @inbounds for i in 1:length(res)
-        seen_groups[groups[i]] ? nothing : (seen_groups[groups[i]] = true; res[i] = false)
-    end
-
+    _nonunique_barrier!(res, groups, seen_groups)
+    
 	fill!(seen_groups, false)
-    @inbounds for i in 1:length(res)
-		res[i] && !seen_groups[groups[i]] ? seen_groups[groups[i]] = true : nothing
-	end
+    
+    _find_groups_with_more_than_one_observation_barrier!(res, groups, seen_groups)
 	seen_groups, findall(seen_groups)
 
 end
 
-
+function _find_groups_with_more_than_one_observation_barrier!(res, groups, seen_groups)
+    @inbounds for i in 1:length(res)
+        res[i] && !seen_groups[groups[i]] ? seen_groups[groups[i]] = true : nothing
+    end
+    nothing
+end
 
 function _gather_groups_old_version(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]
