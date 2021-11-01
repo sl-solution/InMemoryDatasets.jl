@@ -1040,17 +1040,12 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
 
-    _nonunique_barrier!(res, groups, seen_groups)
-    return res
-end
-nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false) = nonunique(ds, [col]; mapformats = mapformats)
-
-function _nonunique_barrier!(res, groups, seen_groups)
     @inbounds for i in 1:length(res)
         seen_groups[groups[i]] ? nothing : (seen_groups[groups[i]] = true; res[i] = false)
     end
-    nothing
+    return res
 end
+nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false) = nonunique(ds, [col]; mapformats = mapformats)
 
 """
     vcat(dss::AbstractDataset...;
