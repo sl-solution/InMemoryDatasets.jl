@@ -107,13 +107,13 @@ end
 
 function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}) where T1 where T2
     Threads.@threads for i in 1:length(x)
-        ranges[i] = searchsorted_join(_fr, y, _fl(x[i])::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+        ranges[i] = searchsorted_join(_fr, y, _fl(DataAPI.unwrap(x[i]))::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
     end
 end
 
 function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, ::Val{T2}) where T1 where T2
     Threads.@threads for i in 1:length(x)
-        revmap_paval_ref = get(invpool, _fl(x[i])::T1, missing)
+        revmap_paval_ref = get(invpool, _fl(DataAPI.unwrap(x[i]))::T1, missing)
         if ismissing(revmap_paval_ref)
             ranges[i] = 1:0
         else
@@ -187,7 +187,7 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_
         _fr = identity
     end
 
-    T1 = Core.Compiler.return_type(_fl, (eltype(var_l), ))
+    T1 = Core.Compiler.return_type(_fl∘DataAPI.unwrap, (eltype(var_l), ))
 
     if DataAPI.refpool(var_r) !== nothing
         # sort taken care for refs ordering of modified values, but we still need to change refs
