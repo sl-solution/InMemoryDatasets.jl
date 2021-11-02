@@ -403,7 +403,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                     resize!(gslots, sz)
                     resize!(groups, nrow(ds))
                 end
-				j > 1 ? stablegather = stable : stablegather = false
+				prev_max_group > nrow(ds)/100 ? stablegather = stable : stablegather = false
                 flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T))
 
             end
@@ -414,7 +414,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                 resize!(gslots, sz)
                 resize!(groups, nrow(ds))
             end
-			j > 1 ? stablegather = stable : stablegather = false
+			prev_max_group > nrow(ds)/100 ? stablegather = stable : stablegather = false
             flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T))
         end
         !flag && break
@@ -427,9 +427,9 @@ function _find_groups_with_more_than_one_observation(groups, ngroups, ::Val{T}) 
     seen_groups = falses(ngroups)
 
     _nonunique_barrier!(res, groups, seen_groups)
-    
+
 	fill!(seen_groups, false)
-    
+
     _find_groups_with_more_than_one_observation_barrier!(res, groups, seen_groups)
 	seen_groups, findall(seen_groups)
 
