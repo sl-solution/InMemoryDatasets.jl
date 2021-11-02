@@ -1,7 +1,8 @@
 Tables.istable(::Type{<:AbstractDataset}) = true
 Tables.columnaccess(::Type{<:AbstractDataset}) = true
 Tables.columns(df::AbstractDataset) = eachcol(df)
-Tables.rowaccess(::Type{<:AbstractDataset}) = true
+# TODO Monitor this for any unseen problem
+Tables.rowaccess(::Type{<:AbstractDataset}) = false
 Tables.rows(df::AbstractDataset) = eachrow(df)
 Tables.rowtable(df::AbstractDataset) = Tables.rowtable(Tables.columntable(df))
 Tables.namedtupleiterator(df::AbstractDataset) =
