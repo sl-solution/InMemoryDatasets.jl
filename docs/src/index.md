@@ -21,9 +21,10 @@ Pages = ["man/basics.md",
          "man/filter.md",
          "man/sorting.md",
          "man/grouping.md",
-         "man/aggregation",
+         "man/aggregation.md",
          "man/transpose.md",
-         "man/joins.md"]
+         "man/joins.md",
+         "man/gallery.md"]
 Depth = 2
 ```
 
