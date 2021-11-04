@@ -154,6 +154,8 @@ julia> groupby(salary, 2)
         5       3
 ```
 
+The `groupby!` and `groupby` functions accept the output of the `groupby` function. Thus, some may use these functions to incrementally group a data set.
+
 When the `groupby!` function is used on a data set, the data set is marked as a grouped data set and the functions which handle grouped data set differently are signalled when the grouped data sets are passed as their arguments. Two of those functions are `modify!` and `modify` functions. When a grouped data set is passed to these two functions, InMemoryDatasets applies each modification within each group. The `modify!` and `modify` functions treat the view of a grouped data set (produced by the `groupby` function) in the same way without changing the order of the original data set. For efficiency reason, it is recommended to use `stable = false` when the `groupby` function is used in conjunction with `modify!` or `modify`.
 
 ### Examples

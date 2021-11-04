@@ -135,6 +135,7 @@ struct GIVENRANGE
     idx
     starts
 	starts_loc
+	lastvalid
 end
 
 function _sortitout!(res, starts, x)
@@ -187,7 +188,7 @@ function _divide_for_fast_join(x, f, chunk) # chunk = 2^10 then data are divided
     starts = Vector{T}(undef, chunk + 1)
     starts_loc = _divide_for_fast_join_barrier!(res, starts, x, f, chunk < typemax(UInt8) ? Val(UInt8) : chunk < typemax(UInt16) ? Val(UInt16) : Val(UInt32))
 	starts = _remove_unwantedstarts!(starts, length(x))
-	GIVENRANGE(res, starts, starts_loc)
+	GIVENRANGE(res, starts, starts_loc, length(starts))
 end
 
 
