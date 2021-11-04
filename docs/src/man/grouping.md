@@ -2,13 +2,13 @@
 
 ## Introduction
 
-InMemoryDatasets uses two approaches to group observations: sorting, and hashing. In sorting approach, it sorts the data set based on the given columns and finds the starts and ends of each group based on the sorted values. In hashing approach, it uses a customised algorithm to group observations. Each of these approaches has some advantages over the other one and for any particular problem one might be more suitable than the other one.
+InMemoryDatasets uses two approaches to group observations: sorting, and hashing. In sorting approach, it sorts the data set based on given columns and finds the starts and ends of each group based on the sorted values. In hashing approach, it uses a customised algorithm to group observations. Each of these approaches has some advantages over the other one and for any particular problem one of them might be more suitable than the other one.
 
 ## `groupby!` and `groupby`
 
-The main functions for grouping observations based on sorting approach are `groupby!` and `groupby`. The `groupby!` replaces the original data set with the sorted one and attaches a meta information about the grouping orders to the replaced data set, on the other hand, `groupby` performs the sorting phase, however, it creates a view of the main data set where the meta information is attached to it. The output of `groupby` can be viewed as a view of the sorted data set.
+The main functions for grouping observations based on sorting approach are `groupby!` and `groupby`. The `groupby!` function replaces the original data set with the sorted one and attaches a meta information about the grouping orders to the replaced data set, on the other hand, the `groupby` function performs the sorting phase, however, it creates a view of the main data set where the meta information is attached to it. The output of `groupby` is basically a view of the sorted data set.
 
-The syntax for calling `groupby!` and `groupby` is the same as the `sort!` function. This means `groupby!` and `groupby` accept all keyword arguments that `sort!` function supports, these include:
+The syntax for calling `groupby!` and `groupby` is the same as the `sort!` function. This means `groupby!` and `groupby` accept all keyword arguments that the `sort!` function supports, these include:
 
 * `rev` with default value of `false`
 * `mapformats` with default value of `true`, i.e. by default these functions group data sets based on the formatted values.
@@ -156,7 +156,7 @@ julia> groupby(salary, 2)
 
 The `groupby!` and `groupby` functions accept the output of the `groupby` function. Thus, some may use these functions to incrementally group a data set.
 
-When the `groupby!` function is used on a data set, the data set is marked as a grouped data set and the functions which handle grouped data set differently are signalled when the grouped data sets are passed as their arguments. Two of those functions are `modify!` and `modify` functions. When a grouped data set is passed to these two functions, InMemoryDatasets applies each modification within each group. The `modify!` and `modify` functions treat the view of a grouped data set (produced by the `groupby` function) in the same way without changing the order of the original data set. For efficiency reason, it is recommended to use `stable = false` when the `groupby` function is used in conjunction with `modify!` or `modify`.
+When the `groupby!` function is used on a data set, the data set is marked as a grouped data set and the functions which handle grouped data set differently are signalled when the grouped data sets are passed as their arguments. Two of those functions are `modify!` and `modify` functions. When a grouped data set is passed to these two functions, InMemoryDatasets applies each modification within each group. The `modify!` and `modify` functions treat the view of a grouped data set (produced by the `groupby` function) in the same way without changing the order of the original data set. For better performance, set `stable = false` when the `groupby` function is used in conjunction with `modify!` or `modify`.
 
 ### Examples
 
@@ -251,7 +251,7 @@ julia> modify(groupby(sale, :date), :sale => spct => :sale_pct)
 
 ## `ungroup!`
 
-The `ungroup!` function is a utility function that removes the `grouped` mark from a grouped data set produced by `groupby!`. The function doesn't change the permutation of the data set, thus, even the data set is not any more grouped, it is still sorted, and it is very efficient to re-group it.
+The `ungroup!` function is a utility function that removes the `grouped` mark from a grouped data set produced by `groupby!`. The function doesn't change the permutation of the data set, thus, even the data set is not any more grouped, it is still sorted, and it is very efficient to re-group it. However, note that the last modified time of the data set is updated when `ungroup!` is called on a data set.
 
 The `ungroup!` function can be used in scenarios that one need to modify a data set but it is not desired to apply a specific modification within each group, instead the modification is needed to be applied to the whole column. In these kind of situations, first `ungroup!` is used to remove the grouping mark and then the `modify!` function can be used on the data set. The `groupby!` function can be used afterward to mark the data set as grouped data set.
 
@@ -332,4 +332,4 @@ Similar to `groupby!/groupby` functions, `gatherby` can be pass to functions whi
 
 As mentioned before, the result of `gatherby` is stable, i.e. the observations order within each group will be the order of their appearance in the original data set. However, when this stability is not needed and there are many groups in the data set, passing `stable = false` improves the performance by sacrificing the stability.
 
-The `gatherby` function has one extra keyword arguments, `isgathered`, which by default is set to `false`. When this argument is set to `true`, InMemoryDatasets assumes that the observations are currently gathered by some rules and it only finds the starts and ends of each group and marks the data set as gathered. So users can manually group observations by using this keyword argument.
+The `gatherby` function has one extra keyword arguments, `isgathered`, which by default is set to `false`. When this argument is set to `true`, InMemoryDatasets assumes that the observations are currently gathered by some rules and it only finds the starts and ends of each group and marks the data set as gathered. So users can manually group observations by setting this keyword argument.
