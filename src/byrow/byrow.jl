@@ -111,9 +111,3 @@ function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = tru
 	end
 	res
 end
-
-
-function byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex; op = .+, kwargs...)
-	colsidx = index(ds)[cols]
-	mapreduce(identity, op, view(_columns(ds),colsidx); kwargs...)
-end
