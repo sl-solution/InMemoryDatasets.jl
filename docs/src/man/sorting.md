@@ -4,6 +4,8 @@
 
 Sorting is one of the key tasks for Datasets. Actually, when we group a data set by given set of columns, InMemoryDatasets does sorting behind the scene and groups the observations based on their sorted values. The joining algorithms also uses the sorting functions for finding the matched observations. For Datasets someone can sort a set of columns by either their formatted values, or their actual values. In this section we go through the main functions for sorting Datasets.
 
+> Note that InMemoryDatasets uses parallel algorithms for sorting observations.
+
 ## `sort!/sort`
 
 The `sort!` function accepts a Dataset and a set of columns and sorts the given Dataset based on provided columns. By default the `sort!` function does the sorting based on the formatted values, however, using `mapformats = false` forces the sorting be done based on the actual values. `sort!` doesn't create a new dataset, it only replaces the original one with the sorted one. If the original data set needed to be untouched the `sort` function must be used. By default, both `sort!` and `sort` functions do a stable sort using a `Heap` sort algorithm. If the stability of the sort is not needed, using the keyword option `stable = false` can improve the performance. User can also change the default sorting algorithm to `QuickSort` by using the `alg = QuickSort` option. By default the ascending sorting is used for the sorting task, and using `rev = true` changes it to descending ordering, and for multiple columns a vector of  `true`, `false` can be supplied for this option, i.e. each column can be sorted in ascending or descending order independently. Note that:
