@@ -480,14 +480,11 @@ end
 
 # ds assumes is grouped based on cols and groups are gathered togther
 function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) where T
-    colsidx = IMD.index(ds)[cols]
-	sortedidx = IMD.index(ds).sortedcols
-	starts = IMD.index(ds).starts
-	ngroups = IMD.index(ds).ngroups[]
+    colsidx = index(ds)[cols]
 
     ranges = Vector{T}(undef, nrow(ds))
     inbits = zeros(Bool, nrow(ds))
-    inbits[1] = 1
+    inbits[1] = true
     last_valid_index = 1
 	
     for j in 1:length(colsidx)
@@ -496,15 +493,10 @@ function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) w
         else
             _f = identity
         end
-		
-		if colsidx <= sortedidx
-			_find_starts_of_groups!(IMD._columns(ds)[colsidx[j]], _f , inbits, starts, ngroups)
-		else
-			_find_starts_of_groups!(IMD._columns(ds)[colsidx[j]], _f , inbits)
-		end
+		_find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , inbits)
     end
     @inbounds for i in 1:length(inbits)
-        if inbits[i] == 1
+        if inbits[i] == true
             ranges[last_valid_index] = i
             last_valid_index += 1
         end
@@ -517,13 +509,8 @@ _find_starts_of_groups(ds, cols::UnitRange, ::Val{T}; mapformats = true) where T
 
 function _find_starts_of_groups!(x, f, inbits)
     Threads.@threads for j in 2:length(inbits)
-        @inbounds inbits[j] = inbits[j]==1 ? 1 : !isequal(f(x[j]), f(x[j-1]))
+        @inbounds inbits[j] = inbits[j]==true ? true : !isequal(f(x[j]), f(x[j-1]))
     end
-end
-function _find_starts_of_groups!(x, f, inbits, starts, ngroups)
-	Threads.@threads for i in 1:ngroups
-		@inbounds inbits[starts[i]] = inbits[starts[i]]==1 ? 1 : !isequal(f(x[starts[i]]), f(x[starts[i]-1]))
-	end
 end
 
 function make_unique!(names::Vector{Symbol}, src::AbstractVector{Symbol};
