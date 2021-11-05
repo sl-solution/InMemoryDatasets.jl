@@ -150,7 +150,7 @@ end
     T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
     ranges = [1]
     last_valid_index = 1
-    r1, r2, r3 = _find_starts_of_groups(ds, colsidx, T)
+    r1, r2, r3 = IMD._find_starts_of_groups(ds, colsidx, T)
     @test r1 == colsidx
     @test r3 == last_valid_index
     @test r2 == ranges[1:r3]
@@ -160,7 +160,7 @@ end
     T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
     ranges = [1, 4, 6]
     last_valid_index = 3
-    r1, r2, r3 = _find_starts_of_groups(ds, colsidx, T)
+    r1, r2, r3 = IMD._find_starts_of_groups(ds, colsidx, T)
     @test r1 == colsidx
     @test r3 == last_valid_index
     @test r2[1:r3] == ranges
@@ -170,7 +170,7 @@ end
     T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
     ranges = [1]
     last_valid_index = 1
-    r1, r2, r3 = _find_starts_of_groups(ds, colsidx, T)
+    r1, r2, r3 = IMD._find_starts_of_groups(ds, colsidx, T)
     @test r1 == colsidx
     @test r3 == last_valid_index
     @test r2[1:r3] == ranges
@@ -180,7 +180,7 @@ end
     T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
     ranges = [1, 2, 3, 5, 7]
     last_valid_index = 5
-    r1, r2, r3 = _find_starts_of_groups(ds, colsidx, T)
+    r1, r2, r3 = IMD._find_starts_of_groups(ds, colsidx, T)
     @test r1 == colsidx
     @test r3 == last_valid_index
     @test r2[1:r3] == ranges
