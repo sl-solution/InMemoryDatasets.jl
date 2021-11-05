@@ -517,7 +517,7 @@ _find_starts_of_groups(ds, cols::UnitRange, ::Val{T}; mapformats = true) where T
 
 function _find_starts_of_groups!(x, f, inbits)
     Threads.@threads for j in 2:length(inbits)
-        @inbounds inbits[j] = intbis[j]==1 ? 1 : !isequal(f(x[j]), f(x[j-1]))
+        @inbounds inbits[j] = inbis[j]==1 ? 1 : !isequal(f(x[j]), f(x[j-1]))
     end
 end
 function _find_starts_of_groups!(x, f, inbits, starts, ngroups)
