@@ -328,7 +328,7 @@ julia> gatherby(ds, 1)
   false     false
 ```
 
-Similar to `groupby!/groupby` functions, `gatherby` can be pass to functions which operate on grouped data sets.
+Similar to `groupby!/groupby` functions, `gatherby` can be passed to functions which operate on grouped data sets.
 
 As mentioned before, the result of `gatherby` is stable, i.e. the observations order within each group will be the order of their appearance in the original data set. However, when this stability is not needed and there are many groups in the data set, passing `stable = false` improves the performance by sacrificing the stability.
 
