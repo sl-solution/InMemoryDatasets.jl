@@ -91,9 +91,8 @@ byrow(ds::AbstractDataset, ::typeof(stdze!), cols::MultiColumnIndex = names(ds, 
 byrow(ds::AbstractDataset, ::typeof(hash), cols::MultiColumnIndex = :; by = identity, threads = true && nrow(ds)>1000) = threads ? row_hash_hp(ds, by, cols) : row_hash(ds, by, cols)
 byrow(ds::AbstractDataset, ::typeof(hash), col::ColumnIndex; by = identity, threads = true && nrow(ds)>1000) = byrow(ds, hash, [col]; by = by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::Union{MultiColumnIndex, ColumnIndex} = names(ds, Union{Missing, Number}); op = .+, kwargs...) = mapreduce(identity, op, eachcol(ds[!, cols]); kwargs...)
+byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); op = .+, f = identity,  init = missings(mapreduce(eltype, promote_type, view(_columns(ds),index(ds)[cols])), nrow(ds)), kwargs...) = mapreduce(f, op, view(_columns(ds), index(ds)[cols]), init = init; kwargs...)
 
-byrow(ds::AbstractDataset, ::typeof(reduce), cols::Union{MultiColumnIndex, ColumnIndex} = names(ds, Union{Missing, Number}); op = .+, kwargs...) = reduce(op, eachcol(ds[!, cols]); kwargs...)
 
 function byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = true && nrow(ds)>1000)
 	colsidx = index(ds)[cols]
@@ -111,10 +110,4 @@ function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = tru
 		map!(f, res, ds[!, col].val)
 	end
 	res
-end
-
-
-function byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex; op = .+, kwargs...)
-	colsidx = index(ds)[cols]
-	mapreduce(identity, op, view(_columns(ds),colsidx); kwargs...)
 end

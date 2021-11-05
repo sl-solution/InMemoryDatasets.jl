@@ -7,16 +7,17 @@ end
 
 groupby!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby!(ds, [col]; alg = alg, rev = rev, mapformats = mapformats, stable = stable)
 
-struct GroupBy
+mutable struct GroupBy
 	parent::Dataset
 	groupcols
+	rev
 	perm
 	starts
 	lastvalid
 	mapformats::Bool
 end
 
-Base.copy(gds::GroupBy) = GroupBy(copy(gds.parent), copy(gds.groupcols), copy(gds.perm), copy(gds.starts), gds.lastvalid, gds.mapformats)
+Base.copy(gds::GroupBy) = GroupBy(copy(gds.parent), copy(gds.groupcols), copy(gds.rev), copy(gds.perm), copy(gds.starts), gds.lastvalid, gds.mapformats)
 
 nrow(ds::GroupBy) = nrow(ds.parent)
 ncol(ds::GroupBy) = ncol(ds.parent)
@@ -29,10 +30,32 @@ Base.parent(ds::GroupBy) = ds.parent
 function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
 	colsidx = index(ds)[cols]
 	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)
-	GroupBy(ds,colsidx, a[2], a[1], a[3], mapformats)
+	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats)
 end
 
 groupby(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)
+
+function groupby!(ds::GroupBy, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+	colsidx = index(ds)[cols]
+	grng = GIVENRANGE(_get_perms(ds),_group_starts(ds), nothing, _ngroups(ds))
+	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, givenrange = grng, skipcol = -1)
+	ds.groupcols = colsidx
+	ds.rev = rev
+	ds.lastvalid = a[3]
+	ds.mapformats = mapformats
+	ds
+end
+groupby!(ds::GroupBy, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby!(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)
+
+function groupby(ds::GroupBy, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+	colsidx = index(ds)[cols]
+	grng = GIVENRANGE(copy(_get_perms(ds)),copy(_group_starts(ds)), nothing, _ngroups(ds))
+	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, givenrange = grng, skipcol = -1)
+	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats)
+end
+groupby(ds::GroupBy, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)
+
+
 
 function _threaded_permute_for_groupby(x, perm)
 	if DataAPI.refpool(x) !== nothing
@@ -292,6 +315,9 @@ function _groupcols(ds::Dataset)
 	end
 end
 
+_sortedcols(ds::Dataset) = index(ds).sortedcols
+_sortedcols(ds::GroupBy) = _groupcols(ds)
+
 function _groupcols(ds::GatherBy)
 	ds.groupcols
 end
@@ -330,4 +356,26 @@ function _get_perms(ds::GatherBy)
 	else
 		ds.perm
 	end
+end
+
+
+_get_sort_perms(ds::Dataset) = index(ds).perm
+_get_sort_perms(ds::GroupBy) = _get_perms(ds)
+
+
+function _get_rev(ds::Dataset)
+	index(ds).rev
+end
+function _get_rev(ds::GroupBy)
+	ds.rev
+end
+
+function _get_fmt(ds::Dataset)
+	index(ds).fmt[]
+end
+function _get_fmt(ds::GroupBy)
+	ds.mapformats
+end
+function _get_fmt(ds::GatherBy)
+	ds.mapformats
 end

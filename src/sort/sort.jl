@@ -92,7 +92,7 @@ function unsort!(ds::Dataset)
         empty!(index(ds).rev)
         empty!(index(ds).starts)
         index(ds).ngroups[] = 1
-        index(ds).grouped[] = 1
+        index(ds).grouped[] = false
         return ds
     else
         _permute_ds_after_sort!(ds, invperm(index(ds).perm))

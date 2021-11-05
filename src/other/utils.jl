@@ -135,6 +135,7 @@ struct GIVENRANGE
     idx
     starts
 	starts_loc
+	lastvalid
 end
 
 function _sortitout!(res, starts, x)
@@ -187,7 +188,7 @@ function _divide_for_fast_join(x, f, chunk) # chunk = 2^10 then data are divided
     starts = Vector{T}(undef, chunk + 1)
     starts_loc = _divide_for_fast_join_barrier!(res, starts, x, f, chunk < typemax(UInt8) ? Val(UInt8) : chunk < typemax(UInt16) ? Val(UInt16) : Val(UInt32))
 	starts = _remove_unwantedstarts!(starts, length(x))
-	GIVENRANGE(res, starts, starts_loc)
+	GIVENRANGE(res, starts, starts_loc, length(starts))
 end
 
 
@@ -403,7 +404,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                     resize!(gslots, sz)
                     resize!(groups, nrow(ds))
                 end
-				j > 1 ? stablegather = stable : stablegather = false
+				prev_max_group > nrow(ds)/100 ? stablegather = stable : stablegather = false
                 flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T))
 
             end
@@ -414,7 +415,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                 resize!(gslots, sz)
                 resize!(groups, nrow(ds))
             end
-			j > 1 ? stablegather = stable : stablegather = false
+			prev_max_group > nrow(ds)/100 ? stablegather = stable : stablegather = false
             flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T))
         end
         !flag && break
@@ -426,19 +427,21 @@ function _find_groups_with_more_than_one_observation(groups, ngroups, ::Val{T}) 
     res = trues(length(groups))
     seen_groups = falses(ngroups)
 
-    @inbounds for i in 1:length(res)
-        seen_groups[groups[i]] ? nothing : (seen_groups[groups[i]] = true; res[i] = false)
-    end
+    _nonunique_barrier!(res, groups, seen_groups)
 
 	fill!(seen_groups, false)
-    @inbounds for i in 1:length(res)
-		res[i] && !seen_groups[groups[i]] ? seen_groups[groups[i]] = true : nothing
-	end
+
+    _find_groups_with_more_than_one_observation_barrier!(res, groups, seen_groups)
 	seen_groups, findall(seen_groups)
 
 end
 
-
+function _find_groups_with_more_than_one_observation_barrier!(res, groups, seen_groups)
+    @inbounds for i in 1:length(res)
+        res[i] && !seen_groups[groups[i]] ? seen_groups[groups[i]] = true : nothing
+    end
+    nothing
+end
 
 function _gather_groups_old_version(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]

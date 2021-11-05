@@ -705,9 +705,9 @@ end
                   a_1=vcat(fill(missing, nl), r.a.val))
     @test eltype.(eachcol(outerjoin(l, r, on=:b, makeunique=true))) ==
         [Union{Int, Missing}, CS, Union{Int, Missing}]
-
+    # joining categorical column with non-ca one
     dsl = Dataset(x= categorical([1,2,1]))
     dsr = Dataset(x=1:5)
-    # categorical values cannot be compared to non categorical values
-    @test_throws TaskFailedException leftjoin(dsl, dsr, on =:x)
+    @test leftjoin(dsl, dsr, on =:x) == dsl
+    @test delete!(leftjoin(dsr, dsl, on =:x), 1) == dsr
 end

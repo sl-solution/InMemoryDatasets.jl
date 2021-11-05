@@ -154,6 +154,11 @@ julia> byrow(ds, count, :, by = !ismissing)
  4
  5
 ```
+## `mapreduce`
+
+One special function that can be used as `fun` in the `byrow` function is `mapreduce`. This can be used to implement a customised reduction as row operation. When `mapreduce` is used in `byrow`, two keyword arguments must be passed, `op` and `init`. For example in the following code we use `mapreduce` to `sum` all values in each row:
+
+> `byrow(ds, mapreduce, :, op = .+, init = zeros(nrow(ds)))`
 
 ## User defined operations
 
