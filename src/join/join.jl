@@ -351,11 +351,35 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
 
 end
 
+function _in_use_Set(ldata, rdata, _fl, _fr)
+    ss = Set(Base.Generator(_fr, rdata));
+    res = Vector{Bool}(undef, length(ldata))
+    Threads.@threads for i in 1:length(res)
+        res[i] = _fl(ldata[i]) in ss
+    end
+    res
+end
+
+
 function _in(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false) where T
     isempty(dsl) && return Bool[]
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
 
+    # use Set when there is only one column in `on`
+    if length(oncols_right) == 1
+        if mapformats[1]
+            _fl = getformat(dsl, oncols_left[1])
+        else
+            _fl = identity
+        end
+        if mapformats[2]
+            _fr = getformat(dsr, oncols_right[1])
+        else
+            _fr = identity
+        end
+        return _in_use_Set(dsl[!, oncols_left[1]].val, dsr[!, oncols_right[1]].val, _fl, _fr)
+    end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     idx = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
     for j in 1:length(oncols_left)
