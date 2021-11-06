@@ -481,6 +481,9 @@ end
 # ds assumes is grouped based on cols and groups are gathered togther
 function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) where T
     colsidx = index(ds)[cols]
+    sortedidx = _sortedcols(ds)
+	starts = _group_starts(ds)
+	ngroups = _ngroups(ds)
 
     ranges = Vector{T}(undef, nrow(ds))
     inbits = zeros(Bool, nrow(ds))
@@ -488,12 +491,16 @@ function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) w
     last_valid_index = 1
 	
     for j in 1:length(colsidx)
-        if mapformats
+        if mapformats && typeof(ds) <: AbstractDataset
             _f = getformat(ds, colsidx[j])
         else
             _f = identity
         end
-		_find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , inbits)
+        if length(colsidx) <= length(sortedidx) && colsidx == view(sortedidx, 1:length(colsidx))
+		    _find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , inbits, starts, ngroups)
+        else
+            _find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , inbits)
+        end
     end
     @inbounds for i in 1:length(inbits)
         if inbits[i] == true
@@ -511,6 +518,11 @@ function _find_starts_of_groups!(x, f, inbits)
     Threads.@threads for j in 2:length(inbits)
         @inbounds inbits[j] = inbits[j]==true ? true : !isequal(f(x[j]), f(x[j-1]))
     end
+end
+function _find_starts_of_groups!(x, f, inbits, starts, ngroups)
+	Threads.@threads for i in 1:ngroups
+		@inbounds inbits[starts[i]] = inbits[starts[i]]==1 ? 1 : !isequal(f(x[starts[i]]), f(x[starts[i]-1]))
+	end
 end
 
 function make_unique!(names::Vector{Symbol}, src::AbstractVector{Symbol};
