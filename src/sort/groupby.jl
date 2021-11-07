@@ -379,3 +379,5 @@ end
 function _get_fmt(ds::GatherBy)
 	ds.mapformats
 end
+
+getformat(ds::GroupBy, i) = getformat(parent(ds), i)

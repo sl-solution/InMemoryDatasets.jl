@@ -661,5 +661,5 @@ function getformat(x::Index, y::UnitRange)
     end
 end
 function getformat(x::SubIndex, idx::Integer)
-    getformat(parent(x), idx)
+    getformat(parent(x), parentcols(x, idx))
 end
