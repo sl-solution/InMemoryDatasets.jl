@@ -606,20 +606,30 @@ _bool_mask(f) = x->f(x)::Union{Bool, Missing}
 # Unique cases
 
 # Modify Dataset
-Base.unique!(ds::Dataset; mapformats = false) = delete!(ds, nonunique(ds, mapformats = mapformats))
-Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false) =
-    delete!(ds, nonunique(ds, cols, mapformats = mapformats))
-Base.unique!(ds::Dataset, cols; mapformats = false) =
-    delete!(ds, nonunique(ds, cols, mapformats = mapformats))
+function Base.unique!(ds::Dataset; mapformats = false, keep = :first)
+    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
+    delete!(ds, nonunique(ds, mapformats = mapformats, first = keep == :first))
+end
+function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first)
+    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
+    delete!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+end
+
+function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
+    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
+    delete!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+end
 
 # Unique rows of an Dataset.
-@inline function Base.unique(ds::AbstractDataset; view::Bool=false, mapformats = false)
-    rowidxs = (!).(nonunique(ds, mapformats = mapformats))
+@inline function Base.unique(ds::AbstractDataset; view::Bool=false, mapformats = false, keep = :first)
+    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
+    rowidxs = (!).(nonunique(ds, mapformats = mapformats, first = keep == :first))
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
 
-@inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false, mapformats = false)
-    rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats))
+@inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false, mapformats = false, keep = :first)
+    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
+    rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
 
