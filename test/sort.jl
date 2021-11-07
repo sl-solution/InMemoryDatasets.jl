@@ -175,6 +175,13 @@ end
     @test r3 == last_valid_index
     @test r2[1:r3] == ranges
 
+    # Not only for Dataset, but also GroupBy.
+    gb = groupby(ds, :)
+    r1, r2, r3 = IMD._find_starts_of_groups(gb, colsidx, T)
+    @test r1 == colsidx
+    @test r3 == last_valid_index
+    @test r2[1:r3] == ranges
+
     # Use formats for some columns.
     format1(x) = isodd(x)
     ds = Dataset(x1 = [1, 1, 1, 1, 3, 3, 3], x2 = [1, 6, 5, 5, 5, 5, 2], x3 = [2, 2, 4, 4, 4, 4, 1], x4 = [4, 1, 1, 4, 4, 4, 1])
@@ -233,6 +240,21 @@ end
         return cols, ranges, (last_valid_index - 1)
     end
 
+    # Test for large data set with few levels.
+    c1 = rand(1:3, 10^6)
+    c2 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
+    c3 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
+    c4 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
+    c5 = rand(1:8, 10^6)
+    ds = Dataset(x1 = c1, x2 = c2, x3 = c3, x4 = c4, x5 = c5)
+    colsidx = [1, 2, 4, 5]
+    T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
+    ra1, ra2, ra3 = IMD._find_starts_of_groups(ds, colsidx, T)
+    rb1, rb2, rb3 = _get_starts(ds, colsidx, T)
+    @test ra1 == rb1
+    @test ra3 == rb3
+    @test ra2[1:ra3] == rb2[1:rb3]
+
     # Test for large data set with many levels.
     c1 = rand(1:3, 10^6)
     c2 = rand(Date(100):Day(1):Date(101), 10^6)
@@ -248,18 +270,4 @@ end
     @test ra3 == rb3
     @test ra2[1:ra3] == rb2[1:rb3]
 
-    # Test for large data set with few levels.
-    c1 = rand(1:3, 10^6)
-    c2 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
-    c3 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
-    c4 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
-    c5 = rand(1:8, 10^6)
-    ds = Dataset(x1 = c1, x2 = c2, x3 = c3, x4 = c4, x5 = c5)
-    colsidx = [1, 2, 4, 5]
-    T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
-    ra1, ra2, ra3 = IMD._find_starts_of_groups(ds, colsidx, T)
-    rb1, rb2, rb3 = _get_starts(ds, colsidx, T)
-    @test ra1 == rb1
-    @test ra3 == rb3
-    @test ra2[1:ra3] == rb2[1:rb3]
 end
