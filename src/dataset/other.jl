@@ -954,3 +954,16 @@ end
 DataAPI.describe(ds::Dataset; cols = :) = describe(ds, n, nmissing, mean, std, minimum, maximum; cols = cols)
 nmissing(x) = count(ismissing, x)
 n(x) = count(!ismissing, x)
+
+"""
+    filter(ds, cols; [type = all, by])
+
+A convenient shortcut for ds[byrow(ds, type, cols; by = by), :].
+"""
+Base.filter(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type= all, by) = ds[byrow(ds, type, cols, by = by), :]
+"""
+    filter!(ds, cols; [type = all, by])
+
+A convenient shortcut for delete![ds, byrow(ds, type, cols; by = by)).
+"""
+Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, by) = delete!(ds, .!byrow(ds, type, cols, by = by))
