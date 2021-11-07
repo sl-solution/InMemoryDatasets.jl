@@ -175,13 +175,91 @@ end
     @test r3 == last_valid_index
     @test r2[1:r3] == ranges
 
+    # Use formats for some columns.
+    format1(x) = isodd(x)
     ds = Dataset(x1 = [1, 1, 1, 1, 3, 3, 3], x2 = [1, 6, 5, 5, 5, 5, 2], x3 = [2, 2, 4, 4, 4, 4, 1], x4 = [4, 1, 1, 4, 4, 4, 1])
+    setformat!(ds, [1, 3, 4] => format1)
     colsidx = 1:3
     T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
     ranges = [1, 2, 3, 5, 7]
     last_valid_index = 5
+    r1, r2, r3 = IMD._find_starts_of_groups(ds, colsidx, T, mapformats = false) # Do not use formatted values.
+    @test r1 == colsidx
+    @test r3 == last_valid_index
+    @test r2[1:r3] == ranges
+
+    ranges = [1, 2, 3, 7]
+    last_valid_index = 4
+    r1, r2, r3 = IMD._find_starts_of_groups(ds, colsidx, T) # Use formatted values.
+    @test r1 == colsidx
+    @test r3 == last_valid_index
+    @test r2[1:r3] == ranges
+
+    # Consider ds with multiple types.
+    c1 = PooledArray(["string", "string", 1.1, 1.1, 1.1, 20000.0, 123.0])
+    c2 = PooledArray(["string", missing, 1.1, 1.1, 'a', 'a', 'b'])
+    c3 = PooledArray([missing, missing, missing, 1.1, 1.1, 20000.0, 123.0])
+    c4 = CategoricalArray{Union{Characters{6, UInt8}, String}}(["Old", "Young", "Young", "Young", "Old", "Young", "Middle"])
+    levels!(c4, ["Young", "Middle", "Old"])
+    ds = Dataset(x1 = c1, x2 = c2, x3 = c3, x4 = c4)
+    colsidx = [1, 2]
+    T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
+    ranges = [1, 2, 3, 5, 6, 7]
+    last_valid_index = 6
     r1, r2, r3 = IMD._find_starts_of_groups(ds, colsidx, T)
     @test r1 == colsidx
     @test r3 == last_valid_index
     @test r2[1:r3] == ranges
+
+    # Simple functions to test large data set.
+    function _zero_or_one(ds, colsidx)
+        re = zeros(Bool, nrow(ds))
+        re[1] = true
+        re[2:end] = byrow(ds[2:end, colsidx] .!== ds[1:(end-1), colsidx], any)
+        re
+    end
+
+    function _get_starts(ds, colsidx, ::Val{T}) where T
+        zero_or_one = _zero_or_one(ds, colsidx)
+        cols = IMD.index(ds)[colsidx]
+        last_valid_index = 1
+        ranges = Vector{T}(undef, length(zero_or_one))
+        @inbounds for i in 1:length(zero_or_one)
+            if zero_or_one[i] == true
+                ranges[last_valid_index] = i
+                last_valid_index += 1
+            end
+        end
+        return cols, ranges, (last_valid_index - 1)
+    end
+
+    # Test for large data set with many levels.
+    c1 = rand(1:3, 10^6)
+    c2 = rand(Date(100):Day(1):Date(101), 10^6)
+    c3 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
+    c4 = [randstring(2) for _ in 1:10^6]
+    c5 = rand(1:2, 10^6)
+    ds = Dataset(x1 = c1, x2 = c2, x3 = c3, x4 = c4, x5 = c5)
+    colsidx = [1, 2, 4, 5]
+    T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
+    ra1, ra2, ra3 = IMD._find_starts_of_groups(ds, colsidx, T)
+    rb1, rb2, rb3 = _get_starts(ds, colsidx, T)
+    @test ra1 == rb1
+    @test ra3 == rb3
+    @test ra2[1:ra3] == rb2[1:rb3]
+
+    # Test for large data set with few levels.
+    c1 = rand(1:3, 10^6)
+    c2 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
+    c3 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
+    c4 = PooledArray(rand([missing, 1.1, 20000.0, 123.0], 10^6))
+    c5 = rand(1:8, 10^6)
+    ds = Dataset(x1 = c1, x2 = c2, x3 = c3, x4 = c4, x5 = c5)
+    colsidx = [1, 2, 4, 5]
+    T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
+    ra1, ra2, ra3 = IMD._find_starts_of_groups(ds, colsidx, T)
+    rb1, rb2, rb3 = _get_starts(ds, colsidx, T)
+    @test ra1 == rb1
+    @test ra3 == rb3
+    @test ra2[1:ra3] == rb2[1:rb3]
 end
