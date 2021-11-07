@@ -964,14 +964,16 @@ Base.Array(ds::AbstractDataset) = Matrix(ds)
 Base.Array{T}(ds::AbstractDataset) where {T} = Matrix{T}(ds)
 
 """
-    nonunique(ds::AbstractDataset; [mapformats = false])
-    nonunique(ds::AbstractDataset, cols; [mapformats = false])
+    nonunique(ds::AbstractDataset; [mapformats = false, first = true])
+    nonunique(ds::AbstractDataset, cols; [mapformats = false, first = true])
 
 Return a `Vector{Bool}` in which `true` entries indicate duplicate rows.
 A row is a duplicate if there exists a prior row with all columns containing
 equal values (according to `isequal`).
 
 If `mapformats = true` the values are checked based on their formatted values.
+`first = true` means that everey occurance after the first one be marked as non-unique value, and
+`first = false` means that every occurance before the last one be marked as non-unique value.
 
 See also [`unique`](@ref) and [`unique!`](@ref).
 
@@ -1030,7 +1032,7 @@ julia> nonunique(ds, 2)
  1
 ```
 """
-function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false)
+function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, first = true)
     if ncol(ds) == 0
         throw(ArgumentError("finding duplicate rows in data set with no " *
                             "columns is not allowed"))
@@ -1040,14 +1042,20 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
 
-    _nonunique_barrier!(res, groups, seen_groups)
+    _nonunique_barrier!(res, groups, seen_groups; first = first)
     return res
 end
-nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false) = nonunique(ds, [col]; mapformats = mapformats)
+nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false, first = true) = nonunique(ds, [col]; mapformats = mapformats, first = first)
 
-function _nonunique_barrier!(res, groups, seen_groups)
-    @inbounds for i in 1:length(res)
-        seen_groups[groups[i]] ? nothing : (seen_groups[groups[i]] = true; res[i] = false)
+function _nonunique_barrier!(res, groups, seen_groups; first = true)
+    if first
+        @inbounds for i in 1:length(res)
+            seen_groups[groups[i]] ? nothing : (seen_groups[groups[i]] = true; res[i] = false)
+        end
+    else
+        @inbounds for i in length(res):-1:1
+            seen_groups[groups[i]] ? nothing : (seen_groups[groups[i]] = true; res[i] = false)
+        end
     end
     nothing
 end
