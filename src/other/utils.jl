@@ -491,7 +491,7 @@ function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) w
     last_valid_index = 1
 	
     for j in 1:length(colsidx)
-        if mapformats && typeof(ds) <: AbstractDataset
+        if mapformats
             _f = getformat(ds, colsidx[j])
         else
             _f = identity
