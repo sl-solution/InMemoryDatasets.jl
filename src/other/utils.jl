@@ -481,7 +481,7 @@ end
 # ds assumes is grouped based on cols and groups are gathered togther
 function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) where T
     colsidx = index(ds)[cols]
-    sortedidx = _sortedcols(ds)
+    sortedidx = _groupcols(ds)
 	starts = _group_starts(ds)
 	ngroups = _ngroups(ds)
 
