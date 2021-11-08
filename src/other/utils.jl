@@ -490,14 +490,14 @@ function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) w
     inbits = zeros(Bool, nrow(ds))
     inbits[1] = true
     last_valid_index = 1
-	
+	perm = typeof(ds) == GroupBy ? _get_perms(ds) : 1:nrow(ds)
+
     for j in 1:length(colsidx)
         if mapformats
             _f = getformat(ds, colsidx[j])
         else
             _f = identity
         end
-        perm = typeof(ds) == GroupBy ? _get_perms(ds) : 1:nrow(ds)
         if !(typeof(ds) <: SubDataset) && length(colsidx) <= length(_sortedcols(ds)) && colsidx == view(_sortedcols(ds), 1:length(colsidx)) && mapformats == _get_fmt(ds)
 		    _find_starts_of_groups!(_columns(ds)[colsidx[j]], perm, _f , inbits, _group_starts(ds), _ngroups(ds))
         else
