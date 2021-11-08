@@ -176,7 +176,12 @@ end
     @test r2[1:r3] == ranges
 
     # Not only for Dataset, but also GroupBy.
-    gb = groupby(ds, :)
+    ds = Dataset(x1 = [1, 1, 1], x2 = [1, 2, 1])
+    gb = groupby(ds, 2)
+    colsidx = [2]
+    T = nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64)
+    ranges = [1, 3]
+    last_valid_index = 2
     r1, r2, r3 = IMD._find_starts_of_groups(gb, colsidx, T)
     @test r1 == colsidx
     @test r3 == last_valid_index
@@ -198,6 +203,48 @@ end
     ranges = [1, 2, 3, 7]
     last_valid_index = 4
     r1, r2, r3 = IMD._find_starts_of_groups(ds, colsidx, T) # Use formatted values.
+    @test r1 == colsidx
+    @test r3 == last_valid_index
+    @test r2[1:r3] == ranges
+
+    # Consider whether ds is sorted using formatted values.
+    # If ds is sorted using formatted values.
+    format2(x) = abs(2.5 - x)
+    ds = Dataset(x1 = [1, 1, 1, 1, 3, 3, 3], x2 = [1, 6, 5, 5, 5, 5, 2], x3 = [2, 1, 4, 4, 4, 4, 1], x4 = [4, 1, 1, 4, 4, 4, 1])
+    setformat!(ds, 3:4 => format2)
+    dss = sort(ds, 3, mapformats = true) # Use formatted values for sorting.
+    colsidx = [1, 3, 4]
+    T = nrow(dss) < typemax(Int32) ? Val(Int32) : Val(Int64)
+    ranges = [1, 2, 3, 4, 5, 7]
+    last_valid_index = 6
+    r1, r2, r3 = IMD._find_starts_of_groups(dss, colsidx, T, mapformats = false) # Do not use formatted values.
+    @test r1 == colsidx
+    @test r3 == last_valid_index
+    @test r2[1:r3] == ranges
+
+    ranges = [1, 2, 5]
+    last_valid_index = 3
+    r1, r2, r3 = IMD._find_starts_of_groups(dss, colsidx, T) # Use formatted values.
+    @test r1 == colsidx
+    @test r3 == last_valid_index
+    @test r2[1:r3] == ranges
+
+    # If ds is sorted using unformatted values.
+    ds = Dataset(x1 = [1, 1, 1, 1, 3, 3, 3], x2 = [1, 6, 5, 5, 5, 5, 2], x3 = [2, 1, 4, 4, 4, 4, 1], x4 = [4, 1, 1, 4, 4, 4, 1])
+    setformat!(ds, 3:4 => format2)
+    dss = sort(ds, 3, mapformats = false) # Use unformatted values for sorting.
+    colsidx = [1, 3, 4]
+    T = nrow(dss) < typemax(Int32) ? Val(Int32) : Val(Int64)
+    ranges = [1, 2, 3, 4, 5, 6]
+    last_valid_index = 6
+    r1, r2, r3 = IMD._find_starts_of_groups(dss, colsidx, T, mapformats = false) # Do not use formatted values.
+    @test r1 == colsidx
+    @test r3 == last_valid_index
+    @test r2[1:r3] == ranges
+
+    ranges = [1, 2, 3, 4, 6]
+    last_valid_index = 5
+    r1, r2, r3 = IMD._find_starts_of_groups(dss, colsidx, T) # Use formatted values.
     @test r1 == colsidx
     @test r3 == last_valid_index
     @test r2[1:r3] == ranges
