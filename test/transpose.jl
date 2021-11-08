@@ -393,3 +393,45 @@ end
     @test names(transpose(ds1, 2:4, id = 1, variable_name = "foo")) == ["foo", "x", "y"]
 
 end
+
+@testset "passing Tuple as cols" begin
+        ds = Dataset([Union{Missing, Int64}[1, 1, 1, 2, 2, 2],
+                 Union{Missing, String}["foo", "bar", "monty", "foo", "bar", "monty"],
+                 Union{Missing, String}["a", "b", "c", "d", "e", "f"],
+                 Union{Missing, Int64}[1, 2, 3, 4, 5, 6]], [:g, :key, :foo, :bar])
+        dst = transpose(groupby(ds, :g), (:foo, :bar), id = :key)
+        dst_t = Dataset([Union{Missing, Int64}[1, 2],
+                 Union{Missing, String}["foo", "foo"],
+                 Union{Missing, String}["bar", "bar"],
+                 Union{Missing, String}["a", "d"],
+                 Union{Missing, String}["b", "e"],
+                 Union{Missing, String}["c", "f"],
+                 Union{Missing, Int64}[1, 4],
+                 Union{Missing, Int64}[2, 5],
+                 Union{Missing, Int64}[3, 6]], ["g", "_variables_", "_variables__1", "foo", "bar", "monty", "foo_1", "bar_1", "monty_1"])
+        @test dst == dst_t
+        ds = Dataset(paddockId= [0, 0, 1, 1, 2, 2],
+                                color= ["red", "blue", "red", "blue", "red", "blue"],
+                                count= [3, 4, 3, 4, 3, 4],
+                                weight= [0.2, 0.3, 0.2, 0.3, 0.2, 0.2])
+        dst = transpose(groupby(ds, 1), (:count, :weight), id = :color)
+        dst_t = Dataset([Union{Missing, Int64}[0, 1, 2],
+                 Union{Missing, String}["count", "count", "count"],
+                 Union{Missing, String}["weight", "weight", "weight"],
+                 Union{Missing, Int64}[3, 3, 3],
+                 Union{Missing, Int64}[4, 4, 4],
+                 Union{Missing, Float64}[0.2, 0.2, 0.2],
+                 Union{Missing, Float64}[0.3, 0.3, 0.2]], ["paddockId", "_variables_", "_variables__1", "red", "blue", "red_1", "blue_1"])
+        @test dst == dst_t
+        ds = Dataset([Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                 Union{Missing, Int64}[1, 1, 2, 5, 5, 5, 5, 2, 3, 3],
+                 Union{Missing, Int64}[5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+                 Union{Missing, Int64}[3, 3, 3, 3, 2, 2, 2, 2, 1, 1],
+                 Union{Missing, Int64}[1, 1, 5, 5, missing, missing, missing, missing, missing, missing],
+                 Union{Missing, Int64}[2, 2, 5, 5, missing, missing, missing, missing, missing, missing],
+                 Union{Missing, Int64}[3, 3, 3, 3, missing, missing, missing, missing, missing, missing]], ["id", "a1_l1", "a2_l1", "a3_l1", "a1_l2", "a2_l2", "a3_l2"])
+        ds_sum = combine(ds, 2:ncol(ds) => x->count(isequal(5),x)/IMD.n(x))
+        dst = select!(transpose(ds_sum, (r"l1", r"l2")), r"_c1")
+        dst_t = Dataset(_c1 = [.4, 1.0, 0], _c1_1 = [.5, .5, 0])
+        @test dst == dst_t
+end
