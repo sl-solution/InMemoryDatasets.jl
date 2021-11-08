@@ -481,7 +481,7 @@ end
 # ds assumes is grouped based on cols and groups are gathered togther
 function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) where T
     colsidx = index(ds)[cols]
-    perm = _get_perms(ds)
+    #perm = _get_perms(ds)
     #sortedidx = _sortedcols(ds)
 	#starts = _group_starts(ds)
 	#ngroups = _ngroups(ds)
@@ -497,6 +497,7 @@ function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) w
         else
             _f = identity
         end
+        perm = typeof(ds) == GroupBy ? _get_perms(ds) : 1:nrow(ds)
         if !(typeof(ds) <: SubDataset) && length(colsidx) <= length(_sortedcols(ds)) && colsidx == view(_sortedcols(ds), 1:length(colsidx)) && mapformats == _get_fmt(ds)
 		    _find_starts_of_groups!(_columns(ds)[colsidx[j]], perm, _f , inbits, _group_starts(ds), _ngroups(ds))
         else
