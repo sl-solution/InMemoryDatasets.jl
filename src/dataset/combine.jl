@@ -308,8 +308,8 @@ function _check_mutliple_rows_for_each_group(ds, ms)
                 return i
             end
         elseif !(ms[i].second.first isa Expr) &&
-                 haskey(index(ds), ms[i].first) &&
-                    !(ms[i].first ∈ map(x->x.second.second, view(ms, 1:(i-1))))
+                 haskey(index(ds), ms[i].first) #&&
+                    #!(ms[i].first ∈ map(x->x.second.second, view(ms, 1:(i-1)))) #TODO monitor this for any unseen problem
             T = return_type(ms[i].second.first, ds[!, ms[i].first].val)
             if T <: AbstractVector
                 return i
