@@ -518,13 +518,13 @@ _find_starts_of_groups(ds, cols::UnitRange, ::Val{T}; mapformats = true) where T
 
 function _find_starts_of_groups!(x, perm, f, inbits)
     Threads.@threads for j in 2:length(inbits)
-        @inbounds inbits[perm[j]] = inbits[perm[j]]==true ? true : !isequal(f(x[perm[j]]), f(x[perm[j-1]]))
+        @inbounds inbits[j] = inbits[j]==true ? true : !isequal(f(x[perm[j]]), f(x[perm[j-1]]))
     end
 end
 function _find_starts_of_groups!(x, perm, f, inbits, starts, ngroups)
 	Threads.@threads for j in 1:ngroups
 		i = starts[j]
-		@inbounds inbits[perm[i]] = inbits[perm[i]]==1 ? 1 : !isequal(f(x[perm[i]]), f(x[perm[i-1]]))
+		@inbounds inbits[i] = inbits[i]==1 ? 1 : !isequal(f(x[perm[i]]), f(x[perm[i-1]]))
 	end
 end
 
