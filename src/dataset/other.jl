@@ -316,8 +316,9 @@ function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex; th
             _f = identity
         end
         v = _columns(ds)[j]
-        T = Core.Compiler.return_type(_f, (eltype(v), ))
+
         if threads
+            T = Core.Compiler.return_type(_f, (eltype(v), ))
             fv = Vector{T}(undef, length(v))
             _hp_map_a_function!(fv, _f, v)
         else
