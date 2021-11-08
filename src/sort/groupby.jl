@@ -344,6 +344,7 @@ end
 function _get_perms(ds::Dataset)
 	1:nrow(ds)
 end
+_get_perms(ds::SubDataset) = 1:nrow(ds)
 function _get_perms(ds::GroupBy)
 	ds.perm
 end
