@@ -522,7 +522,7 @@ function _find_starts_of_groups!(x, perm, f, inbits)
     end
 end
 function _find_starts_of_groups!(x, perm, f, inbits, starts, ngroups)
-	Threads.@threads for i in 1:ngroups
+	Threads.@threads for j in 1:ngroups
 		i = starts[j]
 		@inbounds inbits[perm[i]] = inbits[perm[i]]==1 ? 1 : !isequal(f(x[perm[i]]), f(x[perm[i-1]]))
 	end
