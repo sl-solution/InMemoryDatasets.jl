@@ -481,6 +481,7 @@ end
 # ds assumes is grouped based on cols and groups are gathered togther
 function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) where T
     colsidx = index(ds)[cols]
+    perm = _get_perms(ds)
     #sortedidx = _sortedcols(ds)
 	#starts = _group_starts(ds)
 	#ngroups = _ngroups(ds)
@@ -496,10 +497,10 @@ function _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) w
         else
             _f = identity
         end
-        if !(typeof(ds) <: SubDataset) && length(colsidx) <= length(_sortedcols(ds)) && colsidx == view(_sortedcols(ds), 1:length(colsidx))
-		    _find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , inbits, _group_starts(ds), _ngroups(ds))
+        if !(typeof(ds) <: SubDataset) && length(colsidx) <= length(_sortedcols(ds)) && colsidx == view(_sortedcols(ds), 1:length(colsidx)) && mapformats == _get_fmt(ds)
+		    _find_starts_of_groups!(_columns(ds)[colsidx[j]], perm, _f , inbits, _group_starts(ds), _ngroups(ds))
         else
-            _find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , inbits)
+            _find_starts_of_groups!(_columns(ds)[colsidx[j]], perm, _f , inbits)
         end
     end
     @inbounds for i in 1:length(inbits)
@@ -514,14 +515,15 @@ end
 _find_starts_of_groups(ds, col::ColumnIndex, ::Val{T}; mapformats = true) where T = _find_starts_of_groups(ds, [col], Val(T), mapformats = mapformats)
 _find_starts_of_groups(ds, cols::UnitRange, ::Val{T}; mapformats = true) where T = _find_starts_of_groups(ds, collect(cols), Val(T), mapformats = mapformats)
 
-function _find_starts_of_groups!(x, f, inbits)
+function _find_starts_of_groups!(x, perm, f, inbits)
     Threads.@threads for j in 2:length(inbits)
-        @inbounds inbits[j] = inbits[j]==true ? true : !isequal(f(x[j]), f(x[j-1]))
+        @inbounds inbits[perm[j]] = inbits[perm[j]]==true ? true : !isequal(f(x[perm[j]]), f(x[perm[j-1]]))
     end
 end
-function _find_starts_of_groups!(x, f, inbits, starts, ngroups)
+function _find_starts_of_groups!(x, perm, f, inbits, starts, ngroups)
 	Threads.@threads for i in 1:ngroups
-		@inbounds inbits[starts[i]] = inbits[starts[i]]==1 ? 1 : !isequal(f(x[starts[i]]), f(x[starts[i]-1]))
+		i = starts[j]
+		@inbounds inbits[perm[i]] = inbits[perm[i]]==1 ? 1 : !isequal(f(x[perm[i]]), f(x[perm[i-1]]))
 	end
 end
 
