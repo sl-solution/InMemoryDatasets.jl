@@ -61,6 +61,7 @@ export
       repeat!,
       select,
       select!,
+      mapcols,
       insertcols!,
       mask,
       compare,
