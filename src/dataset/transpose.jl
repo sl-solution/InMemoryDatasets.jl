@@ -178,16 +178,21 @@ function ds_transpose(ds::Dataset, cols::Union{Tuple, MultiColumnIndex}; id = no
 
         outputmat = _simple_transpose_ds_generate(T, ECol, max_num_col, new_col_names, variable_name, threads)
         if j == 1
-            new_var_label = Symbol(variable_name)
-            newds = insertcols!(Dataset(outputmat, new_col_names), 1,  new_var_label => row_names, unsupported_copy_cols = false)
+            newds = Dataset(outputmat, new_col_names)
+            if variable_name !== nothing
+                new_var_label = Symbol(variable_name)
+                newds = insertcols!(newds, 1,  new_var_label => row_names, unsupported_copy_cols = false)
+            end
         else
             ds2 = Dataset(outputmat, new_col_names)
             u = add_names(index(newds), index(ds2), makeunique=true)
             for i in 1:length(u)
                 newds[!, u[i]] = ds2[!, i].val
             end
-            new_var_label = Symbol(variable_name)
-            insertcols!(newds, j, new_var_label => row_names, unsupported_copy_cols = false, makeunique = true)
+            if variable_name !== nothing
+                new_var_label = Symbol(variable_name)
+                insertcols!(newds, j, new_var_label => row_names, unsupported_copy_cols = false, makeunique = true)
+            end
         end
     end
     newds
@@ -429,11 +434,13 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
             if j == 1
                 outds = fast_stack_gcols(T, ds, ECol, max_num_col, gcolsidx, threads)
             end
-            _repeat_row_names = allowmissing(PooledArray(renamerowid.(names(ds, sel_cols))))
-            _extend_repeat_row_names!(_repeat_row_names, max_num_col)
-            _repeat_row_names.refs = repeat(_repeat_row_names.refs, nrow(ds))
-            new_var_label = Symbol(variable_name)
-            insertcols!(outds, length(gcolsidx)+j, new_var_label => _repeat_row_names, unsupported_copy_cols = false, makeunique = true)
+            if variable_name !== nothing
+                _repeat_row_names = allowmissing(PooledArray(renamerowid.(names(ds, sel_cols))))
+                _extend_repeat_row_names!(_repeat_row_names, max_num_col)
+                _repeat_row_names.refs = repeat(_repeat_row_names.refs, nrow(ds))
+                new_var_label = Symbol(variable_name)
+                insertcols!(outds, length(gcolsidx)+j, new_var_label => _repeat_row_names, unsupported_copy_cols = false, makeunique = true)
+            end
             res = Vector{Union{Missing, T}}(undef, nrow(ds) * max_num_col)
             _fill_col_val!(res, ECol, length(sel_cols), max_num_col, nrow(ds), _get_perms(ds), threads)
             new_col_id = Symbol(renamecolid(1))
@@ -492,9 +499,11 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
 
         # _repeat_row_names = Vector{eltype(row_names)}(undef, _ngroups(ds)*length(colsidx))
         # _fill_row_names!(_repeat_row_names, row_names, _ngroups(ds))
-        _repeat_row_names = allowmissing(PooledArray(row_names))
-        _repeat_row_names.refs = repeat(_repeat_row_names.refs, _ngroups(ds))
-        insertcols!(outds, length(gcolsidx)+j, new_var_label => _repeat_row_names, unsupported_copy_cols = false, makeunique = true)
+        if variable_name !== nothing
+            _repeat_row_names = allowmissing(PooledArray(row_names))
+            _repeat_row_names.refs = repeat(_repeat_row_names.refs, _ngroups(ds))
+            insertcols!(outds, length(gcolsidx)+j, new_var_label => _repeat_row_names, unsupported_copy_cols = false, makeunique = true)
+        end
         outds2 = Dataset(outputmat, new_col_names, copycols = false)
 
         for j in 1:ncol(outds2)
