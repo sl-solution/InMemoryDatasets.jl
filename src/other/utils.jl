@@ -479,49 +479,45 @@ function _gather_groups_old_version(ds, cols, ::Val{T}; mapformats = false) wher
 end
 
 # ds assumes is grouped based on cols and groups are gathered togther
-function  _find_starts_of_groups(ds, cols::Vector, ::Val{T}; mapformats = true) where T
+function _find_starts_of_groups(ds, cols::MultiColumnIndex, ::Val{T}; mapformats = true) where T
     colsidx = index(ds)[cols]
-
     ranges = Vector{T}(undef, nrow(ds))
-    ranges_cpy = copy(ranges)
-    ranges[1] = 1
-    ranges_cpy[1] = 1
+    inbits = zeros(Bool, nrow(ds))
+    inbits[1] = true
     last_valid_index = 1
-
     for j in 1:length(colsidx)
         if mapformats
             _f = getformat(ds, colsidx[j])
         else
             _f = identity
         end
-        last_valid_index = _find_starts_of_groups!(_columns(ds)[colsidx[j]], _f , ranges, ranges_cpy, last_valid_index)
+        _find_starts_of_groups!(_columns(ds)[colsidx[j]], _get_perms(ds), _f , inbits)
+	all(inbits) && break
     end
-    return colsidx, ranges, last_valid_index
+    @inbounds for i in 1:length(inbits)
+        if inbits[i]
+            ranges[last_valid_index] = i
+            last_valid_index += 1
+        end
+    end
+    return collect(colsidx), ranges, (last_valid_index - 1)
 end
 
 _find_starts_of_groups(ds, col::ColumnIndex, ::Val{T}; mapformats = true) where T = _find_starts_of_groups(ds, [col], Val(T), mapformats = mapformats)
-_find_starts_of_groups(ds, cols::UnitRange, ::Val{T}; mapformats = true) where T = _find_starts_of_groups(ds, collect(cols), Val(T), mapformats = mapformats)
 
-
-function _find_starts_of_groups!(x, format, ranges, ranges_cpy, last_valid_index)
-    cnt = 1
-    @inbounds for j in 1:last_valid_index
-        lo = ranges_cpy[j]
-        j == last_valid_index ? hi = length(x) : hi = ranges_cpy[j + 1] - 1
-        ranges[cnt] = lo
-        cnt += 1
-        @inbounds for i in lo:(hi - 1)
-            if !isequal(format(x[i]), format(x[i+1]))
-                ranges[cnt] = i + 1
-                cnt += 1
-            end
-        end
+function _find_starts_of_groups!(x, perm, f, inbits)
+    Threads.@threads for i in 2:length(inbits)
+        @inbounds if !inbits[i]
+		inbits[i] = !isequal(f(x[perm[i]]), f(x[perm[i-1]]))
+	end										
     end
-    @inbounds for j in 1:(cnt - 1)
-        ranges_cpy[j] = ranges[j]
-    end
-    return cnt - 1
 end
+# function _find_starts_of_groups!(x, perm, f, inbits, starts, ngroups)
+# 	Threads.@threads for j in 1:ngroups
+# 		i = starts[j]
+# 		@inbounds inbits[i] = inbits[i]==1 ? 1 : !isequal(f(x[perm[i]]), f(x[perm[i-1]]))
+# 	end
+# end
 
 function make_unique!(names::Vector{Symbol}, src::AbstractVector{Symbol};
                       makeunique::Bool=false)
