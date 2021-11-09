@@ -145,7 +145,6 @@ stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_w
 function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     all(ismissing, x) && return missing
     any(ISNAN, x) && return convert(eltype(x), NaN)
-    length(x) == 1 && return 0.0
     meanval = stat_mean(f, x)
     n = mapreduce(!ismissing, +, x)
 
