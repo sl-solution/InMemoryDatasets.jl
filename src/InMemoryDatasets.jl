@@ -70,7 +70,6 @@ export
       gatherby,
       describe,
       unsort!,
-      # gatherby,
       ungroup!,
       modify,
       modify!,
@@ -82,8 +81,6 @@ export
       nunique,
       # from stat
       stdze,
-      lag,
-      lead,
       rescale,
       wsum,
       wmean,

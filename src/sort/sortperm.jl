@@ -441,7 +441,7 @@ function _sortperm(ds, cols::MultiColumnIndex, rev::Vector{Bool}; a = HeapSortAl
         return copy(_group_starts(ds)), 1:nrow(ds), _ngroups(ds)
     end
     if _check_for_fast_sort(ds, colsidx, rev, mapformats; notsortpaforjoin = notsortpaforjoin, givenrange = givenrange) == 1
-        colsidx, ranges, last_valid_index = _find_starts_of_groups(view(ds, _get_perms(ds), :), colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
+        colsidx, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
         if !skipcol_mkcopy
             _fill_idx_for_sort!(_get_sort_perms(ds))
             # make use of perm in original data (simply replace it with new one)
@@ -488,7 +488,7 @@ function _sortperm(ds, cols::MultiColumnIndex, rev::Bool = false; a = HeapSortAl
         return copy(_group_starts(ds)), 1:nrow(ds), _ngroups(ds)
     end
     if _check_for_fast_sort(ds, colsidx, revs, mapformats; notsortpaforjoin = notsortpaforjoin, givenrange = givenrange) == 1
-        colsidx, ranges, last_valid_index = _find_starts_of_groups(view(ds, _get_perms(ds), :), colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
+        colsidx, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
 
         if !skipcol_mkcopy
             _fill_idx_for_sort!(_get_sort_perms(ds))

@@ -53,40 +53,6 @@ function stdze(x)
     (x .- meandata) ./ sqrt(vardata)
 end
 
-
-"""
-lag(x,k; filling = missing) Creates a lag-k of the provided array x. The output will be an array the
-same size as x (the input array), and the its type will be Union{Missing, T} where T is the type of input.
-"""
-function lag(x::AbstractVector, k; filling = missing)
-    res = zeros(Union{promote_type(typeof(filling), eltype(x)), Missing}, length(x))
-    @simd for i in 1:k
-        @inbounds res[i] = filling
-    end
-    @simd for i in (k+1):length(x)
-        @inbounds res[i] = x[i-k]
-    end
-    res
-end
-
-lag(x::AbstractVector) = lag(x,1)
-
-"""
-lead(x,k; filling = missing) Creates a lead-k of the provided array x. The output will be an array the
-same size as x (the input array), and the its type will be Union{Missing, T} where T is the type of input.
-"""
-function lead(x::AbstractVector, k; filling = missing)
-    res = zeros(Union{promote_type(typeof(filling), eltype(x)),Missing},length(x))
-    @simd for i in 1:length(x)-k
-        @inbounds res[i] = x[i+k]
-    end
-    @simd for i in (length(x)-k+1):length(x)
-        @inbounds res[i] = filling
-    end
-    res
-end
-lead(x::AbstractVector) = lead(x, 1)
-
 function stat_maximum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
     all(ismissing, view(x, lo:hi)) && return missing
     _dmiss(x) = ismissing(f(x)) ? typemin(nonmissingtype(T)) : f(x)
