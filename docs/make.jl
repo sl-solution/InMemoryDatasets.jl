@@ -32,7 +32,8 @@ makedocs(
             "Transpose data" => "man/transpose.md",
             "Joins" => "man/joins.md"
         ],
-        "Gallery" => "man/gallery.md"
+        "Gallery" => "man/gallery.md",
+        "Performance tips" => "man/performance.md"
         # "API" => Any[
         #     "Functions" => "lib/functions.md"
         # ]

@@ -24,7 +24,8 @@ Pages = ["man/basics.md",
          "man/aggregation.md",
          "man/transpose.md",
          "man/joins.md",
-         "man/gallery.md"]
+         "man/gallery.md",
+         "man/performance.md"]
 Depth = 2
 ```
 
