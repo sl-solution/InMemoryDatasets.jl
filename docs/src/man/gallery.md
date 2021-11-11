@@ -176,3 +176,58 @@ julia> combine(gatherby(ds, [1, 3], isgathered = true),
    6 │        2  2019-05-04         false
    7 │        3  2019-12-12          true
 ```
+
+## Using `for loops` when needed
+
+* [map select rows to a new column](https://stackoverflow.com/questions/69920121/map-select-rows-to-a-new-column) :  I want to use rows with names Becks, Campbell, Crows as a separate column to name the entries below them.
+
+```julia
+julia> using Chain
+julia> ds = Dataset( [["Becks", "307NRR", "321NRR", "342NRR", "Campbell", "329NRR", "347NRR", "Crows", "C3001R"],
+                     [missing, "R", "R", "R", missing, "R", "R", missing, "R"],
+                     [missing, "CM,SG", "CM,SG", "CM,SG", missing, "None", "None", missing, "None"],
+                     [missing, 3.0, 3.2, 3.4, missing, 3.2, 3.4, missing, 3.0]], :auto)
+9×4 Dataset
+ Row │ x1        x2        x3        x4        
+     │ identity  identity  identity  identity  
+     │ String?   String?   String?   Float64?  
+─────┼─────────────────────────────────────────
+   1 │ Becks     missing   missing   missing   
+   2 │ 307NRR    R         CM,SG           3.0
+   3 │ 321NRR    R         CM,SG           3.2
+   4 │ 342NRR    R         CM,SG           3.4
+   5 │ Campbell  missing   missing   missing   
+   6 │ 329NRR    R         None            3.2
+   7 │ 347NRR    R         None            3.4
+   8 │ Crows     missing   missing   missing   
+   9 │ C3001R    R         None            3.0
+
+julia> function replace_with_prev(x,y)
+           res = similar(x, length(x))
+           for i in 1:length(x)
+               if !ismissing(y[i])
+                   res[i] = res[i-1]
+               else
+                   res[i] = x[i]
+               end
+           end
+           res
+       end
+f1 (generic function with 2 methods)
+julia> @chain ds begin
+            modify!((1,2)=>replace_with_prev=>:name) # find previous name
+            dropmissing!(2) # drop unwanted rows
+            select!(:name, :) # rearrange columns
+         end
+6×5 Dataset
+ Row │ name      x1        x2        x3        x4       
+     │ identity  identity  identity  identity  identity
+     │ String?   String?   String?   String?   Float64?
+─────┼──────────────────────────────────────────────────
+   1 │ Becks     307NRR    R         CM,SG          3.0
+   2 │ Becks     321NRR    R         CM,SG          3.2
+   3 │ Becks     342NRR    R         CM,SG          3.4
+   4 │ Campbell  329NRR    R         None           3.2
+   5 │ Campbell  347NRR    R         None           3.4
+   6 │ Crows     C3001R    R         None           3.0
+```
