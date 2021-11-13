@@ -967,14 +967,14 @@ nmissing(x) = count(ismissing, x)
 n(x) = count(!ismissing, x)
 
 """
-    filter(ds, cols; [type = all, by])
+    filter(ds, cols; [type = all, by = isequal(true),...])
 
-A convenient shortcut for ds[byrow(ds, type, cols; by = by), :].
+A convenient shortcut for ds[byrow(ds, type, cols; by = by,...), :].
 """
-Base.filter(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type= all, by) = ds[byrow(ds, type, cols, by = by), :]
+Base.filter(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type= all, by = isequal(true), kwargs...) = ds[byrow(ds, type, cols, by = by; kwargs...), :]
 """
-    filter!(ds, cols; [type = all, by])
+    filter!(ds, cols; [type = all, by = isequal(true),...])
 
-A convenient shortcut for delete![ds, byrow(ds, type, cols; by = by)).
+A convenient shortcut for delete![ds, byrow(ds, type, cols; by = by,...)).
 """
-Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, by) = delete!(ds, .!byrow(ds, type, cols, by = by))
+Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, by = isequal(true), kwargs...) = delete!(ds, .!byrow(ds, type, cols, by = by; kwargs...))
