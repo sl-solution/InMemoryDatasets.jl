@@ -1038,7 +1038,7 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
                             "columns is not allowed"))
     end
 
-    groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats)
+    groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats, stable = false)
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
 
