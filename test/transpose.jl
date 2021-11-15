@@ -106,7 +106,7 @@ const ≅ = isequal
     # allowmissing!(ds)
     ds[2, :b] = missing
     ds[4, :d] = missing
-    ds2 = transpose(groupby(ds, :group, stable = true), 2:4, id = :e, filling = 0)
+    ds2 = transpose(groupby(ds, :group, stable = true), 2:4, id = :e, default = 0)
 
     ds3 = Dataset(group = repeat(1:3, inner = 3),
                     _variables_ = string.(repeat('b':'d', 3)),
