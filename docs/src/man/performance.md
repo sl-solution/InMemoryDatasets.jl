@@ -1,6 +1,6 @@
 # Performance tips
 
-This section contains some performance tips which can improve the experience of working with InMemoryDatasets. These tips are specially important when the package is handling huge data. 
+This section contains some performance tips which can improve the experience of working with InMemoryDatasets. These tips are specially important when the package is handling huge data.
 
 ## Make use of provided APIs
 
@@ -10,7 +10,7 @@ This section contains some performance tips which can improve the experience of 
 
 ## Choose `groupby` or `gatherby` based on the problem in hand
 
-## Aware that every column must support `missings`
+## Beware that every column must support `missings`
 
 ## Master `byrow`
 
