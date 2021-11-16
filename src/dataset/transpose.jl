@@ -442,6 +442,9 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
 
             if j == 1
                 outds = fast_stack_gcols(T, ds, ECol, max_num_col, gcolsidx, threads)
+                for j in 1:length(gcolsidx)
+                    setformat!(outds, j => getformat(parent(ds), gcolsidx[j]))
+                end
             end
             if variable_name !== nothing
                 _repeat_row_names = allowmissing(PooledArray(renamerowid.(names(ds, sel_cols))))

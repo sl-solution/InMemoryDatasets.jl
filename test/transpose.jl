@@ -317,10 +317,12 @@ const ≅ = isequal
                  Union{Missing, Int64}[65],
                  Union{Missing, Int64}[65]], ["_variables_", "(1, 1)", "(1, 2)", "(2, 3)", "(2, 4)"])
         @test t5 == t5_t
-
-
-
-
+        ds = Dataset(g1 = [1, 2, 3, 4], x = [1,2,3,4], g2 = [false, false, true, true])
+        setformat!(ds, 1=>isodd)
+        groupby!(ds, [:g2, :g1])
+        dst = transpose(ds, :x, variable_name = nothing)
+        dst_t = compare(ds, dst, on =[:g1=>:g1, :g2=>:g2, :x=>:_c1])
+        @test all(byrow(dst_t, all, :))
 end
 
 
