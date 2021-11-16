@@ -15,6 +15,7 @@ The syntax for calling `groupby!` and `groupby` is the same as the `sort!` funct
 * `stable` with default value of `true`
 * `alg` which by default is set to `HeapSortAlg`, and it can be set as `QuickSort` too.
 
+> Removing formats of columns that are used for `groupby!` with `mapformats = true` removes the grouping information too, i.e. the data set will not be marked as grouped/sorted data set .
 
 ### Examples
 
