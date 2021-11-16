@@ -42,6 +42,7 @@ export
       SubDatasetColumn,
       Dataset,
       GatherBy,
+      GroupBy,
       Between,
       splitter,
       # functions
