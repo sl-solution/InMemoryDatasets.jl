@@ -430,7 +430,7 @@ end
                  Union{Missing, String}["foo", "bar", "monty", "foo", "bar", "monty"],
                  Union{Missing, String}["a", "b", "c", "d", "e", "f"],
                  Union{Missing, Int64}[1, 2, 3, 4, 5, 6]], [:g, :key, :foo, :bar])
-        dst = transpose(groupby(ds, :g), (:foo, :bar), id = :key)
+        dst = transpose(groupby(ds, :g), (:foo, :bar), id = :key, variable_name = "_variables_")
         dst_t = Dataset([Union{Missing, Int64}[1, 2],
                  Union{Missing, String}["foo", "foo"],
                  Union{Missing, String}["bar", "bar"],
@@ -445,7 +445,7 @@ end
                                 color= ["red", "blue", "red", "blue", "red", "blue"],
                                 count= [3, 4, 3, 4, 3, 4],
                                 weight= [0.2, 0.3, 0.2, 0.3, 0.2, 0.2])
-        dst = transpose(groupby(ds, 1), (:count, :weight), id = :color)
+        dst = transpose(groupby(ds, 1), (:count, :weight), id = :color, variable_name = :_variables_)
         dst_t = Dataset([Union{Missing, Int64}[0, 1, 2],
                  Union{Missing, String}["count", "count", "count"],
                  Union{Missing, String}["weight", "weight", "weight"],
