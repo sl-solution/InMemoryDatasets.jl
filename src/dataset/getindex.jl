@@ -93,22 +93,38 @@ end
     @inbounds _columns(ds)[selected_column][row_ind]
 end
 
+_getindex(ds, r, c, f) = map(f, _columns(ds)[c][r])
+
 # ds[MultiRowIndex, SingleColumnIndex] => AbstractVector, copy
-@inline function Base.getindex(ds::Dataset, row_inds::AbstractVector, col_ind::ColumnIndex)
+@inline function Base.getindex(ds::Dataset, row_inds::AbstractVector, col_ind::ColumnIndex; mapformats = false)
     selected_column = index(ds)[col_ind]
     @boundscheck if !checkindex(Bool, axes(ds, 1), row_inds)
         throw(BoundsError(ds, (row_inds, col_ind)))
     end
-    @inbounds return _columns(ds)[selected_column][row_inds]
+    if mapformats
+        _getindex(ds, row_inds, col_ind, getformat(ds, col_ind))
+    else
+        @inbounds return _columns(ds)[selected_column][row_inds]
+    end
 end
 
-@inline Base.getindex(ds::Dataset, row_inds::Not, col_ind::ColumnIndex) =
-    ds[axes(ds, 1)[row_inds], col_ind]
+@inline function Base.getindex(ds::Dataset, row_inds::Not, col_ind::ColumnIndex; mapformats = false)
+    if mapformats
+        _getindex(ds, axes(ds, 1)[row_inds], col_ind, getformat(ds, col_ind))
+    else
+        ds[axes(ds, 1)[row_inds], col_ind]
+    end
+end
+
 
 # ds[:, SingleColumnIndex] => AbstractVector
-function Base.getindex(ds::Dataset, row_inds::Colon, col_ind::ColumnIndex)
+function Base.getindex(ds::Dataset, row_inds::Colon, col_ind::ColumnIndex; mapformats = false)
     selected_column = index(ds)[col_ind]
-    copy(_columns(ds)[selected_column])
+    if mapformats
+        map(getformat(ds, col_ind), _columns(ds)[selected_column])
+    else
+        copy(_columns(ds)[selected_column])
+    end
 end
 
 # ds[!, SingleColumnIndex] => AbstractVector, the same vector
