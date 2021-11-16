@@ -290,6 +290,37 @@ const ≅ = isequal
         @test ds8 == tds8
         @test ds9 == tds9
         @test_throws AssertionError transpose(ds, :val1, id = :g1)
+        ds = Dataset(g = [1,1,2,2], x1=1:4, y=[454,65,65,65])
+        setformat!(ds, 2=>isodd)
+        t1 = transpose(groupby(ds, 1), :y, id = :x1)
+        t1_t = Dataset("g" => [1,2], "_variables_" => ["y","y"], "true" => [454, 65], "false"=>[65,65])
+        @test t1 == t1_t
+        t2 = transpose(groupby(ds, 1), :y, id = :x1, mapformats = false)
+        t2_t = Dataset("g" => [1,2], "_variables_" => ["y","y"], "1"=>[454, missing], "2"=>[65, missing], "3"=>[missing, 65], "4"=>[missing, 65])
+        @test t2 == t2_t
+        @test_throws AssertionError transpose(ds, :y, id = :x1, mapformats = true)
+        t3 = transpose(ds, :y, id = :x1, mapformats = false)
+        t3_t = Dataset("_variables_" => ["y"], "1"=>[454], "2"=>[65], "3"=>[65], "4"=>[65])
+        @test t3 == t3_t
+        setformat!(ds, 1=>isodd)
+        t4 = transpose(ds, :y, id = 1:2)
+        t4_t = Dataset([Union{Missing, String}["y"],
+                 Union{Missing, Int64}[454],
+                 Union{Missing, Int64}[65],
+                 Union{Missing, Int64}[65],
+                 Union{Missing, Int64}[65]], ["_variables_", "(true, true)", "(true, false)", "(false, true)", "(false, false)"])
+        @test t4 == t4_t
+        t5 = transpose(ds, :y, id = 1:2, mapformats = false)
+        t5_t = Dataset([Union{Missing, String}["y"],
+                 Union{Missing, Int64}[454],
+                 Union{Missing, Int64}[65],
+                 Union{Missing, Int64}[65],
+                 Union{Missing, Int64}[65]], ["_variables_", "(1, 1)", "(1, 2)", "(2, 3)", "(2, 4)"])
+        @test t5 == t5_t
+
+
+
+
 end
 
 

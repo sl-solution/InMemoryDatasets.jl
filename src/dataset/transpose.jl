@@ -2,8 +2,8 @@
 #  If type is not Number, probably something is wrong about setting the variables and it is better to be conservative. here 10^7 threshhold is arbitarary
 _check_allocation_limit(T, rows, cols) = T <: Number ? sizeof(T)*rows*cols / Base.Sys.total_memory() : rows*cols/10^7
 
-_default_renamecolid_function_withoutid(x) = "_c" * string(x)
-_default_renamecolid_function_withid(x) = identity(string(values(x)))
+_default_renamecolid_function_withoutid(x, y) = "_c" * string(x)
+_default_renamecolid_function_withid(x, y) = identity(string(values(x)))
 _default_renamerowid_function(x) = identity(x)
 # handling simplest case
 function _simple_ds_transpose!(outx, inx, i)
@@ -11,8 +11,16 @@ function _simple_ds_transpose!(outx, inx, i)
 end
 
 function _generate_col_row_names(renamecolid, renamerowid, ids, dsnames; max_length = 0)
-
-    new_col_names = map(renamecolid, ids)
+    local new_col_names
+    try
+        new_col_names = map(x -> renamecolid(x, dsnames), ids)
+    catch e
+        if (e isa MethodError)
+            new_col_names = map(renamecolid, ids)
+        else
+            rethrow(e)
+        end
+    end
     row_names = map(renamerowid, dsnames)
     row_names = allowmissing(row_names)
     r_n_l = length(row_names)
@@ -150,9 +158,10 @@ function ds_transpose(ds::Dataset, cols::Union{Tuple, MultiColumnIndex}; id = no
         ids_refs, unique_loc  = _find_id_unique_values(parent(ds), ididx, _get_perms(ds); mapformats = mapformats)
 
         if length(ididx) == 1
-            unique_ids = parent(ds)[view(_get_perms(ds), unique_loc), ididx[1]]
+            unique_ids = getindex(parent(ds), view(_get_perms(ds), unique_loc), ididx[1]; mapformats = mapformats)
         else
-            unique_ids = Tables.rowtable(parent(ds)[view(_get_perms(ds), unique_loc), ididx])
+            #TODO not very good way to do this
+            unique_ids = Tables.rowtable(Dataset([getindex(parent(ds), view(_get_perms(ds), unique_loc), ididx[k], mapformats = mapformats) for k in 1:length(ididx)], :auto, copycols = false))
         end
         @assert (size(unique_ids,1)) == nrow(ds) "Duplicate ids are not allowed."
     end
@@ -443,7 +452,16 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
             end
             res = Vector{Union{Missing, T}}(undef, nrow(ds) * max_num_col)
             _fill_col_val!(res, ECol, length(sel_cols), max_num_col, nrow(ds), _get_perms(ds), threads)
-            new_col_id = Symbol(renamecolid(1))
+            local new_col_id
+            try
+                new_col_id = Symbol(renamecolid(1, names(ds, sel_cols)))
+            catch e
+                if (e isa MethodError)
+                    new_col_id = Symbol(renamecolid(1))
+                else
+                    rethrow(e)
+                end
+            end
             insertcols!(outds, ncol(outds)+1, new_col_id => res, unsupported_copy_cols = false, makeunique = true)
         end
         return outds
@@ -458,9 +476,10 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
 
         # we assume the unique function keep the same order as original data, which is the case sofar
         if length(ididx) == 1
-            unique_ids = parent(ds)[view(_get_perms(ds), unique_loc), ididx[1]]
+            unique_ids = getindex(parent(ds), view(_get_perms(ds), unique_loc), ididx[1], mapformats = mapformats)
         else
-            unique_ids = Tables.rowtable(parent(ds)[view(_get_perms(ds), unique_loc), ididx])
+            #TODO not very good way to do this
+            unique_ids = Tables.rowtable(Dataset([getindex(parent(ds), view(_get_perms(ds), unique_loc), ididx[k], mapformats = mapformats) for k in 1:length(ididx)], :auto, copycols = false))
         end
 
         out_ncol = length(unique_ids)
