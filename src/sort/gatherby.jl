@@ -86,7 +86,7 @@ end
 function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true, stable = true, isgathered = false)
     colsidx = index(ds)[cols]
 	T = nrow(ds) < typemax(Int32) ? Int32 : Int64
-
+	_check_consistency(ds)
 	if isgathered
 		# TODO _find_starts_of_groups() needs improvement
 		 colindex, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, Val(T); mapformats = mapformats)

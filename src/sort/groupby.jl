@@ -28,6 +28,7 @@ index(ds::GroupBy) = index(ds.parent)
 Base.parent(ds::GroupBy) = ds.parent
 
 function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+	_check_consistency(ds)
 	colsidx = index(ds)[cols]
 	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)
 	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats)

@@ -1,11 +1,13 @@
 function Base.sortperm(ds::Dataset, cols; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
     isempty(ds) && return []
+    _check_consistency(ds)
     colsidx = index(ds)[cols]
     _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)[2]
 end
 
 function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
     isempty(ds) && return ds
+    _check_consistency()
     colsidx = index(ds)[cols]
     if length(rev) == 1
         revs = repeat([rev], length(colsidx))
@@ -56,6 +58,7 @@ Base.sort!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false
 
 function Base.sort(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
     isempty(ds) && return copy(ds)
+    _check_consistency(ds)
     colsidx = index(ds)[cols]
     if length(rev) == 1
         revs = repeat([rev], length(colsidx))
