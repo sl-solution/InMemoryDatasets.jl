@@ -14,4 +14,4 @@ This section contains some performance tips which can improve the experience of 
 
 ## Master `byrow`
 
-## Exploit the power of `Julia Base`
+## Don't avoid `for loops`!
