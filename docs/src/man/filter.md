@@ -13,6 +13,12 @@ be set as `all` or `any`, and supply the conditions by using the `by` keyword op
 
 The main feature of `byrow(ds, fun, cols, by = ...)` when `fun` is `all/any` is that the `by` keyword argument can be a vector of functions. Thus, when a multiple columns are supplied as `cols` each column can have its own `by`.
 
+### `filter` and `filter!`
+
+The `filter` and `filter!` functions are two shortcuts for doing the `byrow` and `getindex` operations at the same call.
+
+`filter(ds, cols; [type = all, by = isequal(true),...])` is the shortcut for `ds[byrow(ds, type, cols; by = by,...), :]`, and `filter!(ds, cols; [type = all, by = isequal(true),...])` is the shortcut for `deleteat![ds, byrow(ds, type, cols; by = by,...))`.
+
 ### Examples
 
 The first expression creates a data set, and in the second one we use `byrow` to filter `all` rows which the values of all columns are equal to 1.
@@ -53,20 +59,8 @@ Note that only the first row is meeting the condition. As another example, let's
 filter all rows which the numbers in all columns are odd.
 
 ```jldoctest
-julia> _tmp = byrow(ds, all, :, by = isodd)
-10-element Vector{Bool}:
- 1
- 0
- 1
- 0
- 1
- 0
- 1
- 0
- 1
- 0
+julia> filter(ds, :, by = isodd)
 
-julia> ds[_tmp, :]
  5×3 Dataset
   Row │ x1        x2        x3       
       │ identity  identity  identity
@@ -133,20 +127,8 @@ julia> modify!(ds, 2:3 .=> (x -> x .> mean(x)) .=> [:_tmp1, :_tmp2])
    9 │        1         9         1      true     false
   10 │        1        10         2      true      true
 
-julia> _tmp = byrow(ds, all, r"_tm")
-10-element Vector{Bool}:
-0
-0
-0
-0
-0
-1
-0
-1
-0
-1
+julia> filter(ds, r"_tm") # translate to ds[byrow(ds, all, r"_tm"), :]
 
-julia> ds[_tmp, :]
 3×5 Dataset
 Row │ x1        x2        x3        _tmp1     _tmp2    
     │ identity  identity  identity  identity  identity
@@ -244,7 +226,7 @@ Row │ x1        x2        x3
   9 │     true     false     false
  10 │    false     false     false
 
-julia> ds[byrow(_tmp, any, :), :] # use the result of previous run
+julia> filter(_tmp, :, type = any) # OR ds[byrow(_tmp, any, :), :]. This uses the result of previous run
 5×3 Dataset
  Row │ x1        x2      x3       
      │ identity  isodd   identity
