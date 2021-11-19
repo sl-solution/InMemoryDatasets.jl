@@ -95,7 +95,7 @@ ungroup!
 ```@docs
 byrow
 contains
-delete!
+deleteat!
 empty
 empty!
 first

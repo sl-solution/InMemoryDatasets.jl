@@ -920,7 +920,7 @@ julia> dsl
 ```
 """
 function antijoin!(dsl::Dataset, dsr::Dataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
-    delete!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate))
+    deleteat!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate))
 end
 """
     semijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
@@ -1048,7 +1048,7 @@ julia> dsl
 ```
 """
 function semijoin!(dsl::Dataset, dsr::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
-    delete!(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate))
+    deleteat!(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate))
 end
 
 

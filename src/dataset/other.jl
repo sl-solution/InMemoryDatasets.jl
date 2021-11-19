@@ -609,16 +609,16 @@ _bool_mask(f) = x->f(x)::Union{Bool, Missing}
 # Modify Dataset
 function Base.unique!(ds::Dataset; mapformats = false, keep = :first)
     !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
-    delete!(ds, nonunique(ds, mapformats = mapformats, first = keep == :first))
+    deleteat!(ds, nonunique(ds, mapformats = mapformats, first = keep == :first))
 end
 function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first)
     !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
-    delete!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+    deleteat!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
 end
 
 function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
     !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
-    delete!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+    deleteat!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
 end
 
 # Unique rows of an Dataset.
@@ -783,7 +783,7 @@ function dropmissing!(ds::Dataset,
                       cols::Union{ColumnIndex, MultiColumnIndex}=:)
     inds = completecases(ds, cols)
     inds .= .!(inds)
-    delete!(ds, inds)
+    deleteat!(ds, inds)
     ds
 end
 
@@ -975,9 +975,9 @@ Base.filter(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type= all, 
 """
     filter!(ds, cols; [type = all, by = isequal(true),...])
 
-A convenient shortcut for delete![ds, byrow(ds, type, cols; by = by,...)).
+A convenient shortcut for deleteat![ds, byrow(ds, type, cols; by = by,...)).
 """
-Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, by = isequal(true), kwargs...) = delete!(ds, .!byrow(ds, type, cols, by = by; kwargs...))
+Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, by = isequal(true), kwargs...) = deleteat!(ds, .!byrow(ds, type, cols, by = by; kwargs...))
 
 
 """

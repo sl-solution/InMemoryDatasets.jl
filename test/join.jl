@@ -709,7 +709,7 @@ end
     dsl = Dataset(x= categorical([1,2,1]))
     dsr = Dataset(x=1:5)
     @test leftjoin(dsl, dsr, on =:x) == dsl
-    @test delete!(leftjoin(dsr, dsl, on =:x), 1) == dsr
+    @test deleteat!(leftjoin(dsr, dsl, on =:x), 1) == dsr
 end
 
 @testset "range inner join" begin

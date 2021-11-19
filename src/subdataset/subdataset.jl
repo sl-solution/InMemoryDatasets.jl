@@ -275,7 +275,7 @@ Base.setproperty!(::SubDataset, ::AbstractString, ::Any) =
 
 Base.copy(sds::SubDataset) = parent(sds)[rows(sds), parentcols(index(sds), :)]
 
-Base.delete!(ds::SubDataset, ind) =
+Base.deleteat!(ds::SubDataset, ind) =
     throw(ArgumentError("SubDataset does not support deleting rows"))
 
 function Dataset(sds::SubDataset)

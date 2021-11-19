@@ -1,9 +1,9 @@
 """
-    delete!(ds::Dataset, inds)
+    deleteat!(ds::Dataset, inds)
 
 Delete rows specified by `inds` from a `Dataset` `ds` in place and return it.
 
-Internally `deleteat!` is called for all columns so `inds` must be:
+`inds` must be:
 a vector of sorted and unique integers, a boolean vector, an integer, or `Not`.
 
 # Examples
@@ -17,7 +17,7 @@ julia> ds = Dataset(a=1:3, b=4:6)
    2 │     2      5
    3 │     3      6
 
-julia> delete!(ds, 2)
+julia> deleteat!(ds, 2)
 2×2 Dataset
  Row │ a      b
      │ Int64  Int64
@@ -27,7 +27,7 @@ julia> delete!(ds, 2)
 ```
 
 """
-function Base.delete!(ds::Dataset, inds)
+function Base.deleteat!(ds::Dataset, inds)
 
 # Modify Dataset
     if !isempty(inds) && size(ds, 2) == 0
@@ -40,7 +40,7 @@ function Base.delete!(ds::Dataset, inds)
 end
 
 # Modify Dataset
-function Base.delete!(ds::Dataset, inds::AbstractVector{Bool})
+function Base.deleteat!(ds::Dataset, inds::AbstractVector{Bool})
     if length(inds) != size(ds, 1)
         throw(BoundsError(ds, (inds, :)))
     end
@@ -49,7 +49,7 @@ function Base.delete!(ds::Dataset, inds::AbstractVector{Bool})
 end
 
 # Modify Dataset
-Base.delete!(ds::Dataset, inds::Not) = delete!(ds, axes(ds, 1)[inds])
+Base.deleteat!(ds::Dataset, inds::Not) = deleteat!(ds, axes(ds, 1)[inds])
 
 # Modify Dataset
 function _delete!_helper(ds::Dataset, drop)

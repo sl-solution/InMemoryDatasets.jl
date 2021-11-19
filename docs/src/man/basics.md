@@ -393,7 +393,7 @@ The following functions are very handy when working with a data set. Note that f
 * `last(ds, n)` shows the last `n` rows of a data set
 * `rename!` can be used to rename column names
 * `select!` can be used to drop, select, or rearrange columns
-* `delete!` deletes rows from a data set
+* `deleteat!` deletes rows from a data set
 * `append!(ds, tds)` appends `tds` at the end of `ds`
 
 ```jldoctest
@@ -475,7 +475,7 @@ julia> test_data
    3 │        7         1
    4 │        6         2
 
-julia> delete!(test_data, 2)
+julia> deleteat!(test_data, 2)
 3×2 Dataset
  Row │ x2        var1
      │ identity  identity
