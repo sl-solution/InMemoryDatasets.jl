@@ -29,7 +29,7 @@ julia> byrow(ds, sum, 1:100)
 
 As it can be observed the function syntax is very straightforward, and to examine the efficiency of it, we use the `@btime` macro from the BenchmarkTools package,
 
-```julia
+```jldoctest
 julia> using BenchmarkTools
 julia> @btime byrow(ds, sum, 1:100);
   7.874 ms (2143 allocations: 1.02 MiB)

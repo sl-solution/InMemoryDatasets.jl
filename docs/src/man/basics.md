@@ -4,7 +4,7 @@
 
 To install in memory Datasets package , simply, use the following commands inside a Julia session:
 
-```julia
+```jldoctest
 julia> using Pkg
 julia> Pkg.add("InMemoryDatasets")
 ```
