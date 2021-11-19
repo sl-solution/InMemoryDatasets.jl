@@ -978,3 +978,64 @@ Base.filter(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type= all, 
 A convenient shortcut for delete![ds, byrow(ds, type, cols; by = by,...)).
 """
 Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, by = isequal(true), kwargs...) = delete!(ds, .!byrow(ds, type, cols, by = by; kwargs...))
+
+
+"""
+    mapcols(ds, f, cols)
+
+Return a `Dataset` where each column in `cols` of `ds` is transformed using function `f`.
+`f` must return `AbstractVector` objects all with the same length or scalars
+(all values other than `AbstractVector` are considered to be a scalar).
+
+Note that `mapcols` guarantees not to reuse the columns from `ds` in the returned
+`Dataset`. If `f` returns its argument then it gets copied before being stored.
+"""
+function mapcols(ds::AbstractDataset, f::Union{Function, Type}, cols = :)
+    # note: `f` must return a consistent length
+    vs = AbstractVector[]
+    seenscalar = false
+    seenvector = false
+    colsidx = index(ds)[cols]
+    for j in 1:length(colsidx)
+        fv = f(_columns(ds)[colsidx[j]])
+        if fv isa AbstractVector
+            if seenscalar
+                throw(ArgumentError("mixing scalars and vectors in mapcols not allowed"))
+            end
+            seenvector = true
+            push!(vs, fv === _columns(ds)[colsidx[j]] ? copy(fv) : fv)
+        else
+            if seenvector
+                throw(ArgumentError("mixing scalars and vectors in mapcols not allowed"))
+            end
+            seenscalar = true
+            push!(vs, [fv])
+        end
+    end
+    return Dataset(vs, names(ds, colsidx), copycols=false)
+end
+function mapcols(ds::AbstractDataset, f::Vector{T}, cols = :) where T <: Union{Function, Type}
+    # note: `f` must return a consistent length
+    vs = AbstractVector[]
+    seenscalar = false
+    seenvector = false
+    colsidx = index(ds)[cols]
+    @assert length(f) == length(colsidx) "Number of functions must match number of columns."
+    for j in 1:length(colsidx)
+        fv = f[j](_columns(ds)[colsidx[j]])
+        if fv isa AbstractVector
+            if seenscalar
+                throw(ArgumentError("mixing scalars and vectors in mapcols not allowed"))
+            end
+            seenvector = true
+            push!(vs, fv === _columns(ds)[colsidx[j]] ? copy(fv) : fv)
+        else
+            if seenvector
+                throw(ArgumentError("mixing scalars and vectors in mapcols not allowed"))
+            end
+            seenscalar = true
+            push!(vs, [fv])
+        end
+    end
+    return Dataset(vs, names(ds, colsidx), copycols=false)
+end
