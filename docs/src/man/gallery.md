@@ -87,6 +87,14 @@ julia> ds
    8 │        3         3         3         1         1         1
    9 │        3         1         1         3         1         1
   10 │        1         1         3         1         1         3
+
+julia> # write our own version of pandas' ffill-bfill
+julia> function fbfill!(ds, cols)
+         f_n_m = byrow(ds, coalesce, cols)
+         op(x, y) = y .= ifelse.(ismissing.(y), x, y)
+         byrow(ds, mapreduce, cols, op = op, init = f_n_m)
+         ds
+      end
 ```
 
 ## Filtering
@@ -176,8 +184,47 @@ julia> combine(gatherby(ds, [1, 3], isgathered = true),
    6 │        2  2019-05-04         false
    7 │        3  2019-12-12          true
 ```
+## Joins
 
-## Using `for loops` when needed
+* [Counting the number of instances between dates](https://stackoverflow.com/questions/69994244/counting-the-number-of-instances-between-dates) : What I want to do is simply count the number of employees that each store has on any given date in the `store` data set
+
+```julia
+julia> store = Dataset([Date.(["2019-10-01", "2019-10-02", "2019-10-03", "2019-10-04",
+                         "2019-10-05", "2019-10-01", "2019-10-02", "2019-10-03",
+                         "2019-10-04", "2019-10-05"]),
+                         ["A", "A", "A", "A", "A", "B", "B", "B", "B", "B"]],
+                         ["date", "store"])
+julia> roster = Dataset([["A", "A", "A", "A", "B", "B", "B", "B"],
+                         [1, 2, 3, 4, 5, 6, 7, 8],
+                         [Date("2019-09-30"), Date("2019-10-02"), Date("2019-10-03"), Date("2019-10-04"),
+                         Date("2019-09-30"), Date("2019-10-02"), Date("2019-10-03"), Date("2019-10-04")],
+                         [Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"),
+                         Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06")]],
+                         ["store", "employee_ID", "start_date", "end_date"])
+julia> using Chain
+julia> @chain store begin
+          innerjoin(roster, on = [:store => :store, :date => (:start_date, :end_date)])
+          groupby([:store, :date])
+          combine(:employee_ID => length)
+       end
+10×3 Dataset
+ Row │ store     date        employee_ID_length
+     │ identity  identity    identity           
+     │ String?   Date?       Int64?             
+─────┼──────────────────────────────────────────
+   1 │ A         2019-10-01                   1
+   2 │ A         2019-10-02                   2
+   3 │ A         2019-10-03                   3
+   4 │ A         2019-10-04                   4
+   5 │ A         2019-10-05                   2
+   6 │ B         2019-10-01                   1
+   7 │ B         2019-10-02                   2
+   8 │ B         2019-10-03                   3
+   9 │ B         2019-10-04                   4
+  10 │ B         2019-10-05                   2
+```
+
+## `for loops`
 
 * [map select rows to a new column](https://stackoverflow.com/questions/69920121/map-select-rows-to-a-new-column) :  I want to use rows with names Becks, Campbell, Crows as a separate column to name the entries below them.
 
@@ -215,10 +262,10 @@ julia> function replace_with_prev(x,y)
        end
 f1 (generic function with 2 methods)
 julia> @chain ds begin
-            modify!((1,2)=>replace_with_prev=>:name) # find previous name
-            dropmissing!(2) # drop unwanted rows
-            select!(:name, :) # rearrange columns
-         end
+         modify!((1,2)=>replace_with_prev=>:name) # find previous name
+         dropmissing!(2) # drop unwanted rows
+         select!(:name, :) # rearrange columns
+      end
 6×5 Dataset
  Row │ name      x1        x2        x3        x4       
      │ identity  identity  identity  identity  identity
