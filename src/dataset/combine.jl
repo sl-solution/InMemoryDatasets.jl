@@ -10,13 +10,14 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
 end
 
 function normalize_combine!(offset, outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:NTuple{2, ColumnIndex},
+                            @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
                                                     <:Pair{<:Union{Function},
                                                         <:Union{Symbol, AbstractString}}})
-                                                        )
+                                                        ) where N
     src, (fun, dst) = sel
+    N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
     _check_ind_and_add!(outidx, Symbol(dst))
-    return (_names(idx)[idx[src[1]]], _names(idx)[idx[src[2]]]) => fun => Symbol(dst)
+    return ntuple(i -> _names(idx)[idx[src[i]]], N) => fun => Symbol(dst)
 end
 
 # col => fun => dst, the job is to create col => fun => :dst
@@ -37,19 +38,28 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
                                                     <:Union{Function}}))
 
     src, fun = sel
-    _check_ind_and_add!(outidx, Symbol(_names(idx)[idx[src]], "_", funname(fun)))
-    return _names(idx)[idx[src]] => fun => Symbol(_names(idx)[idx[src]], "_", funname(fun))
+    nname = Symbol(funname(fun), "_", _names(idx)[idx[src]])
+    _check_ind_and_add!(outidx, nname)
+    return _names(idx)[idx[src]] => fun => nname
 end
 
 function normalize_combine!(offset, outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:NTuple{2, ColumnIndex},
-                                                    <:Union{Function}}))
+                            @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                                                    <:Union{Function}})) where N
 
     src, fun = sel
+    N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
     col1, col2 = idx[src[1]], idx[src[2]]
     var1, var2 = _names(idx)[col1], _names(idx)[col2]
-    _check_ind_and_add!(outidx, Symbol(var1,"_", var2, "_", funname(fun)))
-    return (var1, var2) => fun => Symbol(var1,"_", var2, "_", funname(fun))
+    if N > 2
+        nname = Symbol(funname(fun), "_", var1, "_", var2, "_etc")
+    else
+        nname = Symbol(funname(fun), "_", var1, "_", var2)
+    end
+
+
+    _check_ind_and_add!(outidx, nname)
+    return ntuple(i -> _names(idx)[idx[src[i]]], N) => fun => nname
 end
 
 
@@ -65,7 +75,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
         else
             colsidx = outidx[sel.first]
         end
-        dsc_sym = Symbol(_names(outidx)[outidx[sel.first]], "_", funname(sel.second[1].args[1]))
+        dsc_sym = Symbol(funname(sel.second[1].args[1]), "_", _names(outidx)[outidx[sel.first]])
         _check_ind_and_add!(outidx, dsc_sym )
         return _names(outidx)[outidx[colsidx]] => sel.second[1] => dsc_sym
     end
@@ -82,7 +92,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
         else
             colsidx = outidx[sel.first]
         end
-         dsc_sym = Symbol(_names(outidx)[outidx[sel.first]], "_", funname(sel.second.args[1]))
+         dsc_sym = Symbol(funname(sel.second.args[1]), "_", _names(outidx)[outidx[sel.first]])
         _check_ind_and_add!(outidx, dsc_sym )
         return _names(outidx)[outidx[colsidx]] => sel.second => dsc_sym
     end
@@ -303,7 +313,7 @@ function _check_mutliple_rows_for_each_group(ds, ms)
     for i in 1:length(ms)
         # byrow are not checked since they are not going to modify the number of rows
         if ms[i].first isa Tuple
-            T = return_type(ms[i].second.first, [ds[!, ms[i].first[1]].val, ds[!, ms[i].first[2]].val])
+            T = return_type(ms[i].second.first, ntuple(j-> ds[!, ms[i].first[j]].val, length(ms[i].first)))
             if T <: AbstractVector
                 return i
             end
@@ -340,11 +350,11 @@ function _compute_the_mutli_row_trans!(special_res, new_lengths, x, nrows, _f, _
         new_lengths[g] = length(special_res[g])
     end
 end
-function _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, x, y, nrows, _f, _first_vector_res, starts, ngroups)
+function _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts, ngroups)
     Threads.@threads for g in 1:ngroups
         lo = starts[g]
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
-        special_res[g] = _f(view(x, lo:hi), view(y, lo:hi))
+        special_res[g] = do_call(_f, x, lo:hi)
         new_lengths[g] = length(special_res[g])
     end
 end
@@ -451,7 +461,7 @@ function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths
     push!(res, _res)
     return _res
 end
-function _add_one_col_combine_tuple!(res, _res, in_x, in_y, _f, starts, ngroups, new_lengths, total_lengths, nrows)
+function _add_one_col_combine_tuple!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows)
     # make sure lo and hi are not defined any where outside the following loop
     Threads.@threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
@@ -460,7 +470,7 @@ function _add_one_col_combine_tuple!(res, _res, in_x, in_y, _f, starts, ngroups,
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         l1 = new_lengths[g] - length(counter) + 1
         h1 = new_lengths[g]
-        _tmp_res = _f(view(in_x, lo:hi),view(in_y, lo:hi))
+        _tmp_res = do_call(_f, in_x, lo:hi)
         check_scalar = _is_scalar(_tmp_res, length(l1:h1))
         if check_scalar
             fill!(view(_res,l1:h1), _tmp_res)
@@ -559,10 +569,10 @@ function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_look
         throw(ArgumentError("`combine` doesn't support $(msfirst=>mssecond=>mslast) combination"))
     end
 end
-function _combine_f_barrier_tuple(fromds1, fromds2, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
-    T = _check_the_output_type([fromds1, fromds2], mssecond)
+function _combine_f_barrier_tuple(fromds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+    T = _check_the_output_type(fromds, mssecond)
     _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-    _add_one_col_combine_tuple!(_columns(newds), _res, fromds1, fromds2, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds1))
+    _add_one_col_combine_tuple!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds[1]))
 
 end
 
@@ -595,7 +605,7 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false)
     else
         if ms[_first_vector_res].first isa Tuple
             CT = return_type(ms[_first_vector_res].second.first,
-                 [ds[!, ms[_first_vector_res].first[1]].val, ds[!, ms[_first_vector_res].first[2]].val])
+                 ntuple(i->_columns(ds)[index(ds)[ms[_first_vector_res].first[i]]], length(ms[_first_vector_res].first)))
         else
             CT = return_type(ms[_first_vector_res].second.first,
                  ds[!, ms[_first_vector_res].first].val)
@@ -604,7 +614,7 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false)
         new_lengths = Vector{Int}(undef, ngroups)
         # _columns(ds)[ms[_first_vector_res].first]
         if  ms[_first_vector_res].first isa Tuple
-            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first[1]]], _columns(ds)[index(ds)[ms[_first_vector_res].first[2]]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, ntuple(i->_columns(ds)[index(ds)[ms[_first_vector_res].first[i]]], length(ms[_first_vector_res].first)), nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
         else
             _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
         end
@@ -637,13 +647,13 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false)
     for i in 1:length(ms)
         if i == _first_vector_res
             if ms[i].first isa Tuple
-                _combine_f_barrier_special_tuple(special_res, [ds[!, ms[i].first[1]].val,ds[!, ms[i].first[2]].val], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_special_tuple(special_res, ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
             else
                 _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
             end
         else
             if ms[i].first isa Tuple
-                _combine_f_barrier_tuple(_columns(ds)[index(ds)[ms[i].first[1]]], _columns(ds)[index(ds)[ms[i].first[2]]] , newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_tuple(ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
             else
                 _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
             end
@@ -688,7 +698,7 @@ function combine_ds(ds::Dataset, @nospecialize(args...))
     else
         if ms[_first_vector_res].first isa Tuple
             CT = return_type(ms[_first_vector_res].second.first,
-                 [ds[!, ms[_first_vector_res].first[1]].val, ds[!, ms[_first_vector_res].first[2]].val])
+                 ntuple(i->_columns(ds)[index(ds)[ms[_first_vector_res].first[i]]], length(ms[_first_vector_res].first)))
         else
             CT = return_type(ms[_first_vector_res].second.first,
                  ds[!, ms[_first_vector_res].first].val)
@@ -697,7 +707,7 @@ function combine_ds(ds::Dataset, @nospecialize(args...))
         new_lengths = Vector{Int}(undef, ngroups)
         # _columns(ds)[ms[_first_vector_res].first]
         if  ms[_first_vector_res].first isa Tuple
-            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first[1]]], _columns(ds)[index(ds)[ms[_first_vector_res].first[2]]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, ntuple(i->_columns(ds)[index(ds)[ms[_first_vector_res].first[i]]], length(ms[_first_vector_res].first)), nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
         else
             _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
         end
@@ -716,13 +726,13 @@ function combine_ds(ds::Dataset, @nospecialize(args...))
     for i in 1:length(ms)
         if i == _first_vector_res
             if ms[i].first isa Tuple
-                _combine_f_barrier_special_tuple(special_res, [ds[!, ms[i].first[1]].val,ds[!, ms[i].first[2]].val], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_special_tuple(special_res, ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
             else
                 _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
             end
         else
             if ms[i].first isa Tuple
-                _combine_f_barrier_tuple(_columns(ds)[index(ds)[ms[i].first[1]]], _columns(ds)[index(ds)[ms[i].first[2]]] , newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_tuple(ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
             else
                 _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
             end

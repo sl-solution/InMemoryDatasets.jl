@@ -1,5 +1,5 @@
 # modified return_type to suit for our purpose
-function return_type(f::Function, x::AbstractVector)
+function return_type(f::Function, x)
     CT = nonmissingtype(eltype(x))
     if CT <: AbstractVector
         return return_type_tuple(f, x)
@@ -18,17 +18,16 @@ function return_type(f::Function, x::AbstractVector)
     T
 end
 
-function return_type_tuple(f::Function, x::AbstractVector)
-    CT1 = nonmissingtype(eltype(x[1]))
-    CT2 = nonmissingtype(eltype(x[2]))
-    T = Core.Compiler.return_type(f, (Vector{CT1}, Vector{CT2}, ))
+function return_type_tuple(f::Function, x)
+    CT = ntuple(i -> nonmissingtype(eltype(x[i])), length(x))
+    T = Core.Compiler.return_type(f, ntuple(i->Vector{CT[i]}, length(x)))
     # workaround for SubArray type
     if T <: SubArray
-        return Core.Compiler.return_type(f, (typeof(x), ))
+        return Core.Compiler.return_type(f, typeof.(x))
     elseif T <: AbstractVector
         T = AbstractVector{Union{Missing, eltype(T)}}
     elseif T <: Tuple
-        T = Union{Missing, Core.Compiler.return_type(f, (Vector{eltype(x[1])}, Vector{eltype(x[2])}, ))}
+        T = Union{Missing, Core.Compiler.return_type(f, ntuple(i->Vector{eltype(x[i])}, length(x)))}
     else
         T = Union{Missing, T}
     end
@@ -200,6 +199,24 @@ function _calculate_ends(groups, ngroups, ::Val{T}) where T
     START_END(false, length(groups), cumsum!(where, where))
 end
 
+
+# From DataFrames.jl
+
+function do_call(f::Base.Callable, incols::NTuple{2, AbstractVector}, r)
+    return f(view(incols[1], r), view(incols[2], r))
+end
+
+function do_call(f::Base.Callable, incols::NTuple{3, AbstractVector}, r)
+    return f(view(incols[1], r), view(incols[2], r),  view(incols[3], r))
+end
+
+function do_call(f::Base.Callable, incols::NTuple{4, AbstractVector}, r)
+    return f(view(incols[1], r), view(incols[2], r),  view(incols[3], r), view(incols[4], r))
+end
+
+function do_call(f::Base.Callable, incols::Tuple, r)
+    return f(map(c -> view(c, r), incols)...)
+end
 
 # Date & Time should be treated as integer
 _date_value(::Missing) = missing
@@ -509,7 +526,7 @@ function _find_starts_of_groups!(x, perm, f, inbits)
     Threads.@threads for i in 2:length(inbits)
         @inbounds if !inbits[i]
 		inbits[i] = !isequal(f(x[perm[i]]), f(x[perm[i-1]]))
-	end										
+	end
     end
 end
 # function _find_starts_of_groups!(x, perm, f, inbits, starts, ngroups)

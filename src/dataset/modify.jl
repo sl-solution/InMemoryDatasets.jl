@@ -48,13 +48,14 @@ end
 
 # (col1, col2) => fun => dst, the job is to create (col1, col2) => fun => :dst
 function normalize_modify!(outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:NTuple{2, ColumnIndex},
+                            @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
                                                     <:Pair{<:Union{Base.Callable},
                                                         <:Union{Symbol, AbstractString}}})
-                                                        )
+                                                        ) where N
     src, (fun, dst) = sel
+    N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
     _check_ind_and_add!(outidx, Symbol(dst))
-    return (outidx[src[1]], outidx[src[2]]) => fun => Symbol(dst)
+    return ntuple(i->outidx[src[i]], N) => fun => Symbol(dst)
 end
 
 # col => fun, the job is to create col => fun => :colname
@@ -68,14 +69,21 @@ end
 
 # (col1, col2) => fun, the job is to create (col1, col2) => fun => :colname
 function normalize_modify!(outidx::Index, idx::Index,
-                            @nospecialize(sel::Pair{<:NTuple{2, ColumnIndex},
-                                                    <:Union{Base.Callable}}))
+                            @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                                                    <:Union{Base.Callable}})) where N
 
     src, fun = sel
+    N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
     col1, col2 = outidx[src[1]], outidx[src[2]]
     var1, var2 = _names(outidx)[col1], _names(outidx)[col2]
-    _check_ind_and_add!(outidx, Symbol(funname(sel.second), "_", var1, "_", var2))
-    return (outidx[src[1]], outidx[src[2]]) => fun => Symbol(funname(sel.second), "_", var1, "_", var2)
+    if N > 2
+        nname = Symbol(funname(sel.second), "_", var1, "_", var2, "_etc")
+    else
+        nname = Symbol(funname(sel.second), "_", var1, "_", var2)
+    end
+
+    _check_ind_and_add!(outidx, nname)
+    return ntuple(i->outidx[src[i]], length(src)) => fun => nname
 end
 
 
@@ -342,8 +350,8 @@ function _modify_single_var!(ds, _f, x, dst)
     _res = _f(x)
     _resize_result!(ds, _res, dst)
 end
-function _modify_single_tuple_var!(ds, _f, x, y, dst)
-    _res = _f(x, y)
+function _modify_single_tuple_var!(ds, _f, x, dst)
+    _res = _f(x...)
     _resize_result!(ds, _res, dst)
 end
 
@@ -363,7 +371,7 @@ end
 function _modify_f_barrier(ds, msfirst, mssecond, mslast)
     if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
         if msfirst isa NTuple
-            _modify_single_tuple_var!(ds, mssecond, _columns(ds)[msfirst[1]], _columns(ds)[msfirst[2]], mslast)
+            _modify_single_tuple_var!(ds, mssecond, ntuple(i -> _columns(ds)[msfirst[i]], length(msfirst)), mslast)
         else
             _modify_single_var!(ds, mssecond, _columns(ds)[msfirst], mslast)
         end
@@ -393,9 +401,9 @@ end
 
 function _check_the_output_type(ds::Dataset, ms)
     if ms.first isa Tuple
-        CT = return_type(ms.second.first, [ds[!, ms.first[1]].val,ds[!, ms.first[2]].val])
+        CT = return_type(ms.second.first, ntuple(i -> _columns(ds)[ms.first[i]], length(ms.first)))
     else
-        CT = return_type(ms.second.first, ds[!, ms.first].val)
+        CT = return_type(ms.second.first, _columns(ds)[ms.first])
     end
     # TODO check other possibilities:
     # the result can be
@@ -432,11 +440,11 @@ function _modify_grouped_fill_one_col!(_res, x, _f, starts, ngroups, nrows)
     _res
 end
 
-function _modify_grouped_fill_one_col_tuple!(_res, x, y, _f, starts, ngroups, nrows)
+function _modify_grouped_fill_one_col_tuple!(_res, x, _f, starts, ngroups, nrows)
     Threads.@threads for g in 1:ngroups
         lo = starts[g]
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
-        _tmp_res = _f(view(x, lo:hi), view(y, lo:hi))
+        _tmp_res = do_call(_f, x, lo:hi)
         resize_col = _is_scalar(_tmp_res, length(lo:hi))
         if resize_col
             fill!(view(_res, lo:hi), _tmp_res)
@@ -453,7 +461,7 @@ function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast)
         T = _check_the_output_type(ds, msfirst=>mssecond=>mslast)
         _res = Tables.allocatecolumn(T, nrow(ds))
         if msfirst isa Tuple
-            _modify_grouped_fill_one_col_tuple!(_res, _columns(ds)[msfirst[1]],  _columns(ds)[msfirst[2]], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
+            _modify_grouped_fill_one_col_tuple!(_res, ntuple(i->_columns(ds)[msfirst[i]], length(msfirst)), mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
         else
             _modify_grouped_fill_one_col!(_res, _columns(ds)[msfirst], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
         end
