@@ -468,3 +468,60 @@ end
         dst_t = Dataset(_c1 = [.4, 1.0, 0], _c1_1 = [.5, .5, 0])
         @test dst == dst_t
 end
+
+@testset "flatten  column" begin
+    ds_vec = Dataset(a = [1, 2], b = [[1, 2], [3, 4]])
+    ds_tup = Dataset(a = [1, 2], b = [(1, 2), (3, 4)])
+    ref = Dataset(a = [1, 1, 2, 2], b = [1, 2, 3, 4])
+    @test flatten(ds_vec, :b) == flatten(ds_tup, :b) == ref
+    @test flatten(ds_vec, "b") == flatten(ds_tup, "b") == ref
+    ds_mixed_types = Dataset(a = [1, 2], b = [[1, 2], ["x", "y"]])
+    ref_mixed_types = Dataset(a = [1, 1, 2, 2], b = [1, 2, "x", "y"])
+    @test flatten(ds_mixed_types, :b) == ref_mixed_types
+    ds_three = Dataset(a = [1, 2, 3], b = [[1, 2], [10, 20], [100, 200, 300]])
+    ref_three = Dataset(a = [1, 1, 2, 2, 3, 3, 3], b = [1, 2, 10, 20, 100, 200, 300])
+    @test flatten(ds_three, :b) == ref_three
+    @test flatten(ds_three, "b") == ref_three
+    ds_gen = Dataset(a = [1, 2], b = [(i for i in 1:5), (i for i in 6:10)])
+    ref_gen = Dataset(a = [fill(1, 5); fill(2, 5)], b = collect(1:10))
+    @test flatten(ds_gen, :b) == ref_gen
+    @test flatten(ds_gen, "b") == ref_gen
+    ds_miss = Dataset(a = [1, 2], b = [Union{Missing, Int}[1, 2], Union{Missing, Int}[3, 4]])
+    ref = Dataset(a = [1, 1, 2, 2], b = [1, 2, 3, 4])
+    @test flatten(ds_miss, :b) == ref
+    @test flatten(ds_miss, "b") == ref
+    v1 = [[1, 2], [3, 4]]
+    v2 = [[5, 6], [7, 8]]
+    v = [v1, v2]
+    ds_vec_vec = Dataset(a = [1, 2], b = v)
+    ref_vec_vec = Dataset(a = [1, 1, 2, 2], b = [v1 ; v2])
+    @test flatten(ds_vec_vec, :b) == ref_vec_vec
+    @test flatten(ds_vec_vec, "b") == ref_vec_vec
+    ds_cat = Dataset(a = [1, 2], b = [CategoricalArray([1, 2]), CategoricalArray([1, 2])])
+    ds_flat_cat = flatten(ds_cat, :b)
+    ref_cat = Dataset(a = [1, 1, 2, 2], b = [1, 2, 1, 2])
+    @test ds_flat_cat == ref_cat
+    @test ds_flat_cat.b.val isa CategoricalArray
+
+    ds = Dataset(a = [1, 2], b = [[1, 2], [3, 4]], c = [[5, 6], [7, 8]])
+    @test flatten(ds, []) == ds
+    ref = Dataset(a = [1, 1, 2, 2], b = [1, 2, 3, 4], c = [5, 6, 7, 8])
+    @test flatten(ds, [:b, :c]) == ref
+    @test flatten(ds, [:c, :b]) == ref
+    @test flatten(ds, ["b", "c"]) == ref
+    @test flatten(ds, ["c", "b"]) == ref
+    @test flatten(ds, 2:3) == ref
+    @test flatten(ds, r"[bc]") == ref
+    @test flatten(ds, Not(:a)) == ref
+    @test flatten(ds, Between(:b, :c)) == ref
+    ds_allcols = Dataset(b = [[1, 2], [3, 4]], c = [[5, 6], [7, 8]])
+    ref_allcols = Dataset(b = [1, 2, 3, 4], c = [5, 6, 7, 8])
+    @test flatten(ds_allcols, :) == ref_allcols
+    ds_bad = Dataset(a = [1, 2], b = [[1, 2], [3, 4]], c = [[5, 6], [7]])
+    @test_throws ArgumentError flatten(ds_bad, [:b, :c])
+    ds_vec = Dataset(a = [1, missing], b = [[1, missing], [3, 4]])
+    ds_tup = Dataset(a = [1, missing], b = [(1, missing), (3, 4)])
+    ref = Dataset(a = [1, 1, missing, missing], b = [1, missing, 3, 4])
+    @test flatten(ds_vec, :b) == flatten(ds_tup, :b) == ref
+    @test flatten(ds_vec, "b") == flatten(ds_tup, "b") == ref
+end

@@ -1587,23 +1587,23 @@ julia> flatten(ds1, :b)
 4×3 Dataset
  Row │ a         b         c
      │ identity  identity  identity
-     │ Int64?    Any       Array…?
+     │ Int64?    Int64?    Array…?
 ─────┼──────────────────────────────
-   1 │        1  1         [5, 6]
-   2 │        1  2         [5, 6]
-   3 │        2  3         [7, 8]
-   4 │        2  4         [7, 8]
+   1 │        1         1  [5, 6]
+   2 │        1         2  [5, 6]
+   3 │        2         3  [7, 8]
+   4 │        2         4  [7, 8]
 
 julia> flatten(ds1, [:b, :c])
 4×3 Dataset
  Row │ a         b         c
      │ identity  identity  identity
-     │ Int64?    Any       Any
+     │ Int64?    Int64?    Int64?
 ─────┼──────────────────────────────
-   1 │        1  1         5
-   2 │        1  2         6
-   3 │        2  3         7
-   4 │        2  4         8
+   1 │        1         1         5
+   2 │        1         2         6
+   3 │        2         3         7
+   4 │        2         4         8
 
 julia> ds2 = Dataset(a = [1, 2], b = [("p", "q"), ("r", "s")])
 2×2 Dataset
@@ -1618,7 +1618,7 @@ julia> flatten(ds2, :b)
 4×2 Dataset
  Row │ a         b
      │ identity  identity
-     │ Int64?    Any
+     │ Int64?    String?
 ─────┼────────────────────
    1 │        1  p
    2 │        1  q
@@ -1638,49 +1638,125 @@ julia> flatten(ds3, [:b, :c])
 ERROR: ArgumentError: Lengths of iterables stored in columns :b and :c are not the same in row 2
 ```
 """
+flatten(ds, cols)
+#
+# function flatten(ds::AbstractDataset,
+#                  cols::Union{ColumnIndex, MultiColumnIndex})
+#     # Create Dataset
+#     _check_consistency(ds)
+#
+#     idxcols = index(ds)[cols]
+#     isempty(idxcols) && return copy(ds)
+#     col1 = first(idxcols)
+#     lengths = length.(_columns(ds)[col1])
+#     for col in idxcols
+#         v = _columns(ds)[col]
+#         if any(x -> length(x[1]) != x[2], zip(v, lengths))
+#             r = findfirst(x -> x != 0, length.(v) .- lengths)
+#             colnames = _names(ds)
+#             throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
+#                                 "and :$(colnames[col]) are not the same in row $r"))
+#         end
+#     end
+#
+#     new_ds = similar(ds[!, Not(cols)], sum(lengths))
+#     for name in _names(new_ds)
+#         repeat_lengths!(new_ds[!, name].val, ds[!, name].val, lengths)
+#     end
+#     length(idxcols) > 1 && sort!(idxcols)
+#     for col in idxcols
+#         col_to_flatten = _columns(ds)[col]
+#         flattened_col = col_to_flatten isa AbstractVector{<:AbstractVector} ?
+#             reduce(vcat, col_to_flatten) :
+#             collect(Iterators.flatten(col_to_flatten))
+#
+#         insertcols!(new_ds, col, _names(ds)[col] => flattened_col)
+#     end
+#     setformat!(new_ds, index(ds).format)
+#     setinfo!(new_ds, _attributes(ds).meta.info[])
+#     _reset_grouping_info!(new_ds)
+#     new_ds
+#     # TODO actually the grouping info can be kept but needs more work, since the starts would change
+#     # if idxcols ∈ Ref(index(ds).sortedcols)
+#     #     return new_ds
+#     # else
+#     #     _copy_grouping_info!(new_ds, ds)
+#     #     return new_ds
+#     # end
+# end
+
+
+_ELTYPE(x) = eltype(x)
+_ELTYPE(::Missing) = Missing
+_LENGTH(x) = length(x)
+_LENGTH(::Missing) = 1
+
 function flatten(ds::AbstractDataset,
                  cols::Union{ColumnIndex, MultiColumnIndex})
-    # Create Dataset
-    _check_consistency(ds)
+     _check_consistency(ds)
 
-    idxcols = index(ds)[cols]
-    isempty(idxcols) && return copy(ds)
-    col1 = first(idxcols)
-    lengths = length.(_columns(ds)[col1])
-    for col in idxcols
-        v = _columns(ds)[col]
-        if any(x -> length(x[1]) != x[2], zip(v, lengths))
-            r = findfirst(x -> x != 0, length.(v) .- lengths)
-            colnames = _names(ds)
-            throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
-                                "and :$(colnames[col]) are not the same in row $r"))
+     idxcols = index(ds)[cols]
+     isempty(idxcols) && return copy(ds)
+     col1 = first(idxcols)
+     lengths = _LENGTH.(_columns(ds)[col1])
+     for col in idxcols
+         v = _columns(ds)[col]
+         if any(x -> _LENGTH(x[1]) != x[2], zip(v, lengths))
+             r = findfirst(x -> x != 0, _LENGTH.(v) .- lengths)
+             colnames = _names(ds)
+             throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
+                                 "and :$(colnames[col]) are not the same in row $r"))
+         end
+     end
+     new_total = sum(lengths)
+     new_ds = similar(ds[!, Not(cols)], new_total)
+     for name in _names(new_ds)
+        repeat_lengths_v2!(new_ds[!, name].val, ds[!, name].val, lengths)
+     end
+     length(idxcols) > 1 && sort!(idxcols)
+     for col in idxcols
+         col_to_flatten = _columns(ds)[col]
+         T = mapreduce(_ELTYPE, promote_type, col_to_flatten)
+         _res = allocatecol(T, new_total)
+         _fill_flatten!(_res, col_to_flatten, lengths)
+         insertcols!(new_ds, col, _names(ds)[col] => _res)
+     end
+     setformat!(new_ds, copy(index(ds).format))
+     setinfo!(new_ds, _attributes(ds).meta.info[])
+     _reset_grouping_info!(new_ds)
+     new_ds
+end
+
+
+function _fill_flatten!_barrier(_res, val, counter)
+    for j in val
+        _res[counter] = j
+        counter += 1
+    end
+    counter
+end
+
+function _fill_flatten!(_res, col_to_flatten, lengths)
+    counter = 1
+    for i in 1:length(col_to_flatten)
+        if ismissing(col_to_flatten[i])
+            _res[counter] = missing
+            counter += 1
+        else
+            counter = _fill_flatten!_barrier(_res, col_to_flatten[i], counter)
         end
     end
+end
 
-    new_ds = similar(ds[!, Not(cols)], sum(lengths))
-    for name in _names(new_ds)
-        repeat_lengths!(new_ds[!, name].val, ds[!, name].val, lengths)
+function repeat_lengths_v2!(longnew::AbstractVector, shortold::AbstractVector,
+                         lengths::AbstractVector{Int})
+    counter = 1
+    @inbounds for i in eachindex(shortold)
+        l = lengths[i]
+        # longnew[counter:(counter + l - 1)] .= Ref(shortold[i])
+        fill!(view(longnew, counter:(counter + l - 1)),  shortold[i])
+        counter += l
     end
-    length(idxcols) > 1 && sort!(idxcols)
-    for col in idxcols
-        col_to_flatten = _columns(ds)[col]
-        flattened_col = col_to_flatten isa AbstractVector{<:AbstractVector} ?
-            reduce(vcat, col_to_flatten) :
-            collect(Iterators.flatten(col_to_flatten))
-
-        insertcols!(new_ds, col, _names(ds)[col] => flattened_col)
-    end
-    setformat!(new_ds, index(ds).format)
-    setinfo!(new_ds, _attributes(ds).meta.info[])
-    _reset_grouping_info!(new_ds)
-    new_ds
-    # TODO actually the grouping info can be kept but needs more work, since the starts would change
-    # if idxcols ∈ Ref(index(ds).sortedcols)
-    #     return new_ds
-    # else
-    #     _copy_grouping_info!(new_ds, ds)
-    #     return new_ds
-    # end
 end
 
 function repeat_lengths!(longnew::AbstractVector, shortold::AbstractVector,
@@ -1692,6 +1768,7 @@ function repeat_lengths!(longnew::AbstractVector, shortold::AbstractVector,
         counter += l
     end
 end
+
 
 # Disallowed operations that are a common mistake
 
