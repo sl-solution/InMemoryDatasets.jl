@@ -86,6 +86,7 @@ julia> tds = transpose(groupby(ds, 1), :y)
    4 │        4  y            88   88    88~~~88       88       88~~~88
    5 │        5  y            88  .8D    88   88       88       88   88
    6 │        6  y            Y8888D'    YP   YP       YP       YP   YP
+   
 julia> mds = map(tds, x->replace(x, r"[^ ]"=>"#"), r"_c")
 6×6 Dataset
  Row │ g1        _variables_  _c1        _c2        _c3        _c4       
