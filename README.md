@@ -112,7 +112,7 @@ julia> byrow(mds, sum, r"_c", by = x->count(isequal('#'),x))
 julia> using Chain
 
 julia> @chain tds begin
-           vcat(_,_)
+           vcat(_, tds)
            sort!(:g1)
            flatten(r"_c")
            insertcols!(:g2=>repeat(1:9, 12))
