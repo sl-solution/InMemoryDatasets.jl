@@ -108,5 +108,62 @@ julia> byrow(mds, sum, r"_c", by = x->count(isequal('#'),x))
  20
  15
  17
+
+julia> using Chain
+
+julia> @chain tds begin
+           vcat(_,_)
+           sort(:g1)
+           flatten(r"_c")
+           insertcols!(:g2=>repeat(1:9, 12))
+           groupby(:g2)
+           transpose(r"_c")
+           modify!(r"_c"=>byrow(x->join(reverse(x))))
+           select!(r"row")
+           insertcols!(1, :g=>repeat(1:4, 9))
+           sort!(:g)
+       end
+36×2 Sorted Dataset
+ Sorted by: g
+ Row │ g         row_function
+     │ identity  identity
+     │ Int64?    String?
+─────┼────────────────────────
+   1 │        1  YY88888888dd
+   2 │        1  888888888888
+   3 │        1  88        88
+   4 │        1  88        88
+   5 │        1  88..    ``88
+   6 │        1  DD88888888bb
+   7 │        1  ''DD8888DD..
+   8 │        1
+   9 │        1
+  10 │        2  YY888888dd
+  11 │        2  PP88888888..
+  12 │        2      ~~oo''dd
+  13 │        2      ~~oo  88
+  14 │        2      ~~oo``bb
+  15 │        2  YY88888888..
+  16 │        2  PP888888bb
+  17 │        2
+  18 │        2
+  19 │        3          ``dd
+  20 │        3          ~~88
+  21 │        3          ~~88
+  22 │        3  YY8888888888
+  23 │        3  PP8888888888
+  24 │        3          ~~88
+  25 │        3          ~~88
+  26 │        3          ''bb
+  27 │        3
+  28 │        4
+  29 │        4  YY888888dd
+  30 │        4  PP88888888..
+  31 │        4      ~~oo''dd
+  32 │        4      ~~oo  88
+  33 │        4      ~~oo``bb
+  34 │        4  YY88888888..
+  35 │        4  PP888888bb
+  36 │        4
 ```
 
