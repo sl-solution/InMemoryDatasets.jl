@@ -74,7 +74,7 @@ julia> sort(ds, 2)
   23 │        5         4   88   88
   24 │        6         4   YP   YP
 
-julia> transpose(groupby(ds, 1), :y)
+julia> tds = transpose(groupby(ds, 1), :y)
 6×6 Dataset
  Row │ g1        _variables_  _c1        _c2        _c3        _c4       
      │ identity  identity     identity   identity   identity   identity  
@@ -86,5 +86,25 @@ julia> transpose(groupby(ds, 1), :y)
    4 │        4  y            88   88    88~~~88       88       88~~~88
    5 │        5  y            88  .8D    88   88       88       88   88
    6 │        6  y            Y8888D'    YP   YP       YP       YP   YP
+julia> mds = map(tds, x->replace(x, r"[^ ]"=>"*"), r"_c")
+6×6 Dataset
+ Row │ g1        _variables_  _c1        _c2        _c3        _c4       
+     │ identity  identity     identity   identity   identity   identity  
+     │ Int64?    String?      String?    String?    String?    String?   
+─────┼───────────────────────────────────────────────────────────────────
+   1 │        1  y            *******     *****     ********     *****
+   2 │        2  y            **  ***    *** ***    ********    *** ***
+   3 │        3  y            **   **    *******       **       *******
+   4 │        4  y            **   **    *******       **       *******
+   5 │        5  y            **  ***    **   **       **       **   **
+   6 │        6  y            *******    **   **       **       **   **
+julia> byrow(mds, sum, r"_c", by = x->count(isequal('*'),x))
+6-element Vector{Int64}:
+ 25
+ 25
+ 20
+ 20
+ 15
+ 17
 ```
 
