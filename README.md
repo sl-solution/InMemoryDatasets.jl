@@ -113,7 +113,7 @@ julia> using Chain
 
 julia> @chain tds begin
            vcat(_,_)
-           sort(:g1)
+           sort!(:g1)
            flatten(r"_c")
            insertcols!(:g2=>repeat(1:9, 12))
            groupby(:g2)
