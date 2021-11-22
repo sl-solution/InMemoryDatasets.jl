@@ -120,17 +120,28 @@ function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}; ty
         Threads.@threads for i in 1:length(x)
             ranges[i] = searchsorted_join(_fr, y, _fl(DataAPI.unwrap(x[i]))::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
         end
-    elseif type == :left
+    # TODO having another elseif branch is better for performance.
+    elseif type == :left || type == :rightstrict
         Threads.@threads for i in 1:length(x)
-            hi = searchsortedlast_join(_fr, y, _fl(DataAPI.unwrap(x[i]))::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+             _flx = _fl(DataAPI.unwrap(x[i]))::T1
+            hi = searchsortedlast_join(_fr, y, _flx, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
             lo = ranges[i].start
-            ranges[i] = lo:hi
+            if type === :rightstrict
+                ranges[i] = hi+1:ranges[i].stop
+            else
+                ranges[i] = lo:hi
+            end
         end
-    elseif type == :right
+    elseif type == :right || type == :leftstrict
         Threads.@threads for i in 1:length(x)
-            lo = searchsortedfirst_join(_fr, y, _fl(DataAPI.unwrap(x[i]))::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+            _flx = _fl(DataAPI.unwrap(x[i]))::T1
+            lo = searchsortedfirst_join(_fr, y, _flx, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
             hi = ranges[i].stop
-            ranges[i] = lo:hi
+            if type === :leftstrict
+                    ranges[i] = ranges[i].start:lo-1
+            else
+                ranges[i] = lo:hi
+            end
         end
     end
 end
@@ -146,7 +157,7 @@ function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, :
                 ranges[i] = searchsorted_join(identity, y, revmap_paval_ref, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
             end
         end
-    elseif type == :left
+    elseif type == :left || type == :rightstrict
         Threads.@threads for i in 1:length(x)
             revmap_paval_ref = get(invpool, _fl(DataAPI.unwrap(x[i]))::T1, missing)
             if ismissing(revmap_paval_ref)
@@ -155,10 +166,14 @@ function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, :
                 #_fr is identity
                 hi = searchsoredlast_join(identity, y, revmap_paval_ref, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
                 lo = ranges[i].start
-                ranges[i] = lo:hi
+                if type === :rightstrict
+                    ranges[i] = hi+1:ranges[i].stop
+                else
+                    ranges[i] = lo:hi
+                end
             end
         end
-    elseif type == :right
+    elseif type == :right || type == :leftstrict
         Threads.@threads for i in 1:length(x)
             revmap_paval_ref = get(invpool, _fl(DataAPI.unwrap(x[i]))::T1, missing)
             if ismissing(revmap_paval_ref)
@@ -167,7 +182,11 @@ function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, :
                 #_fr is identity
                 lo = searchsortedfirst_join(identity, y, revmap_paval_ref, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
                 hi = ranges[i].stop
-                range[i] = lo:hi
+                if type === :leftstrict
+                    ranges[i] = ranges[i].start:lo-1
+                else
+                    range[i] = lo:hi
+                end
             end
         end
     end
@@ -277,7 +296,7 @@ ISLE(::Missing, y) = false
 ISLE(::Missing, ::Missing) = false
 
 
-function _mark_lt_part!(inbits, x_l, x_r, ranges, r_perms, en, ::Val{T}) where T
+function _mark_lt_part!(inbits, x_l, x_r, _fl, _fr, ranges, r_perms, en, ::Val{T}; strict = false) where T
     revised_ends = zeros(T, length(en))
     Threads.@threads for i in 1:length(ranges)
         if length(ranges[i]) == 0
@@ -291,7 +310,11 @@ function _mark_lt_part!(inbits, x_l, x_r, ranges, r_perms, en, ::Val{T}) where T
         total = 0
         cnt = 1
         for j in ranges[i]
-            inbits[lo + cnt - 1] = ISLE(x_l[i], x_r[r_perms[j]])
+            if strict
+                inbits[lo + cnt - 1] = isless(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+            else
+                inbits[lo + cnt - 1] = ISLE(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+            end
             total += inbits[lo + cnt - 1]
             cnt += 1
         end
@@ -438,7 +461,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     dsl
 end
 
-function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true) where T
+function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false]) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -455,7 +478,19 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, onri
         end
 
         oncols_right = [oncols_right; first(right_range_cols)]
-        onright_range[1] !== nothing ? type = :left : type = :right
+        if onright_range[1] !== nothing
+            if strict_inequality[1]
+                type = :leftstrict
+            else
+                type = :left
+            end
+        else
+            if strict_inequality[2]
+                type = :rightstrict
+            else
+                type = :right
+            end
+        end
     else
         right_cols = setdiff(1:length(index(dsr)), oncols_right)
     end
@@ -477,7 +512,16 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, onri
     revised_ends = nothing
     if length(right_range_cols) == 2
         inbits = zeros(Bool, total_length)
-        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64))
+        # TODO any optimisation is needed for pa?
+        _fl = identity
+        _fr = identity
+        if mapformats[1]
+            _fl = getformat(dsl, left_range_col)
+        end
+        if mapformats[2]
+            _fr = getformat(dsr, right_range_cols[2])
+        end
+        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], _fl, _fr, ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64); strict = strict_inequality[2])
     end
     if length(right_range_cols) == 2
         total_length = sum(inbits)
