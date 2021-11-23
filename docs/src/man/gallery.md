@@ -99,8 +99,7 @@ julia> function fbfill!(ds, cols)
 
 ## Filtering
 
-* [Filtering based on conditions comparing one column to other columns](https://discourse.julialang.org/t/dataframe-filtering-based-on-conditions-comparing-one-column-to-other-columns/70802) :
-In the following example we like to filter rows where columns `:x1` and `:x2` are greater than `:x5`.
+* [Filtering based on conditions comparing one column to other columns](https://discourse.julialang.org/t/dataframe-filtering-based-on-conditions-comparing-one-column-to-other-columns/70802) : In the following example we like to filter rows where columns `:x1` and `:x2` are greater than `:x5`.
 
 ```julia
 julia> ds = Dataset(rand(10, 5), :auto)
