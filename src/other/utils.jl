@@ -226,7 +226,8 @@ _date_value(x) = x
 
 
 function _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, ::Val{T}) where T
-	_which_to_process, offsets = _find_groups_with_more_than_one_observation(prev_groups, prev_max_group, Val(T))
+	_which_to_process = _find_groups_with_more_than_one_observation(prev_groups, prev_max_group)[1]
+	offsets = findall(_which_to_process)
 	_sum_of_which_to_process = sum(_which_to_process)
 	Threads.@threads for i in 1:length(v)
 		@inbounds if _which_to_process[prev_groups[i]]
@@ -440,7 +441,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
     return prev_groups, gslots, prev_max_group
 end
 
-function _find_groups_with_more_than_one_observation(groups, ngroups, ::Val{T}) where T
+function _find_groups_with_more_than_one_observation(groups, ngroups)
     res = trues(length(groups))
     seen_groups = falses(ngroups)
 
@@ -449,7 +450,7 @@ function _find_groups_with_more_than_one_observation(groups, ngroups, ::Val{T}) 
 	fill!(seen_groups, false)
 
     _find_groups_with_more_than_one_observation_barrier!(res, groups, seen_groups)
-	seen_groups, findall(seen_groups)
+	seen_groups, res
 
 end
 

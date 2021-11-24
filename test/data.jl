@@ -58,6 +58,55 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
         unique!(ds, cols)
         @test ds == ds1
     end
+
+    ds = Dataset([Union{Missing, Int64}[3, 3, 1, 2, 2, 3, 3, 1, 1, 3], Union{Missing, Int64}[1, 1, 1, 1, 2, 1, 2, 2, 1, 3], Union{Missing, Int64}[1, 3, 1, 1, 2, 3, 2, 2, 1, 1]], :auto)
+    ds1 = unique(ds)
+    ds2 = unique(ds, keep = :last)
+    ds3 = unique(ds, keep = :none)
+    ds4 = unique(ds, 1, keep = :last)
+    ds5 = unique(ds, 1, keep = :none)
+    ds1_t = Dataset([Union{Missing, Int64}[3, 3, 1, 2, 2, 3, 1, 3], Union{Missing, Int64}[1, 1, 1, 1, 2, 2, 2, 3], Union{Missing, Int64}[1, 3, 1, 1, 2, 2, 2, 1]], :auto)
+    ds2_t = Dataset([Union{Missing, Int64}[3, 2, 2, 3, 3, 1, 1, 3], Union{Missing, Int64}[1, 1, 2, 1, 2, 2, 1, 3], Union{Missing, Int64}[1, 1, 2, 3, 2, 2, 1, 1]], :auto)
+    ds3_t = Dataset([Union{Missing, Int64}[3, 2, 2, 3, 1, 3], Union{Missing, Int64}[1, 1, 2, 2, 2, 3], Union{Missing, Int64}[1, 1, 2, 2, 2, 1]], :auto)
+    ds4_t = Dataset([Union{Missing, Int64}[2, 1, 3], Union{Missing, Int64}[2, 1, 3], Union{Missing, Int64}[2, 1, 1]], :auto)
+    ds5_t = Dataset([Union{Missing, Int64}[], Union{Missing, Int64}[], Union{Missing, Int64}[]], :auto)
+    ds6 = unique!(copy(ds))
+    ds7 = unique!(copy(ds), keep = :last)
+    ds8 = unique!(copy(ds), keep = :none)
+    ds9 = unique!(copy(ds), 1, keep = :last)
+    ds10 = unique!(copy(ds), 1, keep = :none)
+    @test ds1 == ds1_t
+    @test ds2 == ds2_t
+    @test ds3 == ds3_t
+    @test ds4 == ds4_t
+    @test ds5 == ds5_t
+    @test ds6 == ds1_t
+    @test ds7 == ds2_t
+    @test ds8 == ds3_t
+    @test ds9 == ds4_t
+    @test ds10 == ds5_t
+    mft(x) = x == 1 ? missing : x==2 ? 10 : 4
+    setformat!(ds, 1:3=>mft)
+    ds1 = unique(ds, 2:3, mapformats = true)
+    ds1_t = ds[[1,2,5,10], :]
+    ds2 = unique(ds, 1, mapformats = true)
+    ds2_t = ds[[1,3,4], :]
+    ds3 = unique(ds, 1, mapformats = true, keep = :last)
+    ds3_t = ds[[5,9,10], :]
+    ds4 = unique(ds,1,mapformats = true, keep = :none)
+    ds4_t = ds[[], :]
+    ds5 = unique(ds,1:2, mapformats = true, keep = :none)
+    ds5_t = ds[[4,5,7,8,10], :]
+    @test ds1 == ds1_t
+    @test ds2 == ds2_t
+    @test ds3 == ds3_t
+    @test ds4 == ds4_t
+    @test ds5 == ds5_t
+    @test byrow(compare(ds1, ds1_t, mapformats =true), all)|>all
+    @test byrow(compare(ds2, ds2_t, mapformats =true), all)|>all
+    @test byrow(compare(ds3, ds3_t, mapformats =true), all)|>all
+    @test byrow(compare(ds4, ds4_t, mapformats =true), all)|>all
+    @test byrow(compare(ds5, ds5_t, mapformats =true), all)|>all
 end
 
 @testset "completecases and dropmissing" begin

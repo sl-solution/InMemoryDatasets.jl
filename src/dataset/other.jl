@@ -605,48 +605,83 @@ _bool_mask(f) = x->f(x)::Union{Bool, Missing}
 
 
 # Unique cases
+function _unique_none_case(ds::Dataset, cols; mapformats = false)
+    if ncol(ds) == 0
+        throw(ArgumentError("finding duplicate rows in data set with no " *
+                            "columns is not allowed"))
+    end
+    groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats, stable = true)
+    _find_groups_with_more_than_one_observation(groups, ngroups)
+end
 
 # Modify Dataset
 function Base.unique!(ds::Dataset; mapformats = false, keep = :first)
-    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
-    deleteat!(ds, nonunique(ds, mapformats = mapformats, first = keep == :first))
+    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
+    if keep == :none
+        seen, res = _unique_none_case(ds, :,  mapformats = mapformats)
+        deleteat!(ds, res)
+        deleteat!(ds, seen)
+    else
+        deleteat!(ds, nonunique(ds, mapformats = mapformats, first = keep == :first))
+    end
 end
 function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first)
-    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
-    deleteat!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
+    if keep == :none
+        seen, res = _unique_none_case(ds, cols, mapformats = mapformats)
+        deleteat!(ds, res)
+        deleteat!(ds, seen)
+    else
+        deleteat!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+    end
 end
 
 function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
-    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
-    deleteat!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
+    if keep == :none
+        seen, res = _unique_none_case(ds, cols, mapformats = mapformats)
+        deleteat!(ds, res)
+        deleteat!(ds, seen)
+    else
+        deleteat!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+    end
 end
 
 # Unique rows of an Dataset.
 @inline function Base.unique(ds::AbstractDataset; view::Bool=false, mapformats = false, keep = :first)
-    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
-    rowidxs = (!).(nonunique(ds, mapformats = mapformats, first = keep == :first))
-    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
+    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
+    if keep == :none
+        seen, res = _unique_none_case(ds, :,  mapformats = mapformats)
+        rowidxs = .!res
+        return view ? Base.view(Base.view(ds, rowidxs, :), .!(seen), :) : (ds[rowidxs, :])[.!seen, :]
+    else
+        rowidxs = (!).(nonunique(ds, mapformats = mapformats, first = keep == :first))
+        return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
+    end
 end
 
 @inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false, mapformats = false, keep = :first)
-    !(keep in (:first, :last)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first or :last"))
-    rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
-    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
+    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
+    if keep == :none
+        seen, res = _unique_none_case(ds, cols,  mapformats = mapformats)
+        rowidxs = .!res
+        return view ? Base.view(Base.view(ds, rowidxs, :), .!(seen), :) : (ds[rowidxs, :])[.!seen, :]
+    else
+        rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+        return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
+    end
 end
 
 
 """
-    unique(ds::AbstractDataset; view::Bool=false)
-    unique(ds::AbstractDataset, cols; view::Bool=false)
-    unique!(ds::AbstractDataset)
-    unique!(ds::AbstractDataset, cols)
+    unique(ds::AbstractDataset, cols = : ; [mapformats = false, keep = :first, view::Bool=false])
+    unique!(ds::AbstractDataset, cols = : ; [mapformats = false, keep = :first, view::Bool=false])
 
-Return a data set containing only the first occurrence of unique rows in `ds`.
-When `cols` is specified, the returned `Dataset` contains complete rows,
-retaining in each case the first occurrence of a given combination of values
-in selected columns or their transformations. `cols` can be any column
-selector or transformation accepted by [`select`](@ref).
-
+Return a data set containing only the unique occurrence of unique rows in `ds` when `keep = :first` or `keep = :last`. The
+`keep` keyword argument detemines which occurrence of the unique value should be kept, i.e. when `keep = :first` the
+first occurrence of the unique value will be kept and when `keep = :last` the last occurrence will be kept. When `keep` is set to `:none`
+all duplicates will be dropped from the result. When `cols` is specified, the unique occurrence is detemined by given combination of values
+in selected columns. `cols` can be any column selector.
 
 For `unique`, if `view=false` a freshly allocated `Dataset` is returned,
 and if `view=true` then a `SubDataset` view into `ds` is returned.
@@ -656,9 +691,11 @@ and if `view=true` then a `SubDataset` view into `ds` is returned.
 See also [`nonunique`](@ref).
 
 # Arguments
-- `ds` : the AbstractDataset
+- `ds` :  AbstractDataset
 - `cols` :  column indicator (Symbol, Int, Vector{Symbol}, Regex, etc.)
 specifying the column(s) to compare.
+- `mapformats` : if it set to `true` the uniqueness of a values is based on its formatted value.
+- `keep` : indicates which occurrence of the duplicate values should be kept
 
 # Examples
 ```jldoctest
