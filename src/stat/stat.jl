@@ -36,7 +36,12 @@ Statistics.median!(x::AbstractArray{Union{T,Missing},1}) where T = stat_median!(
 Base.extrema(f, x::AbstractArray{Union{T,Missing},1}; threads = false) where T <: Union{INTEGERS, FLOATS, TimeType} = threads ? (hp_minimum(f, x), hp_maximum(f, x)) : (stat_minimum(f, x), stat_maximum(f, x))
 Base.extrema(x::AbstractArray{Union{T,Missing},1}; threads = false) where T  <: Union{INTEGERS, FLOATS, TimeType}= threads ? (hp_minimum(identity, x), hp_maximum(identity, x)) : (stat_minimum(identity, x), stat_maximum(identity, x))
 
-Base.argmax(f, x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_argmax(f, x)
-Base.argmax(x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_argmax(x)
-Base.argmin(f, x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_argmin(f, x)
-Base.argmin(x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_argmin(x)
+Base.argmax(f, x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmax(f, x)[2]
+Base.argmax(x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmax(x)[2]
+Base.argmin(f, x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmin(f, x)[2]
+Base.argmin(x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmin(x)[2]
+
+Base.findmax(f, x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmax(f, x)
+Base.findmax(x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmax(x)
+Base.findmin(f, x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmin(f, x)
+Base.findmin(x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmin(x)

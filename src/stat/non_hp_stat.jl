@@ -66,13 +66,12 @@ function _arg_minmax_barrier(x, minmaxval, f)
     end
 end
 
-#TODO why this allocate?
-function stat_argmax(f, x::AbstractArray{T,1}) where T
+function stat_findmax(f, x::AbstractArray{T,1}) where T
     isempty(x) && throw(ArgumentError("input vector cannot be empty"))
     maxval = stat_maximum(f, x)
-    _arg_minmax_barrier(x, maxval, f)
+    (maxval, _arg_minmax_barrier(x, maxval, f))
 end
-stat_argmax(x::AbstractArray{T,1}) where T = stat_argmax(identity, x)
+stat_findmax(x::AbstractArray{T,1}) where T = stat_findmax(identity, x)
 
 function stat_minimum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
     all(ismissing, view(x, lo:hi)) && return missing
@@ -81,13 +80,12 @@ function stat_minimum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
 end
 stat_minimum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_minimum(identity, x; lo = lo, hi = hi)
 
-#TODO why this allocate?
-function stat_argmin(f, x::AbstractArray{T,1}) where T
+function stat_findmin(f, x::AbstractArray{T,1}) where T
     isempty(x) && throw(ArgumentError("input vector cannot be empty"))
     minval = stat_minimum(f, x)
-    _arg_minmax_barrier(x, minval, f)
+    (minval, _arg_minmax_barrier(x, minval, f))
 end
-stat_argmin(x::AbstractArray{T,1}) where T = stat_argmin(identity, x)
+stat_findmin(x::AbstractArray{T,1}) where T = stat_findmin(identity, x)
 
 
 function stat_sum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: Union{Missing, INTEGERS, FLOATS}
