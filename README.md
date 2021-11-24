@@ -41,7 +41,7 @@ julia> ds = Dataset(g1 = g1, g2 = g2, y = y)
   22 │        6         2  YP   YP
   23 │        6         3     YP
   24 │        6         4   YP   YP
-  
+
 julia> sort(ds, 2)
 24×3 Sorted Dataset
  Sorted by: g2
@@ -86,7 +86,7 @@ julia> tds = transpose(groupby(ds, 1), :y)
    4 │        4  y            88   88    88~~~88       88       88~~~88
    5 │        5  y            88  .8D    88   88       88       88   88
    6 │        6  y            Y8888D'    YP   YP       YP       YP   YP
-   
+
 julia> mds = map(tds, x->replace(x, r"[^ ]"=>"#"), r"_c")
 6×6 Dataset
  Row │ g1        _variables_  _c1        _c2        _c3        _c4       
@@ -99,7 +99,7 @@ julia> mds = map(tds, x->replace(x, r"[^ ]"=>"#"), r"_c")
    4 │        4  y            ##   ##    #######       ##       #######
    5 │        5  y            ##  ###    ##   ##       ##       ##   ##
    6 │        6  y            #######    ##   ##       ##       ##   ##
-   
+
 julia> byrow(mds, sum, r"_c", by = x->count(isequal('#'),x))
 6-element Vector{Int64}:
  25
@@ -112,7 +112,7 @@ julia> byrow(mds, sum, r"_c", by = x->count(isequal('#'),x))
 julia> using Chain
 
 julia> @chain tds begin
-           vcat(_, tds)
+           vcat(tds)
            sort!(:g1)
            flatten(r"_c")
            insertcols!(:g2=>repeat(1:9, 12))
@@ -166,4 +166,3 @@ julia> @chain tds begin
   35 │        4  PP888888bb
   36 │        4
 ```
-
