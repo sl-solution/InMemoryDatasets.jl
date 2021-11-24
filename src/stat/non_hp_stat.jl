@@ -60,12 +60,35 @@ function stat_maximum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
 end
 stat_maximum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_maximum(identity, x; lo = lo, hi = hi)
 
+function _arg_minmax_barrier(x, minmaxval, f)
+    @inbounds for i in 1:length(x)
+        isequal(f(x[i]), minmaxval) && return i
+    end
+end
+
+#TODO why this allocate?
+function stat_argmax(f, x::AbstractArray{T,1}) where T
+    isempty(x) && throw(ArgumentError("input vector cannot be empty"))
+    maxval = stat_maximum(f, x)
+    _arg_minmax_barrier(x, maxval, f)
+end
+stat_argmax(x::AbstractArray{T,1}) where T = stat_argmax(identity, x)
+
 function stat_minimum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
     all(ismissing, view(x, lo:hi)) && return missing
     @inline _dmiss(x) = ismissing(f(x)) ? typemax(nonmissingtype(T)) : f(x)
     Base.mapreduce_impl(_dmiss, min, x, lo, hi)
 end
 stat_minimum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_minimum(identity, x; lo = lo, hi = hi)
+
+#TODO why this allocate?
+function stat_argmin(f, x::AbstractArray{T,1}) where T
+    isempty(x) && throw(ArgumentError("input vector cannot be empty"))
+    minval = stat_minimum(f, x)
+    _arg_minmax_barrier(x, minval, f)
+end
+stat_argmin(x::AbstractArray{T,1}) where T = stat_argmin(identity, x)
+
 
 function stat_sum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: Union{Missing, INTEGERS, FLOATS}
     all(ismissing, view(x, lo:hi)) && return f(first(x))
