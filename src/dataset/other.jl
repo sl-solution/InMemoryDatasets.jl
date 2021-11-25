@@ -817,8 +817,8 @@ julia> dropmissing!(ds, [:x, :y])
 ```
 """
 function dropmissing!(ds::Dataset,
-                      cols::Union{ColumnIndex, MultiColumnIndex}=:)
-    inds = completecases(ds, cols)
+                      cols::Union{ColumnIndex, MultiColumnIndex}=:; mapformats = false, threads = nrow(ds)>1000)
+    inds = completecases(ds, cols; mapformats = mapformats, threads = threads)
     inds .= .!(inds)
     deleteat!(ds, inds)
     ds
