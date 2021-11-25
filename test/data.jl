@@ -187,4 +187,21 @@ end
     ds = Dataset(b=b)
     @test eltype(dropmissing(ds).b) == Union{Int, Missing}
     @test eltype(dropmissing!(ds).b) == Union{Int, Missing}
+
+    ds = Dataset(x1 = [1,2,3,4,missing, 1], x2 = [4,4,4,missing, missing, missing])
+    fmt(x) = isequal(x, 1) ? missing : x
+    setformat!(ds, 1=>fmt)
+    @test completecases(ds, 1) == [true, true, true, true, false, true]
+    @test completecases(ds, 1, mapformats = true) == [false, true, true, true, false, false]
+    for i in 1:100
+        @test completecases(ds, 1, mapformats = true, threads = true) == [false, true, true, true, false, false]
+    end
+    @test completecases(ds, 1:2) == [true, true, true, false, false, false]
+    @test completecases(ds, 1:2, mapformats = true) == [false, true, true, false, false, false]
+    @test completecases(ds, [2,1]) == [true, true, true, false, false, false]
+    @test completecases(ds, [2,1], mapformats = true) == [false, true, true, false, false, false]
+    @test dropmissing(ds, :) == ds[[1,2,3], :]
+    @test dropmissing(ds, :, mapformats = true) == ds[[2,3], :]
+    @test dropmissing(ds, :, mapformats = true, view = true) == view(ds, 2:3, :)
+
 end

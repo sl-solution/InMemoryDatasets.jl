@@ -806,7 +806,7 @@ Base.last(ds::AbstractDataset, n::Integer) = ds[max(1, nrow(ds)-n+1):nrow(ds), :
 ##############################################################################
 
 """
-    completecases(ds::AbstractDataset, cols=:)
+    completecases(ds::AbstractDataset, cols=:; mapformats = false, threads = nrow(ds)>1000)
 
 Return a Boolean vector with `true` entries indicating rows without missing values
 (complete cases) in data set `ds`.
@@ -859,11 +859,22 @@ julia> completecases(ds, [:x, :y])
  1
 ```
 """
-completecases(ds::AbstractDataset, cols::MultiColumnIndex = :) = byrow(ds, all, cols, by = !ismissing)
-completecases(ds::AbstractDataset, col::ColumnIndex) = byrow(ds, all, [col], by = !ismissing)
+function completecases(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, threads = nrow(ds)>1000)
+    if mapformats
+        colsidx = index(ds)[cols]
+        by = Function[]
+        for j in 1:length(colsidx)
+            push!(by, !ismissing∘getformat(ds, colsidx[j]))
+        end
+        byrow(ds, all, cols, by = by, threads = threads)
+    else
+        byrow(ds, all, cols, by = !ismissing, threads = threads)
+    end
+end
+completecases(ds::AbstractDataset, col::ColumnIndex = :; mapformats = false, threads = nrow(ds)>1000) = completecases(ds, [col]; mapformats = mapformats, threads = threads)
 
 """
-    dropmissing(ds::AbstractDataset, cols=:; view::Bool=false)
+    dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, mapformats = false, threads = nrow(ds)>1000)
 
 Return a data set excluding rows with missing values in `ds`.
 
@@ -923,8 +934,8 @@ julia> dropmissing(ds, [:x, :y])
 """
 @inline function dropmissing(ds::AbstractDataset,
                              cols::Union{ColumnIndex, MultiColumnIndex}=:;
-                             view::Bool=false)
-    rowidxs = completecases(ds, cols)
+                             view::Bool=false, mapformats = false, threads = nrow(ds)>1000)
+    rowidxs = completecases(ds, cols; mapformats = mapformats, threads = threads)
     if view
         return Base.view(ds, rowidxs, :)
     else
