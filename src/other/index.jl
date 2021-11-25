@@ -660,6 +660,6 @@ function getformat(x::Index, y::UnitRange)
         throw(ArgumentError("some indices in $y are not valid index for the data set"))
     end
 end
-function getformat(x::SubIndex, idx::Integer)
+function getformat(x::SubIndex, idx)
     getformat(parent(x), parentcols(x, idx))
 end
