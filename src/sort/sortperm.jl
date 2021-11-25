@@ -212,7 +212,7 @@ function _fill_ranges_for_fast_int_sort!(ranges, _starts_vals)
     end
 end
 # T is either Int32 or Int64 based on how many rows ds has
-function ds_sort_perm(ds::Dataset, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a::Base.Sort.Algorithm,  ::Val{T}; skipcol = 0, skipcol_mkcopy = true, notsortpaforjoin = false, givenrange = nothing) where T
+function ds_sort_perm(ds, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a::Base.Sort.Algorithm,  ::Val{T}; skipcol = 0, skipcol_mkcopy = true, notsortpaforjoin = false, givenrange = nothing) where T
     @assert length(colsidx) == length(by) == length(rev) "each col should have all information about lt, by, and rev"
     stable = false
     # arrary to keep the permutation of rows
@@ -533,3 +533,37 @@ function _check_for_fast_sort(ds, colsidx, rev, mapformats; notsortpaforjoin = f
         return -1
     end
 end
+
+
+function _sortperm_v(ds::SubDataset, cols::MultiColumnIndex, rev = false; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true, notsortpaforjoin = false, givenrange = nothing)
+    colsidx = index(ds)[cols]
+    if rev isa AbstractVector
+        @assert length(rev) == length(colsidx) "length of rev and the number of selected columns must match"
+        revs = rev
+    else
+        revs = repeat([rev], length(colsidx))
+    end
+    by = Function[]
+
+    if mapformats
+        for j in 1:length(colsidx)
+            push!(by, getformat(ds, colsidx[j]))
+        end
+    else
+        for j in 1:length(colsidx)
+            push!(by, identity)
+        end
+    end
+    ranges, idx, last_valid_range, isstable = ds_sort_perm(ds, colsidx, by, revs, a, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64); skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy, notsortpaforjoin = notsortpaforjoin, givenrange = givenrange)
+    if stable && !isstable
+        if length(idx) == last_valid_range
+            return ranges, idx, last_valid_range
+        else
+            _stablise_sort!(ranges, idx, last_valid_range, a)
+            return ranges, idx, last_valid_range
+        end
+    else
+        return ranges, idx, last_valid_range
+    end
+end
+_sortperm_v(ds::SubDataset, col::ColumnIndex, rev = false; a = HeapSortAlg(), mapformats = true, stable = true, skipcol = 0, skipcol_mkcopy = true, notsortpaforjoin = false, givenrange = nothing) = _sortperm_v(ds, [col], rev, a = a, mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = skipcol_mkcopy, notsortpaforjoin = notsortpaforjoin, givenrange = givenrange)
