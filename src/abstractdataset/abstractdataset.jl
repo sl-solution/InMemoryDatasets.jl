@@ -871,7 +871,7 @@ function completecases(ds::AbstractDataset, cols::MultiColumnIndex = :; mapforma
         byrow(ds, all, cols, by = !ismissing, threads = threads)
     end
 end
-completecases(ds::AbstractDataset, col::ColumnIndex = :; mapformats = false, threads = nrow(ds)>1000) = completecases(ds, [col]; mapformats = mapformats, threads = threads)
+completecases(ds::AbstractDataset, col::ColumnIndex; mapformats = false, threads = nrow(ds)>1000) = completecases(ds, [col]; mapformats = mapformats, threads = threads)
 
 """
     dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, mapformats = false, threads = nrow(ds)>1000)
