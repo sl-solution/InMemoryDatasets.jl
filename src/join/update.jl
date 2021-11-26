@@ -29,10 +29,9 @@ function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright,
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
     idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
 
-    for j in 1:length(oncols_left)-1
+    for j in 1:length(oncols_left)
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
-    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left), uniquemode = uniquemode)
 
 
     for j in 1:length(right_cols)
