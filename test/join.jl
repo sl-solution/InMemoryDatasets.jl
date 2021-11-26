@@ -84,7 +84,13 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
     @test antijoin(name, job, on = :ID) == anti
     @test closejoin(classA, grades, on = :mark) == closeone
     @test closejoin(trades, quotes, on = :time, makeunique = true) == closefinance1
-
+    @test innerjoin(name, view(job, :, :), on = :ID) == inner
+    @test outerjoin(name, view(job, :, :), on = :ID) == outer
+    @test leftjoin(name, view(job, :, :), on = :ID) == left
+    @test semijoin(name, view(job, :, :), on = :ID) == semi
+    @test antijoin(name, view(job, :, :), on = :ID) == anti
+    @test closejoin(classA, view(grades, :, :), on = :mark) == closeone
+    @test closejoin(trades, view(quotes, :, :), on = :time, makeunique = true) == closefinance1
     # Join with no non-key columns
     on = [:ID]
     nameid = name[:, on]
@@ -95,12 +101,18 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
     @test leftjoin(nameid, jobid, on = :ID) == left[:, on]
     @test semijoin(nameid, jobid, on = :ID) == semi[:, on]
     @test antijoin(nameid, jobid, on = :ID) == anti[:, on]
+    @test innerjoin(nameid, view(jobid, :, :), on = :ID) == inner[:, on]
+    @test outerjoin(nameid, view(jobid, :, :), on = :ID) == outer[:, on]
+    @test leftjoin(nameid, view(jobid, :, :), on = :ID) == left[:, on]
+    @test semijoin(nameid, view(jobid, :, :), on = :ID) == semi[:, on]
+    @test antijoin(nameid, view(jobid, :, :), on = :ID) == anti[:, on]
 
     # Join on multiple keys
     ds1 = Dataset(A = 1, B = 2, C = 3)
     ds2 = Dataset(A = 1, B = 2, D = 4)
 
     @test innerjoin(ds1, ds2, on = [:A, :B]) == Dataset(A = 1, B = 2, C = 3, D = 4)
+    @test innerjoin(ds1, view(ds2, :, :), on = [:A, :B]) == Dataset(A = 1, B = 2, C = 3, D = 4)
 
     dsl = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
          Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
@@ -111,147 +123,201 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
     setformat!(dsr, 1=>isodd)
 
     left1 = leftjoin(dsl, dsr, on = :x1)
+    left1_v = leftjoin(dsl, view(dsr, :, [2,1]), on = :x1)
+
     left1_t = Dataset([Union{Missing, Int64}[10, 10, 3, 4, 4, 1, 5, 5, 6, 6, 7, 2, 2, 10, 10],
            Union{Missing, Int64}[10, 10, 3, 4, 4, 1, 5, 5, 6, 6, 7, 2, 2, 10, 10],
            Union{Missing, Int64}[3, 3, 6, 7, 7, 10, 10, 5, 10, 10, 9, 1, 1, 1, 1],
            Union{Missing, Int64}[1, 1, 2, 3, 3, 4, 5, 6, 7, 7, 8, 9, 9, 10, 10],
            Union{Missing, Float64}[100.0, 200.0, missing, 100.0, 200.0, missing, missing, missing, 100.0, 200.0, missing, 100.0, 200.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
     left2 = leftjoin(dsl, dsr, on = :x1, mapformats = [true, false])
+    left2_v = leftjoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [true, false])
+
     left2_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[100.0, missing, 100.0, missing, missing, missing, 100.0, missing, 100.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
     left3 = leftjoin(dsl, dsr, on = :x1, mapformats = [false, true])
+    left3_v = leftjoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, true])
+
     left3_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[missing, missing, missing, 100.0, 200.0, missing, missing, missing, missing, missing, missing]], ["x1", "x2", "x3", "row", "y"])
     left4 = leftjoin(dsl, dsr, on = :x1, mapformats = [false, false])
+    left4_v = leftjoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, false])
+
     left4_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[missing, 200.0, missing, 100.0, missing, missing, missing, missing, missing, missing]], ["x1", "x2", "x3", "row", "y"])
     inner1 = innerjoin(dsl, dsr, on = :x1)
+    inner1_v = innerjoin(dsl, view(dsr, :, [2,1]), on = :x1)
+
     inner1_t = Dataset([Union{Missing, Int64}[10, 10, 4, 4, 6, 6, 2, 2, 10, 10],
            Union{Missing, Int64}[10, 10, 4, 4, 6, 6, 2, 2, 10, 10],
            Union{Missing, Int64}[3, 3, 7, 7, 10, 10, 1, 1, 1, 1],
            Union{Missing, Int64}[1, 1, 3, 3, 7, 7, 9, 9, 10, 10],
            Union{Missing, Float64}[100.0, 200.0, 100.0, 200.0, 100.0, 200.0, 100.0, 200.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
     inner2 = innerjoin(dsl, dsr, on = :x1, mapformats = [true, false])
+    inner2_v = innerjoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [true, false])
+
     inner2_t = Dataset([ Union{Missing, Int64}[10, 4, 6, 2, 10],
            Union{Missing, Int64}[10, 4, 6, 2, 10],
            Union{Missing, Int64}[3, 7, 10, 1, 1],
            Union{Missing, Int64}[1, 3, 7, 9, 10],
            Union{Missing, Float64}[100.0, 100.0, 100.0, 100.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
     inner3 = innerjoin(dsl, dsr, on = :x1, mapformats = [false, true])
+    inner3_v = innerjoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, true])
+
     inner3_t = Dataset([Union{Missing, Int64}[1, 1],
            Union{Missing, Int64}[1, 1],
            Union{Missing, Int64}[10, 10],
            Union{Missing, Int64}[4, 4],
            Union{Missing, Float64}[100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
     inner4 = innerjoin(dsl, dsr, on = :x1, mapformats = [false, false])
+    inner4_v = innerjoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, false])
+
     inner4_t = Dataset([Union{Missing, Int64}[3, 1],
            Union{Missing, Int64}[3, 1],
            Union{Missing, Int64}[6, 10],
            Union{Missing, Int64}[2, 4],
            Union{Missing, Float64}[200.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
     outer1 = outerjoin(dsl, dsr, on = :x1)
+    outer1_v = outerjoin(dsl, view(dsr, :, [2,1]), on = :x1)
+
     outer1_t = Dataset([Union{Missing, Int64}[10, 10, 3, 4, 4, 1, 5, 5, 6, 6, 7, 2, 2, 10, 10],
            Union{Missing, Int64}[10, 10, 3, 4, 4, 1, 5, 5, 6, 6, 7, 2, 2, 10, 10],
            Union{Missing, Int64}[3, 3, 6, 7, 7, 10, 10, 5, 10, 10, 9, 1, 1, 1, 1],
            Union{Missing, Int64}[1, 1, 2, 3, 3, 4, 5, 6, 7, 7, 8, 9, 9, 10, 10],
            Union{Missing, Float64}[100.0, 200.0, missing, 100.0, 200.0, missing, missing, missing, 100.0, 200.0, missing, 100.0, 200.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
     outer2 = outerjoin(dsl, dsr, on = :x1, mapformats = [false, true])
+    outer2_v = outerjoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, true])
+
     outer2_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[missing, missing, missing, 100.0, 200.0, missing, missing, missing, missing, missing, missing]], ["x1", "x2", "x3", "row", "y"])
     outer3 = outerjoin(dsl, dsr, on = :x1, mapformats = [true, false])
+    outer3_v = outerjoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [true, false])
+
     outer3_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10, 3],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10, missing],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1, missing],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, missing],
            Union{Missing, Float64}[100.0, missing, 100.0, missing, missing, missing, 100.0, missing, 100.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
     outer4 = outerjoin(dsl, dsr, on = :x1, mapformats = [false, false])
+    outer4_v = outerjoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, false])
+
     outer4_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[missing, 200.0, missing, 100.0, missing, missing, missing, missing, missing, missing]], ["x1", "x2", "x3", "row", "y"])
     contains1 = contains(dsl, dsr, on = :x1)
+    contains1_v = contains(dsl, view(dsr, :, [2,1]), on = :x1)
+
     contains1_t = Bool[1, 0, 1, 0, 0, 0, 1, 0, 1, 1]
     contains2 = contains(dsl, dsr, on = :x1, mapformats = [true, false])
+    contains2_v = contains(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [true, false])
+
     contains2_t = Bool[1, 0, 1, 0, 0, 0, 1, 0, 1, 1]
     contains3 = contains(dsl, dsr, on = :x1, mapformats =[false, true])
+    contains3_v = contains(dsl, view(dsr, :, [2,1]), on = :x1, mapformats =[false, true])
+
     contains3_t = Bool[0, 0, 0, 1, 0, 0, 0, 0, 0, 0]
     contains4 = contains(dsl, dsr, on = :x1, mapformats = [false, false])
+    contains4_v = contains(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, false])
+
     contains4_t = Bool[0, 1, 0, 1, 0, 0, 0, 0, 0, 0]
 
     close1 = closejoin(dsl, dsr, on = :x1)
+    close1_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1)
+
     close1_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[200.0, missing, 200.0, missing, missing, missing, 200.0, missing, 200.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
     close2 = closejoin(dsl, dsr, on = :x1, direction = :forward)
+    close2_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, direction = :forward)
+
     close2_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
     close3 = closejoin(dsl, dsr, on = :x1, border = :nearest)
+    close3_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, border = :nearest)
+
     close3_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[200.0, 100.0, 200.0, 100.0, 100.0, 100.0, 200.0, 100.0, 200.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
     close4 = closejoin(dsl, dsr, on = :x1, mapformats = [true, false])
+    close4_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [true, false])
+
     close4_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[100.0, missing, 100.0, missing, missing, missing, 100.0, missing, 100.0, 100.0]],  ["x1", "x2", "x3", "row", "y"])
     close5 = closejoin(dsl, dsr, on = :x1, mapformats = [true, false], direction = :forward)
+    close5_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [true, false], direction = :forward)
+
     close5_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0]], ["x1", "x2", "x3", "row", "y"])
     close6 = closejoin(dsl, dsr, on = :x1, mapformats = [false, true])
+    close6_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, true])
+
     close6_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
     close7 = closejoin(dsl, dsr, on = :x1, mapformats = [false, true], direction = :forward)
+    close7_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, true], direction = :forward)
+
     close7_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[missing, missing, missing, 100.0, missing, missing, missing, missing, missing, missing]],["x1", "x2", "x3", "row", "y"])
     close8 = closejoin(dsl, dsr, on = :x1, mapformats = [false, true], direction = :forward, border = :nearest)
+    close8_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, true], direction = :forward, border = :nearest)
+
     close8_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[200.0, 200.0, 200.0, 100.0, 200.0, 200.0, 200.0, 200.0, 200.0, 200.0]],["x1", "x2", "x3", "row", "y"])
     close9 = closejoin(dsl, dsr, on = :x1, mapformats = [false, false])
+    close9_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = [false, false])
+
     close9_t = Dataset([Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[200.0, 200.0, 200.0, 100.0, 200.0, 200.0, 200.0, 200.0, 100.0, 200.0]], ["x1", "x2", "x3", "row", "y"])
     close10 = closejoin(dsl, dsr, on = :x1, mapformats = false, direction = :forward)
+    close10_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = false, direction = :forward)
+
     close10_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
            Union{Missing, Int64}[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
            Union{Missing, Float64}[missing, 200.0, missing, 100.0, missing, missing, missing, missing, 200.0, missing]], ["x1", "x2", "x3", "row", "y"])
     close11 = closejoin(dsl, dsr, on = :x1, mapformats = false, direction = :forward, border = :nearest)
+    close11_v = closejoin(dsl, view(dsr, :, [2,1]), on = :x1, mapformats = false, direction = :forward, border = :nearest)
+
     close11_t = Dataset([ Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[10, 3, 4, 1, 5, 5, 6, 7, 2, 10],
            Union{Missing, Int64}[3, 6, 7, 10, 10, 5, 10, 9, 1, 1],
@@ -285,6 +351,34 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
     @test close10 == close10_t
     @test close11 == close11_t
 
+    @test left1_v == left1_t
+    @test left2_v == left2_t
+    @test left3_v == left3_t
+    @test left4_v == left4_t
+    @test inner1_v == inner1_t
+    @test inner2_v == inner2_t
+    @test inner3_v == inner3_t
+    @test inner4_v == inner4_t
+    @test outer1_v == outer1_t
+    @test outer2_v == outer2_t
+    @test outer3_v == outer3_t
+    @test outer4_v == outer4_t
+    @test contains1_v == contains1_t
+    @test contains2_v == contains2_t
+    @test contains3_v == contains3_t
+    @test contains4_v == contains4_t
+    @test close1_v == close1_t
+    @test close2_v == close2_t
+    @test close3_v == close3_t
+    @test close4_v == close4_t
+    @test close5_v == close5_t
+    @test close6_v == close6_t
+    @test close7_v == close7_t
+    @test close8_v == close8_t
+    @test close9_v == close9_t
+    @test close10_v == close10_t
+    @test close11_v == close11_t
+
     dsl = Dataset([[Characters{1, UInt8}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
     dsr = Dataset([[Characters{1, UInt8}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
     left1 = leftjoin(dsl, dsr, on = [:x1, :x2], makeunique = true, accelerate = true, stable =true, check = false)
@@ -303,7 +397,12 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
         left2 = leftjoin(dsl, dsr, on = [:x1, :x2], makeunique = true, accelerate = false, stable = true, check = false)
         @test left1 == left2
         @test unique(select!(left1, [:x1, :x2, :x3]), [:x1, :x2]) == unique(dsl, [:x1, :x2])
+        left1 = leftjoin(dsl, view(dsr, :, :), on = [:x1, :x2], makeunique = true, accelerate = true, stable =true, check = false)
+        left2 = leftjoin(dsl, view(dsr, :, :), on = [:x1, :x2], makeunique = true, accelerate = false, stable = true, check = false)
+        @test left1 == left2
+        @test unique(select!(left1, [:x1, :x2, :x3]), [:x1, :x2]) == unique(dsl, [:x1, :x2])
     end
+
     x1 = rand(1:1000, 5000)
     x2 = rand(1:100, 5000)
     y = rand(5000)
@@ -314,6 +413,10 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
     setformat!(dsl, 1:2=>fmtfun)
     semi1 = semijoin(dsl, dsr, on = [:x1, :x2])
     semi2 = semijoin(dsl, dsr, on = [:x1, :x2], accelerate = true)
+    @test semi1 == dsl
+    @test semi2 == dsl
+    semi1 = semijoin(dsl, view(dsr, :, :), on = [:x1, :x2])
+    semi2 = semijoin(dsl, view(dsr, :, :), on = [:x1, :x2], accelerate = true)
     @test semi1 == dsl
     @test semi2 == dsl
     inn1 = innerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true)
@@ -416,6 +519,7 @@ end
                     B = categorical(1:50),
                     C = 1)
     @test innerjoin(ds1, ds1, on = [:A, :B], makeunique=true)[!, 1:3] == ds1
+    @test innerjoin(ds1, ds1, on = [:A, :B], makeunique=true, accelerate = true)[!, 1:3] == ds1
     # Test that join works when mixing Array{Union{T, Missing}} with Array{T} (issue #1088)
     ds = Dataset(Name = Union{String, Missing}["A", "B", "C"],
                 Mass = [1.5, 2.2, 1.1])
@@ -504,15 +608,21 @@ end
     dsl = Dataset(x1 = [1,2,3,4,5,6], x2= [1,1,1,2,2,2])
     dsr = Dataset(x1 = [1,1,1,4,5,7],x2= [1,1,3,4,5,6], y = [343,54,54,464,565,7567])
     cj = closejoin(dsl, dsr, on = [:x1, :x2])
+    cj_v = closejoin(dsl, view(dsr, 1:6, [3,1,2]), on = [:x1, :x2])
     cj_t = Dataset([Union{Missing, Int64}[1, 2, 3, 4, 5, 6],
          Union{Missing, Int64}[1, 1, 1, 2, 2, 2],
          Union{Missing, Int64}[54, missing, missing, missing, missing, missing]], ["x1", "x2", "y"])
     @test cj == cj_t
+    @test cj_v == cj_t
     cj = closejoin(dsl, dsr, on = [:x1, :x2], direction = :forward)
+    cj_v = closejoin(dsl, view(dsr, 1:6, [3,1,2]), on = [:x1, :x2], direction = :forward)
+
     cj_t = Dataset([ Union{Missing, Int64}[1, 2, 3, 4, 5, 6],
          Union{Missing, Int64}[1, 1, 1, 2, 2, 2],
          Union{Missing, Int64}[343, missing, missing, 464, 565, missing]],["x1", "x2", "y"] )
     @test cj == cj_t
+    @test cj_v == cj_t
+
     dsl = Dataset(x1 = [Date(2020,11,6), Date(2021,2,24), Date(2021,1,17), Date(2013,5,12)], val = [66,77,88,99])
     dsr = Dataset(x1 = [Date(2010,11,2), Date(2012, 5, 3), Date(2010, 2,2)], x2 = [1,2,3])
     setformat!(dsl, 1=>month)
@@ -552,6 +662,12 @@ end
     @test levels(outerjoin(A, B, on=:b).c) == ["b", "a"]
     @test levels(semijoin(B, A, on=:b).c) == ["b", "a"]
 
+    @test levels(innerjoin(A, view(B, [3,2,1], [2,1]), on=:b).c) == ["b", "a"]
+    @test levels(innerjoin(B,  view(A, [3,2,1], [2,1]), on=:b).c) == ["b", "a"]
+    @test levels(leftjoin(A,  view(B, [3,2,1], [2,1]), on=:b).c) == ["b", "a"]
+    @test levels(outerjoin(A,  view(B, [3,2,1], [2,1]), on=:b).c) == ["b", "a"]
+    @test levels(semijoin(B,  view(A, [3,2,1], [2,1]), on=:b).c) == ["b", "a"]
+
     dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = 1:5)
     dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = PooledArray([22,missing,33,44]))
     ds_left = leftjoin(dsl, dsr, on = :x)
@@ -589,6 +705,18 @@ end
                      categorical([missing, "a", "e", "c", missing, "f"])], [:x, :y, :x_1])
         @test ds_outer == ds_outer_t
     end
+    for i in 1:20
+        ds_left = leftjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true)
+        ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
+                     Union{Missing, Int64}[1, 2, 3, 4, 5],
+                     categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
+        @test ds_left == ds_left_t
+        ds_outer = outerjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true)
+        ds_outer_t = Dataset([ categorical(["c", "d", missing, "e", "c", missing]),
+                     Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
+                     categorical([missing, "a", "e", "c", missing, "f"])], [:x, :y, :x_1])
+        @test ds_outer == ds_outer_t
+    end
     dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = PooledArray(1:5))
     dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = PooledArray([2,missing,3,4]))
     for i in 1:20
@@ -598,6 +726,18 @@ end
                     categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
         @test ds_left == ds_left_t
         ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_outer_t = Dataset([ categorical(["c", "d", missing, "e", "c", missing]),
+                     Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
+                     categorical([missing, "a", "e", "c", missing, "f"])], [:x, :y, :x_1])
+        @test ds_outer == ds_outer_t
+    end
+    for i in 1:20
+        ds_left = leftjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true)
+        ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
+                     Union{Missing, Int64}[1, 2, 3, 4, 5],
+                    categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
+        @test ds_left == ds_left_t
+        ds_outer = outerjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true)
         ds_outer_t = Dataset([ categorical(["c", "d", missing, "e", "c", missing]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
                      categorical([missing, "a", "e", "c", missing, "f"])], [:x, :y, :x_1])
@@ -622,6 +762,10 @@ end
     dsr = Dataset(x = [missing,5, 19, 1], z = ["a", "b", "c", "d"])
     for i in 1:20
         res = contains(dsl, dsr, on = :x)
+        @test res == Bool[1,0,1,1]
+    end
+    for i in 1:20
+        res = contains(dsl, dsr, on = :x, accelerate = true)
         @test res == Bool[1,0,1,1]
     end
     for i in 1:20
@@ -721,23 +865,64 @@ end
              Union{Missing, Date}[Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-05")]],
              ["store", "employee_ID", "start_date", "end_date"])
     inn_r1 =  innerjoin(store, roster, on = [:date => (:start_date, nothing)], makeunique = true, stable = true)
+    inn_r1_v =  innerjoin(store, view(roster, :, :), on = [:date => (:start_date, nothing)], makeunique = true, stable = true)
+    inn_r1_a =  innerjoin(store, roster, on = [:date => (:start_date, nothing)], makeunique = true, stable = true, accelerate = true)
+    inn_r1_v_a =  innerjoin(store, view(roster, :, :), on = [:date => (:start_date, nothing)], makeunique = true, stable = true, accelerate = true)
+
+
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "B", "B", "A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "A", "A", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B"], Union{Missing, String}["A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B"], Union{Missing, Int64}[1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 2, 6, 1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 1, 5, 2, 6, 1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 2, 6, 3, 7, 1, 5, 2, 6, 3, 7], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05")]], ["date", "store", "store_1", "employee_ID", "end_date"])
     @test inn_r1 == inn_r1_t
+    @test inn_r1_v == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+    @test inn_r1_v_a == inn_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, nothing)], stable = true)
+    inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, nothing)], stable = true)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, nothing)], stable = true, accelerate = true)
+    inn_r1_v_a =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, nothing)], stable = true, accelerate = true)
+
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "A", "A", "A", "A", "B", "A", "A", "B", "B", "B", "B", "B", "B", "B", "B", "A", "A", "A", "B", "B", "B"], Union{Missing, Int64}[1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 1, 2, 5, 6, 7, 8, 5, 6, 7, 8, 1, 2, 3, 5, 6, 7], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05")]], ["date", "store", "employee_ID", "end_date"])
     @test inn_r1 == inn_r1_t
+    @test inn_r1_v == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+    @test inn_r1_v_a == inn_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true)
+    inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, accelerate = true)
+    inn_r1_v_a =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, accelerate = true)
+
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "A", "B", "B", "B", "A", "A", "B", "B", "B", "B", "B", "B", "A", "A", "A", "B", "B", "B"], Union{Missing, Int64}[3, 4, 1, 2, 3, 4, 5, 6, 5, 1, 2, 7, 8, 5, 6, 7, 8, 1, 2, 3, 5, 6, 7]], ["date", "store", "employee_ID"])
     @test inn_r1 == inn_r1_t
+    @test inn_r1_v == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+    @test inn_r1_v_a == inn_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
+    inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true)
+    inn_r1_v_a =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true)
+
     inn_r1_t = Dataset(date=Date[], store=String[], employee_ID=Int[])
     @test inn_r1 == inn_r1_t
+    @test inn_r1_v == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+    @test inn_r1_v_a == inn_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true)
+
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "B", "B", "B", "B", "B", "B", "A", "A", "A", "B", "A", "A", "B", "B"], Union{Missing, Int64}[4, 6, 7, 8, 6, 7, 8, 2, 3, 4, 8, 3, 4, 7, 8], Union{Missing, Date}[Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06")]], ["date", "store", "employee_ID", "end_date"])
     @test inn_r1 == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+
     inn_r2 = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true)
+    inn_r2_a = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, accelerate = true)
+
     inn_r2_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B", "B", "A", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[4, 3, 5, 5, 1, 8, 7, 1, 2, 5, 6]], ["date", "store", "employee_ID"])
     @test inn_r2 == inn_r2_t
+    @test inn_r2_a == inn_r2_t
+
     inn_r2 = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, droprangecols = false)
     inn_r2_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B", "B", "A", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[4, 3, 5, 5, 1, 8, 7, 1, 2, 5, 6], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-03"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-09-30"), Date("2019-10-02"), Date("2019-09-30"), Date("2019-10-02")], Union{Missing, Date}[Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04")]], ["date", "store", "employee_ID", "start_date", "end_date"])
     @test inn_r2 == inn_r2_t
@@ -755,11 +940,19 @@ end
     roster[9,3:4] .= missing
 
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true)
+
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "B", "B", "B", "A", "B", "B", "B", "A", "A", "A", "B", "B", "B", "A", "A", "A", "B", "B"], Union{Missing, Int64}[2, 4, 2, 6, 8, 7, 2, 6, 8, 7, 3, 4, 2, 7, 8, 7, 3, 4, 2, 8, 7], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), missing, Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), missing, missing, Date("2019-10-06"), Date("2019-10-04"), missing, Date("2019-10-06"), missing, missing, Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-06"), missing]], ["date", "store", "employee_ID", "end_date"])
     @test inn_r1 == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true)
+
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2020-01-01")], Union{Missing, String}["A", "A", "A"], Union{Missing, Int64}[2, 2, 2]], ["date", "store", "employee_ID"])
     @test inn_r1 == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true)
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "B", "B", "A", "B", "A", "B", "B", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[3, 4, 1, 3, 4, 5, 6, 3, 5, 1, 8, 5, 6, 8, 1, 3, 5, 6]], ["date", "store", "employee_ID"])
     @test inn_r1 == inn_r1_t
@@ -776,11 +969,82 @@ end
     @test inn_r3 == inn_r3_t
 
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false)
+    inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false, accelerate = true)
+    inn_r1_v_a =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false, accelerate = true)
+
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "B", "B", "B", "A", "B", "B", "B", "A", "A", "A", "B", "B", "B", "A", "A", "A", "B", "B"], Union{Missing, Int64}[2, 4, 2, 6, 8, 7, 2, 6, 8, 7, 3, 4, 2, 7, 8, 7, 3, 4, 2, 8, 7], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), missing, Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), missing, missing, Date("2019-10-06"), Date("2019-10-04"), missing, Date("2019-10-06"), missing, missing, Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-06"), missing]], ["date", "store", "employee_ID", "end_date"])
     @test inn_r1 == inn_r1_t
+    @test inn_r1_v == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+    @test inn_r1_v_a == inn_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false)
+    inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false, accelerate = true)
+    inn_r1_v_a =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false, accelerate = true)
+
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2020-01-01")], Union{Missing, String}["A", "A", "A"], Union{Missing, Int64}[2, 2, 2]], ["date", "store", "employee_ID"])
     @test inn_r1 == inn_r1_t
+    @test inn_r1_v == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+    @test inn_r1_v_a == inn_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false)
+    inn_r1_v =  innerjoin(store, view(roster, :, [1,2, 4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false, accelerate = true)
+    inn_r1_v_a =  innerjoin(store, view(roster, :, [1,2, 4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false, accelerate = true)
+
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "B", "B", "A", "B", "A", "B", "B", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[3, 4, 1, 3, 4, 5, 6, 3, 5, 1, 8, 5, 6, 8, 1, 3, 5, 6]], ["date", "store", "employee_ID"])
+    @test inn_r1 == inn_r1_t
+    @test inn_r1_v == inn_r1_t
+    @test inn_r1_a == inn_r1_t
+    @test inn_r1_v_a == inn_r1_t
+end
+
+@testset "update!, update" begin
+    main = Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
+              id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+              x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
+              x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
+    transaction = Dataset(group = ["G1", "G2"], id = [2, 1],
+              x1 = [2.5, missing], x2 = [missing, 3])
+    up1 = update(main, transaction, on = [:group, :id],
+                 allowmissing = false, mode = :missing)
+    up1_v = update(main, view(transaction, :, :), on = [:group, :id],
+    allowmissing = false, mode = :missing)
+    up1_a = update(main, transaction, on = [:group, :id],
+    allowmissing = false, mode = :missing, accelerate = true)
+    up1_t = Dataset([Union{Missing, String}["G1", "G1", "G1", "G1", "G2", "G2", "G2"], Union{Missing, Int64}[1, 1, 2, 2, 1, 1, 2], Union{Missing, Float64}[1.2, 2.3, 2.5, 2.3, 1.3, 2.1, 0.0], Union{Missing, Int64}[5, 4, 4, 2, 1, 3, 2]], ["group", "id", "x1", "x2"])
+    @test up1 == up1_t
+    @test up1_v == up1_t
+    @test up1_a == up1_t
+
+    up1 = update(main, transaction, on = [:group, :id],
+    allowmissing = false, mode = :all)
+    up1_v = update(main, view(transaction, :, :), on = [:group, :id],
+    allowmissing = false, mode = :all)
+    up1_a = update(main, transaction, on = [:group, :id],
+    allowmissing = false, mode = :all, accelerate = true)
+    up1_t = Dataset([Union{Missing, String}["G1", "G1", "G1", "G1", "G2", "G2", "G2"], Union{Missing, Int64}[1, 1, 2, 2, 1, 1, 2], Union{Missing, Float64}[1.2, 2.3, 2.5, 2.5, 1.3, 2.1, 0.0], Union{Missing, Int64}[5, 4, 4, 2, 3, 3, 2]],["group", "id", "x1", "x2"])
+    @test up1 == up1_t
+    @test up1_v == up1_t
+    @test up1_a == up1_t
+
+    up1 = update(main, transaction, on = [:group, :id],
+                 allowmissing = true, mode = :all)
+    up1_t = Dataset([Union{Missing, String}["G1", "G1", "G1", "G1", "G2", "G2", "G2"], Union{Missing, Int64}[1, 1, 2, 2, 1, 1, 2], Union{Missing, Float64}[1.2, 2.3, 2.5, 2.5, missing, missing, 0.0], Union{Missing, Int64}[5, 4, missing, missing, 3, 3, 2]], ["group", "id", "x1", "x2"])
+    @test up1 == up1_t
+
+    up1 = update(main, transaction, on = [:group, :id],
+    allowmissing = true, mode = :missing)
+    up1_v = update(main, view(transaction, :, :), on = [:group, :id],
+    allowmissing = true, mode = :missing)
+    up1_a = update(main, transaction, on = [:group, :id],
+    allowmissing = true, mode = :missing, accelerate = true)
+    up1_t = Dataset([Union{Missing, String}["G1", "G1", "G1", "G1", "G2", "G2", "G2"], Union{Missing, Int64}[1, 1, 2, 2, 1, 1, 2], Union{Missing, Float64}[1.2, 2.3, 2.5, 2.3, 1.3, 2.1, 0.0], Union{Missing, Int64}[5, 4, 4, 2, 1, 3, 2]], ["group", "id", "x1", "x2"])
+    @test up1 == up1_t
+    @test up1_v == up1_t
+    @test up1_a == up1_t
+
 end

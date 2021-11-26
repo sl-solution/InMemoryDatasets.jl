@@ -107,7 +107,7 @@ julia> leftjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.leftjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false)
+function DataAPI.leftjoin(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -219,7 +219,7 @@ julia> dsl # The left table is changed to be the result.
    4 │ 2012        true  missing
 ```
 """
-function leftjoin!(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -349,7 +349,7 @@ julia> innerjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for data
    3 │ 2020        true  A
 ```
 """
-function DataAPI.innerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols::Bool = true, strict_inequality = false)
+function DataAPI.innerjoin(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols::Bool = true, strict_inequality = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -494,7 +494,7 @@ julia> outerjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for data
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.outerjoin(dsl::Dataset, dsr::Dataset; on = nothing, makeunique = false,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false)
+function DataAPI.outerjoin(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -565,7 +565,7 @@ julia> contains(main, tds, on = :g1 => :group)
  1
 ```
 """
-function Base.contains(main::Dataset, transaction::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+function Base.contains(main::Dataset, transaction::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
         on = [on]
@@ -694,7 +694,7 @@ julia> antijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    1 │ 2012        true
 ```
 """
-function DataAPI.antijoin(dsl::Dataset, dsr::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+function DataAPI.antijoin(dsl::Dataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
 
     dsl[.!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :]
 end
@@ -803,7 +803,7 @@ julia> semijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    3 │ 2020        true
 ```
 """
-function DataAPI.semijoin(dsl::Dataset, dsr::Dataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+function DataAPI.semijoin(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
     dsl[contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :]
 end
 """
@@ -924,7 +924,7 @@ julia> dsl
    1 │ 2012        true
 ```
 """
-function antijoin!(dsl::Dataset, dsr::Dataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+function antijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
     deleteat!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate))
 end
 """
@@ -1052,7 +1052,7 @@ julia> dsl
    3 │ 2020        true
 ```
 """
-function semijoin!(dsl::Dataset, dsr::Dataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
+function semijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
     deleteat!(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate))
 end
 
@@ -1338,7 +1338,7 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], direction = :forward, bo
    5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100     97.99     98.01
 ```
 """
-function closejoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort)
+function closejoin(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing))
         throw(ArgumentError("`border` keyword only accept :nearest or :missing"))
@@ -1358,9 +1358,9 @@ function closejoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backwa
         onright = index(dsr)[on]
         # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
         if direction == :backward
-            _join_asofback(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg)
+            _join_asofback(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
         elseif direction == :forward
-            _join_asoffor(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg)
+            _join_asoffor(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
         else
             throw(ArgumentError("`direction` can be only :backward or :forward"))
         end
@@ -1370,9 +1370,9 @@ function closejoin(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backwa
         onright = index(dsr)[map(x->x.second, on)]
         # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
         if direction == :backward
-            _join_asofback(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg)
+            _join_asofback(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
         elseif direction == :forward
-            _join_asoffor(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg)
+            _join_asoffor(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
         else
             throw(ArgumentError("`direction` can be only :backward or :forward"))
         end
@@ -1645,7 +1645,7 @@ julia> trades # The left table has been changed after joining.
    5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100     97.99     98.01
 ```
 """
-function closejoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort)
+function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing))
         throw(ArgumentError("`border` keyword only accept :nearest or :missing"))
@@ -1665,9 +1665,9 @@ function closejoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backw
         onright = index(dsr)[on]
         # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
         if direction == :backward
-            _join_asofback!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg)
+            _join_asofback!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
         elseif direction == :forward
-            _join_asoffor!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg)
+            _join_asoffor!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
         else
             throw(ArgumentError("`direction` can be only :backward or :forward"))
         end
@@ -1677,9 +1677,9 @@ function closejoin!(dsl::Dataset, dsr::Dataset; on = nothing, direction = :backw
         onright = index(dsr)[map(x->x.second, on)]
         # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
         if direction == :backward
-            _join_asofback!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg)
+            _join_asofback!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
         elseif direction == :forward
-            _join_asoffor!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg)
+            _join_asoffor!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
         else
             throw(ArgumentError("`direction` can be only :backward or :forward"))
         end
@@ -1777,7 +1777,7 @@ julia> dsmain # The main Dataset has been updated.
    7 │ G2               2       0.0         2
 ```
 """
-function update!(dsmain::Dataset, dsupdate::Dataset; on = nothing, allowmissing = false, mode = :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort)
+function update!(dsmain::Dataset, dsupdate::AbstractDataset; on = nothing, allowmissing = false, mode = :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     !(mode ∈ (:all, :missing, :missings))  && throw(ArgumentError("`mode` can be either :all or :missing"))
     if !(on isa AbstractVector)
@@ -1793,11 +1793,11 @@ function update!(dsmain::Dataset, dsupdate::Dataset; on = nothing, allowmissing 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsmain)[on]
         onright = index(dsupdate)[on]
-        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg)
+        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsmain)[map(x->x.first, on)]
         onright = index(dsupdate)[map(x->x.second, on)]
-        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg)
+        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
@@ -1893,4 +1893,4 @@ julia> update(dsmain, dsupdate, on = [:group, :id], allowmissing = true, mode = 
    7 │ G2               2        0.0         2
 ```
 """
-update(dsmain::Dataset, dsupdate::Dataset; on = nothing, allowmissing = false, mode = :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode,  mapformats = mapformats, stable = stable, alg = alg)
+update(dsmain::Dataset, dsupdate::AbstractDataset; on = nothing, allowmissing = false, mode = :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode,  mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)

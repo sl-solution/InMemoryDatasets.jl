@@ -20,22 +20,20 @@ function _update_left_with_right!(x, y, ranges, allowmissing, mode)
     end
 end
 
-function _update!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort) where T
+function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false) where T
     isempty(dsl) && return dsl
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
 
-    if isempty(dsr)
-        idx = []
-    else
-        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
-    end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    fill!(ranges, 1:nrow(dsr))
-    for j in 1:length(oncols_left)
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+
+    for j in 1:length(oncols_left)-1
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left), uniquemode = uniquemode)
+
 
     for j in 1:length(right_cols)
         if haskey(index(dsl).lookup, _names(dsr)[right_cols[j]])

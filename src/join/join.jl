@@ -74,6 +74,7 @@ function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, 
     if isempty(dsr)
         idx = []
         fill!(ranges, 1:nrow(dsr))
+        last_valid_range = -1
     else
         if accelerate
             if mapformats[2]
@@ -81,20 +82,29 @@ function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, 
             else
                 _fr = identity
             end
-            grng = _divide_for_fast_join(dsr[!, oncols_right[1]].val, _fr, chunk)
+            grng = _divide_for_fast_join(_columns(dsr)[oncols_right[1]], _fr, chunk)
             if mapformats[1]
                 _fl = getformat(dsl, oncols_left[1])
             else
                 _fl = identity
             end
-            _fill_range_for_accelerated_join!(ranges, grng.starts, grng.starts_loc, dsl[!, oncols_left[1]].val, _fl, nrow(dsr), chunk)
-            starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true, givenrange = grng)
+            _fill_range_for_accelerated_join!(ranges, grng.starts, grng.starts_loc, _columns(dsl)[oncols_left[1]], _fl, nrow(dsr), chunk)
+            if dsr isa SubDataset
+                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true, givenrange = grng)
+
+            else
+                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true, givenrange = grng)
+            end
         else
-            starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
+            if dsr isa SubDataset
+                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
+            else
+                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
+            end
             fill!(ranges, 1:nrow(dsr))
         end
     end
-    idx
+    idx, last_valid_range == length(idx)
 end
 
 
@@ -115,10 +125,23 @@ function _fill_val_join!(x, r2, val, inbits, r)
     end
 end
 
-function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}; type = :both) where T1 where T2
+function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}; type = :both, uniquemode = false) where T1 where T2
     if type == :both
-        Threads.@threads for i in 1:length(x)
-            ranges[i] = searchsorted_join(_fr, y, _fl(DataAPI.unwrap(x[i]))::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+        if uniquemode
+            Threads.@threads for i in 1:length(x)
+                _flx = _fl(DataAPI.unwrap(x[i]))::T1
+                loc = searchsortedfirst_join(_fr, y, _flx, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+                loc = min(ranges[i].stop, loc)
+                if isequal(_fr(y[loc]), _flx)
+                    ranges[i] = loc:loc
+                else
+                    ranges[i] = loc:loc-1
+                end
+            end
+        else
+            Threads.@threads for i in 1:length(x)
+                ranges[i] = searchsorted_join(_fr, y, _fl(DataAPI.unwrap(x[i]))::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+            end
         end
     # TODO having another elseif branch is better for performance.
     elseif type == :left || type == :rightstrict
@@ -146,15 +169,34 @@ function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}; ty
     end
 end
 
-function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, ::Val{T2}; type = :both) where T1 where T2
+function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, ::Val{T2}; type = :both, uniquemode = false) where T1 where T2
     if type == :both
-        Threads.@threads for i in 1:length(x)
-            revmap_paval_ref = get(invpool, _fl(DataAPI.unwrap(x[i]))::T1, missing)
-            if ismissing(revmap_paval_ref)
-                ranges[i] = 1:0
-            else
-                #_fr is identity
-                ranges[i] = searchsorted_join(identity, y, revmap_paval_ref, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+        if uniquemode
+            Threads.@threads for i in 1:length(x)
+                revmap_paval_ref = get(invpool, _fl(DataAPI.unwrap(x[i]))::T1, missing)
+                if ismissing(revmap_paval_ref)
+                    ranges[i] = 1:0
+                else
+                    #_fr is identity
+                    loc = searchsortedfirst_join(identity, y, revmap_paval_ref, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+                    loc = min(ranges[i].stop, loc)
+                    if isequal(y[loc], revmap_paval_ref)
+                        ranges[i] = loc:loc
+                    else
+                        ranges[i] = loc:loc-1
+                    end
+                end
+            end
+        else
+
+            Threads.@threads for i in 1:length(x)
+                revmap_paval_ref = get(invpool, _fl(DataAPI.unwrap(x[i]))::T1, missing)
+                if ismissing(revmap_paval_ref)
+                    ranges[i] = 1:0
+                else
+                    #_fr is identity
+                    ranges[i] = searchsorted_join(identity, y, revmap_paval_ref, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+                end
             end
         end
     elseif type == :left || type == :rightstrict
@@ -326,7 +368,7 @@ function _mark_lt_part!(inbits, x_l, x_r, _fl, _fr, ranges, r_perms, en, ::Val{T
     cumsum!(revised_ends, revised_ends)
 end
 
-function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, lmf, rmf, j; type = :both)
+function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, lmf, rmf, j; type = :both, uniquemode = false)
     var_l = _columns(dsl)[oncols_left[j]]
     var_r = _columns(dsr)[oncols_right[j]]
     l_idx = oncols_left[j]
@@ -355,16 +397,16 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_
         # now _fr must be identity
         _fr = identity
         # we should use invpool of right column
-        _find_ranges_for_join_pa!(ranges, var_l, DataAPI.invrefpool(var_r_cpy), view(DataAPI.refarray(var_r_cpy), r_perms), _fl, _fr, Val(T1), Val(T2); type = type)
+        _find_ranges_for_join_pa!(ranges, var_l, DataAPI.invrefpool(var_r_cpy), view(DataAPI.refarray(var_r_cpy), r_perms), _fl, _fr, Val(T1), Val(T2); type = type, uniquemode = uniquemode)
     else
         T2 = Core.Compiler.return_type(_fr, (eltype(var_r), ))
-        _find_ranges_for_join!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2); type = type)
+        _find_ranges_for_join!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2); type = type, uniquemode = uniquemode)
     end
 end
 
 
 
-function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false) where T
+function _join_left(dsl::Dataset, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false) where T
     isempty(dsl) && return copy(dsl)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -373,10 +415,11 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
-    for j in 1:length(oncols_left)
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+    for j in 1:length(oncols_left)-1
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left), uniquemode = uniquemode)
 
     new_ends = map(x -> max(1, length(x)), ranges)
     cumsum!(new_ends, new_ends)
@@ -404,7 +447,7 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(_columns(dsr)[right_cols[j]].refs, idx), ranges, new_ends, total_length, fill_val)
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val)
         else
             _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing)
         end
@@ -418,7 +461,7 @@ function _join_left(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeu
 
 end
 
-function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false) where T
+function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false) where T
     isempty(dsl) && return dsl
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -427,10 +470,11 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
-    for j in 1:length(oncols_left)
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+    for j in 1:length(oncols_left)-1
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left), uniquemode = uniquemode)
 
     if !all(x->length(x) <= 1, ranges)
         throw(ArgumentError("`leftjoin!` can only be used when each observation in left data set matches at most one observation from right data set"))
@@ -448,7 +492,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
             # fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(_columns(dsr)[right_cols[j]].refs, idx), ranges, new_ends, total_length, missing)
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, missing)
         else
             _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing)
         end
@@ -461,7 +505,7 @@ function _join_left!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
     dsl
 end
 
-function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false]) where T
+function _join_inner(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false]) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -498,11 +542,11 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, onri
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1))
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1))
     for j in 1:length(oncols_left)-1
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
-    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type)
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, uniquemode = uniquemode)
 
     new_ends = map(length, ranges)
     cumsum!(new_ends, new_ends)
@@ -546,7 +590,7 @@ function _join_inner(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, onri
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
-            _fill_right_cols_table_inner!(_res.refs, view(_columns(dsr)[right_cols[j]].refs, idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
+            _fill_right_cols_table_inner!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
         else
             _fill_right_cols_table_inner!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
         end
@@ -570,7 +614,7 @@ function _in_use_Set(ldata, rdata, _fl, _fr)
 end
 
 
-function _in(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false) where T
+function _in(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false) where T
     isempty(dsl) && return Bool[]
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -587,13 +631,14 @@ function _in(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, mapformats =
         else
             _fr = identity
         end
-        return _in_use_Set(dsl[!, oncols_left[1]].val, dsr[!, oncols_right[1]].val, _fl, _fr)
+        return _in_use_Set(_columns(dsl)[oncols_left[1]], _columns(dsr)[oncols_right[1]], _fl, _fr)
     end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
-    for j in 1:length(oncols_left)
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+    for j in 1:length(oncols_left)-1
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left), uniquemode = uniquemode)
     map(x -> length(x) == 0 ? false : true, ranges)
 end
 
@@ -614,7 +659,7 @@ function _fill_oncols_left_table_left_outer!(res, x, notinleft, en, total)
 end
 
 
-function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false) where T
+function _join_outer(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -623,10 +668,11 @@ function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
-    for j in 1:length(oncols_left)
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+    for j in 1:length(oncols_left)-1
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left), uniquemode = uniquemode)
     new_ends = map(x -> max(1, length(x)), ranges)
     notinleft = _find_right_not_in_left(ranges, nrow(dsr), idx)
     cumsum!(new_ends, new_ends)
@@ -655,8 +701,8 @@ function _join_outer(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, make
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(_columns(dsr)[right_cols[j]].refs, idx), ranges, new_ends, total_length, fill_val)
-            _fill_oncols_left_table_left_outer!(_res.refs, view(_columns(dsr)[right_cols[j]].refs, idx), notinleft, new_ends, total_length)
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val)
+            _fill_oncols_left_table_left_outer!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), notinleft, new_ends, total_length)
         else
             _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing)
             _fill_oncols_left_table_left_outer!(_res, view(_columns(dsr)[right_cols[j]], idx), notinleft, new_ends, total_length)

@@ -120,7 +120,7 @@ end
 
 
 # border = :nearest | :missing
-function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort) where T
+function _join_asofback(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false) where T
     isempty(dsl) && return copy(dsl)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -128,20 +128,14 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
-    if isempty(dsr)
-        idx = []
-    else
-        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
-    end
+
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    fill!(ranges, 1:nrow(dsr))
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1)
+
     for j in 1:(length(oncols_left) - 1)
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
-    # _fl = getformat(dsl, oncols_left[length(oncols_left)])
-    # _fr = getformat(dsr, oncols_right[length(oncols_left)])
-    # _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
     _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :backward, mapformats[1], mapformats[2], length(oncols_left))
     total_length = nrow(dsl)
 
@@ -155,7 +149,7 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_asof!(_res.refs, view(_columns(dsr)[right_cols[j]].refs, idx), ranges, total_length, border == :nearest, fill_val)
+            _fill_right_cols_table_asof!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, total_length, border == :nearest, fill_val)
         else
             _fill_right_cols_table_asof!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, total_length, border == :nearest, missing)
         end
@@ -168,7 +162,7 @@ function _join_asofback(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
 
 end
 
-function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable =false, alg = HeapSort) where T
+function _join_asofback!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable =false, alg = HeapSort, accelerate = false) where T
     isempty(dsl) && return dsl
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -176,20 +170,13 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, 
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
-    if isempty(dsr)
-        idx = []
-    else
-        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
-    end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    fill!(ranges, 1:nrow(dsr))
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1)
+
     for j in 1:(length(oncols_left) - 1)
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
-    # _fl = getformat(dsl, oncols_left[length(oncols_left)])
-    # _fr = getformat(dsr, oncols_right[length(oncols_left)])
-    # _find_ranges_for_asofback!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
     _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :backward, mapformats[1], mapformats[2], length(oncols_left))
 
 
@@ -199,7 +186,7 @@ function _join_asofback!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, 
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_asof!(_res.refs, view(_columns(dsr)[right_cols[j]].refs, idx), ranges, total_length, border == :nearest, fill_val)
+            _fill_right_cols_table_asof!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, total_length, border == :nearest, fill_val)
         else
             _fill_right_cols_table_asof!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, total_length, border == :nearest, missing)
         end
@@ -215,7 +202,7 @@ end
 
 
 
-function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort) where T
+function _join_asoffor(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false) where T
     isempty(dsl) && return copy(dsl)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -223,20 +210,13 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, ma
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
-    if isempty(dsr)
-        idx = []
-    else
-        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
-    end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    fill!(ranges, 1:nrow(dsr))
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1)
+
     for j in 1:(length(oncols_left) - 1)
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
-    # _fl = getformat(dsl, oncols_left[length(oncols_left)])
-    # _fr = getformat(dsr, oncols_right[length(oncols_left)])
-    # _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
     _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :forward, mapformats[1], mapformats[2], length(oncols_left))
 
 
@@ -253,7 +233,7 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, ma
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_asof!(_res.refs, view(_columns(dsr)[right_cols[j]].refs, idx), ranges, total_length, border == :nearest, fill_val)
+            _fill_right_cols_table_asof!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, total_length, border == :nearest, fill_val)
         else
             _fill_right_cols_table_asof!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, total_length, border == :nearest, missing)
         end
@@ -266,7 +246,7 @@ function _join_asoffor(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, ma
     newds
 
 end
-function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort) where T
+function _join_asoffor!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false) where T
     isempty(dsl) && return dsl
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -274,20 +254,13 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
-    if isempty(dsr)
-        idx = []
-    else
-        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
-    end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    fill!(ranges, 1:nrow(dsr))
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1)
+
     for j in 1:(length(oncols_left) - 1)
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
     end
 
-    # _fl = getformat(dsl, oncols_left[length(oncols_left)])
-    # _fr = getformat(dsr, oncols_right[length(oncols_left)])
-    # _find_ranges_for_asoffor!(ranges, _columns(dsl)[oncols_left[length(oncols_left)]], _columns(dsr)[oncols_right[length(oncols_left)]], _fl, _fr)
     _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :forward, mapformats[1], mapformats[2], length(oncols_left))
 
 
@@ -297,7 +270,7 @@ function _join_asoffor!(dsl::Dataset, dsr::Dataset, ::Val{T}; onleft, onright, m
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_asof!(_res.refs, view(_columns(dsr)[right_cols[j]].refs, idx), ranges, total_length, border == :nearest, fill_val)
+            _fill_right_cols_table_asof!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, total_length, border == :nearest, fill_val)
         else
             _fill_right_cols_table_asof!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, total_length, border == :nearest, missing)
         end
