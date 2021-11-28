@@ -213,7 +213,12 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
         if isa(col, BitVector)
             return convert(Vector{Union{Bool, Missing}}, col)
         else
-            return copycols ? copy(allowmissing(col)) : allowmissing(col)
+            _res = allowmissing(col)
+            if copycols
+                _res === col ? copy(_res) : _res
+            else
+                _res
+            end
         end
     elseif col isa Union{AbstractArray{<:Any, 0}, Ref}
         x = col[]
