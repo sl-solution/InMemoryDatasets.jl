@@ -307,7 +307,7 @@ function ds_sort_perm(ds, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a:
             _tmp, _ordr, _missat, _needrev, intable=  _apply_by(x, idx, by[i], rev[i])
 
         end
-        if !_needrev && (eltype(_tmp) <: Union{Missing,Integer} || intable) && eltype(_tmp) !== Missing
+        if !_needrev && (eltype(_tmp) <: Union{Missing, INTEGERS} || intable) && eltype(_tmp) !== Missing
             # further check for fast integer sort
             n = length(_tmp)
             if n > 1
@@ -318,7 +318,7 @@ function ds_sort_perm(ds, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a:
                     minval::Integer = _minval
                 end
                 maxval::Integer = hp_maximum(_tmp)
-                (diff, o1) = sub_with_overflow(Int(maxval), Int(minval))
+                (diff, o1) = sub_with_overflow(BigInt(maxval), BigInt(minval))
                 (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
                 if !o1 && !o2 && maxval < typemax(Int) && (rangelen <= div(n,2))
                     if last_valid_range == 1

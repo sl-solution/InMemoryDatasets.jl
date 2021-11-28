@@ -318,3 +318,38 @@ end
     @test ra2[1:ra3] == rb2[1:rb3]
 
 end
+
+@testset "bigInt test set" begin
+    ds = Dataset(x = big.([1,4,-1,1,100]), x2 = [45,3,98,100,10])
+    @test sortperm(ds, 1) == [3,1,4,2,5]
+    @test sortperm(ds, 1, rev = true) == [5,2,1,4,3]
+    @test sortperm(ds, 1:2) == [3, 1, 4, 2, 5]
+    @test sortperm(ds, 1:2, rev = [false, true]) == [3,4,1,2,5]
+    ds[2,1]=missing
+    @test sortperm(ds, 1) == [3,1,4,5,2]
+    @test sortperm(ds, 1, rev = true) == [2,5,1,4,3]
+
+    x = rand(big(1):big(100), 10000)
+    y = rand(1:200, 10000)
+    ds = Dataset(x = x, y = y)
+    @test sortperm(ds, 1) == sortperm(x)
+    @test sortperm(ds, 1, rev=true) == sortperm(x, rev = true)
+
+    x = rand(Int128, 1000)
+    y = rand(1:100, 1000)
+    ds = Dataset(x = x, y = y)
+    @test sortperm(ds, 1) == sortperm(x)
+    @test sortperm(ds, 1, rev = true) == sortperm(x, rev = true)
+    setformat!(ds, 1=>isodd)
+    @test sortperm(ds, 1) == sortperm(x, by = isodd)
+    @test sortperm(ds, 1, rev = true) == sortperm(x, by = isodd, rev = true)
+
+    ds = Dataset(x = [0xfffffffffffffff3, 0xfffffffffffffff2, 0xfffffffffffffff4, 0xfffffffffffffff1], y = [1,1,2,2])
+    @test sort(ds,1) == ds[[4,2,1,3],:]
+    @test sort(ds,1, rev = true) == ds[[3,1,2,4],:]
+    setformat!(ds, 1=>isodd)
+    @test sort(ds,1) == ds[[2,3,1,4],:]
+    @test sort(ds,1, rev=true) == ds[[1,4,2,3],:]
+    @test sort(ds, 1:2) == ds[[2,3,1,4], :]
+    @test sort(ds, 1:2, rev = [false, true]) == ds[[3,2,4,1], :]
+end

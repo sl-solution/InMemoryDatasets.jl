@@ -29,9 +29,6 @@ _stat_ismissing(x::Any)::Int = 0
 _stat_ismissing(::Missing)::Int = 1
 _stat_notmissing(x::Any)::Int = 1
 _stat_notmissing(::Missing)::Int = 0
-const INTEGERS = Union{Signed, Unsigned, Int8, Int16, Int32, Int64}
-const FLOATS = Union{Float16, Float32, Float64}
-
 
 """
 rescale(x,minx,maxx,minval,maxval) rescales x to run from minval and maxval, given x originaly runs from minx to maxx.

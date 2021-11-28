@@ -1,3 +1,6 @@
+const INTEGERS = Union{Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Bool}
+const FLOATS = Union{Float16, Float32, Float64}
+
 # modified return_type to suit for our purpose
 function return_type(f::Function, x)
     CT = nonmissingtype(eltype(x))
@@ -402,7 +405,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
         else
             v = _columns(ds)[colidx[j]]
         end
-        if nonmissingtype(Core.Compiler.return_type(_f, (nonmissingtype(eltype(v)),))) <: Union{Missing, Integer}
+        if nonmissingtype(Core.Compiler.return_type(_f, (nonmissingtype(eltype(v)),))) <: Union{Missing, INTEGERS}
             _minval = hp_minimum(_f, v)
             if ismissing(_minval)
                 continue
@@ -410,9 +413,9 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                 minval::Integer = _minval
             end
             maxval::Integer = hp_maximum(_f, v)
-            (diff, o1) = sub_with_overflow(Int(maxval), Int(minval))
+            (diff, o1) = sub_with_overflow(BigInt(maxval), BigInt(minval))
             (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-            (outmult, o3) = mul_with_overflow(rangelen, Int(prev_max_group))
+            (outmult, o3) = mul_with_overflow(rangelen, BigInt(prev_max_group))
             if !o1 && !o2 && !o3 && maxval < typemax(Int) &&  prev_max_group*rangelen < 2*length(v)
                 flag, prev_max_group = _create_dictionary_int_fast!(prev_groups, _f, v, prev_max_group, minval, rangelen, Val(T))
             else

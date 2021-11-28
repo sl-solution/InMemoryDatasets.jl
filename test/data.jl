@@ -205,3 +205,36 @@ end
     @test dropmissing(ds, :, mapformats = true, view = true) == view(ds, 2:3, :)
 
 end
+
+@testset "bigint tests" begin
+    ds = Dataset(x = big.([1,2,1,5]), y = [1,2,1,6])
+    @test unique(ds, 1) == ds[[1,2,4], :]
+    @test unique(ds, 1, keep = :last) == ds[[2,3,4], :]
+    @test unique(ds, 1, keep = :none) == ds[[2,4], :]
+    ds[1,1]=missing
+    @test completecases(ds, 1) == [false, true, true, true]
+    @test completecases(ds, 1:2) == [false, true, true, true]
+    @test completecases(ds, 1:2; mapformats = true) == [false, true, true, true]
+
+    ds = Dataset(x = [89789834638463864324, 89789834638463864324, 89789834638463864325, 89789834638463864326])
+    @test completecases(ds, 1) == [true, true, true, true]
+    @test unique(ds, 1) == ds[[1,3,4], :]
+    setformat!(ds, 1=>isodd)
+    @test unique(ds, 1, mapformats = true) == ds[[1,3], :]
+    @test unique(ds, 1, mapformats = true, keep = :last) == ds[[3, 4], :]
+    ds[2,1]=missing
+    @test completecases(ds, 1) == [true, false, true, true]
+    @test dropmissing(ds, 1) == ds[[1,3,4], :]
+
+    ds = Dataset(x = big.([1,1,5,5,1,3,2,2,2]), y=rand(9))
+    @test unique(ds, 1) == ds[[1,3,6,7], :]
+    @test unique(ds, 1, keep = :last) == ds[[4,5,6,9], :]
+
+    ds = Dataset(x = [0xfffffffffffffff3, 0xfffffffffffffff1, 0xfffffffffffffff4, 0xfffffffffffffff1], y = [1,1,2,2])
+    @test unique(ds, 1) == ds[[1,2,3], :]
+    @test unique(ds, 1, keep = :last) == ds[[1,3,4], :]
+    setformat!(ds, 1=>isodd)
+    @test unique(ds, 1:2, mapformats = true) == ds[[1,3,4], :]
+    @test unique(ds, 1:2, mapformats = true, keep = :none) == ds[[3,4], :]
+
+end
