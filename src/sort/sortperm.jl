@@ -318,9 +318,13 @@ function ds_sort_perm(ds, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a:
                     minval::Integer = _minval
                 end
                 maxval::Integer = hp_maximum(_tmp)
-                (diff, o1) = sub_with_overflow(BigInt(maxval), BigInt(minval))
-                (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-                if !o1 && !o2 && maxval < typemax(Int) && (rangelen <= div(n,2))
+                rnglen = BigInt(maxval) - BigInt(minval) + 1
+                o1 = false
+                if rnglen < typemax(Int)
+                    o1 = true
+                    rangelen = Int(rnglen)
+                end
+                if o1 && maxval < typemax(Int) && (rangelen <= div(n,2))
                     if last_valid_range == 1
                       #for many levels but not too many we use parallel version
                       if Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads() && rangelen > 100_000 && rangelen*Threads.nthreads() < n

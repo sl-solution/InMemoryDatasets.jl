@@ -413,10 +413,17 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                 minval::Integer = _minval
             end
             maxval::Integer = hp_maximum(_f, v)
-            (diff, o1) = sub_with_overflow(BigInt(maxval), BigInt(minval))
-            (rangelen, o2) = add_with_overflow(diff, oneunit(diff))
-            (outmult, o3) = mul_with_overflow(rangelen, BigInt(prev_max_group))
-            if !o1 && !o2 && !o3 && maxval < typemax(Int) &&  prev_max_group*rangelen < 2*length(v)
+			rnglen = BigInt(maxval) - BigInt(minval) + 1
+			o1 = false
+			if rnglen < typemax(Int)
+				o1 = true
+				rangelen = Int(rnglen)
+			end
+			o2 = false
+			if BigInt(prev_max_group)*rangelen < 2*length(v)
+				o2 = true
+			end
+            if o1 && o2 && maxval < typemax(Int)
                 flag, prev_max_group = _create_dictionary_int_fast!(prev_groups, _f, v, prev_max_group, minval, rangelen, Val(T))
             else
                 if !seen_nonint
