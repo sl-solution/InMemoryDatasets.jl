@@ -113,6 +113,15 @@ function stat_mean(f, x::AbstractArray{T,1})::Union{Float64, Missing} where T <:
     n == 0 ? missing : sval/n
 end
 
+stat_cumsum(x::AbstractVector) = accumulate(_stat_add_sum, x)
+stat_cumsum!(outx, inx::AbstractVector) = accumulate!(_stat_add_sum, outx, inx)
+stat_cumprod(x::AbstractVector) = accumulate(_stat_mul_prod, x)
+stat_cumprod!(outx, inx::AbstractVector) = accumulate!(_stat_mul_prod, outx, inx)
+stat_cummin(x::AbstractVector) = accumulate(_stat_min_fun, x)
+stat_cummin!(outx, inx::AbstractVector) = accumulate!(_stat_min_fun, outx, inx)
+stat_cummax(x::AbstractVector) = accumulate(_stat_max_fun, x)
+stat_cummax!(outx, inx::AbstractVector) = accumulate!(_stat_max_fun, outx, inx)
+
 stat_mean(x::AbstractArray{T,1}) where T = stat_mean(identity, x)
 
 function stat_wmean(f, x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S
