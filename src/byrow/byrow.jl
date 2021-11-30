@@ -57,6 +57,12 @@ byrow(ds::AbstractDataset, ::typeof(maximum), col::ColumnIndex; by = identity, t
 byrow(ds::AbstractDataset, ::typeof(minimum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds)>1000) = threads ? hp_row_minimum(ds, by, cols) : row_minimum(ds, by, cols)
 byrow(ds::AbstractDataset, ::typeof(minimum), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, minimum, [col]; by = by, threads = threads)
 
+byrow(ds::AbstractDataset, ::typeof(argmin), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds)>1000) = threads ? hp_row_argmin(ds, by, cols) : row_argmin(ds, by, cols)
+byrow(ds::AbstractDataset, ::typeof(argmin), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, argmin, [col]; by = by, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(argmax), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds)>1000) = threads ? hp_row_argmax(ds, by, cols) : row_argmax(ds, by, cols)
+byrow(ds::AbstractDataset, ::typeof(argmax), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, argmax, [col]; by = by, threads = threads)
+
 byrow(ds::AbstractDataset, ::typeof(var), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, dof = true, threads = nrow(ds)>1000) = threads ? hp_row_var(ds, by, cols; dof = dof) : row_var(ds, by, cols; dof = dof)
 byrow(ds::AbstractDataset, ::typeof(var), col::ColumnIndex; by = identity, dof = true, threads = nrow(ds)>1000) = byrow(ds, var, [col]; by = by, dof = dof, threads = threads)
 

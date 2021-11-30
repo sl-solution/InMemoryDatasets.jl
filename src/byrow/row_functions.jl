@@ -115,6 +115,39 @@ function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mi
 end
 row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_maximum(ds, identity, cols)
 
+function _op_for_argminmax!(x, y, f, vals, idx)
+    idx[] += 1
+    for i in 1:length(x)
+        if isequal(vals[i], f(y[i])) && ismissing(x[i])
+            x[i] = idx[]
+        end
+    end
+    x
+end
+
+function row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+    colsidx = index(ds)[cols]
+    minvals = row_minimum(ds, f, cols)
+    colnames_pa = PooledArray(names(ds, colsidx))
+    idx = Ref{Int}(0)
+    res = mapreduce(identity, (x,y)->_op_for_argminmax!(x,y, f, minvals, idx), view(_columns(ds),colsidx), init = missings(eltype(colnames_pa.refs), nrow(ds)))
+    colnames_pa.refs = res
+    colnames_pa
+end
+row_argmin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_argmin(ds, identity, cols)
+
+function row_argmax(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+    colsidx = index(ds)[cols]
+    maxvals = row_maximum(ds, f, cols)
+    colnames_pa = PooledArray(names(ds, colsidx))
+    idx = Ref{Int}(0)
+    res = mapreduce(identity, (x,y)->_op_for_argminmax!(x,y,f, maxvals, idx), view(_columns(ds),colsidx), init = missings(eltype(colnames_pa.refs), nrow(ds)))
+    colnames_pa.refs = res
+    colnames_pa
+end
+row_argmax(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_argmax(ds, identity, cols)
+
+
 # TODO better function for the first component of operator
 function _row_wise_var(ss, sval, n, dof, T)
     res = Vector{T}(undef, length(ss))

@@ -154,6 +154,41 @@ function hp_row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union
 end
 hp_row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = hp_row_maximum(ds, identity, cols)
 
+
+function hp_op_for_argminmax!(x, y, f, vals, idx)
+    idx[] += 1
+    Threads.@threads for i in 1:length(x)
+        if isequal(vals[i], f(y[i])) && ismissing(x[i])
+            x[i] = idx[]
+        end
+    end
+    x
+end
+
+function hp_row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+    colsidx = index(ds)[cols]
+    minvals = hp_row_minimum(ds, f, cols)
+    colnames_pa = PooledArray(names(ds, colsidx))
+    idx = Ref{Int}(0)
+    res = mapreduce(identity, (x,y)->hp_op_for_argminmax!(x,y,f, minvals, idx), view(_columns(ds),colsidx), init = missings(eltype(colnames_pa.refs), nrow(ds)))
+    colnames_pa.refs = res
+    colnames_pa
+end
+hp_row_argmin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = hp_row_argmin(ds, identity, cols)
+
+function hp_row_argmax(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+    colsidx = index(ds)[cols]
+    maxvals = hp_row_maximum(ds, f, cols)
+    colnames_pa = PooledArray(names(ds, colsidx))
+    idx = Ref{Int}(0)
+    res = mapreduce(identity, (x,y)->hp_op_for_argminmax!(x,y,f, maxvals, idx), view(_columns(ds),colsidx), init = missings(eltype(colnames_pa.refs), nrow(ds)))
+    colnames_pa.refs = res
+    colnames_pa
+end
+hp_row_argmax(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = hp_row_argmax(ds, identity, cols)
+
+
+
 function hp_row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
