@@ -155,6 +155,7 @@ include("dataset/transpose.jl")
 
 # joins
 include("join/join.jl")
+include("join/join_dict.jl")
 include("join/asof.jl")
 include("join/update.jl")
 include("join/main.jl")
