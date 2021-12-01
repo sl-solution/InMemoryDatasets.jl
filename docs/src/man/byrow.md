@@ -46,6 +46,8 @@ Generally, `byrow` is very efficient for any `fun` which returns a single value 
 
 * `all`
 * `any`
+* `argmax`
+* `argmin`
 * `coalesce`
 * `count`
 * `hash`
