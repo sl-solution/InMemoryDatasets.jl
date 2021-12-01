@@ -6,7 +6,7 @@
 
 # Example
 
-```jldoctest
+```julia
 julia> using InMemoryDatasets
 julia> g1 = repeat(1:6, inner = 4);
 julia> g2 = repeat(1:4, 6);
