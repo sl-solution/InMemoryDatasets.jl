@@ -469,5 +469,3 @@ julia> update(main, transaction, on = [:group, :id],
    6 │ G2                 1       2.1         3
    7 │ G2                 2       0.0         2
 ```
-
-## Using Dictionary to join data sets
