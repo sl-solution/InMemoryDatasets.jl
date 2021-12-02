@@ -133,7 +133,7 @@ end
 function _apply_by_f_barrier(x::AbstractVector{T}, by, rev) where T
     needrev = rev
     missat = :right
-    CT = Core.Compiler.return_type(by∘_date_value, (nonmissingtype(T), ))
+    CT = Core.Compiler.return_type(_date_value∘by, (nonmissingtype(T), ))
     CT = Union{Missing, CT}
     _temp = Vector{CT}(undef, length(x))
     # FIXME this is trouble if counting sort is not going to be used

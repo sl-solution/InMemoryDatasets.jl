@@ -290,27 +290,32 @@ julia> map(ds, x -> x^2, :)
 # Base.map(ds::Dataset, f::Union{Function}, col::ColumnIndex) = map(ds, f, [col])
 # Base.map(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
-function Base.map(ds::Dataset, f::Function, cols::MultiColumnIndex; threads = true)
+function Base.map(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = true)
     colsidx = index(ds)[cols]
     fs = repeat([f], length(colsidx))
     map(ds, fs, cols; threads = threads)
 end
-Base.map(ds::Dataset, f::Function, col::ColumnIndex; threads = true) = map(ds, f, [col]; threads = threads)
-Base.map(ds::Dataset, f::Vector{Function}; threads = true) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+Base.map(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = true) = map(ds, f, [col]; threads = threads)
+Base.map(ds::AbstractDataset, f::Vector{Function}; threads = true) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
 
-function Base.map(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex; threads = true)
+function Base.map(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex; threads = true)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
     @assert length(f) ==length(colsidx) "The number of functions and the number of columns must match"
-    transfer_grouping_info = !any(colsidx .∈ Ref(index(ds).sortedcols))
-    sorted_colsidx = sort(colsidx)
+    if ds isa SubDataset
+        transfer_grouping_info = false
+    else
+        transfer_grouping_info = !any(colsidx .∈ Ref(index(ds).sortedcols))
+    end
+    sort_perm_colsidx = sortperm(colsidx)
+    # sorted_colsidx = sort(colsidx)
     counter_f = 1
     vs = AbstractVector[]
     for j in 1:ncol(ds)
-        if insorted(j, sorted_colsidx)
-            _f = f[counter_f]
+        if insorted(j, view(colsidx, sort_perm_colsidx))
+            _f = f[sort_perm_colsidx[counter_f]]
             counter_f += 1
         else
             _f = identity

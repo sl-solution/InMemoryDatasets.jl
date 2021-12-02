@@ -468,7 +468,14 @@ end
 
 # SubIndex(parent::AbstractIndex, ::Colon) = parent
 
-Base.copy(x::SubIndex) = Index(_names(x))
+function Base.copy(x::SubIndex)
+    newindx = Index(_names(x))
+    for j in _names(x)
+        setformat!(newindx, j=>getformat(x,j))
+    end
+    newindx
+end
+
 Base.parent(x::SubIndex) = x.parent
 @inline parentcols(ind::SubIndex) = ind.cols
 
