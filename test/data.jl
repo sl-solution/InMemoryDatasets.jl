@@ -85,6 +85,7 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
     @test ds8 == ds3_t
     @test ds9 == ds4_t
     @test ds10 == ds5_t
+    @test unique(ds, 1, keep = :only) == ds
     mft(x) = x == 1 ? missing : x==2 ? 10 : 4
     setformat!(ds, 1:3=>mft)
     ds1 = unique(ds, 2:3, mapformats = true)
@@ -102,11 +103,20 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
     @test ds3 == ds3_t
     @test ds4 == ds4_t
     @test ds5 == ds5_t
+    @test unique(ds, 1:2, keep = :only, mapformats = true) == ds[[1,2,3,6,9], :]
+    @test unique(ds, 1, keep = :only, mapformats = true) == ds
+    @test unique(ds, 1:3, keep = :only, mapformats = true) == ds[[2,3,6,9], :]
     @test byrow(compare(ds1, ds1_t, mapformats =true), all)|>all
     @test byrow(compare(ds2, ds2_t, mapformats =true), all)|>all
     @test byrow(compare(ds3, ds3_t, mapformats =true), all)|>all
     @test byrow(compare(ds4, ds4_t, mapformats =true), all)|>all
     @test byrow(compare(ds5, ds5_t, mapformats =true), all)|>all
+
+    for cols in [1, 1:2, 1:3], keepval in (:first, :last, :none, :only), mfmt in [true, false]
+        @test unique(ds, cols, keep = keepval, mapformats = mfmt) == unique(view(ds, :, :), cols, keep = keepval, mapformats = mfmt)
+        ds2 = ds[nrow(ds):-1:1, ncol(ds):-1:1]
+        @test unique(ds2, cols, keep = keepval, mapformats = mfmt) == unique(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), cols, keep = keepval, mapformats = mfmt)
+    end
 end
 
 @testset "completecases and dropmissing" begin
@@ -237,4 +247,40 @@ end
     @test unique(ds, 1:2, mapformats = true) == ds[[1,3,4], :]
     @test unique(ds, 1:2, mapformats = true, keep = :none) == ds[[3,4], :]
 
+end
+
+@testset "filtering" begin
+    ds = Dataset(x=[3, 1, 2, 1], y=["b", "c", "a", "b"])
+    @test filter(ds, 1, by = >(1)) == Dataset(x=[3, 2], y=["b", "a"])
+    @test filter!(ds, 1, by = >(1)) === ds == Dataset(x=[3, 2], y=["b", "a"])
+
+    ds = Dataset(x=[3, 1, 2, 1], y=["b", "c", "a", "b"])
+    @test filter(ds, :x, by = >(1)) == Dataset(x=[3, 2], y=["b", "a"])
+    @test filter!(ds, :x, by = >(1)) === ds == Dataset(x=[3, 2], y=["b", "a"])
+
+    ds = Dataset(x = [1,2,missing,1], y = ["a", "d", "c", "f"])
+    @test byrow(ds, all, :, by = [isequal(1), >("a")]) == [false, false, false, true]
+    setformat!(ds, 1=>isodd)
+    @test byrow(mask(ds, [isequal(1), >("a")], :), all) == [false, false, false, true]
+    @test byrow(mask(ds, [isequal(1), >("a")], :, mapformats = true), all) == [false, false, false, true]
+    @test byrow(mask(ds, [isequal(1), ==("a")], :), all) == [true, false, false, false]
+    @test byrow(mask(ds, [isequal(1), ==("a")], :, mapformats = true), all) == [true, false, false, false]
+    @test byrow(mask(ds, isequal(1), 1, mapformats = true), all) == [true, false, false, true]
+    @test byrow(mask(ds, ==(1), 1, mapformats = true, missings = true), all) == [true, false, true, true]
+    @test isequal(mask(ds, ==(1), 1, mapformats = true, missings = missing).x , [true, false, missing, true])
+    @test byrow(mask(ds, isequal(1), 1, mapformats = false), all) == [true, false, false, true]
+    @test byrow(mask(ds, ==(1), 1, mapformats = false, missings = true), all) == [true, false, true, true]
+    @test isequal(mask(ds, ==(1), 1, mapformats = false, missings = missing).x , [true, false, missing, true])
+    setformat!(ds, 1=>iseven)
+    @test byrow(mask(ds, isequal(1), 1, mapformats = true), all) == [false, true, false, false]
+    @test byrow(mask(ds, ==(1), 1, mapformats = true, missings = true), all) == [false, true, true, false]
+    @test isequal(mask(ds, ==(1), 1, mapformats = true, missings = missing).x , [false, true, missing, false])
+
+    ds = Dataset(x = repeat(1:10, inner = 100), y = 10)
+    @test byrow(ds, all, :, by = [>(5), ==(10)]) == [falses(500);trues(500)]
+    @test byrow(mask(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), [>(5), ==(10)], [2,1]), all) == [trues(500);falses(500)]
+    @test byrow(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), all, [2,1], by = [>(5), ==(10)]) == [trues(500);falses(500)]
+    @test byrow(ds, all, :, by = [>(5), ==(10)], threads = false) == [falses(500);trues(500)]
+    @test byrow(mask(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), [>(5), ==(10)], [2,1], threads = false), all, threads = false) == [trues(500);falses(500)]
+    @test byrow(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), all, [2,1], by = [>(5), ==(10)], threads = false) == [trues(500);falses(500)]
 end
