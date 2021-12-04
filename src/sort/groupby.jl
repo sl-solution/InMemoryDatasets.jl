@@ -8,7 +8,7 @@ end
 groupby!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby!(ds, [col]; alg = alg, rev = rev, mapformats = mapformats, stable = stable)
 
 mutable struct GroupBy
-	parent::Dataset
+	parent
 	groupcols
 	rev
 	perm
@@ -191,7 +191,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 				_push_groups_to_res!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
 			end
 			push!(index(newds), new_nm[var_cnt])
-			setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
+			setformat!(newds, new_nm[var_cnt] => getformat(parent(gds), groupcols[j]))
 			var_cnt += 1
 		end
 	end
@@ -207,7 +207,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 		else
 			if !(ms[i].first isa Tuple)
 				if old_x !== ms[i].first
-					if haskey(index(gds.parent).lookup, ms[i].first)
+					if haskey(index(gds.parent), ms[i].first)
 						curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1])
 						old_x = ms[i].first
 					else
@@ -228,7 +228,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 			if ms[i].first isa Tuple
 				_combine_f_barrier_tuple(ntuple(j-> _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first[j]]], a[1]), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
 			else
-				_combine_f_barrier(haskey(index(gds.parent).lookup, ms[i].first) ? curr_x : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+				_combine_f_barrier(haskey(index(gds.parent), ms[i].first) ? curr_x : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
 			end
 		end
 		if !haskey(index(newds), ms[i].second.second)
@@ -280,6 +280,14 @@ function getindex_group(ds::Dataset, i::Integer)
 	end
 	lo = index(ds).starts[i]
 	i == index(ds).ngroups[] ? hi = nrow(ds) : hi = index(ds).starts[i+1] - 1
+	lo:hi
+end
+function getindex_group(ds::Union{GatherBy, GroupBy}, i::Integer)
+	if !(1 <= i <= ds.lastvalid)
+		throw(BoundsError(ds, i))
+	end
+	lo = _group_starts(ds)[i]
+	i == ds.lastvalid ? hi = nrow(ds) : hi = _group_starts(ds)[i+1] - 1
 	lo:hi
 end
 
@@ -372,3 +380,17 @@ function _get_fmt(ds::GatherBy)
 end
 
 getformat(ds::GroupBy, i) = getformat(parent(ds), i)
+
+
+### EXPERIMENTAL FOR SubDataset ####
+_sortedcols(::SubDataset) = []
+_get_fmt(::SubDataset) = false
+_get_rev(::SubDataset) = []
+
+function groupby(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+	_check_consistency(ds)
+	colsidx = index(ds)[cols]
+	a = _sortperm_v(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)
+	GroupBy(ds, colsidx, rev, a[2], a[1], a[3], mapformats)
+end
+groupby(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)

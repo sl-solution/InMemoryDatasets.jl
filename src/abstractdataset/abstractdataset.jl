@@ -975,8 +975,8 @@ Base.Array(ds::AbstractDataset) = Matrix(ds)
 Base.Array{T}(ds::AbstractDataset) where {T} = Matrix{T}(ds)
 
 """
-    nonunique(ds::AbstractDataset; [mapformats = false, first = true])
-    nonunique(ds::AbstractDataset, cols; [mapformats = false, first = true])
+    nonunique(ds::AbstractDataset; [mapformats = false, first = true, only = false])
+    nonunique(ds::AbstractDataset, cols; [mapformats = false, first = true, only = false])
 
 Return a `Vector{Bool}` in which `true` entries indicate duplicate rows.
 A row is a duplicate if there exists a prior row with all columns containing
@@ -985,6 +985,7 @@ equal values (according to `isequal`).
 If `mapformats = true` the values are checked based on their formatted values.
 `first = true` means that everey occurance after the first one be marked as non-unique value, and
 `first = false` means that every occurance before the last one be marked as non-unique value.
+`only = true` means that only duplicated rows are marked as non-unique value.
 
 See also [`unique`](@ref) and [`unique!`](@ref).
 
@@ -1043,7 +1044,7 @@ julia> nonunique(ds, 2)
  1
 ```
 """
-function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, first = true)
+function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, first = true, only = false)
     if ncol(ds) == 0
         throw(ArgumentError("finding duplicate rows in data set with no " *
                             "columns is not allowed"))
@@ -1052,11 +1053,19 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
     groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats, stable = false)
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
-
-    _nonunique_barrier!(res, groups, seen_groups; first = first)
-    return res
+    if only
+        _nonunique_barrier!(res, groups, seen_groups; first = true)
+        r1 = copy(res)
+        res = trues(nrow(ds))
+        seen_groups = falses(ngroups)
+        _nonunique_barrier!(res, groups, seen_groups; first = false)
+        .|(r1, res)
+    else
+        _nonunique_barrier!(res, groups, seen_groups; first = first)
+        return res
+    end
 end
-nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false, first = true) = nonunique(ds, [col]; mapformats = mapformats, first = first)
+nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false, first = true, only = false) = nonunique(ds, [col]; mapformats = mapformats, first = first, only = only)
 
 function _nonunique_barrier!(res, groups, seen_groups; first = true)
     if first

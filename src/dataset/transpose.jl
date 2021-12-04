@@ -148,7 +148,14 @@ function ds_transpose(ds::Dataset, cols::Union{Tuple, MultiColumnIndex}; id = no
         tcols = [index(ds)[cols]]
     end
     max_num_col = maximum(length, tcols)
-
+    if variable_name isa AbstractString || variable_name isa Symbol || variable_name === nothing
+        var_name = repeat([variable_name], length(tcols))
+    elseif variable_name isa AbstractVector
+        var_name = variable_name
+        @assert length(var_name) == length(tcols)
+    else
+        throw(ArgumentError("`variable_name` must be a string, symbol, nothing, or a vector of them"))
+    end
     if id !== nothing
         ididx = index(ds)[id]
 
@@ -188,8 +195,8 @@ function ds_transpose(ds::Dataset, cols::Union{Tuple, MultiColumnIndex}; id = no
         outputmat = _simple_transpose_ds_generate(T, ECol, max_num_col, new_col_names, variable_name, threads)
         if j == 1
             newds = Dataset(outputmat, new_col_names)
-            if variable_name !== nothing
-                new_var_label = Symbol(variable_name)
+            if var_name[j] !== nothing
+                new_var_label = Symbol(var_name[j])
                 newds = insertcols!(newds, 1,  new_var_label => row_names, unsupported_copy_cols = false)
             end
         else
@@ -198,8 +205,8 @@ function ds_transpose(ds::Dataset, cols::Union{Tuple, MultiColumnIndex}; id = no
             for i in 1:length(u)
                 newds[!, u[i]] = ds2[!, i].val
             end
-            if variable_name !== nothing
-                new_var_label = Symbol(variable_name)
+            if var_name[j] !== nothing
+                new_var_label = Symbol(var_name[j])
                 insertcols!(newds, j, new_var_label => row_names, unsupported_copy_cols = false, makeunique = true)
             end
         end
@@ -421,7 +428,14 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
     end
     max_num_col = maximum(length, tcols)
     gcolsidx = gcols
-
+    if variable_name isa AbstractString || variable_name isa Symbol || variable_name === nothing
+        var_name = repeat([variable_name], length(tcols))
+    elseif variable_name isa AbstractVector
+        var_name = variable_name
+        @assert length(var_name) == length(tcols)
+    else
+        throw(ArgumentError("`variable_name` must be a string, symbol, nothing, or a vector of them"))
+    end
     local outds
 
     need_fast_stack = false
@@ -446,11 +460,11 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
                     setformat!(outds, j => getformat(parent(ds), gcolsidx[j]))
                 end
             end
-            if variable_name !== nothing
+            if var_name[j] !== nothing
                 _repeat_row_names = allowmissing(PooledArray(renamerowid.(names(ds, sel_cols))))
                 _extend_repeat_row_names!(_repeat_row_names, max_num_col)
                 _repeat_row_names.refs = repeat(_repeat_row_names.refs, nrow(ds))
-                new_var_label = Symbol(variable_name)
+                new_var_label = Symbol(var_name[j])
                 insertcols!(outds, length(gcolsidx)+j, new_var_label => _repeat_row_names, unsupported_copy_cols = false, makeunique = true)
             end
             res = Vector{Union{Missing, T}}(undef, nrow(ds) * max_num_col)
@@ -509,7 +523,7 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
             outputmat = _fill_outputmat_withid(T, ECol, ds, view(_group_starts(ds), 1:_ngroups(ds)),  _get_perms(ds), ids_refs, new_col_names, max_num_col, threads; default_fill = default_fill)
         end
         # rows_with_group_info = _find_group_row(gds)
-        new_var_label = Symbol(variable_name)
+        new_var_label = Symbol(var_name[j])
         if j == 1
             g_array = AbstractArray[]
             _fill_gcol!(g_array, parent(ds), gcolsidx, max_num_col, view(_get_perms(ds), view(_group_starts(ds), 1:_ngroups(ds))), _ngroups(ds), threads)
@@ -521,7 +535,7 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
 
         # _repeat_row_names = Vector{eltype(row_names)}(undef, _ngroups(ds)*length(colsidx))
         # _fill_row_names!(_repeat_row_names, row_names, _ngroups(ds))
-        if variable_name !== nothing
+        if var_name[j] !== nothing
             _repeat_row_names = allowmissing(PooledArray(row_names))
             _repeat_row_names.refs = repeat(_repeat_row_names.refs, _ngroups(ds))
             insertcols!(outds, length(gcolsidx)+j, new_var_label => _repeat_row_names, unsupported_copy_cols = false, makeunique = true)

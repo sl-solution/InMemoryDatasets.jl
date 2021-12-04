@@ -1,5 +1,5 @@
 # col => fun => dst, the job is to create col => fun => :dst
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Pair{<:Union{Function},
                                                         <:Union{Symbol, AbstractString}}})
@@ -9,7 +9,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     return _names(idx)[idx[src]] => fun => Symbol(dst)
 end
 
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
                                                     <:Pair{<:Union{Function},
                                                         <:Union{Symbol, AbstractString}}})
@@ -21,7 +21,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
 end
 
 # col => fun => dst, the job is to create col => fun => :dst
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Pair{<:Union{Function},
                                                         <:Vector{<:Union{Symbol, AbstractString}}}})
@@ -33,7 +33,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     return _names(idx)[idx[src]] => fun => MultiCol(Symbol.(dst))
 end
 # col => fun, the job is to create col => fun => :colname
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Union{Function}}))
 
@@ -43,7 +43,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     return _names(idx)[idx[src]] => fun => nname
 end
 
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
                                                     <:Union{Function}})) where N
 
@@ -65,7 +65,7 @@ end
 
 
 # col => byrow
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Vector{Expr}}))
     if sel.second[1].head == :BYROW
@@ -81,7 +81,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Expr}))
     if sel.second.head == :BYROW
@@ -99,7 +99,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
 # col => byrow => dst
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                         <:Pair{<:Vector{Expr},
                                             <:Union{Symbol, AbstractString}}}))
@@ -115,7 +115,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                         <:Pair{<:Expr,
                                             <:Union{Symbol, AbstractString}}}))
@@ -132,7 +132,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
 
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Vector{Expr}}))
     if sel.second[1] isa Expr
@@ -148,7 +148,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
         end
     end
 end
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Union{Function,Expr}}))
     if sel.second isa Expr
@@ -171,7 +171,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     return res
 end
 # cols => funs which will be normalize as col1=>fun1, col2=>fun2, ...
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Vector{<:Function}}))
     colsidx = idx[sel.first]
@@ -185,7 +185,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     return res
 end
 
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Vector{<:Function}}))
     colsidx = idx[sel.first]
@@ -198,7 +198,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
 end
 
 # special case cols => byrow(...) => :name
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
     @nospecialize(sel::Pair{<:MultiColumnIndex,
                             <:Pair{<:Vector{Expr},
                                 <:Union{Symbol, AbstractString}}}))
@@ -214,7 +214,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
         throw(ArgumentError("only byrow operation is supported for cols => fun => :name"))
     end
 end
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
     @nospecialize(sel::Pair{<:MultiColumnIndex,
                             <:Pair{<:Expr,
                                 <:Union{Symbol, AbstractString}}}))
@@ -232,7 +232,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
 end
 
 # cols .=> fun .=> dsts, the job is to create col1 => fun => :dst1, col2 => fun => :dst2, ...
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Pair{<:Vector{Expr},
                                                         <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
@@ -245,7 +245,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     end
     return res
 end
-function normalize_combine!(offset, outidx::Index, idx::Index,
+function normalize_combine!(offset, outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Pair{<:Union{Function},
                                                         <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
@@ -260,10 +260,10 @@ function normalize_combine!(offset, outidx::Index, idx::Index,
     return res
 end
 
-function normalize_combine!(offset, outidx::Index, idx::Index, arg::AbstractVector)
+function normalize_combine!(offset, outidx::Index, idx, arg::AbstractVector)
     res = Any[]
     for i in 1:length(arg)
-        _res = normalize_combine!(offset, outidx::Index, idx::Index, arg[i])
+        _res = normalize_combine!(offset, outidx::Index, idx, arg[i])
         if _res isa AbstractVector
             for j in 1:length(_res)
                 push!(res, _res[j])
@@ -275,7 +275,7 @@ function normalize_combine!(offset, outidx::Index, idx::Index, arg::AbstractVect
     return res
 end
 
-function normalize_combine_multiple!(offset, outidx::Index, idx::Index, @nospecialize(args...))
+function normalize_combine_multiple!(offset, outidx::Index, idx, @nospecialize(args...))
     res = Any[]
     for i in 1:length(args)
         _res = normalize_combine!(offset, outidx, idx, args[i])

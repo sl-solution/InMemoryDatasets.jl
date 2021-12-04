@@ -456,7 +456,7 @@ julia> ds
    4 │       16        13
 ```
 """
-function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex; threads = true)
+function Base.map!(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex; threads = true)
     # Create Dataset
     ncol(ds) == 0 && return ds # skip if no columns
     colsidx = index(ds)[cols]
@@ -479,7 +479,7 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex; t
             end
             # removeformat!(ds, colsidx[j])
             _modified(_attributes(ds))
-            if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
+            if !_reset_group && parentcols(index(ds), colsidx[j]) ∈ index(parent(ds)).sortedcols
                 _reset_grouping_info!(ds)
                 _reset_group = true
             end
@@ -497,14 +497,14 @@ function Base.map!(ds::Dataset, f::Vector{<:Function}, cols::MultiColumnIndex; t
     return ds
 end
 
-function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex; threads = true)
+function Base.map!(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = true)
     colsidx = index(ds)[cols]
     fs = repeat([f], length(colsidx))
     map!(ds, fs, colsidx; threads = threads)
 end
 
-Base.map!(ds::Dataset, f::Union{Function}, col::ColumnIndex; threads = true) = map!(ds, f, [col]; threads = threads)
-Base.map!(ds::Dataset, f::Vector{<:Function}; threads = true) = throw(ArgumentError("the `cols` argument cannot be left blank"))
+Base.map!(ds::AbstractDataset, f::Union{Function}, col::ColumnIndex; threads = true) = map!(ds, f, [col]; threads = threads)
+Base.map!(ds::AbstractDataset, f::Vector{<:Function}; threads = true) = throw(ArgumentError("the `cols` argument cannot be left blank"))
 
 
 # the order of argument in `mask` is based on map, should we make it mask(ds, cols, fun)
@@ -608,8 +608,7 @@ function _fill_mask!(fv, v, fj, threads, missings)
 end
 _bool_mask(f) = x->f(x)::Union{Bool, Missing}
 
-
-# Unique cases
+# TODO is it faster to use this function for unique(..., keep = :none) case?
 function _unique_none_case(ds::Dataset, cols; mapformats = false)
     if ncol(ds) == 0
         throw(ArgumentError("finding duplicate rows in data set with no " *
@@ -621,60 +620,64 @@ end
 
 # Modify Dataset
 function Base.unique!(ds::Dataset; mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
+    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        seen, res = _unique_none_case(ds, :,  mapformats = mapformats)
-        deleteat!(ds, res)
-        deleteat!(ds, seen)
+        rowidx = nonunique(ds, mapformats = mapformats, only = true)
+    elseif keep == :only
+        rowidx = .!nonunique(ds, mapformats = mapformats, only = true)
     else
-        deleteat!(ds, nonunique(ds, mapformats = mapformats, first = keep == :first))
+        rowidx = nonunique(ds, mapformats = mapformats, first = keep == :first)
     end
+    deleteat!(ds, rowidx)
 end
+# this is for fixing ambiguity
 function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
+    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        seen, res = _unique_none_case(ds, cols, mapformats = mapformats)
-        deleteat!(ds, res)
-        deleteat!(ds, seen)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, only = true)
+    elseif keep == :only
+        rowidx = .!nonunique(ds, cols, mapformats = mapformats, only = true)
     else
-        deleteat!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+        rowidx = nonunique(ds, cols, mapformats = mapformats, first = keep == :first)
     end
+    deleteat!(ds, rowidx)
+end
+function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
+    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
+    if keep == :none
+        rowidx = nonunique(ds, cols, mapformats = mapformats, only = true)
+    elseif keep == :only
+        rowidx = .!nonunique(ds, cols, mapformats = mapformats, only = true)
+    else
+        rowidx = nonunique(ds, cols, mapformats = mapformats, first = keep == :first)
+    end
+    deleteat!(ds, rowidx)
 end
 
-function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
-    if keep == :none
-        seen, res = _unique_none_case(ds, cols, mapformats = mapformats)
-        deleteat!(ds, res)
-        deleteat!(ds, seen)
-    else
-        deleteat!(ds, nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
-    end
-end
 
 # Unique rows of an Dataset.
 @inline function Base.unique(ds::AbstractDataset; view::Bool=false, mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
+    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        seen, res = _unique_none_case(ds, :,  mapformats = mapformats)
-        rowidxs = .!res
-        return view ? Base.view(Base.view(ds, rowidxs, :), .!(seen), :) : (ds[rowidxs, :])[.!seen, :]
+        rowidxs = .!nonunique(ds, mapformats = mapformats, only = true)
+    elseif keep == :only
+        rowidxs = nonunique(ds, mapformats = mapformats, only = true)
     else
         rowidxs = (!).(nonunique(ds, mapformats = mapformats, first = keep == :first))
-        return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
     end
+    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
 
 @inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false, mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last or :none"))
+    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        seen, res = _unique_none_case(ds, cols,  mapformats = mapformats)
-        rowidxs = .!res
-        return view ? Base.view(Base.view(ds, rowidxs, :), .!(seen), :) : (ds[rowidxs, :])[.!seen, :]
+        rowidxs = .!nonunique(ds, cols, mapformats = mapformats, only = true)
+    elseif keep == :only
+        rowidxs = nonunique(ds, cols, mapformats = mapformats, only = true)
     else
         rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
-        return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
     end
+    return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
 
 
@@ -682,10 +685,11 @@ end
     unique(ds::AbstractDataset, cols = : ; [mapformats = false, keep = :first, view::Bool=false])
     unique!(ds::AbstractDataset, cols = : ; [mapformats = false, keep = :first, view::Bool=false])
 
-Return a data set containing only the unique occurrence of unique rows in `ds` when `keep = :first` or `keep = :last`. The
+Return a data set containing only the unique occurrence of unique rows in `ds` where `keep` can be one of the following value: `:first`, `:last`, `:none`, or `:only`. The
 `keep` keyword argument detemines which occurrence of the unique value should be kept, i.e. when `keep = :first` the
 first occurrence of the unique value will be kept and when `keep = :last` the last occurrence will be kept. When `keep` is set to `:none`
-all duplicates will be dropped from the result. When `cols` is specified, the unique occurrence is detemined by given combination of values
+all duplicates will be dropped from the result, and when `keep` is set to `:only` only duplicated rows are kept.
+ When `cols` is specified, the unique occurrence is detemined by given combination of values
 in selected columns. `cols` can be any column selector.
 
 For `unique`, if `view=false` a freshly allocated `Dataset` is returned,
@@ -887,7 +891,7 @@ julia> compare(ds1, ds2, on = [:x=>:x, :y=>:y3])
 
 ```
 """
-function compare(ds1::Dataset, ds2::Dataset; on = nothing, eq = isequal, mapformats = false, threads = true)
+function compare(ds1::AbstractDataset, ds2::AbstractDataset; on = nothing, eq = isequal, mapformats = false, threads = true)
     if !(mapformats isa AbstractVector)
         mapformats = repeat([mapformats], 2)
     else

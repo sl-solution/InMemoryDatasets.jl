@@ -32,7 +32,7 @@ end
 # fast combine for gatherby data
 
 mutable struct GatherBy
-    parent::Dataset
+    parent
     groupcols
     groups
     lastvalid
@@ -83,7 +83,7 @@ function _group_creator!(groups, starts, ngroups)
 	end
 end
 
-function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true, stable = true, isgathered = false)
+function gatherby(ds::AbstractDataset, cols::MultiColumnIndex; mapformats = true, stable = true, isgathered = false)
     colsidx = index(ds)[cols]
 	T = nrow(ds) < typemax(Int32) ? Int32 : Int64
 	_check_consistency(ds)
@@ -98,7 +98,7 @@ function gatherby(ds::Dataset, cols::MultiColumnIndex; mapformats = true, stable
     	return GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
 	end
 end
-gatherby(ds::Dataset, col::ColumnIndex; mapformats = true, stable = true, isgathered = false) = gatherby(ds, [col], mapformats = mapformats, stable = stable, isgathered = isgathered)
+gatherby(ds::AbstractDataset, col::ColumnIndex; mapformats = true, stable = true, isgathered = false) = gatherby(ds, [col], mapformats = mapformats, stable = stable, isgathered = isgathered)
 
 
 function _fill_mapreduce_col!(x, f, op, y, loc)
@@ -316,7 +316,7 @@ function _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm; dropgroupc
 	            push!(_columns(newds), _tmpres)
 	        end
 	        push!(index(newds), new_nm[var_cnt])
-	        setformat!(newds, new_nm[var_cnt] => get(index(gds.parent).format, groupcols[j], identity))
+			setformat!(newds, new_nm[var_cnt] => getformat(parent(gds), groupcols[j]))
 	        var_cnt += 1
 	    end
 	end
