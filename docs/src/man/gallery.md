@@ -224,7 +224,7 @@ julia> @chain store begin
 ```
 ## Reshape
 
-* [How to transpose or pivote a table? Selecting specific columns](https://stackoverflow.com/questions/70228385/how-to-transpose-or-pivote-a-table-selecting-specific-columns) : I need to pivot or transpose it, keeping the Country Code, the years, and the indicators names as columns
+* [How to transpose or pivote a table? Selecting specific columns](https://stackoverflow.com/questions/70228385/how-to-transpose-or-pivote-a-table-selecting-specific-columns) : I need to pivot or transpose my data, keeping the Country Code, the years, and the indicators names as columns
 
 ```julia
 julia> ds = Dataset("Country_Code"=>["FR","FR","FR","USA","USA","USA","BR","BR","BR"],
