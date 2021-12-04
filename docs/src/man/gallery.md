@@ -222,6 +222,43 @@ julia> @chain store begin
    9 │ B         2019-10-04                   4
   10 │ B         2019-10-05                   2
 ```
+## Reshape
+
+* [How to transpose or pivote a table? Selecting specific columns](https://stackoverflow.com/questions/70228385/how-to-transpose-or-pivote-a-table-selecting-specific-columns) : I need to pivot or transpose it, keeping the Country Code, the years, and the indicators names as columns
+
+```julia
+julia> ds = Dataset("Country_Code"=>["FR","FR","FR","USA","USA","USA","BR","BR","BR"],
+                    "Indicator_Name"=>["GPD","Pop","birth","GPD","Pop","birth","GPD","Pop","birth"],
+                    "2005"=>[14,34,56, 25, 67, 68, 55, 8,99],
+                    "2006"=>[23, 34, 34, 43,34,34, 65, 34,45])
+9×4 Dataset
+ Row │ Country_Code  Indicator_Name  2005      2006     
+     │ identity      identity        identity  identity
+     │ String?       String?         Int64?    Int64?   
+─────┼──────────────────────────────────────────────────
+   1 │ FR            GPD                   14        23
+   2 │ FR            Pop                   34        34
+   3 │ FR            birth                 56        34
+   4 │ USA           GPD                   25        43
+   5 │ USA           Pop                   67        34
+   6 │ USA           birth                 68        34
+   7 │ BR            GPD                   55        65
+   8 │ BR            Pop                    8        34
+   9 │ BR            birth                 99        45
+
+julia> transpose(gatherby(ds, 1), 3:4, id = r"Name")
+6×5 Dataset
+ Row │ Country_Code  _variables_  GPD       Pop       birth    
+     │ identity      identity     identity  identity  identity
+     │ String?       String?      Int64?    Int64?    Int64?   
+─────┼─────────────────────────────────────────────────────────
+   1 │ FR            2005               14        34        56
+   2 │ FR            2006               23        34        34
+   3 │ USA           2005               25        67        68
+   4 │ USA           2006               43        34        34
+   5 │ BR            2005               55         8        99
+   6 │ BR            2006               65        34        45
+```
 
 ## `for loops`
 
