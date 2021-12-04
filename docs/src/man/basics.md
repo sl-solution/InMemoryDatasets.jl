@@ -9,7 +9,7 @@ julia> using Pkg
 julia> Pkg.add("InMemoryDatasets")
 ```
 
-Throughout the rest of the tutorial we will assume that you have installed the "In Memory Datasets" package and
+Throughout the rest of the tutorial we will assume that you have installed the "In-Memory Datasets" package and
 have already typed `using InMemoryDatasets` which loads the package:
 
 ```jldoctest
@@ -224,7 +224,7 @@ julia> setformat!(ds, :y => sqrt)
 
 The first argument for `setformat!` is the data set which needs to be modified and the second argument is the name of column, `=>`, and a named function. In the above example, we assign `sqrt` function as a format for the column `:y`.
 
-> Note that `setformat!` doesn't check the validity of a format, so if an invalid format is assigned to a column, for instance assigning `sqrt` to a column which contains negative values, some functionality of data set will be parallelised (like `show`ing the data set). In this cases, simply remove the invalid format by using `removeformat!`.
+> Note that `setformat!` doesn't check the validity of a format, so if an invalid format is assigned to a column, for instance assigning `sqrt` to a column which contains negative values, some functionality of data set will be parallelised (like `show`ing the data set). In these cases, simply remove the invalid format by using `removeformat!`.
 
 Let's define a function as a new format for column `:z` in the above example,
 
@@ -276,7 +276,7 @@ julia> removeformat!(ds, :y)
   10 │       10         5  Female
 ```
 
-Similar to `setformat!` the first argument is the name of the data set and the second argument is the name of the column which we want to remove its format. Note that assigning or removing a format doesn't change the actual values of the column.
+Similar to `setformat!` the first argument is the name of the data set and the second argument is the name of the column(s) which we want to remove its(their) format(s). Note that assigning or removing a format doesn't change the actual values of the column.
 
 By default, formatted values of a column will be used when operations like displaying, sorting, grouping, or joining are called.
 
@@ -296,7 +296,7 @@ julia> ds[3, :y]
 43
 ```
 
-Note that `ds[:, col]` extracts (copy) a column of a data set as a vector. Thus, this vector can be used as a normal vector in Julia.
+Note that `ds[:, col]` extracts (copies) a column of a data set as a vector. Thus, this vector can be used as a normal vector in Julia.
 
 Also note that, assigning a new value to `ds[3, :y]` will modify the data set, i.e.
 
@@ -379,7 +379,7 @@ julia> ds
    3 │        3  val3            32.0
 ```
 
-Be aware that, when adding a new column to a data set, using the above syntax, if the column already exists in the data set it will be replaced by new one.
+Beware that, when adding a new column to a data set, using the above syntax, if the column already exists in the data set it will be replaced by the new one.
 
 ### Some useful functions
 

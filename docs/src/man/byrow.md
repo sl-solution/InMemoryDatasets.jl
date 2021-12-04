@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The `byrow` function is a high performance (multi-threaded) function for row-wise operations. It is designed to make tasks like summing up each row simple, efficient, and lightening fast. The function can be used as a stand-alone function or inside `modify` or `combine` functions. The stand-alone syntax of the function is `byrow(ds, fun, cols, ...)`, where `ds` is a data set, `fun` is a function, and `cols`  is the list of columns which row-wise operation is going to be applied on their values in each row, e.g. the following code creates a data set with 100,000 rows and 100 columns, and adds the values in each row,
+The `byrow` function is a high performance (multi-threaded) function for row-wise operations. It is designed to make tasks like summing up each row simple, efficient, and lightening fast. The function can be used as a stand-alone function or inside `modify`/`modify!` or `combine` functions. The stand-alone syntax of the function is `byrow(ds, fun, cols, ...)`, where `ds` is a data set, `fun` is a function, and `cols`  is the list of columns which row-wise operation is going to be applied on their values in each row, e.g. the following code creates a data set with 100,000 rows and 100 columns, and adds the values in each row,
 
 ```jldoctest
 julia> ds = Dataset(rand(10^5, 100), :auto);
@@ -38,11 +38,11 @@ julia> @btime sum(m, dims = 2)
   20.773 ms (7 allocations: 879.11 KiB)
 ```
 
-In the above benchmark, you should expect even more difference when the data set has a group of heterogeneous columns.
+In the above benchmark, `byrow` should be even more performant when the data set has a group of heterogeneous columns.
 
 ## Optimised operations
 
-Generally, `byrow` is very efficient for any `fun` which returns a single value for each row, however, it is fine tuned for the following functions:
+Generally, `byrow` is efficient for any `fun` which returns a single value for each row, however, it is fine tuned for the following functions:
 
 * `all`
 * `any`
@@ -64,9 +64,9 @@ The common syntax of `byrow` for all of these functions except `nunique`, `coale
 
 `byrow(ds, fun, cols; [by , threads = true])`
 
-The `by` keyword argument is for giving a function to call on each value before calling `fun` to aggregate the values, and `threads = true` causes `byrow` to exploit all cores available to Julia for performing the computations.
+The `by` keyword argument is for specifying a function to call on each value before calling `fun` to aggregate the result, and `threads = true` causes `byrow` to exploit all cores available to Julia for performing the computations.
 
-The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique value of each row, and `count_missing = true` counts missings as a unique value.
+The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique values of each row, and `count_missing = true` counts missings as a unique value.
 
 The `coalesce` function doesn't accept `by` argument.
 
@@ -107,7 +107,7 @@ julia> byrow(ds, mean, r"_float")
 
 Note that, since for the second row all values are `missing`, the result of mean is also `missing`.
 
-To calculate the mean of the absolute value of each row for the float columns we use the same code and add `by = abs` as the keyword argument,
+To calculate the mean of the absolute value of each row for the float columns we use the same code and pass `by = abs` as the keyword argument,
 
 ```jldoctest
 julia> byrow(ds, mean, r"_float", by = abs)
@@ -158,7 +158,7 @@ julia> byrow(ds, count, :, by = !ismissing)
 ```
 ## `mapreduce`
 
-One special function that can be used as `fun` in the `byrow` function is `mapreduce`. This can be used to implement a customised reduction as row operation. When `mapreduce` is used in `byrow`, two keyword arguments must be passed, `op` and `init`. For example in the following code we use `mapreduce` to `sum` all values in each row:
+One special function that can be used as `fun` in the `byrow` function is `mapreduce`. This can be used to implement a customised reduction as row operation. When `mapreduce` is used in `byrow`, two keyword arguments must be passed, `op` and `init`. For example in the following code we use `mapreduce` to `sum` all values in each row: (note that unlike `byrow(ds, sum, :)` the following function will return missing for a row if any of the value in that row is missing)
 
 > `byrow(ds, mapreduce, :, op = .+, init = zeros(nrow(ds)))`
 
@@ -187,7 +187,7 @@ Note that `avg` is missing if any of the values in `x` is missing.
 
 ## Special operations
 
-`byrow` also supports a few optimised operations which return a vector of values for each row. The `fun` argument for these operations is one the followings:
+`byrow` also supports a few optimised operations which return a vector of values for each row. The `fun` argument for these operations is one of the followings:
 
 * `cumprod`
 * `cumprod!`
@@ -216,6 +216,6 @@ julia> byrow(ds, cumsum, 1:3)
    5 │        2         4         2       10.0  missing       -100.0
 ```
 
-Note that for these operations, `cumsum` treats `missing` as zero, and `cumprod` treats `missing` as one.
+Note that for these operations, by default, `cumsum` treats `missing` as zero, and `cumprod` treats `missing` as one, i.e. they ignore `missing` values, however, passing `missings = :skip` causes these functions to skip the missing values (leave them as `missing`).
 
 The special operations don't change the columns names or their orders.
