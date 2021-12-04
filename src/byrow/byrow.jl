@@ -72,17 +72,17 @@ byrow(ds::AbstractDataset, ::typeof(std), col::ColumnIndex; by = identity, dof =
 byrow(ds::AbstractDataset, ::typeof(nunique), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, count_missing = true) = row_nunique(ds, by, cols; count_missing = count_missing)
 byrow(ds::AbstractDataset, ::typeof(nunique), col::ColumnIndex; by = identity, count_missing = true) = byrow(ds, nunique, [col]; by = by, count_missing = count_missing)
 
-byrow(ds::AbstractDataset, ::typeof(cumsum), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_cumsum(ds, cols)
-byrow(ds::AbstractDataset, ::typeof(cumsum), col::ColumnIndex) = byrow(ds, cumsum, [col])
+byrow(ds::AbstractDataset, ::typeof(cumsum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore) = row_cumsum(ds, cols, missings = missings)
+byrow(ds::AbstractDataset, ::typeof(cumsum), col::ColumnIndex; missings = :ignore) = byrow(ds, cumsum, [col], missings = missings)
 
-byrow(ds::AbstractDataset, ::typeof(cumprod!), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_cumprod!(ds, cols)
-byrow(ds::AbstractDataset, ::typeof(cumprod!), col::ColumnIndex) = byrow(ds, cumprod!, [col])
+byrow(ds::AbstractDataset, ::typeof(cumprod!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore) = row_cumprod!(ds, cols, missings = missings)
+byrow(ds::AbstractDataset, ::typeof(cumprod!), col::ColumnIndex; missings = :ignore) = byrow(ds, cumprod!, [col], missings = missings)
 
-byrow(ds::AbstractDataset, ::typeof(cumprod), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_cumprod(ds, cols)
-byrow(ds::AbstractDataset, ::typeof(cumprod), col::ColumnIndex) = byrow(ds, cumprod, [col])
+byrow(ds::AbstractDataset, ::typeof(cumprod), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore) = row_cumprod(ds, cols, missings = missings)
+byrow(ds::AbstractDataset, ::typeof(cumprod), col::ColumnIndex; missings = :ignore) = byrow(ds, cumprod, [col], missings = missings)
 
-byrow(ds::AbstractDataset, ::typeof(cumsum!), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_cumsum!(ds, cols)
-byrow(ds::AbstractDataset, ::typeof(cumsum!), col::ColumnIndex) = byrow(ds, cumsum!, [col])
+byrow(ds::AbstractDataset, ::typeof(cumsum!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore) = row_cumsum!(ds, cols, missings = missings)
+byrow(ds::AbstractDataset, ::typeof(cumsum!), col::ColumnIndex; missings = :ignore) = byrow(ds, cumsum!, [col], missings = missings)
 
 byrow(ds::AbstractDataset, ::typeof(sort), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); threads = true, kwargs...) = threads ? hp_row_sort(ds, cols; kwargs...) : row_sort(ds, cols; kwargs...)
 byrow(ds::AbstractDataset, ::typeof(sort), col::ColumnIndex; threads = true, kwargs...) = byrow(ds, sort, [col]; threads = threads, kwargs...)

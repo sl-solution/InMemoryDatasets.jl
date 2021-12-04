@@ -193,7 +193,15 @@ function row_std(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missin
 end
 row_std(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); dof = true) = row_std(ds, identity, cols, dof = dof)
 
-function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}))
+function _op_for_cumsum_skip!(x, y)
+    x .= _add_sum.(x,y)
+    y .= ifelse.(ismissing.(y), missing, x)
+    x
+end
+_op_for_cumsum_ignore!(x, y) = y .= _add_sum.(x, y)
+
+
+function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
     colsidx = index(ds)[cols]
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     for i in colsidx
@@ -203,9 +211,14 @@ function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}))
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    _op_for_cumsum!(x, y) = y .= _add_sum.(x, y)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
-    mapreduce(identity, _op_for_cumsum!, view(_columns(ds),colsidx), init = init0)
+    if missings == :ignore
+        mapreduce(identity,  _op_for_cumsum_ignore!, view(_columns(ds),colsidx), init = init0)
+    elseif missings == :skip
+        mapreduce(identity, _op_for_cumsum_skip!, view(_columns(ds),colsidx), init = init0)
+    else
+        throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
+    end
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
@@ -213,14 +226,20 @@ function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}))
 end
 # row_cumsum!(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_cumsum!(identity, ds, cols)
 
-function row_cumsum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}))
+function row_cumsum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
     dscopy = copy(ds)
-    row_cumsum!(dscopy, cols)
+    row_cumsum!(dscopy, cols, missings = missings)
     dscopy
 end
 
+function _op_for_cumprod_skip!(x, y)
+    x .= _mul_prod.(x,y)
+    y .= ifelse.(ismissing.(y), missing, x)
+    x
+end
+_op_for_cumprod_ignore!(x, y) = y .= _mul_prod.(x, y)
 
-function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}))
+function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
     colsidx = index(ds)[cols]
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     for i in colsidx
@@ -230,18 +249,23 @@ function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}))
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    _op_for_cumprod!(x, y) = y .= _mul_prod.(x, y)
     init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
-    mapreduce(identity, _op_for_cumprod!, view(_columns(ds),colsidx), init = init0)
+    if missings == :ignore
+        mapreduce(identity, _op_for_cumprod_ignore!, view(_columns(ds),colsidx), init = init0)
+    elseif missings == :skip
+        mapreduce(identity, _op_for_cumprod_skip!, view(_columns(ds),colsidx), init = init0)
+    else
+        throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
+    end
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
     nothing
 end
 
-function row_cumprod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}))
+function row_cumprod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
     dscopy = copy(ds)
-    row_cumprod!(dscopy, cols)
+    row_cumprod!(dscopy, cols; missings = missings)
     dscopy
 end
 
