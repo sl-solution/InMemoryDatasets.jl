@@ -204,7 +204,7 @@ Note that `avg` is missing if any of the values in `x` is missing.
 
 The main difference between these operations and the previous operations is that these operations return a data set with the corresponding row has been updated with the operation. For the operations with `!` the updated version of the original data set is returned and for the operations without `!` a modified copy of the original data set is returned.
 
-the `cum*` functions calculate the cumulative `*`, `sort` sorts the values in each row, and `stdze` standardises the values in each row. The `sort` operation accepts all keyword arguments that the function `sort` in Julia Base accept.
+the cumulative functions calculate the cumulative min, max, sum, and product, `sort` sorts the values in each row, and `stdze` standardises the values in each row. The `sort` operation accepts all keyword arguments that the function `sort` in Julia Base accept.
 
 ```jldoctest
 julia> byrow(ds, cumsum, 1:3)
@@ -220,6 +220,6 @@ julia> byrow(ds, cumsum, 1:3)
    5 │        2         4         2       10.0  missing       -100.0
 ```
 
-Note that for these operations, by default, `cumsum` treats `missing` as zero, and `cumprod` treats `missing` as one, i.e. they ignore `missing` values, however, passing `missings = :skip` causes these functions to skip the missing values (leave them as `missing`). For other cumulative function similar rules follow.
+Note that for these operations, by default, `cumsum` treats `missing` as zero, and `cumprod` treats `missing` as one, i.e. they ignore `missing` values, however, passing `missings = :skip` causes these functions to skip the missing values (leave them as `missing`). For other cumulative functions the same keyword argument rules the behaviour.
 
 The special operations don't change the columns names or their orders.
