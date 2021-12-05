@@ -811,10 +811,11 @@ Base.last(ds::AbstractDataset, n::Integer) = ds[max(1, nrow(ds)-n+1):nrow(ds), :
 Return a Boolean vector with `true` entries indicating rows without missing values
 (complete cases) in data set `ds`.
 
-If `cols` is provided, only missing values in the corresponding columns areconsidered.
+If `cols` is provided, only missing values in the corresponding columns are considered.
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
-See also: [`dropmissing`](@ref) and [`dropmissing!`](@ref).
+See also: [`dropmissing`](@ref).
+
 Use `findall(completecases(ds))` to get the indices of the rows.
 
 # Examples

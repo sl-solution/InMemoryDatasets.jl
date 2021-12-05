@@ -113,14 +113,84 @@ function stat_mean(f, x::AbstractArray{T,1})::Union{Float64, Missing} where T <:
     n == 0 ? missing : sval/n
 end
 
-stat_cumsum(x::AbstractVector) = accumulate(_stat_add_sum, x)
-stat_cumsum!(outx, inx::AbstractVector) = accumulate!(_stat_add_sum, outx, inx)
-stat_cumprod(x::AbstractVector) = accumulate(_stat_mul_prod, x)
-stat_cumprod!(outx, inx::AbstractVector) = accumulate!(_stat_mul_prod, outx, inx)
-stat_cummin(x::AbstractVector) = accumulate(_stat_min_fun, x)
-stat_cummin!(outx, inx::AbstractVector) = accumulate!(_stat_min_fun, outx, inx)
-stat_cummax(x::AbstractVector) = accumulate(_stat_max_fun, x)
-stat_cummax!(outx, inx::AbstractVector) = accumulate!(_stat_max_fun, outx, inx)
+stat_cumsum_ignore(x::AbstractVector) = accumulate(_stat_add_sum, x)
+stat_cumsum!_ignore(outx, inx::AbstractVector) = accumulate!(_stat_add_sum, outx, inx)
+stat_cumprod_ignore(x::AbstractVector) = accumulate(_stat_mul_prod, x)
+stat_cumprod!_ignore(outx, inx::AbstractVector) = accumulate!(_stat_mul_prod, outx, inx)
+stat_cummin_ignore(x::AbstractVector) = accumulate(_stat_min_fun, x)
+stat_cummin!_ignore(outx, inx::AbstractVector) = accumulate!(_stat_min_fun, outx, inx)
+stat_cummax_ignore(x::AbstractVector) = accumulate(_stat_max_fun, x)
+stat_cummax!_ignore(outx, inx::AbstractVector) = accumulate!(_stat_max_fun, outx, inx)
+
+function stat_cumsum_skip(x::AbstractVector)
+    locmiss = ismissing.(x)
+    res = stat_cumsum_ignore(x)
+    if sum(locmiss)>0
+        res[locmiss] .= missing
+    end
+    res
+end
+
+function stat_cumsum!_skip(outx, inx::AbstractVector)
+    locmiss = ismissing.(inx)
+    stat_cumsum!_ignore(outx, inx)
+    if sum(locmiss)>0
+        outx[locmiss] .= missing
+    end
+    outx
+end
+function stat_cumprod_skip(x::AbstractVector)
+    locmiss = ismissing.(x)
+    res = stat_cumprod_ignore(x)
+    if sum(locmiss)>0
+        res[locmiss] .= missing
+    end
+    res
+end
+
+function stat_cumprod!_skip(outx, inx::AbstractVector)
+    locmiss = ismissing.(inx)
+    stat_cumprod!_ignore(outx, inx)
+    if sum(locmiss)>0
+        outx[locmiss] .= missing
+    end
+    outx
+end
+
+function stat_cummin_skip(x::AbstractVector)
+    locmiss = ismissing.(x)
+    res = stat_cummin_ignore(x)
+    if sum(locmiss)>0
+        res[locmiss] .= missing
+    end
+    res
+end
+
+function stat_cummin!_skip(outx, inx::AbstractVector)
+    locmiss = ismissing.(inx)
+    stat_cummin!_ignore(outx, inx)
+    if sum(locmiss)>0
+        outx[locmiss] .= missing
+    end
+    outx
+end
+function stat_cummax_skip(x::AbstractVector)
+    locmiss = ismissing.(x)
+    res = stat_cummax_ignore(x)
+    if sum(locmiss)>0
+        res[locmiss] .= missing
+    end
+    res
+end
+
+function stat_cummax!_skip(outx, inx::AbstractVector)
+    locmiss = ismissing.(inx)
+    stat_cummax!_ignore(outx, inx)
+    if sum(locmiss)>0
+        outx[locmiss] .= missing
+    end
+    outx
+end
 
 stat_mean(x::AbstractArray{T,1}) where T = stat_mean(identity, x)
 

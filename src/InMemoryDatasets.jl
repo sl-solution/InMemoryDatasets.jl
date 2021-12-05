@@ -86,6 +86,10 @@ export
       wsum,
       wmean,
       topk,
+      cummax,
+      cummax!,
+      cummin,
+      cummin!,
       # from join
       innerjoin,
       outerjoin,

@@ -34,7 +34,7 @@
     @test byrow(sds, any, :, by = ismissing) == [true, true, true, false, false, false, true, true, true, true, true, true, true, true]
 end
 
-@testset "cumsum/! and cumprod/!" begin
+@testset "cum*/!" begin
     ds = Dataset(x1 = [1,missing,3,missing], x2 = [1.0,2.0,missing,4.0], x3 = [1,missing,3,4])
     @test byrow(ds, cumsum, :) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [2.0, 2.0, 3.0, 4.0], x3 = [3.0, 2.0, 6.0, 8.0])
     @test byrow(ds, cumsum, :, missings = :skip) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [2.0, 2.0, missing, 4.0], x3=[3.0, missing, 6.0, 8.0])
@@ -57,4 +57,21 @@ end
     @test byrow(sds, cumsum, :, missings = :skip) == Dataset(x3 = [1.0, missing, 1,3,1,4], x1 = [2, missing, 2.0, 6, 2,missing], x2 = [3.0, 2.0, 3, missing, 3, 8])
     @test byrow(sds, cumprod, :) == Dataset(x3 = [1.0, missing, 1,3,1,4], x1 = [1, missing, 1.0, 9, 1,4], x2 = [1.0, 2.0, 1, 9, 1, 16])
     @test byrow(sds, cumprod, :, missings = :skip) == Dataset(x3 = [1.0, missing, 1,3,1,4], x1 = [1, missing, 1.0, 9, 1,missing], x2 = [1.0, 2.0, 1, missing, 1, 16])
+
+    ds = Dataset(x1 = [1,missing,3,missing], x2 = [1.0,2.0,missing,4.0], x3 = [1,missing,3,4])
+    @test byrow(ds, cummax, :) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, 3.0, 4.0], x3 = [1.0, 2.0, 3.0, 4.0])
+    @test byrow(ds, cummax, :, missings = :skip) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, missing, 4.0], x3 = [1.0, missing, 3.0, 4.0])
+    @test byrow(ds, cummin, :) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, 3.0, 4.0], x3 = [1.0, 2.0, 3.0, 4.0])
+    @test byrow(ds, cummin, :, missings = :skip) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, missing, 4.0], x3 = [1.0, missing, 3.0, 4.0])
+
+    byrow(ds, cummax!, :)
+    @test ds == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, 3.0, 4.0], x3 = [1.0, 2.0, 3.0, 4.0])
+    ds = Dataset(x1 = [1,missing,3,missing], x2 = [1.0,2.0,missing,4.0], x3 = [1,missing,3,4])
+    byrow(ds, cummin!, :, missings = :skip)
+    @test ds == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, missing, 4.0], x3 = [1.0, missing, 3.0, 4.0])
+
+    ds = Dataset(x1 = [1,missing,3,missing], x2 = [1.0,2.0,missing,4.0], x3 = [1,missing,3,6])
+    sds = view(ds, [1,2,1,3,1,4], [3,1,2])
+    @test byrow(sds, cummax, :) == Dataset(x3 = [1.0, missing, 1,3,1,6], x1 = [1, missing, 1,3,1,6.0], x2 = [1.0,2.0, 1.0,3.0,1.0,6.0])
+    @test byrow(sds, cummax, :, missings = :skip) == Dataset(x3 = [1.0, missing, 1,3,1,6], x1 = [1, missing, 1,3,1.0, missing], x2 = [1.0,2.0, 1.0,missing,1.0,6.0])
 end

@@ -45,3 +45,77 @@ Base.findmax(f, x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS,
 Base.findmax(x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmax(x)
 Base.findmin(f, x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmin(f, x)
 Base.findmin(x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = stat_findmin(x)
+
+function Base.cumsum(x::AbstractArray{Union{T,Missing},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS}
+    if missings == :ignore
+        stat_cumsum_ignore(x)
+    elseif missings == :skip
+        stat_cumsum_skip(x)
+    else
+        throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
+    end
+end
+function Base.cumsum!(outx::AbstractVector, x::AbstractArray{Union{T,Missing},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS}
+    if missings == :ignore
+        stat_cumsum!_ignore(outx, x)
+    elseif missings == :skip
+        stat_cumsum!_skip(outx, x)
+    else
+        throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
+    end
+end
+function Base.cumprod(x::AbstractArray{Union{T,Missing},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS}
+    if missings == :ignore
+        stat_cumprod_ignore(x)
+    elseif missings == :skip
+        stat_cumprod_skip(x)
+    else
+        throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
+    end
+end
+function Base.cumprod!(outx::AbstractVector, x::AbstractArray{Union{T,Missing},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS}
+    if missings == :ignore
+        stat_cumprod!_ignore(outx, x)
+    elseif missings == :skip
+        stat_cumprod!_skip(outx, x)
+    else
+        throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
+    end
+end
+
+function cummin(x::AbstractArray{Union{T,Missing},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
+    if missings == :ignore
+        stat_cummin_ignore(x)
+    elseif missings == :skip
+        stat_cummin_skip(x)
+    else
+        throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
+    end
+end
+function cummin!(outx, x::AbstractArray{Union{T,Missing},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
+    if missings == :ignore
+        stat_cummin!_ignore(outx, x)
+    elseif missings == :skip
+        stat_cummin!_skip(outx, x)
+    else
+        throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
+    end
+end
+function cummax(x::AbstractArray{Union{T,Missing},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
+    if missings == :ignore
+        stat_cummax_ignore(x)
+    elseif missings == :skip
+        stat_cummax_skip(x)
+    else
+        throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
+    end
+end
+function cummax!(outx, x::AbstractArray{Union{T,Missing},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
+    if missings == :ignore
+        stat_cummax!_ignore(outx, x)
+    elseif missings == :skip
+        stat_cummax!_skip(outx, x)
+    else
+        throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
+    end
+end

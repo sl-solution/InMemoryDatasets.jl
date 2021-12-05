@@ -84,6 +84,18 @@ byrow(ds::AbstractDataset, ::typeof(cumprod), col::ColumnIndex; missings = :igno
 byrow(ds::AbstractDataset, ::typeof(cumsum!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore) = row_cumsum!(ds, cols, missings = missings)
 byrow(ds::AbstractDataset, ::typeof(cumsum!), col::ColumnIndex; missings = :ignore) = byrow(ds, cumsum!, [col], missings = missings)
 
+byrow(ds::AbstractDataset, ::typeof(cummin!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore) = row_cummin!(ds, cols, missings = missings)
+byrow(ds::AbstractDataset, ::typeof(cummin!), col::ColumnIndex; missings = :ignore) = byrow(ds, cummin!, [col], missings = missings)
+
+byrow(ds::AbstractDataset, ::typeof(cummin), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore) = row_cummin(ds, cols, missings = missings)
+byrow(ds::AbstractDataset, ::typeof(cummin), col::ColumnIndex; missings = :ignore) = byrow(ds, cummin, [col], missings = missings)
+
+byrow(ds::AbstractDataset, ::typeof(cummax!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore) = row_cummax!(ds, cols, missings = missings)
+byrow(ds::AbstractDataset, ::typeof(cummax!), col::ColumnIndex; missings = :ignore) = byrow(ds, cummax!, [col], missings = missings)
+
+byrow(ds::AbstractDataset, ::typeof(cummax), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore) = row_cummax(ds, cols, missings = missings)
+byrow(ds::AbstractDataset, ::typeof(cummax), col::ColumnIndex; missings = :ignore) = byrow(ds, cummax, [col], missings = missings)
+
 byrow(ds::AbstractDataset, ::typeof(sort), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); threads = true, kwargs...) = threads ? hp_row_sort(ds, cols; kwargs...) : row_sort(ds, cols; kwargs...)
 byrow(ds::AbstractDataset, ::typeof(sort), col::ColumnIndex; threads = true, kwargs...) = byrow(ds, sort, [col]; threads = threads, kwargs...)
 
