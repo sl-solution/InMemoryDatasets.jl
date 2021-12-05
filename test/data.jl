@@ -6,7 +6,7 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
                     c = Union{Int, Missing}[1:3;1:3])
     ds = vcat(ds1, ds1)
     @test findall(nonunique(ds)) == collect(7:12)
-    @test findall(nonunique(ds, first = false)) == collect(1:6)
+    @test findall(nonunique(ds, leave = :last)) == collect(1:6)
     @test findall(nonunique(ds, :)) == collect(7:12)
     @test findall(nonunique(ds, Colon())) == collect(7:12)
     @test findall(nonunique(ds, :a)) == collect(3:12)

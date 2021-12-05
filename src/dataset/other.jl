@@ -622,11 +622,11 @@ end
 function Base.unique!(ds::Dataset; mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        rowidx = nonunique(ds, mapformats = mapformats, only = true)
+        rowidx = .!nonunique(ds, mapformats = mapformats, leave = :none)
     elseif keep == :only
-        rowidx = .!nonunique(ds, mapformats = mapformats, only = true)
+        rowidx = nonunique(ds, mapformats = mapformats, leave = :none)
     else
-        rowidx = nonunique(ds, mapformats = mapformats, first = keep == :first)
+        rowidx = nonunique(ds, mapformats = mapformats, leave = keep)
     end
     deleteat!(ds, rowidx)
 end
@@ -634,22 +634,22 @@ end
 function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        rowidx = nonunique(ds, cols, mapformats = mapformats, only = true)
+        rowidx = .!nonunique(ds, cols, mapformats = mapformats, leave = :none)
     elseif keep == :only
-        rowidx = .!nonunique(ds, cols, mapformats = mapformats, only = true)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none)
     else
-        rowidx = nonunique(ds, cols, mapformats = mapformats, first = keep == :first)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = keep)
     end
     deleteat!(ds, rowidx)
 end
 function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        rowidx = nonunique(ds, cols, mapformats = mapformats, only = true)
+        rowidx = .!nonunique(ds, cols, mapformats = mapformats, leave = :none)
     elseif keep == :only
-        rowidx = .!nonunique(ds, cols, mapformats = mapformats, only = true)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none)
     else
-        rowidx = nonunique(ds, cols, mapformats = mapformats, first = keep == :first)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = keep)
     end
     deleteat!(ds, rowidx)
 end
@@ -659,11 +659,11 @@ end
 @inline function Base.unique(ds::AbstractDataset; view::Bool=false, mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        rowidxs = .!nonunique(ds, mapformats = mapformats, only = true)
+        rowidxs = nonunique(ds, mapformats = mapformats, leave = :none)
     elseif keep == :only
-        rowidxs = nonunique(ds, mapformats = mapformats, only = true)
+        rowidxs = .!nonunique(ds, mapformats = mapformats, leave = :none)
     else
-        rowidxs = (!).(nonunique(ds, mapformats = mapformats, first = keep == :first))
+        rowidxs = (!).(nonunique(ds, mapformats = mapformats, leave = keep))
     end
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
@@ -671,11 +671,11 @@ end
 @inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false, mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        rowidxs = .!nonunique(ds, cols, mapformats = mapformats, only = true)
+        rowidxs = nonunique(ds, cols, mapformats = mapformats, leave = :none)
     elseif keep == :only
-        rowidxs = nonunique(ds, cols, mapformats = mapformats, only = true)
+        rowidxs = .!nonunique(ds, cols, mapformats = mapformats, leave = :none)
     else
-        rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, first = keep == :first))
+        rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, leave = keep))
     end
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
