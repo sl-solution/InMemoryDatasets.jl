@@ -2,8 +2,8 @@
 
 ## Introduction
 
-In this section, the Datasets' APIs for filtering observations are discussed. We provides information about
-three main ways to filter observations based on some conditions, 1) using the `byrow` function, 2) using the `mask` function, 3) and using Julia broadcasting.
+In this section, the InMemoryDatasets' APIs for filtering observations are discussed. We provides information about
+four main ways to filter observations based on some conditions, 1) using the `byrow` function, 2) using the `mask` function, 3) using the `contains` and related functions, 4) and using Julia broadcasting.
 
 ## `byrow`
 
@@ -15,9 +15,9 @@ The main feature of `byrow(ds, fun, cols, by = ...)` when `fun` is `all/any` is 
 
 ### `filter` and `filter!`
 
-The `filter` and `filter!` functions are two shortcuts for doing the `byrow` and `getindex` operations at the same call.
+The `filter` and `filter!` functions are two shortcuts which wrap the `byrow` and `getindex`/`deleteat!` operations in a function.
 
-`filter(ds, cols; [type = all, by = isequal(true),...])` is the shortcut for `ds[byrow(ds, type, cols; by = by,...), :]`, and `filter!(ds, cols; [type = all, by = isequal(true),...])` is the shortcut for `deleteat![ds, byrow(ds, type, cols; by = by,...))`.
+`filter(ds, cols; [view = false, type = all, by = isequal(true),...])` is the shortcut for `ds[byrow(ds, type, cols; by = by,...), :]`, and `filter!(ds, cols; [type = all, by = isequal(true),...])` is the shortcut for `deleteat![ds, .!byrow(ds, type, cols; by = by,...))`.
 
 ### Examples
 
@@ -256,9 +256,83 @@ julia> mask(ds, [isodd, ==(2)], 2:3, missings = missing) # using a vector of fun
   10 │    false      true
 ```
 
+## Using `contains` and related functions
+
+Filtering a data set based on another data set should be done via `contains`, `semijoin`, `semijoin!`, `antijoin`, and `antijoin!` functions. These functions are discussed in the section about joining data sets, and here we just provide some examples about how to use them for filtering a data set.
+
+Additionally, these functions can be used in situations when a data set needed to be filter when a column's values belong to a set of values. In this case, a temporary data set can be formed based on given values and then one of the aforementioned functions can be used.
+
+### Examples
+
+```jldoctest
+julia> ds1 = Dataset(x = [1,7,4,5], y = [.1,.2,.3,.4])
+4×2 Dataset
+ Row │ x         y        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1       0.1
+   2 │        7       0.2
+   3 │        4       0.3
+   4 │        5       0.4
+
+julia> ds2 = Dataset(x = [1,3,5,7,11])
+5×1 Dataset
+ Row │ x        
+     │ identity
+     │ Int64?   
+─────┼──────────
+   1 │        1
+   2 │        3
+   3 │        5
+   4 │        7
+   5 │       11
+
+julia> contains(ds1,ds2, on = :x)
+4-element Vector{Bool}:
+ 1
+ 1
+ 0
+ 1
+
+julia> semijoin(ds1,ds2, on = :x)
+3×2 Dataset
+ Row │ x         y        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1       0.1
+   2 │        7       0.2
+   3 │        5       0.4
+
+julia> vals = [.05,.01,.1,.4];
+
+julia> _tmp = Dataset(vals = vals)
+4×1 Dataset
+ Row │ vals     
+     │ identity
+     │ Float64?
+─────┼──────────
+   1 │     0.05
+   2 │     0.01
+   3 │     0.1
+   4 │     0.4
+
+julia> antijoin!(ds1, _tmp, on = :y=>:vals)
+2×2 Dataset
+ Row │ x         y        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        7       0.2
+   2 │        4       0.3
+```
+
 ## Julia broadcasting
 
-For simple use case (e.g. when working on a single column) we can use broadcasting directly. For example if we are interested on rows which the first column is greater than 5 we can directly use (assume the data set is called `ds`):
+> Note that, in general, `byrow`, `filter`, or `filter!` are preferred methods to filter data sets compared to `broadcasting`
+
+For simple use case (e.g. when working on a single column) we can use broadcasting directly. For example if we are interested in rows which the first column is greater than 5 we can directly use (assume the data set is called `ds`):
 
 > `ds[ds[!, 1] .> 1, :]`
 
@@ -306,4 +380,14 @@ Row │ x1        x2        x3
 ────┼──────────────────────────────
   1 │        1         7   missing
   2 │        1         9   missing
+
+julia> using BenchmarkTools
+
+julia> ds = Dataset(rand(1:1000, 10^6, 10), :auto);
+
+julia> @btime ds[ds.x1 .== 100, :];
+  3.480 ms (472 allocations: 8.83 MiB)
+
+julia> @btime filter(ds, :x1, by = ==(100));
+  880.436 μs (526 allocations: 1.09 MiB)
 ```
