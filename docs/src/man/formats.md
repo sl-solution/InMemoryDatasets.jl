@@ -54,9 +54,9 @@ There are two functions that are handy for manipulating the columns' `format`s, 
 
 > `removeformat!(ds, cols...)`
 
-For `setformat!` each `arg` in the argument must be of the `cols => fmt` form, where `fmt` is the named function and `cols` is either column(s) name(s), column(s) index(s), or regular expression, thus, expressions like `setformat!(ds, 1:10=>sqrt)`, `setformat!(ds, r"x"=>iseven, :y=>sqrt)` are valid in Datasets. When `cols` refers to more than one column, `fmt` will be assigned to all of those columns.
+For `setformat!` each `arg` in the argument must be of the `cols => fmt` form, where `fmt` is the named function and `cols` is either column(s) name(s), column(s) index(s), or regular expression, thus, expressions like `setformat!(ds, 1:10=>sqrt)`, `setformat!(ds, r"x"=>iseven, :y=>sqrt)` are valid in InMemoryDatasets. When `cols` refers to more than one column, `fmt` will be assigned to all of those columns.
 
-For `removeformat!` each `cols` in the argument must be either column(s) name(s), column(s) index(s), or regular expression.
+For `removeformat!` each `cols` in the argument is any column selector like column(s) name(s), column(s) index(s), or regular expression.
 
 Beside these two functions, there exists the `getformat` function to query `format` of a column. The syntax of `getformat` is
 
@@ -67,7 +67,7 @@ where `col` is a single column identifier, i.e. column index or column's name.
 
 ### Examples
 
-In the following example we assign user defined functions as the format for the first and the last column and use the `month` function (predefined in Julia Dates) as the format for the column `:date`. Note that, the actual values of columns haven't been modified, they are only shown with the formatted value. As you may observe, the formatted value can help us to scan easily the sale of each store in different month
+In the following example we assign user defined functions as the format for the first and the last column and use the `month` function (predefined in Julia Dates) as the format for the column `:date`. Note that, the actual values of columns haven't been modified, they are only shown with the formatted value. As you may observe, the formatted values can help us to scan easily the sale of each store in different month
 
 ```jldoctest
 julia> sale = Dataset(store = ["store1", "store1", "store2",
@@ -124,7 +124,7 @@ julia> getformat(sale, "date")
 month (generic function with 3 methods)
 ```
 
-When the formatted values are not needed for some columns, a call to `removeformat!` can remove their `format`s,
+When the formatted values are not needed for some columns, a call to `removeformat!` can remove them,
 
 ```jldoctest
 julia> removeformat!(sale, [1,2])
@@ -204,7 +204,7 @@ julia> setformat!(ds, 1:3 => fmt1)
 
 ## `format` validation
 
-Datasets doesn't validate the supplied `format` until it needs to use the formatted values for an operation, in that case, if the supplied `format` is not a valid `format`, Datasets will throw errors. Also it is important to note that InMemoryDatasets is not aware of changing the definition of a `format` by users, thus, changing the definition of a function which is used as a `format` during a workflow may have some side effects. For example if a data set is `groupby!` with `mapformats = true` option, changing the definition of the formats destroys the sorting order of the data set, but InMemoryDatasets is unaware of this, so, it is the user responsibility to remove the invalid formats in these situations.
+InMemoryDatasets doesn't validate the supplied `format` until it needs to use the formatted values for an operation, in that case, if the supplied `format` is not a valid `format`, InMemoryDatasets will throw errors. Also it is important to note that InMemoryDatasets is not aware of changing the definition of a `format` by users, thus, changing the definition of a function which is used as a `format` during a workflow may have some side effects. For example if a data set is `groupby!` with `mapformats = true` option, changing the definition of the formats destroys the sorting order of the data set, but InMemoryDatasets is unaware of this, so, it is the user responsibility to remove the invalid formats in these situations.
 
 In the following examples we demonstrate some scenarios which end up with an invalid `format`, and provide some remedies to fix the issues. Nevertheless, note that supplying an invalid `format` will not damage a data set and a simple call to `removeformat!` can be helpful to recover the original data set.
 
@@ -225,7 +225,7 @@ julia> ds = Dataset(x1 = [-1, 0, 1], x2 = [1.1, missing, 2.2], x3 = [1,2,3])
 julia> custom_format(x) = x[2]
 custom_format (generic function with 1 method)
 ```
-* **The function supplied as `format` is not defined for some values**: In this example, we use `sqrt` as `:x1`'s `format`, but `:x1` contains negative values and `sqrt` is not defined for negative integers. Running the following expression will throw bunch of errors, because after setting `format` Datasets is trying to display the data set, but it cannot do that.
+* **The function supplied as `format` is not defined for some values**: In this example, we use `sqrt` as `:x1`'s `format`, but `:x1` contains negative values and `sqrt` is not defined for negative integers. Running the following expression will throw bunch of errors, because after setting `format` InMemoryDatasets is trying to display the data set, but it cannot do that.
 
 ```jldoctest
 julia> setformat!(ds, 1 => sqrt)
@@ -255,7 +255,7 @@ julia> setformat!(ds, 1 => sqrt_fmt)
    3 │       1.0        2.2         3
 ```
 
-* **Ignoring `missing` values**: In this example, we use `ROUND(x) = round(Int, x)` as `:x2` `format`, however, `round(Int, x)` doesn't know how to deal with `missing` values, thus, the same as the above example, Datasets will throw errors.
+* **Ignoring `missing` values**: In this example, we use `ROUND(x) = round(Int, x)` as `:x2` `format`, however, `round(Int, x)` doesn't know how to deal with `missing` values, thus, the same as the above example, InMemoryDatasets will throw errors.
 
 ```jldoctest
 julia> ROUND(x) = round(Int, x)
