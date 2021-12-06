@@ -1046,7 +1046,8 @@ julia> nonunique(ds, 2)
 ```
 """
 function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, leave = :first)
-    !(leave in (:first, :last, :none)) && throw(ArgumentError("`leave` must be either `:first`, `:last`, or `:none`"))
+    # :xor, :nor, :and, :or are undocumented
+    !(leave in (:first, :last, :none, :xor, :nand, :nor, :and, :or)) && throw(ArgumentError("`leave` must be either `:first`, `:last`, or `:none`"))
     if ncol(ds) == 0
         throw(ArgumentError("finding duplicate rows in data set with no " *
                             "columns is not allowed"))
@@ -1055,19 +1056,32 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
     groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats, stable = false)
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
-    if leave === :none
-        _nonunique_barrier!(res, groups, seen_groups; first = true)
-        r1 = copy(res)
-        res = trues(nrow(ds))
-        seen_groups = falses(ngroups)
-        _nonunique_barrier!(res, groups, seen_groups; first = false)
-        .!(r1 .| res)
-    elseif leave === :first
+    if leave === :first
         _nonunique_barrier!(res, groups, seen_groups; first = true)
         return res
     elseif leave === :last
         _nonunique_barrier!(res, groups, seen_groups; first = false)
         return res
+    else
+        _nonunique_barrier!(res, groups, seen_groups; first = true)
+        r1 = res
+        res = trues(nrow(ds))
+        seen_groups = falses(ngroups)
+        _nonunique_barrier!(res, groups, seen_groups; first = false)
+        if leave == :none
+            .!(r1 .| res)
+        elseif leave == :xor
+            xor.(r1, res)
+        elseif leave == :and
+            r1 .& res
+        elseif leave == :or
+            r1 .| res
+        elseif leave == :nand
+            .!(r1 .& res)
+        elseif leave == :nor
+            .!(r1 .| res)
+        end
+
     end
 
 end

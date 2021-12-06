@@ -622,7 +622,7 @@ end
 function Base.unique!(ds::Dataset; mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        rowidx = .!nonunique(ds, mapformats = mapformats, leave = :none)
+        rowidx = nonunique(ds, mapformats = mapformats, leave = :or)
     elseif keep == :only
         rowidx = nonunique(ds, mapformats = mapformats, leave = :none)
     else
@@ -634,7 +634,7 @@ end
 function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        rowidx = .!nonunique(ds, cols, mapformats = mapformats, leave = :none)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or)
     elseif keep == :only
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none)
     else
@@ -645,7 +645,7 @@ end
 function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
     if keep == :none
-        rowidx = .!nonunique(ds, cols, mapformats = mapformats, leave = :none)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or)
     elseif keep == :only
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none)
     else
@@ -661,7 +661,7 @@ end
     if keep == :none
         rowidxs = nonunique(ds, mapformats = mapformats, leave = :none)
     elseif keep == :only
-        rowidxs = .!nonunique(ds, mapformats = mapformats, leave = :none)
+        rowidxs = nonunique(ds, mapformats = mapformats, leave = :or)
     else
         rowidxs = (!).(nonunique(ds, mapformats = mapformats, leave = keep))
     end
@@ -673,7 +673,7 @@ end
     if keep == :none
         rowidxs = nonunique(ds, cols, mapformats = mapformats, leave = :none)
     elseif keep == :only
-        rowidxs = .!nonunique(ds, cols, mapformats = mapformats, leave = :none)
+        rowidxs = nonunique(ds, cols, mapformats = mapformats, leave = :or)
     else
         rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, leave = keep))
     end
