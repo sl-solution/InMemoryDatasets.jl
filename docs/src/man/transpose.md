@@ -2,8 +2,8 @@
 
 ## Introduction
 
-In InMemoryDatasets the reshaping of a data set is done by the `transpose` function, that is, one function that can handle the most sophisticated reshaping of a data set.
-In the simplest case, you can think about a data set as a matrix, and `transpose` simply flips it over its diagonal; that is, `transpose` switches the row and column indices of it. The key feature that makes `transpose` such a versatile and powerful function is its ability to do the simple transposing within each group of observations created by `groupby!`, `groupby` or `gatherby`. Basically, the two popular functions for reshaping data, `stack` and `unstack`, are special cases of `transpose`. The `stack` function transposes each row of a data set, and the `unstack` function transposes one column of a data set for each group of observations.
+In InMemoryDatasets the reshaping of a data set is done by the `transpose` function.
+In the simplest case, you can think about a data set as a matrix, and `transpose` simply flips it over its diagonal; that is, `transpose` switches the row and column indices of it. The key feature that makes `transpose`  versatile and powerful is its ability to do the simple transposing within each group of observations created by `groupby!`, `groupby` or `gatherby`. Basically, the two popular functions for reshaping data, `stack` and `unstack`, are special cases of `transpose`; The `stack` function transposes each row of a data set, and the `unstack` function transposes one column of a data set for each group of observations.
 
 > By default, the `transpose` function uses parallel algorithms to perform the transposing, however, this can be switched to single threaded process by setting the `threads` keyword argument to `false`.
 
@@ -112,7 +112,7 @@ julia> transpose(ds2, Between(:b, :d), id = :a) # promoting the values
 
 ## `transpose` of grouped data sets
 
-When the first argument of the `transpose` function is a grouped data set - created by `groupby!`, `groupby`, or `gatherby` - `transpose` does the simple transposing within each group of observations. Thus, the transposition of a grouped data set can be viewed as transposing the matrix shape data values which are created for each group of observations. Since the size of transposed columns within each group can not be the same, `transpose` pads them with `missing` values to overcome this problem. The `missing` padding can be replaced by any other values which passed to `default` keyword argument of the function.
+When the first argument of the `transpose` function is a grouped data set - created by `groupby!`, `groupby`, or `gatherby` - `transpose` does the simple transposing within each group of observations. Thus, the transposition of a grouped data set can be viewed as transposing the matrix shape data values which are created for each group of observations. Since the size of transposed columns within each group can be different, `transpose` pads them with `missing` values to overcome this problem. The `missing` padding can be replaced by any other values which passed to `default` keyword argument of the function.
 
 ```jldoctest
 julia> ds = Dataset(group = repeat(1:3, inner = 2),
@@ -334,7 +334,7 @@ The `renamecolid` function can also get access to the variable names from the in
 
 ### Passing `Tuple` of column selectors
 
-The column selector of the `transpose` function can be also a `Tuple` of column selectors. In this case, InMemoryDatasets does the transposition for each element of the tuple and then horizontally concatenates the output data sets to create a single data set. This provides extra flexibility to the user for reshaping a data set. By default, the `variable_name` is set to `nothing`, when `Tuple` of column selectors is passed as the argument.
+The column selector of the `transpose` function can be also a `Tuple` of column selectors. In this case, InMemoryDatasets does the transposition for each element of the tuple and then horizontally concatenates the output data sets to create a single data set. This provides extra flexibility to the user for reshaping a data set. By default, the `variable_name` is set to `nothing`, when `Tuple` of column selectors is passed as the argument, however, we can supply different names for each element of the `Tuple`.
 
 Since the column names for the output data set can be the same for all elements of the tuple, `transpose` automatically modifies them to make them unique. Nevertheless, by passing `renamecolid`, we can customise the column names.
 
@@ -478,7 +478,7 @@ julia> transpose(groupby(_tmp, 1:2), :D_sum, id = :C, variable_name = nothing, d
    3 │ foo       one              4         1
    4 │ foo       two              0         6
 
-julia> # The next example aggregates by taking the mean across multiple columns. Here we don't need transposing at all
+julia> # The next example aggregates by taking the mean across multiple columns. Here we don't need transposing
 julia> combine(groupby(ds, [:A, :C]), [:D, :E] => mean)
 4×4 Dataset
  Row │ A         C         D_mean    E_mean   
