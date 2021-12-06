@@ -12,11 +12,11 @@ The first argument of these two functions is the name of the data set which is g
 
 > `modify!(ds, args...)` or `modify(ds, args...)`
 
-The simplest form of `args` is `col => fun` which calls `fun` on `col` as a vector and replaces `col` with the output of the call. `col` can be a column index or a column name. Thus, to replace the value of a column which is called `:x1` in a data set `ds` with their standardised values, we can use the following expression:
+The simplest form of `args` is `col => fun` which calls `fun` on `col` as a vector and **replaces** `col` with the output of the call. `col` can be a column index or a column name. Thus, to replace the value of a column which is called `:x1` in a data set `ds` with their standardised values, we can use the following expression:
 
 > `modify!(ds, :x1 => stdze)`
 
-where `:x1` is a column in `ds`, and `stdze` is a function which subtracts values by their mean and divide them by their standard deviation. If you don't want to replace the column, but instead you like to create a new column based on calling `fun` on `col`, the `col => fun => :newname` (here `:newname` is a name for the new column) form is handy. Thus, to standardised the values of a column, which is called `:x1`, and store them as a new column in the data set, you  can use,
+where `:x1` is a column in `ds`, and `stdze` is a function which subtracts values by their mean and divide them by their standard deviation. If you don't want to replace the column, but instead you like to create a new column based on calling `fun` on `col`, the `col => fun => :newname` (here `:newname` is a name for the new column) form is handy. Thus, to standardised the values of a column, which is called `:x1`, and store them as a new column in the data set, you can use,
 
 > `modify!(ds, :x1 => stdze => :x1_stdze)`
 
@@ -176,3 +176,29 @@ julia> modify!(sale, :customer => byrow(name_split),
 ```
 
 In the last example, we use `byrow` to apply `name_split` on each row of `:customer`, and since there is only one column as the input of `byrow`, `modify!` replaces the column with the new values. Also, note that the `modify!` function has access to these new values and we can use `splitter` to split the column into two new columns.
+
+## Using `Tuple` of column names
+
+When the form of the transform specifications is as `NTuple{col} => fun`, `modify!` and `modify` assumes that the `fun` function accepts multiple arguments (multiple columns).
+
+```jldoctest
+julia> body = Dataset(weight = [78.5, 59, 80], height = [160, 171, 183])
+3×2 Dataset
+ Row │ weight    height   
+     │ identity  identity
+     │ Float64?  Int64?   
+─────┼────────────────────
+   1 │     78.5       160
+   2 │     59.0       171
+   3 │     80.0       183
+
+julia> modify(body, (:weight, :height)=> cor)
+3×3 Dataset
+ Row │ weight    height    cor_weight_height
+     │ identity  identity  identity          
+     │ Float64?  Int64?    Float64?          
+─────┼───────────────────────────────────────
+   1 │     78.5       160          0.0890411
+   2 │     59.0       171          0.0890411
+   3 │     80.0       183          0.0890411
+```
