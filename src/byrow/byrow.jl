@@ -121,11 +121,11 @@ function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = nro
 	if threads
 		T = Core.Compiler.return_type(f, (nonmissingtype(eltype(ds[!, col])), ))
 		res = Vector{Union{Missing, T}}(undef, nrow(ds))
-		_hp_map_a_function!(res, f, ds[!, col].val)
+		_hp_map_a_function!(res, f, _columns(ds)[col])
 	else
 		T = Core.Compiler.return_type(f, (nonmissingtype(eltype(ds[!, col])), ))
 		res = Vector{Union{Missing, T}}(undef, nrow(ds))
-		map!(f, res, ds[!, col].val)
+		map!(f, res, _columns(ds)[col])
 	end
 	res
 end
