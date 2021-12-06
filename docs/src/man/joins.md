@@ -18,7 +18,7 @@ The main functions for combining two data sets are `leftjoin`, `innerjoin`, `out
 
 See [the Wikipedia page on SQL joins](https://en.wikipedia.org/wiki/Join_(SQL)) for more information.
 
-In general, to match observations, InMemoryDatasets sorts the right data set and uses a binary search algorithm for finding the matches of each observation in the left data set in the right data set based on the passed key column(s), thus, it has better performance when the left data set is larger than the right data set. The matching is done based on the formatted values of the key columns, however, using the `mapformats` keyword argument, one may set it to `false` for one or both data sets.
+In general (for some special cases InMemoryDatasets may use "hash-join" techniques), to match observations, InMemoryDatasets sorts the right data set and uses a binary search algorithm for finding the matches of each observation in the left data set in the right data set based on the passed key column(s), thus, it has better performance when the left data set is larger than the right data set. The matching is done based on the formatted values of the key column(s), however, using the `mapformats` keyword argument, one may set it to `false` for one or both data sets.
 
 For `leftjoin` and `innerjoin` the order of observations of the output data set is the same as their order in the left data set. However, the order of observations from the right table depends on the stability of the sort algorithm. User can set the `stable` keyword argument to `true` to guarantee a stable sort. For `outerjoin` the order of observations from the left data set in the output data set is also the same as their order in the original data set, however, for those observations which are from the right table, there is no specific order.
 
@@ -141,7 +141,7 @@ julia> @btime innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>:y2], accelerate = true);
   155.306 ms (2160 allocations: 45.92 MiB)
 ```
 
-As it can be observed, using `accelerate = true` significantly reduces the joining time. The reason for this reduction is because currently sorting `String` types columns in InMemoryDatasets is relatively expensive, and using `accelerate = true` helps to reduce this by splitting the observations into multiple parts.
+As it can be observed, using `accelerate = true` significantly reduces the joining time. The reason for this reduction is because currently sorting `String` type columns in InMemoryDatasets is relatively expensive, and using `accelerate = true` helps to reduce this by splitting the observations into multiple parts.
 
 ## `contains`
 
@@ -274,7 +274,7 @@ julia> closejoin(trades, quotes, on = :time, makeunique = true)
 
 In the above example, the `closejoin` for each `ticker` can be done by passing `ticker` as the first variable for the `on` keyword, i.e. when more than one key is used for `on` the last one will be used for "close match" and the rest are used for exact match.
 
- When `border` is set to `:missing` (default value) for the `:backward` direction the value below the smallest value will be set to `missing`, and for the `:forward` direction the value above the largest value will be set to `missing`. And when `border = :missing` the closest non-missing value will be fetched.
+ When `border` is set to `:missing` (default value) for the `:backward` direction the value below the smallest value will be set to `missing`, and for the `:forward` direction the value above the largest value will be set to `missing`. And when `border = :nearest` the closest non-missing value will be fetched.
 
 ```jldoctest
 julia> closejoin(trades, quotes, on = [:ticker, :time], border = :missing)
@@ -308,11 +308,13 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], border = :nearest)
 
 The `innerjoin` function can also use inequality comparisons to match observations from the left data set with the observations in the right data set. It can find all observations in the right data set that are `<=`(`<`) or `>=`(`>`) than a selected observation in the left data set. Additionally, if the user specifies two columns in the right table for a single key in the left table, it matches the observations in the left data set when they fall into the range specifies by the selected two key columns in the right data set. This conditional joining can be done within groups of observations if the user provide more than one key column for the left and the right data sets, i.e. the last key will be used for "inequality-kind" join and the rest will be used for the exact match.
 
-For this kind of inner join, the key columns for both data sets which are defined for grouping observation must be passed as pair of column names (similar to normal use of `innerjoin`), however, the key column from the left data set which is going to be used for conditional joining must be also passed as a column name, and the key column(s) for conditional joining from he right data set must be passed as a Tuple of column names. For example, if the key column for the left data set is `:l_key`, and there are two columns in the right table called, `:r_start` and `:r_end` the following demonstrate how a user can perform different kinds of conditional joining:
+For this kind of inner join, the key columns for both data sets which are defined for grouping observation must be passed as pair of column names (similar to normal use of `innerjoin`), however, the key column from the left data set which is going to be used for conditional joining must be also passed as a column name, and the key column(s) for conditional joining from the right data set must be passed as a Tuple of column names. For example, if the key column for the left data set is `:l_key`, and there are two columns in the right table called, `:r_start` and `:r_end` the following demonstrates how a user can perform different kinds of conditional joining:
 
-* `:l_key => (:r_start, nothing)`, a match happens if the selected observation from the left data set `:l_key`'s value is greater than or equal to the selected observation from the right data set `:r_start`'s value.
-* `:l_key => (nothing, :r_end)`, a match happens if the selected observation from the left data set `:l_key`'s value is less than or equal to the selected observation from the right data set `:r_end`'s value.
-* `:l_key => (:r_start, :r_end)`, a match happens if the selected observation from the left data set `:l_key`'s value is greater than or equal to the selected observation from the right data set `:r_start`'s value and less than or equal to the selected observation from the right data set `:r_end`'s value.
+* `:l_key => (:r_start, nothing)`, a match happens if the selected observation from the left data set is `>= :r_start`.
+* `:l_key => (nothing, :r_end)`, a match happens if the selected observation from the left data set is `<= :r_end`.
+* `:l_key => (:r_start, :r_end)`, a match happens if the selected observation from the left data set is `>= :r_start` and `<= :r_end`.
+
+To change inequalities to strict inequality the `strict_inequality` keyword argument must be set to `true` for one or both sides, e.g. `strict_inequality = true`(both side), `strict_inequality = [false, true]`(only one side).
 
 ### Examples
 
@@ -402,7 +404,7 @@ julia> innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :
 
 ## Update a data set by values from another data set
 
-`update!` updates a data set values by using values from a transaction data set. The function uses the given keys (`on = ...`) to select rows for updating. By default, the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true`  changes this behaviour. If there are multiple rows in the main data set which match the key(s), using `mode = :all` causes all of them to be updated, and `mode = :missing` causes only the ones which are missing in the main data set to be updated. If there are multiple rows in the transaction data set which match the key, only the last one will be used to update the main data set.
+`update!` updates a data set values by using values from a transaction data set. The function uses the given keys (`on = ...`) to select rows for updating. By default, the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true` changes this behaviour. If there are multiple rows in the main data set which match the key(s), using `mode = :all` causes all of them to be updated, and `mode = :missing` causes only the ones which are missing in the main data set to be updated. If there are multiple rows in the transaction data set which match the key, only the last one will be used to update the main data set.
 
 The `update!` functions replace the main data set with the updated version, however, if a copy of the updated data set is required, the `update` function can be used instead.
 
