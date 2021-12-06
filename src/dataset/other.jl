@@ -1027,7 +1027,7 @@ end
 """
     filter!(ds, cols; [type = all, by = isequal(true),...])
 
-A convenient shortcut for deleteat![ds, byrow(ds, type, cols; by = by,...)).
+A convenient shortcut for deleteat![ds, .!byrow(ds, type, cols; by = by,...)).
 """
 Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, by = isequal(true), kwargs...) = deleteat!(ds, .!byrow(ds, type, cols, by = by; kwargs...))
 
