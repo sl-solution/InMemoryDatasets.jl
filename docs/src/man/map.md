@@ -8,7 +8,7 @@ There are multiple ways to call a function on individual values (observations) o
 
 ## `map!`
 
-The Datasets' `map!` function modifies a data set in-place by calling a function on individual values of a column. The syntax for the function is
+The InMemoryDatasets' `map!` function modifies a data set in-place by calling a function on individual values of a column. The syntax for the function is
 
 > `map!(ds, fun, cols; threads = true)`
 
@@ -187,7 +187,7 @@ julia> ds # map doesn't modify the original data set
    5 │        5         2        0.4
 ```
 
-In the following example, we `map` some functions on columns of a data set which one the column has a `format`.
+In the following example, we `map` some functions on columns of a data set which one of the columns has a `format`.
 
 ```jldoctest
 julia> ds = Dataset(x1 = 1:5, x2 = [1,2,1,2,1])
