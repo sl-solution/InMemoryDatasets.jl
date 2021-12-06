@@ -254,11 +254,11 @@ julia> modify(groupby(sale, :date), :sale => spct => :sale_pct)
 
 The `ungroup!` function is a utility function that removes the `grouped` mark from a grouped data set produced by `groupby!`. The function doesn't change the permutation of the data set, thus, even the data set is not any more grouped, it is still sorted, and it is very efficient to re-group it. However, note that the last modified time of the data set is updated when `ungroup!` is called on a data set.
 
-The `ungroup!` function can be used in scenarios that one need to modify a data set but it is not desired to apply a specific modification within each group, instead the modification is needed to be applied to the whole column. In these kind of situations, first `ungroup!` is used to remove the grouping mark and then the `modify!` function can be used on the data set. The `groupby!` function can be used afterward to mark the data set as grouped data set.
+The `ungroup!` function can be used in scenarios that one needs to modify a data set but it is not desired to apply a specific modification within each group, instead the modification is needed to be applied to the whole column. In these kind of situations, first `ungroup!` is used to remove the grouping mark and then the `modify!` function can be used on the data set. The `groupby!` function can be used afterward to mark the data set as grouped data set.
 
 ## `gatherby`
 
-The `gatherby` function uses the hashing approach to group observations based on a set of columns. InMemoryDatasets uses a customised algorithm to gather observations which sometimes does this without using the `hash` function. The `gatherby` function doesn't sort the data set, instead, it uses the in-house developed algorithm to group observations. This can be particularly useful when sorting is computationally expensive. Another benefit of `gatherby` is that, by default, it keeps the order of observations in each group the same as their appearance in the original data set.
+The `gatherby` function uses the hashing approach to group observations based on a set of columns. InMemoryDatasets uses a customised algorithm to gather observations which sometimes does this without using the `hash` function. The `gatherby` function doesn't sort the data set, instead, it uses the in-house developed algorithm to group observations. `gatherby` can be particularly useful when sorting is computationally expensive. Another benefit of `gatherby` is that, by default, it keeps the order of observations in each group the same as their appearance in the original data set.
 
 The `gatherby` function uses the formatted values for gathering the observations into groups, however, using `mapformats = false` changes this behaviour.
 
