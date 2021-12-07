@@ -272,7 +272,7 @@ end
 
 end
 
-@testset "combine" begin
+@testset "combine - set 1" begin
     Random.seed!(1)
     # 5 is there to ensure we test a single-row group
     ds = Dataset(a=[rand([1:4;missing], 19); 5],
@@ -309,6 +309,9 @@ end
     @test all(byrow(compare(combine_out7, combine_out7_v, on = names(combine_out7)), all, :))
     @test all(byrow(compare(combine_out8, combine_out8_v, on = names(combine_out8)), all, :))
     @test all(byrow(compare(combine_out9, combine_out9_v, on = names(combine_out9)), all, :))
+end
+
+@testset "combine - set 2" begin
 
     c1_IMD = combine(gatherby(ds, [:a, :x3]), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
     c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
@@ -338,7 +341,8 @@ end
     df = DF.DataFrame(ds)
     c1_DF = DF.combine(DF.groupby(df, 1, sort = true), 2:3=>cor=>:cor, 3=>sum=>:sum, 2=>mean=>:mean)
     @test all(byrow(compare(c1_IMD, Dataset(c1_DF), eq = isapprox), all, :))
-
+end
+@testset "combine - set 3"
     ds = Dataset(x1 = [1,2,1,2,2,1], x2=[1.0,missing,1.1,1.1,1.1,1.1],y=100:100:600.0)
     c1 = combine(gatherby(ds, 1), :x2=>sum)
     c2 = combine(groupby(ds, 1, stable = false), :y=>mean)
