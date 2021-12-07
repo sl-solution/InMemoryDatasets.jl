@@ -180,14 +180,18 @@ function _join_left_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}
         _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
             # fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_oncols_left_table_left!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length, missing)
+            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, missing)
         else
             _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing)
         end
         push!(res, _res)
 
     end
-    newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    if dsl isa SubDataset
+        newds = Dataset(res, copy(index(dsl)), copycols = false)
+    else
+        newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    end
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
@@ -278,14 +282,17 @@ function _join_inner_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
     for j in 1:length(index(dsl))
         _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
-            _fill_oncols_left_table_inner!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length)
+            _fill_oncols_left_table_inner!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length)
         else
             _fill_oncols_left_table_inner!(_res, _columns(dsl)[j], ranges, new_ends, total_length)
         end
         push!(res, _res)
     end
-
-    newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    if dsl isa SubDataset
+        newds = Dataset(res, copy(index(dsl)), copycols = false)
+    else
+        newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    end
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
@@ -331,7 +338,7 @@ function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols
         _res = allocatecol(_columns(dsl)[j], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_oncols_left_table_left!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length, fill_val)
+            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, fill_val)
         else
             _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing)
         end
@@ -340,8 +347,11 @@ function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols
     for j in 1:length(oncols_left)
         _fill_oncols_left_table_left_outer!(res[oncols_left[j]], _columns(dsr)[oncols_right[j]], notinleft, new_ends, total_length)
     end
-
-    newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    if dsl isa SubDataset
+        newds = Dataset(res, copy(index(dsl)), copycols = false)
+    else
+        newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    end
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)

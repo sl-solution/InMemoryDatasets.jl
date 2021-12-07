@@ -309,7 +309,7 @@ function _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm; dropgroupc
 	        addmissing = false
 	        _tmpres = allocatecol(gds.parent[!, groupcols[j]].val, ngroups, addmissing = addmissing)
 	        if DataAPI.refpool(_tmpres) !== nothing
-	            _fast_gatherby_groups_to_res!(_tmpres.refs, _columns(gds.parent)[groupcols[j]].refs, groups)
+	            _fast_gatherby_groups_to_res!(_tmpres.refs, DataAPI.refarray(_columns(gds.parent)[groupcols[j]]), groups)
 	            push!(_columns(newds), _tmpres)
 	        else
 	            _fast_gatherby_groups_to_res!(_tmpres, _columns(gds.parent)[groupcols[j]], groups)

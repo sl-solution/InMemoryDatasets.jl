@@ -472,7 +472,7 @@ function Base.map!(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumn
         T = Core.Compiler.return_type(f[j], (nonmissingtype(CT),))
         T = Union{Missing, T}
         if promote_type(T, CT) <: CT
-            if threads
+            if threads && DataAPI.refpool(_columns(ds)[colsidx[j]]) === nothing
                 _hp_map!_a_function!(_columns(ds)[colsidx[j]], f[j])
             else
                 map!(f[j], _columns(ds)[colsidx[j]], _columns(ds)[colsidx[j]])

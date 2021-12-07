@@ -104,6 +104,9 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
     @test innerjoin(nameid, view(jobid, :, :), on = :ID) == inner[:, on]
     @test outerjoin(nameid, view(jobid, :, :), on = :ID) == outer[:, on]
     @test leftjoin(nameid, view(jobid, :, :), on = :ID) == left[:, on]
+    @test innerjoin(view(nameid, :, :), view(jobid, :, :), on = :ID) == inner[:, on]
+    @test outerjoin(view(nameid, :, :), view(jobid, :, :), on = :ID) == outer[:, on]
+    @test leftjoin(view(nameid, :, :), view(jobid, :, :), on = :ID) == left[:, on]
     @test semijoin(nameid, view(jobid, :, :), on = :ID) == semi[:, on]
     @test antijoin(nameid, view(jobid, :, :), on = :ID) == anti[:, on]
 
@@ -481,6 +484,52 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
     out1 = outerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true)
     left1 = leftjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], accelerate = true, stable =true)
     @test inn1 == out1 == left1
+
+    dsl = Dataset(x = [1,1,1,2,2,2], y = PooledArray([6,4,1,2,5,3]))
+    dsr = Dataset(x = [1,1,2], y = PooledArray([0,3,1]), z=[100,200,300])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+    dsl = Dataset(x = [1,1,1,2,2,2], y = ([6,4,1,2,5,3]))
+    dsr = Dataset(x = [1,1,2], y = PooledArray([0,3,1]), z=[100,200,300])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+    dsl = Dataset(x = [1,1,1,2,2,2], y = PooledArray([6,4,1,2,5,3]))
+    dsr = Dataset(x = [1,1,2], y = ([0,3,1]), z=[100,200,300])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
+    dsl = Dataset(x = PooledArray([1,1,1,2,2,2]), y = PooledArray([6,4,1,2,5,3]))
+    dsr = Dataset(x = PooledArray([2,1,1]), y = PooledArray([1,3,0]), z=[300,200,100])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+    dsl = Dataset(x = PooledArray([1,1,1,2,2,2]), y = ([6,4,1,2,5,3]))
+    dsr = Dataset(x = PooledArray([2,1,1]), y = PooledArray([1,3,0]), z=[300,200,100])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+    dsl = Dataset(x = PooledArray([1,1,1,2,2,2]), y = PooledArray([6,4,1,2,5,3]))
+    dsr = Dataset(x = PooledArray([2,1,1]), y = PooledArray([1,3,0]), z=[300,200,100])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
+    #views
+    for i in 1:100
+        l_ridx= rand(1:100, 200)
+        l_cidx = shuffle(1:3)
+        dsl = Dataset(rand(1:10, 100, 3), :auto)
+        dsr = Dataset(rand(1:10, 3, 2), :auto)
+        @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1, :x2], makeunique=true, check = false) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1, :x2], makeunique=true, check = false)
+        @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1, :x2], makeunique=true, check = false) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1, :x2], makeunique=true, check = false)
+        @test outerjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1, :x2], makeunique=true, check = false) == outerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1, :x2], makeunique=true, check = false)
+        @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1], makeunique=true, check = false) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1], makeunique=true, check = false)
+        @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1], makeunique=true, check = false) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1], makeunique=true, check = false)
+        @test outerjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1], makeunique=true, check = false) == outerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1], makeunique=true, check = false)
+    end
 
 
 end
@@ -1000,6 +1049,133 @@ end
     @test inn_r1_v == inn_r1_t
     @test inn_r1_a == inn_r1_t
     @test inn_r1_v_a == inn_r1_t
+
+
+    dsl = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
+    dsr = Dataset(x = [2,1,2], y1 = PooledArray([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+    dsl = Dataset(x = [1,2,1,2], y = ([1.0, 5.0, 2.0, 1.0]))
+    dsr = Dataset(x = [2,1,2], y1 = PooledArray([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+    dsl = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
+    dsr = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+    dsl = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
+    dsr = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = ([5,2,2]), z=[111,222,333])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+    dsl = Dataset(x = [1,2,1,2], y = ([1.0, 5.0, 2.0, 1.0]))
+    dsr = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = ([5,2,2]), z=[111,222,333])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    #views
+
+    dsl1 = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
+    dsr1 = Dataset(x = [2,1,2], y1 = PooledArray([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
+    dsl = view(dsl1, [1,2,3,4], [1,2])
+    dsr = view(dsr1, 1:3, 1:4)
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+    dsl1 = Dataset(x = [1,2,1,2], y = ([1.0, 5.0, 2.0, 1.0]))
+    dsr1 = Dataset(x = [2,1,2], y1 = PooledArray([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
+    dsl = view(dsl1, [1,2,3,4], [1,2])
+    dsr = view(dsr1, 1:3, 1:4)
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+    dsl1 = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
+    dsr1 = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+    dsl1 = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
+    dsr1 = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = ([5,2,2]), z=[111,222,333])
+    dsl = view(dsl1, [1,2,3,4], [1,2])
+    dsr = view(dsr1, 1:3, 1:4)
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+    dsl1 = Dataset(x = [1,2,1,2], y = ([1.0, 5.0, 2.0, 1.0]))
+    dsr1 = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = ([5,2,2]), z=[111,222,333])
+    dsl = view(dsl1, [1,2,3,4], [1,2])
+    dsr = view(dsr1, 1:3, 1:4)
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+
+    dsl1 = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
+    dsr1 = Dataset(x = [2,1,2], y1 = PooledArray([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
+    dsl = view(dsl1, [4,4,4,1,1,2,2], [2,1])
+    dsr = view(dsr1, [3,1,2,2], [4,1,3,2])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
+    dsr = Dataset(view(dsr1, [3,1,2,2], [4,1,3,2]))
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
+    dsl = Dataset(view(dsl1, [4,4,4,1,1,2,2], [2,1]))
+    dsr = view(dsr1, [3,1,2,2], [4,1,3,2])
+    @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
+
+
+    dsl = Dataset(rand(1:10, 10, 3), [:x1,:x2, :x3])
+    dsr = Dataset(rand(1:10, 4,3), [:x1, :x2, :y])
+    l_ridx = [1,2,1,1,1,5,4,3,2,10]
+    l_cidx = [3,1,2]
+    r_ridx = [2,1,1,1,1,3]
+    r_cidx = [1,3,2]
+
+    @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+    @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+    dsl = Dataset(rand(1:10, 10, 3), [:x1,:x2, :x3])
+    dsr = Dataset(rand(1:10, 4,3), [:x1, :x2, :y])
+    for i in 1:3
+        dsl[!, i]=PooledArray(dsl[!, i])
+        dsr[!, i] = PooledArray(dsr[!, i])
+    end
+
+    l_ridx = [1,2,1,1,1,5,4,3,2,10]
+    l_cidx = [3,1,2]
+    r_ridx = [2,1,1,1,1,3]
+    r_cidx = [1,3,2]
+
+    @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+    @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+
 end
 
 @testset "update!, update" begin

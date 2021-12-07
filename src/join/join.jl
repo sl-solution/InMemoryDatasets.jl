@@ -70,7 +70,7 @@ function _fill_range_for_accelerated_join!(ranges, starts, loc, x, f, sz, chunk)
     end
 end
 # TODO how the hashing behave for Categorical Arrays?
-function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, chunk = 2^10)
+function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, chunk = 2^10; nsfpaj = true)
     if isempty(dsr)
         idx = []
         fill!(ranges, 1:nrow(dsr))
@@ -90,16 +90,16 @@ function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, 
             end
             _fill_range_for_accelerated_join!(ranges, grng.starts, grng.starts_loc, _columns(dsl)[oncols_left[1]], _fl, nrow(dsr), chunk)
             if dsr isa SubDataset
-                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true, givenrange = grng)
+                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng)
 
             else
-                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true, givenrange = grng)
+                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng)
             end
         else
             if dsr isa SubDataset
-                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
+                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj)
             else
-                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = true)
+                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj)
             end
             fill!(ranges, 1:nrow(dsr))
         end
@@ -336,7 +336,7 @@ function _mark_lt_part!(inbits, x_l, x_r, _fl, _fr, ranges, r_perms, en, ::Val{T
     cumsum!(revised_ends, revised_ends)
 end
 
-function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, lmf, rmf, j; type = :both)
+function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, lmf, rmf, j; type = :both, nsfpaj = true)
     var_l = _columns(dsl)[oncols_left[j]]
     var_r = _columns(dsr)[oncols_right[j]]
     l_idx = oncols_left[j]
@@ -354,7 +354,7 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_
 
     T1 = Core.Compiler.return_type(DataAPI.unwrap∘_fl, (eltype(var_l), ))
 
-    if DataAPI.refpool(var_r) !== nothing
+    if DataAPI.refpool(var_r) !== nothing && nsfpaj
         # sort taken care for refs ordering of modified values, but we still need to change refs
         if _fr == identity
             var_r_cpy = var_r
@@ -374,7 +374,7 @@ end
 
 
 
-function _join_left(dsl::Dataset, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
+function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
     isempty(dsl) && return copy(dsl)
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -409,14 +409,19 @@ function _join_left(dsl::Dataset, dsr, ::Val{T}; onleft, onright, makeunique = f
         _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
             # fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_oncols_left_table_left!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length, missing)
+            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, missing)
         else
             _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing)
         end
         push!(res, _res)
 
     end
-    newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    if dsl isa SubDataset
+        newds = Dataset(res, copy(index(dsl)), copycols = false)
+    else
+        newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    end
+
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
@@ -485,7 +490,7 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     dsl
 end
 
-function _join_inner(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], usehash = false) where T
+function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], usehash = false) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -529,12 +534,22 @@ function _join_inner(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
             return result
         end
     end
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1))
+
+    nsfpaj = true
+    # if the columns for inequality like join are PA we cannot use the fast path
+    if type != :both
+        if any(i-> DataAPI.refpool(_columns(dsr)[i]) !== nothing, right_range_cols)
+            nsfpaj = false
+        end
+    end
+
+
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1); nsfpaj = nsfpaj)
 
     for j in 1:length(oncols_left)-1
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
     end
-    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type)
+    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj)
 
     new_ends = map(length, ranges)
     cumsum!(new_ends, new_ends)
@@ -566,14 +581,17 @@ function _join_inner(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     for j in 1:length(index(dsl))
         _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
-            _fill_oncols_left_table_inner!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
+            _fill_oncols_left_table_inner!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
         else
             _fill_oncols_left_table_inner!(_res, _columns(dsl)[j], ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
         end
         push!(res, _res)
     end
-
-    newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    if dsl isa SubDataset
+        newds = Dataset(res, copy(index(dsl)), copycols = false)
+    else
+        newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    end
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
@@ -636,7 +654,7 @@ function _fill_oncols_left_table_left_outer!(res, x, notinleft, en, total)
 end
 
 
-function _join_outer(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
+function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
     oncols_left = index(dsl)[onleft]
     oncols_right = index(dsr)[onright]
@@ -667,7 +685,7 @@ function _join_outer(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
         _res = allocatecol(_columns(dsl)[j], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_oncols_left_table_left!(_res.refs, _columns(dsl)[j].refs, ranges, new_ends, total_length, fill_val)
+            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, fill_val)
         else
             _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing)
         end
@@ -676,8 +694,11 @@ function _join_outer(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     for j in 1:length(oncols_left)
         _fill_oncols_left_table_left_outer!(res[oncols_left[j]], view(_columns(dsr)[oncols_right[j]], idx), notinleft, new_ends, total_length)
     end
-
-    newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    if dsl isa SubDataset
+        newds = Dataset(res, copy(index(dsl)), copycols = false)
+    else
+        newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
+    end
 
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)

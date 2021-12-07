@@ -75,7 +75,7 @@ function  _fill_right_cols_table_asof!(_res, x, ranges, total, bordervalue, fill
     end
 end
 
-function _change_refpool_find_range_for_asof!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, direction, lmf, rmf, j)
+function _change_refpool_find_range_for_asof!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, direction, lmf, rmf, j; nsfpaj = true)
     var_l = _columns(dsl)[oncols_left[j]]
     var_r = _columns(dsr)[oncols_right[j]]
     l_idx = oncols_left[j]
@@ -93,20 +93,20 @@ function _change_refpool_find_range_for_asof!(ranges, dsl, dsr, r_perms, oncols_
 
     T1 = Core.Compiler.return_type(_fl, (eltype(var_l), ))
 
-    if DataAPI.refpool(var_r) !== nothing
-        # sort taken care for refs ordering of modified values, but we still need to change refs
+    if DataAPI.refpool(var_r) !== nothing && nsfpaj
+        true && throw(ErrorException("we shouldn't end up here"))
         if _fr == identity
             var_r_cpy = var_r
         else
             var_r_cpy = map(_fr, var_r)
         end
 
-        T2 = eltype(var_r_cpy.refs)
+        T2 = eltype(DataAPI.refarray(var_r_cpy))
         _fr = identity
         if direction == :backward
-            _find_ranges_for_asofback_pa!(ranges, var_l.refs, DataAPI.invrefpool(var_r_cpy), view(var_r_cpy.refs, r_perms), _fl, _fr, Val(T1), Val(T2))
+            _find_ranges_for_asofback_pa!(ranges, var_l, DataAPI.invrefpool(var_r_cpy), view(DataAPI.refarray(var_r_cpy), r_perms), _fl, _fr, Val(T1), Val(T2))
         elseif direction == :forward
-            _find_ranges_for_asoffor_pa!(ranges, var_l.refs, DataAPI.invrefpool(var_r_cpy), view(var_r_cpy.refs, r_perms), _fl, _fr, Val(T1), Val(T2))
+            _find_ranges_for_asoffor_pa!(ranges, var_l, DataAPI.invrefpool(var_r_cpy), view(DataAPI.refarray(var_r_cpy), r_perms), _fl, _fr, Val(T1), Val(T2))
         end
     else
         T2 = Core.Compiler.return_type(_fr, (eltype(var_r), ))
@@ -129,14 +129,19 @@ function _join_asofback(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, on
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
 
+    nsfpaj = true
+    # if the column for close join is a PA we cannot use the fast path
+    if DataAPI.refpool(_columns(dsr)[oncols_right[end]]) !== nothing
+        nsfpaj = false
+    end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1)
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1; nsfpaj = nsfpaj)
 
     for j in 1:(length(oncols_left) - 1)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
     end
 
-    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :backward, mapformats[1], mapformats[2], length(oncols_left))
+    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :backward, mapformats[1], mapformats[2], length(oncols_left); nsfpaj = nsfpaj)
     total_length = nrow(dsl)
 
     res = []
@@ -170,14 +175,21 @@ function _join_asofback!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, o
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1)
 
-    for j in 1:(length(oncols_left) - 1)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+    nsfpaj = true
+    # if the column for close join is a PA we cannot use the fast path
+    if DataAPI.refpool(_columns(dsr)[oncols_right[end]]) !== nothing
+        nsfpaj = false
     end
 
-    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :backward, mapformats[1], mapformats[2], length(oncols_left))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1; nsfpaj = nsfpaj)
+
+    for j in 1:(length(oncols_left) - 1)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
+    end
+
+    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :backward, mapformats[1], mapformats[2], length(oncols_left); nsfpaj = nsfpaj)
 
 
     total_length = nrow(dsl)
@@ -210,14 +222,20 @@ function _join_asoffor(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onr
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1)
-
-    for j in 1:(length(oncols_left) - 1)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+    nsfpaj = true
+    # if the column for close join is a PA we cannot use the fast path
+    if DataAPI.refpool(_columns(dsr)[oncols_right[end]]) !== nothing
+        nsfpaj = false
     end
 
-    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :forward, mapformats[1], mapformats[2], length(oncols_left))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1; nsfpaj = nsfpaj)
+
+    for j in 1:(length(oncols_left) - 1)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
+    end
+
+    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :forward, mapformats[1], mapformats[2], length(oncols_left); nsfpaj = nsfpaj)
 
 
     total_length = nrow(dsl)
@@ -254,14 +272,20 @@ function _join_asoffor!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, on
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1)
-
-    for j in 1:(length(oncols_left) - 1)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+    nsfpaj = true
+    # if the column for close join is a PA we cannot use the fast path
+    if DataAPI.refpool(_columns(dsr)[oncols_right[end]]) !== nothing
+        nsfpaj = false
     end
 
-    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :forward, mapformats[1], mapformats[2], length(oncols_left))
+    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1; nsfpaj = nsfpaj)
+
+    for j in 1:(length(oncols_left) - 1)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
+    end
+
+    _change_refpool_find_range_for_asof!(ranges, dsl, dsr, idx, oncols_left, oncols_right, :forward, mapformats[1], mapformats[2], length(oncols_left); nsfpaj = nsfpaj)
 
 
     total_length = nrow(dsl)
