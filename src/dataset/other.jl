@@ -1017,7 +1017,7 @@ n(x) = count(!ismissing, x)
 
 A convenient shortcut for ds[byrow(ds, type, cols; by = by,...), :].
 """
-function Base.filter(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; view = false, type= all, by = isequal(true), kwargs...)
+function Base.filter(ds::AbstractDataset, cols::Union{ColumnIndex, MultiColumnIndex}; view = false, type= all, by = isequal(true), kwargs...)
     if view
         Base.view(ds, byrow(ds, type, cols, by = by; kwargs...), :)
     else
