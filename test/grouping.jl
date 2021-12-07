@@ -312,7 +312,10 @@ end
 end
 
 @testset "combine - set 2" begin
-
+    ds = Dataset(a=[rand([1:4;missing], 19); 5],
+                   x1=rand(1:100, 20),
+                   x2=rand(1:3, 20) + im*rand(1:3, 20),
+                   x3=repeat(1:2, 10) .* u"m")
     c1_IMD = combine(gatherby(ds, [:a, :x3]), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
     c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
     @test all(byrow(compare(c1_IMD, Dataset(c1_DF), on = names(c1_IMD)), all, :))
