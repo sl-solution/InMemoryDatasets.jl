@@ -128,7 +128,7 @@ end
 function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}; type = :both) where T1 where T2
     if type == :both
         Threads.@threads for i in 1:length(x)
-            ranges[i] = searchsorted_join(_fr, y, _fl(DataAPI.unwrap(x[i]))::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
+            ranges[i] = searchsorted_join(_fr, y, DataAPI.unwrap(_fl(x[i]))::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
         end
     # TODO having another elseif branch is better for performance.
     elseif type == :left || type == :rightstrict

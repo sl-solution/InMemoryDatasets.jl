@@ -62,6 +62,10 @@ function _create_dictionary_for_join(f, v, fl, vl, ::Val{T}) where T
         _create_dictionary_for_join_int(identity, DataAPI.refarray(v), minval, rangelen, Val(T))
     elseif nonmissingtype(return_type(f, v)) <: AbstractVector{<:Union{Missing, INTEGERS}} && nonmissingtype(return_type(fl, vl)) <: AbstractVector{<:Union{Missing, INTEGERS}}
         minval = hp_minimum(f, v)
+        # if minval is missing all values are missing
+        if ismissing(minval)
+            return _create_dictionary_for_join_general(f, v, Val(T))
+        end
         maxval::Integer = hp_maximum(f, v)
         rnglen = BigInt(maxval) - BigInt(minval) + 1
         o1 = false
