@@ -87,6 +87,35 @@ end
 
 Base.sort(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable)
 
+function Base.sort(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+    _check_consistency(ds)
+    colsidx = index(ds)[cols]
+    if rev isa AbstractVector
+        @assert length(rev) == length(colsidx) "length of rev and the number of selected columns must match"
+        revs = rev
+    else
+        revs = repeat([rev], length(colsidx))
+    end
+    starts, idx, last_valid_range =  _sortperm_v(ds, cols, revs, stable = stable, a = alg, mapformats = mapformats)
+    newds = ds[idx, :]
+    append!(index(newds).sortedcols, collect(colsidx))
+    append!(index(newds).rev, revs)
+    append!(index(newds).perm, idx)
+    append!(index(newds).starts, starts)
+    index(newds).ngroups[] = last_valid_range
+    index(newds).fmt[] = mapformats
+    newds
+end
+
+Base.sort(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable)
+
+function Base.sortperm(ds::SubDataset, cols; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+    isempty(ds) && return []
+    _check_consistency(ds)
+    colsidx = index(ds)[cols]
+    _sortperm_v(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)[2]
+end
+
 
 function unsort!(ds::Dataset)
     isempty(ds) && return ds
