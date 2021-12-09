@@ -308,3 +308,58 @@ julia> unsort!(ds)
 ```
 
 ## `issorted`/`issorted!`
+
+The `issorted` function checks if a data set is sorted by given column(s). The syntax for the function is `issorted(ds, cols)`, and by default the `mapformats` keyword argument is set to `true` and the `rev` keyword argument is set to `false`. The `issorted!` function does the same job, however, if it returns `true` it marks the input data set as a sorted data set, i.e. it attaches some meta information to the data set.
+
+### Examples
+
+```jldoctest
+julia> ds = Dataset(x1 = [1, 4, 7], x2 = [3.0, 1.1, -10.0], x3 = ["one", "two", "three"])
+3×3 Dataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity
+     │ Int64?    Float64?  String?  
+─────┼──────────────────────────────
+   1 │        1       3.0  one
+   2 │        4       1.1  two
+   3 │        7     -10.0  three
+
+julia> issorted(ds, 1)
+true
+
+julia> issorted(ds, 2)
+false
+
+julia> issorted(ds, 2, rev = true)
+true
+
+julia> julia> fmt(x) = x == "one" ? 1 : x=="two" ? 2 : 3
+fmt (generic function with 1 method)
+
+julia> setformat!(ds, :x3=>fmt)
+3×3 Dataset
+ Row │ x1        x2        x3      
+     │ identity  identity  fmt     
+     │ Int64?    Float64?  String?
+─────┼─────────────────────────────
+   1 │        1       3.0  1
+   2 │        4       1.1  2
+   3 │        7     -10.0  3
+
+julia> issorted(ds, 3)
+true
+
+julia> issorted!(ds, 1:3, rev = [false, true, false])
+true
+
+julia> ds
+3×3 Sorted Dataset
+ Sorted by: x1, x2, x3
+ Row │ x1        x2        x3      
+     │ identity  identity  fmt     
+     │ Int64?    Float64?  String?
+─────┼─────────────────────────────
+   1 │        1       3.0  1
+   2 │        4       1.1  2
+   3 │        7     -10.0  3
+```

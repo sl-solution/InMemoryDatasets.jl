@@ -371,3 +371,139 @@ end
         @test sort(ds, :) == sort(ds[!, 1:2], :)
     end
 end
+
+@testset "issorted/issorted!" begin
+    dv1 = [9, 1, 8, missing, 3, 3, 7, missing]
+    dv2 = [9, 1, 8, missing, 3, 3, 7, missing]
+    dv3 = Vector{Union{Int, Missing}}(1:8)
+    cv1 = CategoricalArray(dv1, ordered=true)
+
+    d = Dataset(dv1=dv1, dv2=dv2, dv3=dv3, cv1=cv1)
+
+    @test !issorted(d, :cv1)
+    @test issorted(d, :dv3)
+    @test !issorted(d, :dv1)
+
+    dv1 = [1,3,3,7,8,9, missing, missing]
+    dv2 = [9, 1, 8, missing, 3, 3, 7, missing]
+    dv3 = Vector{Union{Int, Missing}}(1:8)
+    cv1 = CategoricalArray(dv1, ordered=true)
+
+    d = Dataset(dv1=dv1, dv2=dv2, dv3=dv3, cv1=cv1)
+    @test issorted(d, :cv1)
+    @test issorted(d, :dv1)
+    @test !issorted(d, :dv2)
+
+    ds = Dataset(x = [0xfffffffffffffff3, 0xfffffffffffffff2, 0xfffffffffffffff4, 0xfffffffffffffff1], y = [1,1,2,2])
+    @test issorted(ds[[4,2,1,3],:],1)
+    @test issorted(view(ds, [4,2,1,3], :), 1)
+    @test issorted(ds[[3,1,2,4],:],1, rev = true)
+    setformat!(ds, 1=>isodd)
+    @test issorted(ds[[2,3,1,4],:],1)
+    @test issorted(view(ds, [2,3,1,4], :), 1)
+    @test issorted(ds[[1,4,2,3],:],1, rev=true)
+    @test issorted(ds[[2,3,1,4], :], 1:2)
+    @test issorted(view(ds, [2,3,1,4], :), 1:2)
+    @test issorted(ds[[3,2,4,1], :], 1:2, rev = [false, true])
+    @test issorted(view(ds, [3,2,4,1], :), 1:2, rev = [false, true])
+
+
+    x = rand(Int128, 1000)
+    y = rand(1:100, 1000)
+    ds = Dataset(x = x, y = y)
+    @test issorted(sort(ds, 1),1)
+    @test issorted(sort(ds, 1, rev = true), 1, rev=true)
+    setformat!(ds, 1=>isodd)
+    @test issorted(sort(ds, 1),1)
+    @test issorted(sort(ds, 1, rev = true), 1, rev = true)
+
+    ds = Dataset(x = big.([1,4,-1,1,100]), x2 = [45,3,98,100,10])
+    @test !issorted(ds, 1)
+    @test issorted(ds[[3,1,4,2,5], 1:1], 1)
+    @test issorted(view(ds, [5,2,1,4,3], [2,1]), 2, rev = true)
+    @test issorted(ds[[3, 1, 4, 2, 5], :], 1:2)
+    @test issorted(ds[[3,4,1,2,5],:], 1:2, rev = [false, true])
+    ds[2,1]=missing
+    @test !issorted(ds, 1)
+    @test issorted(ds[[3,1,4,5,2], :], 1)
+    @test issorted(view(ds, [2,5,1,4,3], :), 1, rev = true)
+
+    for i in 1:100
+        ds = Dataset(rand(1:10, 1000, 10), :auto)
+        for j in 1:10
+            @test issorted(sort(ds, 1:j), 1:j)
+            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+            setformat!(ds, 1:10=>isodd)
+            @test issorted(sort(ds, 1:j), 1:j)
+            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+        end
+        ds = Dataset(rand(1:10., 1000, 10), :auto)
+        map!(ds, x->rand()<.1 ? missing : x, :)
+        for j in 1:10
+            @test issorted(sort(ds, 1:j), 1:j)
+            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+            setformat!(ds, 1:10=>sign)
+            @test issorted(sort(ds, 1:j), 1:j)
+            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+        end
+        ds = Dataset(rand(1:10., 1000, 10), :auto)
+        map!(ds, x->rand()<.1 ? missing : x, :)
+        for j in 1:10
+            ds[!, j] = PooledArray(ds[!, j])
+        end
+        for j in 1:10
+            @test issorted(sort(ds, 1:j), 1:j)
+            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+            setformat!(ds, 1:10=>sign)
+            @test issorted(sort(ds, 1:j), 1:j)
+            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+        end
+    end
+    for i in 1:100
+        ds = Dataset(rand(1:10, 1000, 10), :auto)
+        for j in 1:10
+            sort!(ds, 1:j)
+            issorted!(ds, 1:j)
+            @test IMD._sortedcols(ds) == 1:j
+            @test issorted(ds, 1:j)
+
+            setformat!(ds, 1:10=>isodd)
+            sort!(ds, 1:j, rev = true)
+            issorted!(ds, 1:j, rev = true)
+            @test IMD._sortedcols(ds) == 1:j
+            @test issorted(ds, 1:j, rev = true)
+        end
+        ds = Dataset(rand(1:10., 1000, 10), :auto)
+        map!(ds, x->rand()<.1 ? missing : x, :)
+        for j in 1:10
+            sort!(ds, 1:2:j)
+            issorted!(ds, 1:2:j)
+            @test IMD._sortedcols(ds) == collect(1:2:j)
+            @test issorted(ds, 1:2:j)
+
+            setformat!(ds, 1:10=>sign)
+            sort!(ds, 1:2:j, rev = true)
+            issorted!(ds, 1:2:j, rev = true)
+            @test IMD._sortedcols(ds) == collect(1:2:j)
+            @test issorted(ds, 1:2:j, rev = true)
+        end
+        ds = Dataset(rand(1:10., 1000, 10), :auto)
+        map!(ds, x->rand()<.1 ? missing : x, :)
+        for j in 1:10
+            ds[!, j] = PooledArray(ds[!, j])
+        end
+        for j in 1:10
+            sort!(ds, 1:2:j)
+            issorted!(ds, 1:2:j)
+            @test IMD._sortedcols(ds) == collect(1:2:j)
+            @test issorted(ds, 1:2:j)
+
+            setformat!(ds, 1:10=>sign)
+            sort!(ds, 1:2:j, rev = true)
+            issorted!(ds, 1:2:j, rev = true)
+            @test IMD._sortedcols(ds) == collect(1:2:j)
+            @test issorted(ds, 1:2:j, rev = true)
+        end
+    end
+
+end

@@ -70,6 +70,7 @@ export
       groupby,
       gatherby,
       describe,
+      issorted!,
       unsort!,
       ungroup!,
       modify,
