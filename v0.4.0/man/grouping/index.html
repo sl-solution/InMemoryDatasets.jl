@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Group observations · In Memory Datasets</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">In Memory Datasets</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><a class="tocitem" href="../basics/">First Steps</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><a class="tocitem" href="../formats/">Formats</a></li><li><a class="tocitem" href="../map/">Call functions on each observation</a></li><li><a class="tocitem" href="../byrow/">Row-wise operations</a></li><li><a class="tocitem" href="../modify/">Transform columns</a></li><li><a class="tocitem" href="../filter/">Filter observations</a></li><li><a class="tocitem" href="../sorting/">Sort</a></li><li class="is-active"><a class="tocitem" href>Group observations</a><ul class="internal"><li><a class="tocitem" href="#Introduction"><span>Introduction</span></a></li><li><a class="tocitem" href="#groupby!-and-groupby"><span><code>groupby!</code> and <code>groupby</code></span></a></li><li><a class="tocitem" href="#ungroup!"><span><code>ungroup!</code></span></a></li><li><a class="tocitem" href="#gatherby"><span><code>gatherby</code></span></a></li></ul></li><li><a class="tocitem" href="../aggregation/">Aggregation</a></li><li><a class="tocitem" href="../transpose/">Transpose data</a></li><li><a class="tocitem" href="../joins/">Joins</a></li></ul></li><li><a class="tocitem" href="../gallery/">Gallery</a></li><li><a class="tocitem" href="../performance/">Performance tips</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Group observations</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Group observations</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/sl-solution/InMemoryDatasets.jl/blob/master/docs/src/man/grouping.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Group-observations"><a class="docs-heading-anchor" href="#Group-observations">Group observations</a><a id="Group-observations-1"></a><a class="docs-heading-anchor-permalink" href="#Group-observations" title="Permalink"></a></h1><h2 id="Introduction"><a class="docs-heading-anchor" href="#Introduction">Introduction</a><a id="Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction" title="Permalink"></a></h2><p>InMemoryDatasets uses two approaches to group observations: sorting, and hashing. In sorting approach, it sorts the data set based on given columns and finds the starts and ends of each group based on the sorted values. In hashing approach, it uses a customised algorithm to group observations. Each of these approaches has some advantages over the other one and for any particular problem one of them might be more suitable than the other one.</p><h2 id="groupby!-and-groupby"><a class="docs-heading-anchor" href="#groupby!-and-groupby"><code>groupby!</code> and <code>groupby</code></a><a id="groupby!-and-groupby-1"></a><a class="docs-heading-anchor-permalink" href="#groupby!-and-groupby" title="Permalink"></a></h2><p>The main functions for grouping observations based on sorting approach are <code>groupby!</code> and <code>groupby</code>. The <code>groupby!</code> function replaces the original data set with the sorted one and attaches a meta information about the grouping orders to the replaced data set, on the other hand, the <code>groupby</code> function performs the sorting phase, however, it creates a view of the main data set where the meta information is attached to it. The output of <code>groupby</code> is basically a view of the sorted data set.</p><p>The syntax for calling <code>groupby!</code> and <code>groupby</code> is the same as the <code>sort!</code> function. This means <code>groupby!</code> and <code>groupby</code> accept all keyword arguments that the <code>sort!</code> function supports, these include:</p><ul><li><code>rev</code> with default value of <code>false</code></li><li><code>mapformats</code> with default value of <code>true</code>, i.e. by default these functions group data sets based on the formatted values.</li><li><code>stable</code> with default value of <code>true</code></li><li><code>alg</code> which by default is set to <code>HeapSortAlg</code>, and it can be set as <code>QuickSort</code> too.</li></ul><blockquote><p>Removing formats of columns that are used for <code>groupby!</code> with <code>mapformats = true</code> removes the grouping information too, i.e. the data set will not be marked as grouped/sorted data set .</p></blockquote><h3 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(g = [1, 2, 1, 2, 1, 2], x = [12.0, 12.3, 11.0, 13.0, 15.0, 13.2])
+6×2 Dataset
+ Row │ g         x        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1      12.0
+   2 │        2      12.3
+   3 │        1      11.0
+   4 │        2      13.0
+   5 │        1      15.0
+   6 │        2      13.2
+
+julia&gt; groupby!(ds, 1)
+6×2 Grouped Dataset with 2 groups
+Grouped by: g
+ Row │ g         x        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1      12.0
+   2 │        1      11.0
+   3 │        1      15.0
+   4 │        2      12.3
+   5 │        2      13.0
+   6 │        2      13.2
+
+julia&gt; ds # ds has been replaced with its grouped version
+6×2 Grouped Dataset with 2 groups
+Grouped by: g
+ Row │ g         x        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1      12.0
+   2 │        1      11.0
+   3 │        1      15.0
+   4 │        2      12.3
+   5 │        2      13.0
+   6 │        2      13.2
+
+julia&gt; ds = Dataset(group = [&quot;c1&quot;, &quot;c2&quot;, &quot;c1&quot;, &quot;c3&quot;, &quot;c1&quot;, &quot;c3&quot;], x = 1:6)
+6×2 Dataset
+ Row │ group     x        
+     │ identity  identity
+     │ String?   Int64?   
+─────┼────────────────────
+   1 │ c1               1
+   2 │ c2               2
+   3 │ c1               3
+   4 │ c3               4
+   5 │ c1               5
+   6 │ c3               6
+
+julia&gt; groupby(ds, :group)
+6×2 View of Grouped Dataset, Grouped by: group
+ group     x        
+ identity  identity
+ String?   Int64?   
+────────────────────
+ c1               1
+ c1               3
+ c1               5
+ c2               2
+ c3               4
+ c3               6
+
+julia&gt; ds # ds is untouched
+6×2 Dataset
+ Row │ group     x        
+     │ identity  identity
+     │ String?   Int64?   
+─────┼────────────────────
+   1 │ c1               1
+   2 │ c2               2
+   3 │ c1               3
+   4 │ c3               4
+   5 │ c1               5
+   6 │ c3               6
+julia&gt; salary = Dataset(id = 1:10,
+                       salary=[100, 120, 301, 95, 200, 75, 150, 67, 90, 110])
+10×2 Dataset
+ Row │ id        salary   
+     │ identity  identity
+     │ Int64?    Int64?   
+─────┼────────────────────
+   1 │        1       100
+   2 │        2       120
+   3 │        3       301
+   4 │        4        95
+   5 │        5       200
+   6 │        6        75
+   7 │        7       150
+   8 │        8        67
+   9 │        9        90
+  10 │       10       110
+
+julia&gt; s_grp(x) = x &lt; 100 ? 1 : x &lt; 200 ? 2 : 3
+s_grp (generic function with 1 method)
+
+julia&gt; setformat!(salary, :salary =&gt; s_grp)
+10×2 Dataset
+ Row │ id        salary
+     │ identity  s_grp  
+     │ Int64?    Int64?
+─────┼──────────────────
+   1 │        1       2
+   2 │        2       2
+   3 │        3       3
+   4 │        4       1
+   5 │        5       3
+   6 │        6       1
+   7 │        7       2
+   8 │        8       1
+   9 │        9       1
+  10 │       10       2
+
+julia&gt; groupby(salary, 2)
+10×2 View of Grouped Dataset, Grouped by: salary
+ id        salary
+ identity  s_grp  
+ Int64?    Int64?
+──────────────────
+        4       1
+        6       1
+        8       1
+        9       1
+        1       2
+        2       2
+        7       2
+       10       2
+        3       3
+        5       3</code></pre><p>The <code>groupby!</code> and <code>groupby</code> functions accept the output of the <code>groupby</code> function. Thus, some may use these functions to incrementally group a data set.</p><p>When the <code>groupby!</code> function is used on a data set, the data set is marked as a grouped data set and the functions which handle grouped data set differently are signalled when the grouped data sets are passed as their arguments. Two of those functions are <code>modify!</code> and <code>modify</code> functions. When a grouped data set is passed to these two functions, InMemoryDatasets applies each modification within each group. The <code>modify!</code> and <code>modify</code> functions treat the view of a grouped data set (produced by the <code>groupby</code> function) in the same way without changing the order of the original data set. For better performance, set <code>stable = false</code> when the <code>groupby</code> function is used in conjunction with <code>modify!</code> or <code>modify</code>.</p><h3 id="Examples-2"><a class="docs-heading-anchor" href="#Examples-2">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-2" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(g = [2, 1, 1, 2, 2],
+                          x1_int = [0, 0, 1, missing, 2],
+                          x2_int = [3, 2, 1, 3, -2],
+                          x1_float = [1.2, missing, -1.0, 2.3, 10],
+                          x2_float = [missing, missing, 3.0, missing, missing],
+                          x3_float = [missing, missing, -1.4, 3.0, -100.0])
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float  
+     │ identity  identity  identity  identity   identity   identity  
+     │ Int64?    Int64?    Int64?    Float64?   Float64?   Float64?  
+─────┼───────────────────────────────────────────────────────────────
+   1 │        2         0         3        1.2  missing    missing   
+   2 │        1         0         2  missing    missing    missing   
+   3 │        1         1         1       -1.0        3.0       -1.4
+   4 │        2   missing         3        2.3  missing          3.0
+   5 │        2         2        -2       10.0  missing       -100.0
+
+julia&gt; groupby!(ds, 1)
+5×6 Grouped Dataset with 2 groups
+Grouped by: g
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float  
+     │ identity  identity  identity  identity   identity   identity  
+     │ Int64?    Int64?    Int64?    Float64?   Float64?   Float64?  
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1         0         2  missing    missing    missing   
+   2 │        1         1         1       -1.0        3.0       -1.4
+   3 │        2         0         3        1.2  missing    missing   
+   4 │        2   missing         3        2.3  missing          3.0
+   5 │        2         2        -2       10.0  missing       -100.0
+
+julia&gt; modify(ds, r&quot;int&quot; =&gt; x -&gt; x .- maximum(x))
+5×6 Grouped Dataset with 2 groups
+Grouped by: g
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float  
+     │ identity  identity  identity  identity   identity   identity  
+     │ Int64?    Int64?    Int64?    Float64?   Float64?   Float64?  
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1        -1         0  missing    missing    missing   
+   2 │        1         0        -1       -1.0        3.0       -1.4
+   3 │        2        -2         0        1.2  missing    missing   
+   4 │        2   missing         0        2.3  missing          3.0
+   5 │        2         0        -5       10.0  missing       -100.0
+
+julia&gt; sale = Dataset(date = [Date(2012, 11), Date(2013, 5), Date(2012, 4),
+                                     Date(2013, 1), Date(2014, 8), Date(2013, 2)],
+                             sale = [100, 200, 140, 200, 132, 150])
+6×2 Dataset
+ Row │ date        sale     
+     │ identity    identity
+     │ Date?       Int64?   
+─────┼──────────────────────
+   1 │ 2012-11-01       100
+   2 │ 2013-05-01       200
+   3 │ 2012-04-01       140
+   4 │ 2013-01-01       200
+   5 │ 2014-08-01       132
+   6 │ 2013-02-01       150
+
+julia&gt; setformat!(sale, :date=&gt;year)
+6×2 Dataset
+ Row │ date   sale     
+     │ year   identity
+     │ Date?  Int64?   
+─────┼─────────────────
+   1 │ 2012        100
+   2 │ 2013        200
+   3 │ 2012        140
+   4 │ 2013        200
+   5 │ 2014        132
+   6 │ 2013        150
+
+julia&gt; spct(x) = x ./ sum(x) .* 100
+spct (generic function with 1 method)
+
+julia&gt; modify(groupby(sale, :date), :sale =&gt; spct =&gt; :sale_pct)
+6×3 Dataset
+ Row │ date   sale      sale_pct
+     │ year   identity  identity
+     │ Date?  Int64?    Float64?
+─────┼───────────────────────────
+   1 │ 2012        100   41.6667
+   2 │ 2013        200   36.3636
+   3 │ 2012        140   58.3333
+   4 │ 2013        200   36.3636
+   5 │ 2014        132  100.0
+   6 │ 2013        150   27.2727</code></pre><h2 id="ungroup!"><a class="docs-heading-anchor" href="#ungroup!"><code>ungroup!</code></a><a id="ungroup!-1"></a><a class="docs-heading-anchor-permalink" href="#ungroup!" title="Permalink"></a></h2><p>The <code>ungroup!</code> function is a utility function that removes the <code>grouped</code> mark from a grouped data set produced by <code>groupby!</code>. The function doesn&#39;t change the permutation of the data set, thus, even the data set is not any more grouped, it is still sorted, and it is very efficient to re-group it. However, note that the last modified time of the data set is updated when <code>ungroup!</code> is called on a data set.</p><p>The <code>ungroup!</code> function can be used in scenarios that one needs to modify a data set but it is not desired to apply a specific modification within each group, instead the modification is needed to be applied to the whole column. In these kind of situations, first <code>ungroup!</code> is used to remove the grouping mark and then the <code>modify!</code> function can be used on the data set. The <code>groupby!</code> function can be used afterward to mark the data set as grouped data set.</p><h2 id="gatherby"><a class="docs-heading-anchor" href="#gatherby"><code>gatherby</code></a><a id="gatherby-1"></a><a class="docs-heading-anchor-permalink" href="#gatherby" title="Permalink"></a></h2><p>The <code>gatherby</code> function uses the hashing approach to group observations based on a set of columns. InMemoryDatasets uses a customised algorithm to gather observations which sometimes does this without using the <code>hash</code> function. The <code>gatherby</code> function doesn&#39;t sort the data set, instead, it uses the in-house developed algorithm to group observations. <code>gatherby</code> can be particularly useful when sorting is computationally expensive. Another benefit of <code>gatherby</code> is that, by default, it keeps the order of observations in each group the same as their appearance in the original data set.</p><p>The <code>gatherby</code> function uses the formatted values for gathering the observations into groups, however, using <code>mapformats = false</code> changes this behaviour.</p><p>The syntax for using the <code>gatherby</code> function is <code>gatherby(ds, cols)</code> where <code>ds</code> is the data set and <code>cols</code> is any column selector which indicates the columns which are going to be used in gathering.</p><h3 id="Examples-3"><a class="docs-heading-anchor" href="#Examples-3">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-3" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(grp = [1, 2, 3, 3, 1, 3, 2, 1],
+                  x = [true, false, true, true, true, true, false, false])
+8×2 Dataset
+ Row │ grp       x        
+     │ identity  identity
+     │ Int64?    Bool?    
+─────┼────────────────────
+   1 │        1      true
+   2 │        2     false
+   3 │        3      true
+   4 │        3      true
+   5 │        1      true
+   6 │        3      true
+   7 │        2     false
+   8 │        1     false
+
+julia&gt; gatherby(ds, :x)
+8×2 View of GatherBy Dataset, Gathered by: x
+ grp       x        
+ identity  identity
+ Int64?    Bool?    
+────────────────────
+        1      true
+        3      true
+        3      true
+        1      true
+        3      true
+        2     false
+        2     false
+        1     false
+
+julia&gt; setformat!(ds, 1=&gt;isodd)
+8×2 Dataset
+ Row │ grp     x        
+     │ isodd   identity
+     │ Int64?  Bool?    
+─────┼──────────────────
+   1 │   true      true
+   2 │  false     false
+   3 │   true      true
+   4 │   true      true
+   5 │   true      true
+   6 │   true      true
+   7 │  false     false
+   8 │   true     false
+
+julia&gt; gatherby(ds, 1)
+8×2 View of GatherBy Dataset, Gathered by: grp
+ grp     x        
+ isodd   identity
+ Int64?  Bool?    
+──────────────────
+   true      true
+   true      true
+   true      true
+   true      true
+   true      true
+   true     false
+  false     false
+  false     false</code></pre><p>Similar to <code>groupby!/groupby</code> functions, <code>gatherby</code> can be passed to functions which operate on grouped data sets.</p><p>As mentioned before, the result of <code>gatherby</code> is stable, i.e. the observations order within each group will be the order of their appearance in the original data set. However, when this stability is not needed and there are many groups in the data set, passing <code>stable = false</code> improves the performance by sacrificing the stability.</p><p>The <code>gatherby</code> function has one extra keyword arguments, <code>isgathered</code>, which by default is set to <code>false</code>. When this argument is set to <code>true</code>, InMemoryDatasets assumes that the observations are currently gathered by some rules and it only finds the starts and ends of each group and marks the data set as gathered. So users can manually group observations by setting this keyword argument.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../sorting/">« Sort</a><a class="docs-footer-nextpage" href="../aggregation/">Aggregation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 9 December 2021 22:31">Thursday 9 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
