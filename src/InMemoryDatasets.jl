@@ -76,6 +76,7 @@ export
       modify!,
       combine,
       setinfo!,
+      getinfo,
       # allowmissing!,
       # from byrow operations
       byrow,

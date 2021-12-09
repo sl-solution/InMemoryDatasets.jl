@@ -361,6 +361,9 @@ function setinfo!(ds::AbstractDataset, s::String)
     _modified(_attributes(ds))
     s
 end
+function getinfo(ds::AbstractDataset)
+    _attributes(ds).meta.info[]
+end
 
 # TODO needs better printing
 """
