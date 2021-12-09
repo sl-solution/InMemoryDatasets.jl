@@ -133,3 +133,84 @@ function unsort!(ds::Dataset)
         ds
     end
 end
+
+function Base.issorted(ds::AbstractDataset, cols::MultiColumnIndex; rev = false, mapformats = true)
+    _issorted(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), rev = rev, mapformats = mapformats)[1]
+end
+Base.issorted(ds::AbstractDataset, col::ColumnIndex; rev = false, mapformats = true) = issorted(ds, [col], rev = rev, mapformats = mapformats)
+
+function issorted!(ds::Dataset, cols::MultiColumnIndex; rev = false, mapformats = true)
+    res, starts, lastvalid, colsidx, revs, mapformats = _issorted(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), rev = rev, mapformats = mapformats)
+    if res
+        _reset_grouping_info!(ds)
+        append!(index(ds).sortedcols, collect(colsidx))
+        append!(index(ds).rev, revs)
+        append!(index(ds).perm, collect(1:nrow(ds)))
+        append!(index(ds).starts, starts)
+        index(ds).ngroups[] = lastvalid
+        index(ds).fmt[] = mapformats
+    end
+    res
+end
+
+issorted!(ds::Dataset, col::ColumnIndex; rev = false, mapformats = true) = issorted!(ds, [col], rev = rev, mapformats = mapformats)
+
+function _issorted(ds, cols::MultiColumnIndex, ::Val{T}; rev = false, mapformats = true) where T
+    colsidx = index(ds)[cols]
+    if rev isa AbstractVector
+        @assert length(rev) == length(colsidx) "length of rev and the number of selected columns must match"
+        revs = rev
+    else
+        revs = repeat([rev], length(colsidx))
+    end
+    by = Function[]
+
+    if mapformats
+        for j in 1:length(colsidx)
+            push!(by, getformat(parent(ds), colsidx[j]))
+        end
+    else
+        for j in 1:length(colsidx)
+            push!(by, identity)
+        end
+    end
+    res = true
+    starts = Vector{T}(undef, nrow(ds))
+    starts[1] = 1
+    lastvalid = 1
+    inbits = zeros(Bool, nrow(ds))
+    inbits[1] = true
+    for j in 1:length(colsidx)
+        v = _columns(ds)[colsidx[j]]
+        for rng in 1:lastvalid
+            lo = starts[rng]
+            rng == lastvalid ? hi = nrow(ds) : hi = starts[rng+1] - 1
+            part_res = _issorted_barrier(v, Base.Order.ord(isless, by[j], revs[j]), lo, hi)
+            !part_res && return false, starts, lastvalid, colsidx, revs, mapformats
+        end
+        _find_starts_of_groups!(_columns(ds)[colsidx[j]], 1:nrow(ds), by[j], inbits)
+        lastvalid = _fill_starts_from_inbits!(starts, inbits)
+        lastvalid == nrow(ds) && return true, starts, lastvalid, colsidx, revs, mapformats
+        # lastvalid = _fill_starts_v2!(starts, inbits, _columns(ds)[colsidx[j]], lastvalid, Base.Order.ord(isless, by[j], revs[j]), Val(T))
+    end
+    res, starts, lastvalid, colsidx, revs, mapformats
+end
+
+function _fill_starts_from_inbits!(starts, inbits)
+    lastvalid = 1
+    @inbounds for i in 1:length(inbits)
+        if inbits[i]
+            starts[lastvalid] = i
+            lastvalid += 1
+        end
+    end
+    lastvalid - 1
+end
+
+function _issorted_barrier(v, _ord, lo, hi)
+    lo >= hi && return true
+    for i in lo+1:hi
+        Base.Order.lt(_ord, v[i], v[i-1]) && return false
+    end
+    true
+end
