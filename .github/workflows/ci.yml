@@ -5,7 +5,7 @@ on:
       - master
   push:
     branches:
-      - master
+      - main
     tags: '*'
   release:
 jobs:
