@@ -1,25 +1,32 @@
 function normalize_select(idx, @nospecialize(cols...))
-    selected_cols = Int[]
+    selected_cols = [Int[], Int[]]
     for i in 1:length(cols)
         normalize_select!(selected_cols, idx, cols[i])
     end
     unique!(selected_cols)
 end
 function normalize_select!(selected_cols, idx, cols::ColumnIndex)
-    push!(selected_cols, idx[cols])
+    push!(selected_cols[1], idx[cols])
 end
 
 function normalize_select!(selected_cols, idx, cols::MultiColumnIndex)
     colsidx = idx[cols]
     for i in 1:length(colsidx)
-        push!(selected_cols, colsidx[i])
+        push!(selected_cols[1], colsidx[i])
+    end
+    if cols isa Not
+        colsidxnot = idx[cols.skip]
+        for i in 1:length(colsidxnot)
+            push!(selected_cols[2], colsidxnot[i])
+        end
     end
 end
 
 # sell and sell! will replace select and select!
 # Dataset shouldn't support copycols since it causes modifying a data set without telling other alias data sets
 function select(ds::Dataset, @nospecialize(args...))
-    selected_cols = normalize_select(index(ds), args...)
+    selected_cols_all = normalize_select(index(ds), args...)
+    selected_cols = setdiff!(selected_cols_all[1], selected_cols_all[2])
     res = AbstractVector[]
 
     for j in 1:length(selected_cols)
@@ -56,7 +63,8 @@ function select(ds::Dataset, @nospecialize(args...))
 end
 
 function select!(ds, @nospecialize(args...))
-    selected_cols = normalize_select(index(ds), args...)
+    selected_cols_all = normalize_select(index(ds), args...)
+    selected_cols = setdiff!(selected_cols_all[1], selected_cols_all[2])
     unwanted_cols = setdiff(1:ncol(ds), selected_cols)
     sort!(unwanted_cols, rev = true)
 
