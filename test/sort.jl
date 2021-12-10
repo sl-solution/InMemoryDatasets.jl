@@ -361,14 +361,15 @@ end
     @test sort(ds, 1) == sort(ds[!, [2,1]], 2)[:, [2,1]]
     @test sortperm(sds, 2) == [1,3,4,5,8, 7, 2,6,9]
     @test sortperm(sds, [2,1]) == [1,3,4,5,8,7, 9, 2,6]
-
-    for i = 1:100
-        ds = Dataset(rand(1:10, 1000, 3), :auto)
-        @test sort(ds, :) == sort(ds[!, 1:3], :)
-        ds = Dataset(rand(1:1000000, 1000, 3), :auto)
-        @test sort(ds, :) == sort(ds[!, 1:3], :)
-        ds = Dataset(rand(1000, 2), :auto)
-        @test sort(ds, :) == sort(ds[!, 1:2], :)
+    if !Base.Sys.iswindows()
+        for i = 1:100
+            ds = Dataset(rand(1:10, 1000, 3), :auto)
+            @test sort(ds, :) == sort(ds[!, 1:3], :)
+            ds = Dataset(rand(1:1000000, 1000, 3), :auto)
+            @test sort(ds, :) == sort(ds[!, 1:3], :)
+            ds = Dataset(rand(1000, 2), :auto)
+            @test sort(ds, :) == sort(ds[!, 1:2], :)
+        end
     end
 end
 
