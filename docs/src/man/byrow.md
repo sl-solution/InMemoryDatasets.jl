@@ -51,6 +51,7 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `coalesce`
 * `count`
 * `hash`
+* `isequal`
 * `maximum`
 * `mean`
 * `minimum`
@@ -60,7 +61,7 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `sum`
 * `var`
 
-The common syntax of `byrow` for all of these functions except `nunique`, `coalesce` is:
+The common syntax of `byrow` for all of these functions except `nunique`, `coalesce`, and `isequal` is:
 
 `byrow(ds, fun, cols; [by , threads = true])`
 
@@ -68,7 +69,7 @@ The `by` keyword argument is for specifying a function to call on each value bef
 
 The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique values of each row, and `count_missing = true` counts missings as a unique value.
 
-The `coalesce` function doesn't accept `by` argument.
+The `coalesce` and `isequal` functions don't accept `by` argument.
 
 ### Examples
 

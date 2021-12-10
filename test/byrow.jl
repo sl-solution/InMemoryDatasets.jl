@@ -32,6 +32,18 @@
     @test byrow(sds, argmax, [3,2,4,1]) == ["x1_float","x1_float","x1_float","x2_float","x2_float","x2_float","g", "g", "g", "x1_float","x1_float","x1_float","x1_float","x1_float"]
     @test byrow(sds, argmax, [1,2,4,3], by = ismissing) == ["x2_float","x2_float","x2_float", "x1_float","x1_float","x1_float", "x1_float","x1_float","x1_float", "x2_float", "x2_float", "x2_float", "x2_float", "x2_float"]
     @test byrow(sds, any, :, by = ismissing) == [true, true, true, false, false, false, true, true, true, true, true, true, true, true]
+
+    ds = Dataset(x1 = [1,2,3,4,missing], x2 = [3,2,4,5, missing])
+    @test byrow(ds, isequal, :) == [false, true, false, false, true]
+    sds = view(ds, [1,2,2,1,3,4,5,5,5], [2,1])
+    @test byrow(sds, isequal, :) == [0,1,1,0,0,0, 1,1,1]
+    @test byrow(sds, isequal, [1]) == ones(9)
+
+    ds = Dataset(x1 = [1,2,3,4,missing], x2 = [3,2,4,5, missing])
+    @test byrow(ds, isequal, :, threads = true) == [false, true, false, false, true]
+    sds = view(ds, [1,2,2,1,3,4,5,5,5], [2,1])
+    @test byrow(sds, isequal, :, threads = true) == [0,1,1,0,0,0, 1,1,1]
+    @test byrow(sds, isequal, [1], threads = true) == ones(9)
 end
 
 @testset "cum*/!" begin

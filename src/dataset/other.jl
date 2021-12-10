@@ -1013,23 +1013,23 @@ nmissing(x) = count(ismissing, x)
 n(x) = count(!ismissing, x)
 
 """
-    filter(ds, cols; [type = all, by = isequal(true),...])
+    filter(ds, cols; [type = all,...])
 
-A convenient shortcut for ds[byrow(ds, type, cols; by = by,...), :].
+A convenient shortcut for ds[byrow(ds, type, cols; ...), :].
 """
-function Base.filter(ds::AbstractDataset, cols::Union{ColumnIndex, MultiColumnIndex}; view = false, type= all, by = isequal(true), kwargs...)
+function Base.filter(ds::AbstractDataset, cols::Union{ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...)
     if view
-        Base.view(ds, byrow(ds, type, cols, by = by; kwargs...), :)
+        Base.view(ds, byrow(ds, type, cols; kwargs...), :)
     else
-        ds[byrow(ds, type, cols, by = by; kwargs...), :]
+        ds[byrow(ds, type, cols; kwargs...), :]
     end
 end
 """
-    filter!(ds, cols; [type = all, by = isequal(true),...])
+    filter!(ds, cols; [type = all, ...])
 
-A convenient shortcut for deleteat![ds, .!byrow(ds, type, cols; by = by,...)).
+A convenient shortcut for deleteat![ds, .!byrow(ds, type, cols; ...)).
 """
-Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, by = isequal(true), kwargs...) = deleteat!(ds, .!byrow(ds, type, cols, by = by; kwargs...))
+Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, kwargs...) = deleteat!(ds, .!byrow(ds, type, cols; kwargs...))
 
 
 """

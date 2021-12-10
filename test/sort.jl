@@ -361,14 +361,15 @@ end
     @test sort(ds, 1) == sort(ds[!, [2,1]], 2)[:, [2,1]]
     @test sortperm(sds, 2) == [1,3,4,5,8, 7, 2,6,9]
     @test sortperm(sds, [2,1]) == [1,3,4,5,8,7, 9, 2,6]
-
-    for i = 1:100
-        ds = Dataset(rand(1:10, 1000, 3), :auto)
-        @test sort(ds, :) == sort(ds[!, 1:3], :)
-        ds = Dataset(rand(1:1000000, 1000, 3), :auto)
-        @test sort(ds, :) == sort(ds[!, 1:3], :)
-        ds = Dataset(rand(1000, 2), :auto)
-        @test sort(ds, :) == sort(ds[!, 1:2], :)
+    if !Base.Sys.iswindows()
+        for i = 1:100
+            ds = Dataset(rand(1:10, 1000, 3), :auto)
+            @test sort(ds, :) == sort(ds[!, 1:3], :)
+            ds = Dataset(rand(1:1000000, 1000, 3), :auto)
+            @test sort(ds, :) == sort(ds[!, 1:3], :)
+            ds = Dataset(rand(1000, 2), :auto)
+            @test sort(ds, :) == sort(ds[!, 1:2], :)
+        end
     end
 end
 
@@ -427,82 +428,83 @@ end
     @test !issorted(ds, 1)
     @test issorted(ds[[3,1,4,5,2], :], 1)
     @test issorted(view(ds, [2,5,1,4,3], :), 1, rev = true)
+    if !Base.Sys.iswindows()
+        for i in 1:100
+            ds = Dataset(rand(1:10, 1000, 10), :auto)
+            for j in 1:10
+                @test issorted(sort(ds, 1:j), 1:j)
+                @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+                setformat!(ds, 1:10=>isodd)
+                @test issorted(sort(ds, 1:j), 1:j)
+                @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+            end
+            ds = Dataset(rand(1:10., 1000, 10), :auto)
+            map!(ds, x->rand()<.1 ? missing : x, :)
+            for j in 1:10
+                @test issorted(sort(ds, 1:j), 1:j)
+                @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+                setformat!(ds, 1:10=>sign)
+                @test issorted(sort(ds, 1:j), 1:j)
+                @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+            end
+            ds = Dataset(rand(1:10., 1000, 10), :auto)
+            map!(ds, x->rand()<.1 ? missing : x, :)
+            for j in 1:10
+                ds[!, j] = PooledArray(ds[!, j])
+            end
+            for j in 1:10
+                @test issorted(sort(ds, 1:j), 1:j)
+                @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+                setformat!(ds, 1:10=>sign)
+                @test issorted(sort(ds, 1:j), 1:j)
+                @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
+            end
+        end
+        for i in 1:100
+            ds = Dataset(rand(1:10, 1000, 10), :auto)
+            for j in 1:10
+                sort!(ds, 1:j)
+                issorted!(ds, 1:j)
+                @test IMD._sortedcols(ds) == 1:j
+                @test issorted(ds, 1:j)
 
-    for i in 1:100
-        ds = Dataset(rand(1:10, 1000, 10), :auto)
-        for j in 1:10
-            @test issorted(sort(ds, 1:j), 1:j)
-            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
-            setformat!(ds, 1:10=>isodd)
-            @test issorted(sort(ds, 1:j), 1:j)
-            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
-        end
-        ds = Dataset(rand(1:10., 1000, 10), :auto)
-        map!(ds, x->rand()<.1 ? missing : x, :)
-        for j in 1:10
-            @test issorted(sort(ds, 1:j), 1:j)
-            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
-            setformat!(ds, 1:10=>sign)
-            @test issorted(sort(ds, 1:j), 1:j)
-            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
-        end
-        ds = Dataset(rand(1:10., 1000, 10), :auto)
-        map!(ds, x->rand()<.1 ? missing : x, :)
-        for j in 1:10
-            ds[!, j] = PooledArray(ds[!, j])
-        end
-        for j in 1:10
-            @test issorted(sort(ds, 1:j), 1:j)
-            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
-            setformat!(ds, 1:10=>sign)
-            @test issorted(sort(ds, 1:j), 1:j)
-            @test issorted(sort(ds, 1:j, rev = true), 1:j, rev = true)
-        end
-    end
-    for i in 1:100
-        ds = Dataset(rand(1:10, 1000, 10), :auto)
-        for j in 1:10
-            sort!(ds, 1:j)
-            issorted!(ds, 1:j)
-            @test IMD._sortedcols(ds) == 1:j
-            @test issorted(ds, 1:j)
+                setformat!(ds, 1:10=>isodd)
+                sort!(ds, 1:j, rev = true)
+                issorted!(ds, 1:j, rev = true)
+                @test IMD._sortedcols(ds) == 1:j
+                @test issorted(ds, 1:j, rev = true)
+            end
+            ds = Dataset(rand(1:10., 1000, 10), :auto)
+            map!(ds, x->rand()<.1 ? missing : x, :)
+            for j in 1:10
+                sort!(ds, 1:2:j)
+                issorted!(ds, 1:2:j)
+                @test IMD._sortedcols(ds) == collect(1:2:j)
+                @test issorted(ds, 1:2:j)
 
-            setformat!(ds, 1:10=>isodd)
-            sort!(ds, 1:j, rev = true)
-            issorted!(ds, 1:j, rev = true)
-            @test IMD._sortedcols(ds) == 1:j
-            @test issorted(ds, 1:j, rev = true)
-        end
-        ds = Dataset(rand(1:10., 1000, 10), :auto)
-        map!(ds, x->rand()<.1 ? missing : x, :)
-        for j in 1:10
-            sort!(ds, 1:2:j)
-            issorted!(ds, 1:2:j)
-            @test IMD._sortedcols(ds) == collect(1:2:j)
-            @test issorted(ds, 1:2:j)
+                setformat!(ds, 1:10=>sign)
+                sort!(ds, 1:2:j, rev = true)
+                issorted!(ds, 1:2:j, rev = true)
+                @test IMD._sortedcols(ds) == collect(1:2:j)
+                @test issorted(ds, 1:2:j, rev = true)
+            end
+            ds = Dataset(rand(1:10., 1000, 10), :auto)
+            map!(ds, x->rand()<.1 ? missing : x, :)
+            for j in 1:10
+                ds[!, j] = PooledArray(ds[!, j])
+            end
+            for j in 1:10
+                sort!(ds, 1:2:j)
+                issorted!(ds, 1:2:j)
+                @test IMD._sortedcols(ds) == collect(1:2:j)
+                @test issorted(ds, 1:2:j)
 
-            setformat!(ds, 1:10=>sign)
-            sort!(ds, 1:2:j, rev = true)
-            issorted!(ds, 1:2:j, rev = true)
-            @test IMD._sortedcols(ds) == collect(1:2:j)
-            @test issorted(ds, 1:2:j, rev = true)
-        end
-        ds = Dataset(rand(1:10., 1000, 10), :auto)
-        map!(ds, x->rand()<.1 ? missing : x, :)
-        for j in 1:10
-            ds[!, j] = PooledArray(ds[!, j])
-        end
-        for j in 1:10
-            sort!(ds, 1:2:j)
-            issorted!(ds, 1:2:j)
-            @test IMD._sortedcols(ds) == collect(1:2:j)
-            @test issorted(ds, 1:2:j)
-
-            setformat!(ds, 1:10=>sign)
-            sort!(ds, 1:2:j, rev = true)
-            issorted!(ds, 1:2:j, rev = true)
-            @test IMD._sortedcols(ds) == collect(1:2:j)
-            @test issorted(ds, 1:2:j, rev = true)
+                setformat!(ds, 1:10=>sign)
+                sort!(ds, 1:2:j, rev = true)
+                issorted!(ds, 1:2:j, rev = true)
+                @test IMD._sortedcols(ds) == collect(1:2:j)
+                @test issorted(ds, 1:2:j, rev = true)
+            end
         end
     end
 
