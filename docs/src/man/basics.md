@@ -178,7 +178,7 @@ julia> setinfo!(ds, "An example from the manual")
 "An example from the manual"
 ```
 
-This information will be attached to the data set `ds`.
+This information will be attached to the data set `ds`. Use `getinfo` to enquiry this information.
 
 ### Setting and removing formats
 
