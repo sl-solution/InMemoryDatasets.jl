@@ -111,7 +111,7 @@ julia> function op(x,y)
 julia> byrow(ds, mapreduce, :, op = op, init = byrow(ds, mean, :));
 ```
 
-to improve the performance we can use threaded operator:
+to improve performance we can use threaded operator:
 
 ```julia
 julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);
