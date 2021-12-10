@@ -17,7 +17,7 @@ The main feature of `byrow(ds, fun, cols, by = ...)` when `fun` is `all/any` is 
 
 The `filter` and `filter!` functions are two shortcuts which wrap the `byrow` and `getindex`/`deleteat!` operations in a function.
 
-`filter(ds, cols; [view = false, type = all, by = isequal(true),...])` is the shortcut for `ds[byrow(ds, type, cols; by = by,...), :]`, and `filter!(ds, cols; [type = all, by = isequal(true),...])` is the shortcut for `deleteat![ds, .!byrow(ds, type, cols; by = by,...))`.
+`filter(ds, cols; [view = false, type = all,...])` is the shortcut for `ds[byrow(ds, type, cols; ...), :]`, and `filter!(ds, cols; [type = all, ...])` is the shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...))`.
 
 ### Examples
 
