@@ -50,5 +50,5 @@ deploydocs(
     target = "build",
     deps = nothing,
     make = nothing,
-    devbranch = "main"
+    devbranch = "master"
 )
