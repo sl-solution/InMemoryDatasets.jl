@@ -44,24 +44,27 @@ In the above benchmark, `byrow` should be even more performant when the data set
 
 Generally, `byrow` is efficient for any `fun` which returns a single value for each row, however, it is fine tuned for the following functions:
 
-* `all`
-* `any`
-* `argmax`
-* `argmin`
-* `coalesce`
-* `count`
-* `hash`
-* `isequal`
-* `maximum`
-* `mean`
-* `minimum`
-* `nunique`
-* `prod`
-* `std`
-* `sum`
-* `var`
+* `all` : Test whether all elements of a boolean collection are `true`
+* `any` : Test whether any elements of a boolean collection are `true`
+* `argmax` : Return the column name of the maximum element
+* `argmin` : Return the column name of the minimum element
+* `coalesce` : Return the first value which is not equal to `missing`
+* `count` : Count the number of `trues`
+* `findfirst` : Return the column name of the first true value
+* `findlast` : Return the column name of the last true value
+* `hash` : Compute an integer hash code
+* `isequal` : Return `true` when all values are equal
+* `issorted` : Check if the values are sorted
+* `maximum` : Return the maximum value
+* `mean` : Compute the mean value
+* `minimum` : Return the minimum value
+* `nunique` : Return the number of unique values
+* `prod` : Return the product of values
+* `std` : Compute the standard deviation of values
+* `sum` : Return the sum of values
+* `var` : Compute the variance of values
 
-The common syntax of `byrow` for all of these functions except `nunique`, `coalesce`, and `isequal` is:
+The common syntax of `byrow` for all of these functions except `nunique`, `coalesce`, `isequal`, and `issorted` is:
 
 `byrow(ds, fun, cols; [by , threads = true])`
 
@@ -69,7 +72,8 @@ The `by` keyword argument is for specifying a function to call on each value bef
 
 The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique values of each row, and `count_missing = true` counts missings as a unique value.
 
-The `coalesce` and `isequal` functions don't accept `by` argument.
+The `coalesce`, `isequal`, and `issorted` functions don't accept `by` argument, however, `issorted` accepts extra keyword argument `rev` which is set to `false` by default.
+
 
 ### Examples
 

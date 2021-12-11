@@ -44,6 +44,11 @@ function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; b
 end
 byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; by = x->isequal(true, x), threads = nrow(ds)>1000) = byrow(ds, all, [col]; by = by, threads = threads)
 
+byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; threads = nrow(ds)>1000) = row_isequal(ds, cols, threads = threads) 
+byrow(ds::AbstractDataset, ::typeof(findfirst), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findfirst(ds, by, cols; threads = threads)
+byrow(ds::AbstractDataset, ::typeof(findlast), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findlast(ds, by, cols; threads = threads)
+
+
 byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_coalesce(ds, cols) : row_coalesce(ds, cols)
 
 byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_isequal(ds, cols) : row_isequal(ds, cols)
@@ -102,6 +107,8 @@ byrow(ds::AbstractDataset, ::typeof(sort), col::ColumnIndex; threads = true, kwa
 
 byrow(ds::AbstractDataset, ::typeof(sort!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); threads = true, kwargs...) = threads ? hp_row_sort!(ds, cols; kwargs...) : row_sort!(ds, cols; kwargs...)
 byrow(ds::AbstractDataset, ::typeof(sort!), col::ColumnIndex; threads = true, kwargs...) = byrow(ds, sort!, [col]; threads = threads, kwargs...)
+
+byrow(ds::AbstractDataset, ::typeof(issorted), cols::MultiColumnIndex; threads = nrow(ds)>1000, rev = false) = threads ? hp_row_issorted(ds, cols; rev = rev) : row_issorted(ds, cols; rev = rev)
 
 byrow(ds::AbstractDataset, ::typeof(stdze), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_stdze(ds, cols)
 

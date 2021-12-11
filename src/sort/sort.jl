@@ -182,18 +182,26 @@ function _issorted(ds, cols::MultiColumnIndex, ::Val{T}; rev = false, mapformats
     inbits[1] = true
     for j in 1:length(colsidx)
         v = _columns(ds)[colsidx[j]]
-        for rng in 1:lastvalid
-            lo = starts[rng]
-            rng == lastvalid ? hi = nrow(ds) : hi = starts[rng+1] - 1
-            part_res = _issorted_barrier(v, Base.Order.ord(isless, by[j], revs[j]), lo, hi)
-            !part_res && return false, starts, lastvalid, colsidx, revs, mapformats
-        end
+        _ord =  Base.Order.ord(isless, by[j], revs[j])
+        part_res = _issorted_check_for_each_range(v, starts, lastvalid, _ord, nrow(ds))
+        !part_res && return false, starts, lastvalid, colsidx, revs, mapformats
         _find_starts_of_groups!(_columns(ds)[colsidx[j]], 1:nrow(ds), by[j], inbits)
         lastvalid = _fill_starts_from_inbits!(starts, inbits)
         lastvalid == nrow(ds) && return true, starts, lastvalid, colsidx, revs, mapformats
         # lastvalid = _fill_starts_v2!(starts, inbits, _columns(ds)[colsidx[j]], lastvalid, Base.Order.ord(isless, by[j], revs[j]), Val(T))
     end
     res, starts, lastvalid, colsidx, revs, mapformats
+end
+
+function _issorted_check_for_each_range(v, starts, lastvalid, _ord, nrows)
+    part_res = ones(Bool, Threads.nthreads())
+    Threads.@threads for rng in 1:lastvalid
+        lo = starts[rng]
+        rng == lastvalid ? hi = nrows : hi = starts[rng+1] - 1
+        part_res[Threads.threadid()] = _issorted_barrier(v, _ord, lo, hi)
+        !part_res[Threads.threadid()] &&  break
+    end
+    all(part_res)
 end
 
 function _fill_starts_from_inbits!(starts, inbits)
@@ -209,7 +217,7 @@ end
 
 function _issorted_barrier(v, _ord, lo, hi)
     lo >= hi && return true
-    for i in lo+1:hi
+    @inbounds for i in lo+1:hi
         Base.Order.lt(_ord, v[i], v[i-1]) && return false
     end
     true

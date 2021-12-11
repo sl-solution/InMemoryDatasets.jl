@@ -44,6 +44,56 @@
     sds = view(ds, [1,2,2,1,3,4,5,5,5], [2,1])
     @test byrow(sds, isequal, :, threads = true) == [0,1,1,0,0,0, 1,1,1]
     @test byrow(sds, isequal, [1], threads = true) == ones(9)
+
+    ds = Dataset(x1 = [1,2,3,4,missing], x2 = [3,2,4,5, missing])
+    @test byrow(ds, issorted, :) == [true, true, true, true, true]
+    @test byrow(ds, issorted, :, rev = true) == [false, true, false, false, true]
+
+    ds = Dataset(randn(10000, 3), :auto)
+    map!(ds, x->rand()<.1 ? missing : x, :)
+    dsm = Matrix(ds)
+    @test byrow(ds, issorted, :) == issorted.(eachrow(dsm))
+    @test byrow(ds, issorted, :,  rev = true) == issorted.(eachrow(dsm), rev = true)
+    insertcols!(ds, 1, :y=>rand(-1:1, nrow(ds)))
+    dsm = Matrix(ds)
+    @test byrow(ds, issorted, :) == byrow(ds, issorted, :, threads = false) == issorted.(eachrow(dsm))
+    @test byrow(ds, issorted, :,  rev = true) == byrow(ds, issorted, :,  rev = true, threads = false) == issorted.(eachrow(dsm), rev = true)
+
+    ds = Dataset(g = [1, 1, 1, 2, 2],
+                        x1_int = [0, 0, 1, missing, 2],
+                        x2_int = [3, 2, 1, 3, -2],
+                        x1_float = [1.2, missing, -1.0, 2.3, 10],
+                        x2_float = [missing, missing, 3.0, missing, missing],
+                        x3_float = [missing, missing, -1.4, 3.0, -100.0])
+    @test isequal(byrow(ds, findfirst, :, by = ismissing), ["x2_float", "x1_float", missing, "x1_int", "x2_float"])
+    @test isequal(byrow(ds, findlast, :, by = ismissing), ["x3_float", "x3_float", missing, "x2_float", "x2_float"])
+    @test isequal(byrow(ds, findfirst, :, by = x->isless(x,0)), [missing, missing, "x1_float", missing, "x2_int"])
+    @test isequal(byrow(ds, findlast, :, by = x->isless(x,0)), [missing, missing, "x3_float", missing, "x3_float"])
+    @test isequal(byrow(ds, findfirst, :, by = x->1), ["g","g","g", "g","g"])
+    @test isequal(byrow(ds, findfirst, :), ["g","g","g", missing, missing])
+    @test isequal(byrow(ds, findlast, :), ["g","g","x2_int", missing, missing])
+    @test isequal(byrow(ds, findfirst, [3,2,1], by = isequal(2)) ,byrow(ds, findlast, 1:3, by = isequal(2)))
+    @test isequal(byrow(ds, findfirst, 1:3, by = isequal(2)) ,byrow(ds, findlast, [3,2,1], by = isequal(2)))
+
+
+    sds = view(ds, rand(1:5, 100), [2,1,6,5,3,4])
+    @test isequal(byrow(sds, findfirst,:, by = x->isless(x,0)), byrow(Dataset(sds), findfirst, :, by = x->isless(x,0)))
+    @test isequal(byrow(sds, findlast,:, by = x->isless(x,0)), byrow(Dataset(sds), findlast, :, by = x->isless(x,0)))
+    @test isequal(byrow(sds, findfirst,:, by = x->isless(x,0), threads = true), byrow(Dataset(sds), findfirst, :, by = x->isless(x,0)))
+    @test isequal(byrow(sds, findlast,:, by = x->isless(x,0), threads = true), byrow(Dataset(sds), findlast, :, by = x->isless(x,0)))
+    sds = view(ds, rand(1:5, 100), [2,1,6,5,3,4])
+    @test isequal(byrow(sds, findfirst,:, by = x->isless(x,0)), byrow(Dataset(sds), findfirst, :, by = x->isless(x,0)))
+    @test isequal(byrow(sds, findlast,:, by = x->isless(x,0)), byrow(Dataset(sds), findlast, :, by = x->isless(x,0)))
+    @test isequal(byrow(sds, findfirst,:, by = x->isless(x,0), threads = true), byrow(Dataset(sds), findfirst, :, by = x->isless(x,0)))
+    @test isequal(byrow(sds, findlast,:, by = x->isless(x,0), threads = true), byrow(Dataset(sds), findlast, :, by = x->isless(x,0)))
+
+    sds = view(ds, rand(1:5, 100), [2,1,3,4])
+    @test isequal(byrow(sds, findfirst,[1,4,3,2], by = x->isless(x,0)), byrow(Dataset(sds), findfirst, [1,4,3,2], by = x->isless(x,0)))
+    @test isequal(byrow(sds, findlast,[1,4,3,2], by = x->isless(x,0)), byrow(Dataset(sds), findlast, [1,4,3,2], by = x->isless(x,0)))
+    @test isequal(byrow(sds, findfirst,[1,4,3,2], by = x->isless(x,0), threads = true), byrow(Dataset(sds), findfirst, [1,4,3,2], by = x->isless(x,0)))
+    @test isequal(byrow(sds, findlast,[1,4,3,2], by = x->isless(x,0), threads = true), byrow(Dataset(sds), findlast, [1,4,3,2], by = x->isless(x,0)))
+
+
 end
 
 @testset "cum*/!" begin
