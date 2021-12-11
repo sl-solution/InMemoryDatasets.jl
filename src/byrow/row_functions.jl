@@ -69,6 +69,96 @@ function row_all(ds::AbstractDataset, f::Function, cols = :)
 end
 row_all(ds::AbstractDataset, cols = :) = row_all(ds, isequal(true), cols)
 
+function _op_for_isequal!(x,y, x1)
+    x .&= isequal.(y, x1)
+    x
+end
+function hp_op_for_isequal!(x,y, x1)
+    Threads.@threads for i in 1:length(x)
+        x[i] &= isequal(y[i], x1[i])
+    end
+    x
+end
+
+function row_isequal(ds::AbstractDataset, cols = :; threads = true)
+    colsidx = index(ds)[cols]
+    init0 = ones(Bool, nrow(ds))
+    length(colsidx) ==  1 && return init0
+    x1 = _columns(ds)[colsidx[1]]
+    if threads
+        mapreduce(identity, (x,y)->hp_op_for_isequal!(x,y,x1), view(_columns(ds),colsidx), init = init0)
+    else
+        mapreduce(identity, (x,y)->_op_for_isequal!(x,y,x1), view(_columns(ds),colsidx), init = init0)
+    end
+end
+
+
+
+
+# TODO probably we should use this approach instead of mapreduce_indexed
+function _op_for_findfirst!(x, y, f, idx, missref)
+    idx[] += 1
+    x .= ifelse.(isequal.(missref, x) .& isequal.(true, f.(y)), idx, x)
+    x
+end
+
+function hp_op_for_findfirst!(x, y, f, idx, missref)
+    idx[] += 1
+    Threads.@threads for i in 1:length(x)
+        x[i] = ifelse(isequal(missref, x[i]) & isequal(true, f(y[i])), idx[], x[i])
+    end
+    x
+end
+
+function _op_for_findlast!(x, y, f, idx, missref)
+    idx[] += 1
+    x .= ifelse.(isequal.(true, f.(y)), idx, x)
+    x
+end
+
+function hp_op_for_findlast!(x, y, f, idx, missref)
+    idx[] += 1
+    Threads.@threads for i in 1:length(x)
+        x[i] = ifelse(isequal(true, f(y[i])), idx[], x[i])
+    end
+    x
+end
+
+# TODO probably we should use threads argument instead of seperate functions for hp version
+function row_findfirst(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Number}); threads = true)
+    colsidx = index(ds)[cols]
+    idx = Ref{Int}(0)
+    colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
+    push!(colnames_pa, missing)
+    missref = get(colnames_pa.invpool, missing, 0)
+    init0 = fill(missref, nrow(ds))
+    if threads
+        mapreduce(identity, (x,y)->hp_op_for_findfirst!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+    else
+        mapreduce(identity, (x,y)->_op_for_findfirst!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+    end
+    colnames_pa.refs = init0
+    colnames_pa
+end
+
+function row_findlast(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Number}); threads = true)
+    colsidx = index(ds)[cols]
+    idx = Ref{Int}(0)
+    colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
+    push!(colnames_pa, missing)
+    missref = get(colnames_pa.invpool, missing, 0)
+    init0 = fill(missref, nrow(ds))
+    if threads
+        mapreduce(identity, (x,y)->hp_op_for_findlast!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+    else
+        mapreduce(identity, (x,y)->_op_for_findlast!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+    end
+    colnames_pa.refs = init0
+    colnames_pa
+end
+
+
+
 function _op_for_coalesce!(x, y)
     if all(!ismissing, x)
         x
@@ -388,6 +478,26 @@ function row_sort(ds::AbstractDataset, cols = names(ds, Union{Missing, Number});
     dscopy = copy(ds)
     row_sort!(dscopy, cols; kwargs...)
     dscopy
+end
+
+function _op_for_issorted!(x, y, res)
+    res .&= .!isless.(y, x)
+    y
+end
+function _op_for_issorted_rev!(x, y, res)
+    res .&= .!isless.(x, y)
+    y
+end
+
+function row_issorted(ds::AbstractDataset, cols; rev = false)
+    colsidx = index(ds)[cols]
+    init0 = ones(Bool, nrow(ds))
+    if rev
+        mapreduce(identity, (x, y)->_op_for_issorted_rev!(x, y, init0), view(_columns(ds),colsidx))
+    else
+        mapreduce(identity, (x, y)->_op_for_issorted!(x, y, init0), view(_columns(ds),colsidx))
+    end
+    init0
 end
 
 # TODO is it possible to have a faster row_count_unique??

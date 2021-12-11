@@ -243,6 +243,30 @@ function hp_row_sort(ds::AbstractDataset, cols = names(ds, Union{Missing, Number
     dscopy
 end
 
+function hp_op_for_issorted!(x, y, res)
+    Threads.@threads for i in 1:length(x)
+        res[i] &= !isless(y[i], x[i])
+    end
+    y
+end
+function hp_op_for_issorted_rev!(x, y, res)
+    Threads.@threads for i in 1:length(x)
+        res[i] &= !isless(x[i], y[i])
+    end
+    y
+end
+
+function hp_row_issorted(ds::AbstractDataset, cols; rev = false)
+    colsidx = index(ds)[cols]
+    init0 = ones(Bool, nrow(ds))
+    if rev
+        mapreduce(identity, (x, y)->hp_op_for_issorted_rev!(x, y, init0), view(_columns(ds),colsidx))
+    else
+        mapreduce(identity, (x, y)->hp_op_for_issorted!(x, y, init0), view(_columns(ds),colsidx))
+    end
+    init0
+end
+
 
 function hp_row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
     colsidx = index(ds)[cols]
