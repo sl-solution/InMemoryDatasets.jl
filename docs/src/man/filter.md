@@ -19,6 +19,8 @@ The `filter` and `filter!` functions are two shortcuts which wrap the `byrow` an
 
 `filter(ds, cols; [view = false, type = all,...])` is the shortcut for `ds[byrow(ds, type, cols; ...), :]`, and `filter!(ds, cols; [type = all, ...])` is the shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...))`.
 
+ > Note that any function supported by `byrow` can be used with `filter/!` as long as the result of `byrow` is a boolean vector.
+
 ### Examples
 
 The first expression creates a data set, and in the second one we use `byrow` to filter `all` rows which the values of all columns are equal to 1.
