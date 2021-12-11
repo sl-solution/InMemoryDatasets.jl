@@ -111,21 +111,6 @@ function hp_row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Nu
     mapreduce(identity, hp_op_coalesce!, view(_columns(ds),colsidx), init = init0)
 end
 
-function hp_op_isequal!(x,y,x1)
-    Threads.@threads for i in 1:length(x)
-        @inbounds x[i] &= isequal(x1[i], y[i])
-    end
-    x
-end
-function hp_row_isequal(ds::AbstractDataset, cols)
-    colsidx = index(ds)[cols]
-    init0 = ones(Bool, nrow(ds))
-    length(colsidx) == 1 && return init0
-    x1 = _columns(ds)[colsidx[1]]
-    mapreduce(identity, (x, y)->hp_op_isequal!(x, y, x1), view(_columns(ds),view(colsidx, 2:length(colsidx))), init = init0)
-end
-
-
 function hp_row_mean(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     hp_row_sum(ds, f, cols) ./ hp_row_count(ds, x -> !ismissing(x), cols)
 end
