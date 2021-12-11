@@ -51,6 +51,7 @@ byrow(ds::AbstractDataset, ::typeof(findlast), cols::MultiColumnIndex; by = iden
 
 byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_coalesce(ds, cols) : row_coalesce(ds, cols)
 
+byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_isequal(ds, cols) : row_isequal(ds, cols)
 
 byrow(ds::AbstractDataset, ::typeof(mean), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds)>1000) = threads ? hp_row_mean(ds, by, cols) : row_mean(ds, by, cols)
 byrow(ds::AbstractDataset, ::typeof(mean), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, mean, [col]; by = by, threads = threads)

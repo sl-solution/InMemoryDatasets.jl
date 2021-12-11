@@ -74,6 +74,7 @@ The `nunique` function doesn't accept `threads` argument, however, it has an ext
 
 The `coalesce`, `isequal`, and `issorted` functions don't accept `by` argument, however, `issorted` accepts extra keyword argument `rev` which is set to `false` by default.
 
+
 ### Examples
 
 Let's first create an example data set which we will use for the rest of this section:

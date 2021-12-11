@@ -312,40 +312,42 @@ end
 end
 
 # TODO windows on CI stuck here ??
-# @testset "combine - set 2" begin
-#     ds = Dataset(a=[rand([1:4;missing], 19); 5],
-#                    x1=rand(1:100, 20),
-#                    x2=rand(1:3, 20) + im*rand(1:3, 20),
-#                    x3=repeat(1:2, 10) .* u"m")
-#     c1_IMD = combine(gatherby(ds, [:a, :x3]), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
-#     c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
-#     @test all(byrow(compare(c1_IMD, Dataset(c1_DF), on = names(c1_IMD)), all, :))
-#     c1_IMD = combine(groupby(ds, [:a, :x3]), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
-#     c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = true), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
-#     @test all(byrow(compare(c1_IMD, Dataset(c1_DF), on = names(c1_IMD)), all, :))
-#
-#     for r in 0:.1:1
-#         ds = Dataset(rand(1:100, 100, 10), :auto)
-#         modify!(ds, [1,5,3] => x->Float32.(x))
-#         map!(ds, x->rand()<r ? missing : x, :)
-#         c1 = combine(groupby(ds, [:x1,:x3]), :x10=>sort, :x4=>sum)
-#         c2 = combine(groupby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), [:x1, :x3]), :x10=>sort, :x4=>sum)
-#         @test c1 == c2
-#         c1 = combine(gatherby(ds, [:x1,:x3]), :x10=>sort, :x4=>sum)
-#         c2 = combine(gatherby(view(ds, nrow(ds):-1:1, [10, 1, 3, 4]), [:x1, :x3]), :x10=>sort, :x4=>sum)
-#         @test sort(c1, :) == sort(c2, :)
-#     end
-#     ds = Dataset(rand(1000, 2), :auto)
-#     insertcols!(ds, 1, :g=>rand(1:10, nrow(ds)))
-#     c1_IMD = combine(groupby(ds, 1), (2, 3)=>cor=>:cor, 3=>sum=>:sum, 2 => mean => :mean)
-#     df = DF.DataFrame(ds)
-#     c1_DF = DF.combine(DF.groupby(df, 1, sort = true), 2:3=>cor=>:cor, 3=>sum=>:sum, 2=>mean=>:mean)
-#     @test all(byrow(compare(c1_IMD, Dataset(c1_DF), eq = isapprox), all, :))
-#     c1_IMD = combine(groupby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), 3), (2,1)=>cor=>:cor, 1=>sum=>:sum, 2 => mean => :mean)
-#     df = DF.DataFrame(ds)
-#     c1_DF = DF.combine(DF.groupby(df, 1, sort = true), 2:3=>cor=>:cor, 3=>sum=>:sum, 2=>mean=>:mean)
-#     @test all(byrow(compare(c1_IMD, Dataset(c1_DF), eq = isapprox), all, :))
-# end
+if !Base.Sys.iswindows()
+    @testset "combine - set 2" begin
+        ds = Dataset(a=[rand([1:4;missing], 19); 5],
+                       x1=rand(1:100, 20),
+                       x2=rand(1:3, 20) + im*rand(1:3, 20),
+                       x3=repeat(1:2, 10) .* u"m")
+        c1_IMD = combine(gatherby(ds, [:a, :x3]), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
+        c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
+        @test all(byrow(compare(c1_IMD, Dataset(c1_DF), on = names(c1_IMD)), all, :))
+        c1_IMD = combine(groupby(ds, [:a, :x3]), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
+        c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = true), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
+        @test all(byrow(compare(c1_IMD, Dataset(c1_DF), on = names(c1_IMD)), all, :))
+
+        for r in 0:.1:1
+            ds = Dataset(rand(1:100, 100, 10), :auto)
+            modify!(ds, [1,5,3] => x->Float32.(x))
+            map!(ds, x->rand()<r ? missing : x, :)
+            c1 = combine(groupby(ds, [:x1,:x3]), :x10=>sort, :x4=>sum)
+            c2 = combine(groupby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), [:x1, :x3]), :x10=>sort, :x4=>sum)
+            @test c1 == c2
+            c1 = combine(gatherby(ds, [:x1,:x3]), :x10=>sort, :x4=>sum)
+            c2 = combine(gatherby(view(ds, nrow(ds):-1:1, [10, 1, 3, 4]), [:x1, :x3]), :x10=>sort, :x4=>sum)
+            @test sort(c1, :) == sort(c2, :)
+        end
+        ds = Dataset(rand(1000, 2), :auto)
+        insertcols!(ds, 1, :g=>rand(1:10, nrow(ds)))
+        c1_IMD = combine(groupby(ds, 1), (2, 3)=>cor=>:cor, 3=>sum=>:sum, 2 => mean => :mean)
+        df = DF.DataFrame(ds)
+        c1_DF = DF.combine(DF.groupby(df, 1, sort = true), 2:3=>cor=>:cor, 3=>sum=>:sum, 2=>mean=>:mean)
+        @test all(byrow(compare(c1_IMD, Dataset(c1_DF), eq = isapprox), all, :))
+        c1_IMD = combine(groupby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), 3), (2,1)=>cor=>:cor, 1=>sum=>:sum, 2 => mean => :mean)
+        df = DF.DataFrame(ds)
+        c1_DF = DF.combine(DF.groupby(df, 1, sort = true), 2:3=>cor=>:cor, 3=>sum=>:sum, 2=>mean=>:mean)
+        @test all(byrow(compare(c1_IMD, Dataset(c1_DF), eq = isapprox), all, :))
+    end
+end
 
 @testset "combine - set 3" begin
     ds = Dataset(x1 = [1,2,1,2,2,1], x2=[1.0,missing,1.1,1.1,1.1,1.1],y=100:100:600.0)

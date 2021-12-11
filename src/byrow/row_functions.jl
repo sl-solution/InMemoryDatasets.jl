@@ -175,6 +175,15 @@ function row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Numbe
     mapreduce(identity, _op_for_coalesce!, view(_columns(ds),colsidx), init = init0)
 end
 
+function row_isequal(ds::AbstractDataset, cols)
+    colsidx = index(ds)[cols]
+    init0 = ones(Bool, nrow(ds))
+    _op_for_isequal!(x, y, x1) = x .&= isequal.(x1, y)
+    length(colsidx) == 1 && return init0
+    x1 = _columns(ds)[colsidx[1]]
+    mapreduce(identity, (x, y)->_op_for_isequal!(x, y, x1), view(_columns(ds),view(colsidx, 2:length(colsidx))), init = init0)
+end
+
 function row_mean(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     row_sum(ds, f, cols) ./ row_count(ds, x -> !ismissing(x), cols)
 end

@@ -97,6 +97,33 @@ julia> function fbfill!(ds, cols)
       end
 ```
 
+* [A use-case from practice](https://www.juliabloggers.com/news-features-in-dataframes-jl-1-3-part-1/) : We have a data frame
+that has 10,000 rows and columns, but this time we have 50% of missing values
+randomly scattered in it. What we want to do is to fill missing values in each
+row with row means of non-missing values.
+
+```julia
+julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);
+julia> function op(x,y)
+           y .= ifelse.(ismissing.(y), x, y)
+           x
+       end
+julia> byrow(ds, mapreduce, :, op = op, init = byrow(ds, mean, :));
+```
+
+to improve performance we can use threaded operator:
+
+```julia
+julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);
+julia> function threaded_op(x,y)
+          Threads.@threads for i in 1:length(x)
+             y[i] = ifelse(ismissing(y[i]), x[i], y[i])
+          end
+           x
+       end
+julia> byrow(ds, mapreduce, :, op = threaded_op, init = byrow(ds, mean, :));
+```
+
 ## Filtering
 
 * [Filtering based on conditions comparing one column to other columns](https://discourse.julialang.org/t/dataframe-filtering-based-on-conditions-comparing-one-column-to-other-columns/70802) : In the following example we like to filter rows where columns `:x1` and `:x2` are greater than `:x5`.
