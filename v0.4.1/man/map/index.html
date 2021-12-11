@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Call functions on each observation · In Memory Datasets</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">In Memory Datasets</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><a class="tocitem" href="../basics/">First Steps</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><a class="tocitem" href="../formats/">Formats</a></li><li class="is-active"><a class="tocitem" href>Call functions on each observation</a><ul class="internal"><li><a class="tocitem" href="#Introduction"><span>Introduction</span></a></li><li><a class="tocitem" href="#map!"><span><code>map!</code></span></a></li><li><a class="tocitem" href="#map"><span><code>map</code></span></a></li></ul></li><li><a class="tocitem" href="../byrow/">Row-wise operations</a></li><li><a class="tocitem" href="../modify/">Transform columns</a></li><li><a class="tocitem" href="../filter/">Filter observations</a></li><li><a class="tocitem" href="../sorting/">Sort</a></li><li><a class="tocitem" href="../grouping/">Group observations</a></li><li><a class="tocitem" href="../aggregation/">Aggregation</a></li><li><a class="tocitem" href="../transpose/">Transpose data</a></li><li><a class="tocitem" href="../joins/">Joins</a></li></ul></li><li><a class="tocitem" href="../gallery/">Gallery</a></li><li><a class="tocitem" href="../performance/">Performance tips</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Call functions on each observation</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Call functions on each observation</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/sl-solution/InMemoryDatasets.jl/blob/master/docs/src/man/map.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Function-map/map!"><a class="docs-heading-anchor" href="#Function-map/map!">Function <code>map/map!</code></a><a id="Function-map/map!-1"></a><a class="docs-heading-anchor-permalink" href="#Function-map/map!" title="Permalink"></a></h1><h2 id="Introduction"><a class="docs-heading-anchor" href="#Introduction">Introduction</a><a id="Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction" title="Permalink"></a></h2><p>There are multiple ways to call a function on individual values (observations) of a column. In this section we discuss two of them: <code>map!</code> and <code>map</code>. These two functions are high-performance and customised version of <code>map!</code> and <code>map</code> in Julia Base.</p><blockquote><p><code>map!</code> and <code>map</code> call functions on the actual values, i.e. if the column is formatted the functions are called on the values which may be different from what you see when show a data set.</p></blockquote><h2 id="map!"><a class="docs-heading-anchor" href="#map!"><code>map!</code></a><a id="map!-1"></a><a class="docs-heading-anchor-permalink" href="#map!" title="Permalink"></a></h2><p>The InMemoryDatasets&#39; <code>map!</code> function modifies a data set in-place by calling a function on individual values of a column. The syntax for the function is</p><blockquote><p><code>map!(ds, fun, cols; threads = true)</code></p></blockquote><p>where <code>ds</code> is a data set, and <code>cols</code> can be a single column or multiple columns selector. When <code>fun</code> is a single function, <code>map!</code> call that function on all values of <code>cols</code>. Since <code>map!</code> is modifying the data set <code>ds</code> in-place, it will skip columns in <code>cols</code> where <code>fun</code> changes the type of columns, and print a warning on the screen.</p><p>The <code>threads = true</code> keyword argument causes <code>map!</code> to exploit all cores available to Julia for doing the calculations. This is particularly useful when the <code>fun</code> function is expensive to calculate.</p><p>When <code>fun</code> is a vector of functions and <code>cols</code> refers to multiple columns, <code>map!</code> calls each element of <code>fun</code> to the values of the corresponding column in <code>cols</code>. this means that it is possible to call different functions on different columns of a data set, however, the length of <code>fun</code> and the number of selected columns must be the same.</p><h3 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h3><p>In the following data set we like to replace every <code>missing</code> in <code>:x2</code> and <code>:x3</code> with value <code>0</code>. Thus, we use <code>map!</code> and a suitable function to do this:</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = 1:5, x2 = [-2, -1, missing, 1, 2],
+                    x3 = [0.0, 0.1, 0.2, missing, 0.4])
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼──────────────────────────────
+   1 │        1        -2       0.0
+   2 │        2        -1       0.1
+   3 │        3   missing       0.2
+   4 │        4         1   missing
+   5 │        5         2       0.4
+
+julia&gt; map!(ds, x -&gt; ismissing(x) ? 0 : x, 2:3)
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼──────────────────────────────
+   1 │        1        -2       0.0
+   2 │        2        -1       0.1
+   3 │        3         0       0.2
+   4 │        4         1       0.0
+   5 │        5         2       0.4</code></pre><p>Now let&#39;s call <code>sqrt</code> on all values. Note that <code>sqrt</code> of an integer is a float and <code>sqrt</code> of negative integer is not valid in Julia. So <code>map!</code> only applies the provided function on the last column and skips the first two columns.</p><pre><code class="language-julia-repl hljs">julia&gt; map!(ds, sqrt, :)
+┌ Warning: cannot map `f` on ds[!, :x1] in-place, the selected column is Union{Missing, Int64} and the result of calculation is Union{Missing, Float64}
+└ @ InMemoryDatasets ~/.julia/dev/InMemoryDatasets/src/dataset/other.jl:394
+┌ Warning: cannot map `f` on ds[!, :x2] in-place, the selected column is Union{Missing, Int64} and the result of calculation is Union{Missing, Float64}
+└ @ InMemoryDatasets ~/.julia/dev/InMemoryDatasets/src/dataset/other.jl:394
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼──────────────────────────────
+   1 │        1        -2  0.0
+   2 │        2        -1  0.316228
+   3 │        3         0  0.447214
+   4 │        4         1  0.0
+   5 │        5         2  0.632456</code></pre><p>As another example let&#39;s look at a data set where a column already has a <code>format</code>.</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = 1:5, x2 = [1,2,1,2,1])
+julia&gt; setformat!(ds, 1=&gt;isodd)
+5×2 Dataset
+ Row │ x1      x2
+     │ isodd   identity
+     │ Int64?  Int64?
+─────┼──────────────────
+   1 │   true         1
+   2 │  false         2
+   3 │   true         1
+   4 │  false         2
+   5 │   true         1
+
+julia&gt; map!(ds, x-&gt;div(x,2), 1:2)
+5×2 Dataset
+ Row │ x1      x2
+     │ isodd   identity
+     │ Int64?  Int64?
+─────┼──────────────────
+   1 │  false         0
+   2 │   true         1
+   3 │   true         0
+   4 │  false         1
+   5 │  false         0</code></pre><p>Note that the <code>format</code> of <code>:x1</code> is preserved and the function call changed the actual values. Thus, Datasets applies the <code>format</code> of <code>:x1</code> to new values.</p><p>The following example shows how different functions can be used for different columns.</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = 1:5, x2 = [-2, -1, missing, 1, 2],
+                    x3 = [0.0, 0.1, 0.2, missing, 0.4])
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼──────────────────────────────
+   1 │        1        -2       0.0
+   2 │        2        -1       0.1
+   3 │        3   missing       0.2
+   4 │        4         1   missing
+   5 │        5         2       0.4
+
+julia&gt; fun_vec = [x -&gt; div(x, 2),
+                  x -&gt; ismissing(x) ? 0 : x,
+                  sqrt]
+3-element Vector{Function}:
+ #5 (generic function with 1 method)
+ #6 (generic function with 1 method)
+ sqrt (generic function with 19 methods)
+
+julia&gt; map!(ds, fun_vec, 1:3)
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼────────────────────────────────────
+   1 │        0        -2        0.0
+   2 │        1        -1        0.316228
+   3 │        1         0        0.447214
+   4 │        2         1  missing
+   5 │        2         2        0.632456</code></pre><h2 id="map"><a class="docs-heading-anchor" href="#map"><code>map</code></a><a id="map-1"></a><a class="docs-heading-anchor-permalink" href="#map" title="Permalink"></a></h2><p>The <code>map</code> function also calls a function (or a vector of functions) on single or muliple columns of a data set. However, it differs from <code>map!</code> that we discussed earlier in three main areas,</p><ul><li>it doesn&#39;t do in-place operation and returns a copy of the data set,</li><li>unlike <code>map!</code>, it can change the type of columns, and</li><li>it doesn&#39;t preserve the <code>format</code>s of the columns that are going to be modified.</li></ul><h3 id="Examples-2"><a class="docs-heading-anchor" href="#Examples-2">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-2" title="Permalink"></a></h3><p>In the following example we call <code>x -&gt; x/2</code> on all columns. However, note that <code>map</code> automatically changes the data type of the first two columns, and more importantly it <strong>doesn&#39;t</strong> modify the original data set:</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = 1:5, x2 = [-2, -1, missing, 1, 2],
+                    x3 = [0.0, 0.1, 0.2, missing, 0.4])
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼──────────────────────────────
+   1 │        1        -2       0.0
+   2 │        2        -1       0.1
+   3 │        3   missing       0.2
+   4 │        4         1   missing
+   5 │        5         2       0.4
+julia&gt; map(ds, x -&gt; x/2, r&quot;x&quot;)
+5×3 Dataset
+ Row │ x1        x2         x3
+     │ identity  identity   identity
+     │ Float64?  Float64?   Float64?
+─────┼─────────────────────────────────
+   1 │      0.5       -1.0        0.0
+   2 │      1.0       -0.5        0.05
+   3 │      1.5  missing          0.1
+   4 │      2.0        0.5  missing
+   5 │      2.5        1.0        0.2
+
+julia&gt; ds # map doesn&#39;t modify the original data set
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼───────────────────────────────
+   1 │        1        -2        0.0
+   2 │        2        -1        0.1
+   3 │        3   missing        0.2
+   4 │        4         1  missing
+   5 │        5         2        0.4</code></pre><p>In the following example, we <code>map</code> some functions on columns of a data set which one of the columns has a <code>format</code>.</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = 1:5, x2 = [1,2,1,2,1])
+julia&gt; setformat!(ds, 1=&gt;isodd)
+5×2 Dataset
+ Row │ x1      x2
+     │ isodd   identity
+     │ Int64?  Int64?
+─────┼──────────────────
+   1 │   true         1
+   2 │  false         2
+   3 │   true         1
+   4 │  false         2
+   5 │   true         1
+
+julia&gt; map(ds, [x -&gt; div(x,2), x -&gt; x/2], :)
+5×2 Dataset
+ Row │ x1        x2
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        0       0.5
+   2 │        1       1.0
+   3 │        1       0.5
+   4 │        2       1.0
+   5 │        2       0.5</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../formats/">« Formats</a><a class="docs-footer-nextpage" href="../byrow/">Row-wise operations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 11 December 2021 20:56">Saturday 11 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
