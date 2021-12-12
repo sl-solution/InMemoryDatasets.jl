@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Filter observations · In Memory Datasets</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">In Memory Datasets</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><a class="tocitem" href="../basics/">First Steps</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><a class="tocitem" href="../formats/">Formats</a></li><li><a class="tocitem" href="../map/">Call functions on each observation</a></li><li><a class="tocitem" href="../byrow/">Row-wise operations</a></li><li><a class="tocitem" href="../modify/">Transform columns</a></li><li class="is-active"><a class="tocitem" href>Filter observations</a><ul class="internal"><li><a class="tocitem" href="#Introduction"><span>Introduction</span></a></li><li><a class="tocitem" href="#byrow"><span><code>byrow</code></span></a></li><li><a class="tocitem" href="#mask"><span><code>mask</code></span></a></li><li><a class="tocitem" href="#Using-contains-and-related-functions"><span>Using <code>contains</code> and related functions</span></a></li><li><a class="tocitem" href="#Julia-broadcasting"><span>Julia broadcasting</span></a></li></ul></li><li><a class="tocitem" href="../sorting/">Sort</a></li><li><a class="tocitem" href="../grouping/">Group observations</a></li><li><a class="tocitem" href="../aggregation/">Aggregation</a></li><li><a class="tocitem" href="../transpose/">Transpose data</a></li><li><a class="tocitem" href="../joins/">Joins</a></li></ul></li><li><a class="tocitem" href="../gallery/">Gallery</a></li><li><a class="tocitem" href="../performance/">Performance tips</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Filter observations</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Filter observations</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/sl-solution/InMemoryDatasets.jl/blob/master/docs/src/man/filter.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Filter-observations"><a class="docs-heading-anchor" href="#Filter-observations">Filter observations</a><a id="Filter-observations-1"></a><a class="docs-heading-anchor-permalink" href="#Filter-observations" title="Permalink"></a></h1><h2 id="Introduction"><a class="docs-heading-anchor" href="#Introduction">Introduction</a><a id="Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction" title="Permalink"></a></h2><p>In this section, the InMemoryDatasets&#39; APIs for filtering observations are discussed. We provides information about four main ways to filter observations based on some conditions, 1) using the <code>byrow</code> function, 2) using the <code>mask</code> function, 3) using the <code>contains</code> and related functions, 4) and using Julia broadcasting.</p><h2 id="byrow"><a class="docs-heading-anchor" href="#byrow"><code>byrow</code></a><a id="byrow-1"></a><a class="docs-heading-anchor-permalink" href="#byrow" title="Permalink"></a></h2><p><code>byrow</code> has been discussed previously in details. However, in this section we are going to use it for filtering observations. To use <code>byrow(ds, fun, cols, ...)</code> for filtering observations, the <code>fun</code> argument should be set as <code>all</code> or <code>any</code>, and supply the conditions by using the <code>by</code> keyword option. The supplied <code>by</code> will be checked for each observation in all selected columns. The function returns a boolean vector where its <code>j</code>th elements will be equivalent to the result of <code>all(by, [col1[j], col2[j], ...])</code> or <code>any(by, [col1[j], col2[j], ...])</code> when <code>all</code> or <code>any</code> is set as the <code>fun</code> argument, respectively.</p><p>The main feature of <code>byrow(ds, fun, cols, by = ...)</code> when <code>fun</code> is <code>all/any</code> is that the <code>by</code> keyword argument can be a vector of functions. Thus, when a multiple columns are supplied as <code>cols</code> each column can have its own <code>by</code>.</p><h3 id="filter-and-filter!"><a class="docs-heading-anchor" href="#filter-and-filter!"><code>filter</code> and <code>filter!</code></a><a id="filter-and-filter!-1"></a><a class="docs-heading-anchor-permalink" href="#filter-and-filter!" title="Permalink"></a></h3><p>The <code>filter</code> and <code>filter!</code> functions are two shortcuts which wrap the <code>byrow</code> and <code>getindex</code>/<code>deleteat!</code> operations in a function.</p><p><code>filter(ds, cols; [view = false, type = all,...])</code> is the shortcut for <code>ds[byrow(ds, type, cols; ...), :]</code>, and <code>filter!(ds, cols; [type = all, ...])</code> is the shortcut for <code>deleteat![ds, .!byrow(ds, type, cols; ...))</code>.</p><blockquote><p>Note that any function supported by <code>byrow</code> can be used with <code>filter/!</code> as long as the result of <code>byrow</code> is a boolean vector.</p></blockquote><h3 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h3><p>The first expression creates a data set, and in the second one we use <code>byrow</code> to filter <code>all</code> rows which the values of all columns are equal to 1.</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = 1, x2 = 1:10, x3 = repeat(1:2, 5))
+10×3 Dataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         1         1
+   2 │        1         2         2
+   3 │        1         3         1
+   4 │        1         4         2
+   5 │        1         5         1
+   6 │        1         6         2
+   7 │        1         7         1
+   8 │        1         8         2
+   9 │        1         9         1
+  10 │        1        10         2
+
+julia&gt; byrow(ds, all, :, by = isequal(1))
+10-element Vector{Bool}:
+1
+0
+0
+0
+0
+0
+0
+0
+0
+0</code></pre><p>Note that only the first row is meeting the condition. As another example, let&#39;s see the code which filter all rows which the numbers in all columns are odd.</p><pre><code class="language-julia-repl hljs">julia&gt; filter(ds, :, by = isodd)
+
+ 5×3 Dataset
+  Row │ x1        x2        x3       
+      │ identity  identity  identity
+      │ Int64?    Int64?    Int64?   
+ ─────┼──────────────────────────────
+    1 │        1         1         1
+    2 │        1         3         1
+    3 │        1         5         1
+    4 │        1         7         1
+    5 │        1         9         1</code></pre><p>In the next example we are going to filter all rows which the value of any of column is greater than 5.</p><pre><code class="language-julia-repl hljs">julia&gt; byrow(ds, any, :, by = &gt;(5))
+10-element Vector{Bool}:
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1
+ 1
+ 1
+ 1
+ 1</code></pre><p>The next example shows how a vector of functions can be supplied:</p><pre><code class="language-julia-repl hljs">julia&gt; byrow(ds, all, 2:3, by = [&gt;(5), isodd])
+10-element Vector{Bool}:
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1
+ 0
+ 1
+ 0</code></pre><p>We can use the combination of <code>modify!/modify</code> and <code>byrow</code> to filter observations based on all values in a column, e.g. in the following example we filter all rows which <code>:x2</code> and <code>:x3</code> are larger than their means:</p><pre><code class="language-julia-repl hljs">julia&gt; modify!(ds, 2:3 .=&gt; (x -&gt; x .&gt; mean(x)) .=&gt; [:_tmp1, :_tmp2])
+10×5 Dataset
+ Row │ x1        x2        x3        _tmp1     _tmp2    
+     │ identity  identity  identity  identity  identity
+     │ Int64?    Int64?    Int64?    Bool?     Bool?    
+─────┼──────────────────────────────────────────────────
+   1 │        1         1         1     false     false
+   2 │        1         2         2     false      true
+   3 │        1         3         1     false     false
+   4 │        1         4         2     false      true
+   5 │        1         5         1     false     false
+   6 │        1         6         2      true      true
+   7 │        1         7         1      true     false
+   8 │        1         8         2      true      true
+   9 │        1         9         1      true     false
+  10 │        1        10         2      true      true
+
+julia&gt; filter(ds, r&quot;_tm&quot;) # translate to ds[byrow(ds, all, r&quot;_tm&quot;), :]
+
+3×5 Dataset
+Row │ x1        x2        x3        _tmp1     _tmp2    
+    │ identity  identity  identity  identity  identity
+    │ Int64?    Int64?    Int64?    Bool?     Bool?    
+────┼──────────────────────────────────────────────────
+  1 │        1         6         2      true      true
+  2 │        1         8         2      true      true
+  3 │        1        10         2      true      true</code></pre><blockquote><p>Note that to drop the temporary columns we can use the <code>select!</code> function.</p></blockquote><h2 id="mask"><a class="docs-heading-anchor" href="#mask"><code>mask</code></a><a id="mask-1"></a><a class="docs-heading-anchor-permalink" href="#mask" title="Permalink"></a></h2><p><code>mask</code> is a function which calls a function (or a vector of functions) on all observations of a set of selected columns. The syntax for <code>mask</code> is very similar to <code>map</code> function:</p><blockquote><p><code>mask(ds, funs, cols, [mapformats = true, missings = false, threads = true])</code></p></blockquote><p>however, unlike <code>map</code>, the function doesn&#39;t return the whole modified dataset, it returns a boolean data set with the same number of rows as <code>ds</code> and the same number of columns as the length of <code>cols</code>, while <code>fun</code> has been called on each observation. The return value of <code>fun</code> must be <code>true</code>, <code>false</code>, or <code>missing</code>. The combination of <code>mask</code> and <code>byrow</code> can be used to filter observations.</p><p>Compared to <code>byrow</code>, the <code>mask</code> function has some useful features which are handy in some scenarios:</p><ul><li><code>mask</code> returns a boolean data set which shows exactly which observation will be selected when <code>fun</code> is called on it.</li><li>By default, the <code>mask</code> function filters observations based on their formatted values. However, this can be changed by setting <code>mapformats = false</code>.</li><li>By default, the <code>mask</code> function will treat the missing values as <code>false</code>, however, this behaviour can be modified by using the keyword option <code>missings</code>. This option can be set as <code>true</code>, <code>false</code>(default value), or <code>missing</code>.</li></ul><h3 id="Examples-2"><a class="docs-heading-anchor" href="#Examples-2">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-2" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = repeat(1:2, 5), x2 = 1:10, x3 = repeat([missing, 2], 5))
+10×3 Dataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         1   missing
+   2 │        2         2         2
+   3 │        1         3   missing
+   4 │        2         4         2
+   5 │        1         5   missing
+   6 │        2         6         2
+   7 │        1         7   missing
+   8 │        2         8         2
+   9 │        1         9   missing
+  10 │        2        10         2
+
+julia&gt; setformat!(ds, 2 =&gt; isodd)
+10×3 Dataset
+Row │ x1        x2      x3       
+    │ identity  isodd   identity
+    │ Int64?    Int64?  Int64?   
+────┼────────────────────────────
+  1 │        1    true   missing
+  2 │        2   false         2
+  3 │        1    true   missing
+  4 │        2   false         2
+  5 │        1    true   missing
+  6 │        2   false         2
+  7 │        1    true   missing
+  8 │        2   false         2
+  9 │        1    true   missing
+ 10 │        2   false         2
+
+julia&gt;  mask(ds, isequal(1), :) # simple use case
+10×3 Dataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity
+     │ Bool?     Bool?     Bool?    
+─────┼──────────────────────────────
+   1 │     true      true     false
+   2 │    false     false     false
+   3 │     true      true     false
+   4 │    false     false     false
+   5 │     true      true     false
+   6 │    false     false     false
+   7 │     true      true     false
+   8 │    false     false     false
+   9 │     true      true     false
+  10 │    false     false     false
+
+julia&gt; _tmp = mask(ds, isequal(1), :, mapformats = false) # use the actual values instead of formatted values
+10×3 Dataset
+Row │ x1        x2        x3       
+    │ identity  identity  identity
+    │ Bool?     Bool?     Bool?    
+────┼──────────────────────────────
+  1 │     true      true     false
+  2 │    false     false     false
+  3 │     true     false     false
+  4 │    false     false     false
+  5 │     true     false     false
+  6 │    false     false     false
+  7 │     true     false     false
+  8 │    false     false     false
+  9 │     true     false     false
+ 10 │    false     false     false
+
+julia&gt; filter(_tmp, :, type = any) # OR ds[byrow(_tmp, any, :), :]. This uses the result of previous run
+5×3 Dataset
+ Row │ x1        x2      x3       
+     │ identity  isodd   identity
+     │ Int64?    Int64?  Int64?   
+─────┼────────────────────────────
+   1 │        1    true   missing
+   2 │        1    true   missing
+   3 │        1    true   missing
+   4 │        1    true   missing
+   5 │        1    true   missing
+
+julia&gt; mask(ds, [isodd, ==(2)], 2:3, missings = missing) # using a vector of functions and setting missings option
+10×2 Dataset
+ Row │ x2        x3       
+     │ identity  identity
+     │ Bool?     Bool?    
+─────┼────────────────────
+   1 │     true   missing
+   2 │    false      true
+   3 │     true   missing
+   4 │    false      true
+   5 │     true   missing
+   6 │    false      true
+   7 │     true   missing
+   8 │    false      true
+   9 │     true   missing
+  10 │    false      true</code></pre><h2 id="Using-contains-and-related-functions"><a class="docs-heading-anchor" href="#Using-contains-and-related-functions">Using <code>contains</code> and related functions</a><a id="Using-contains-and-related-functions-1"></a><a class="docs-heading-anchor-permalink" href="#Using-contains-and-related-functions" title="Permalink"></a></h2><p>Filtering a data set based on another data set should be done via <code>contains</code>, <code>semijoin</code>, <code>semijoin!</code>, <code>antijoin</code>, and <code>antijoin!</code> functions. These functions are discussed in the section about joining data sets, and here we just provide some examples about how to use them for filtering a data set.</p><p>Additionally, these functions can be used in situations when a data set needed to be filter based on a set of values. In these cases, a temporary data set can be formed by given values and then one of the aforementioned functions can be used.</p><h3 id="Examples-3"><a class="docs-heading-anchor" href="#Examples-3">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-3" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; ds1 = Dataset(x = [1,7,4,5], y = [.1,.2,.3,.4])
+4×2 Dataset
+ Row │ x         y        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1       0.1
+   2 │        7       0.2
+   3 │        4       0.3
+   4 │        5       0.4
+
+julia&gt; ds2 = Dataset(x = [1,3,5,7,11])
+5×1 Dataset
+ Row │ x        
+     │ identity
+     │ Int64?   
+─────┼──────────
+   1 │        1
+   2 │        3
+   3 │        5
+   4 │        7
+   5 │       11
+
+julia&gt; contains(ds1,ds2, on = :x)
+4-element Vector{Bool}:
+ 1
+ 1
+ 0
+ 1
+
+julia&gt; semijoin(ds1,ds2, on = :x)
+3×2 Dataset
+ Row │ x         y        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1       0.1
+   2 │        7       0.2
+   3 │        5       0.4
+
+julia&gt; vals = [.05,.01,.1,.4];
+
+julia&gt; _tmp = Dataset(vals = vals)
+4×1 Dataset
+ Row │ vals     
+     │ identity
+     │ Float64?
+─────┼──────────
+   1 │     0.05
+   2 │     0.01
+   3 │     0.1
+   4 │     0.4
+
+julia&gt; antijoin!(ds1, _tmp, on = :y=&gt;:vals)
+2×2 Dataset
+ Row │ x         y        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        7       0.2
+   2 │        4       0.3</code></pre><h2 id="Julia-broadcasting"><a class="docs-heading-anchor" href="#Julia-broadcasting">Julia broadcasting</a><a id="Julia-broadcasting-1"></a><a class="docs-heading-anchor-permalink" href="#Julia-broadcasting" title="Permalink"></a></h2><blockquote><p>Note that, in general, <code>byrow</code>, <code>filter</code>, or <code>filter!</code> are preferred methods to filter data sets compared to <code>broadcasting</code></p></blockquote><p>For simple use case (e.g. when working on a single column) we can use broadcasting directly. For example if we are interested in rows which the first column is greater than 5 we can directly use (assume the data set is called <code>ds</code>):</p><blockquote><p><code>ds[ds[!, 1] .&gt; 1, :]</code></p></blockquote><p>or use the column names.</p><h3 id="Examples-4"><a class="docs-heading-anchor" href="#Examples-4">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-4" title="Permalink"></a></h3><p>In the following examples we use <code>.</code> for broadcasting, and its important to include it in your code when you are going to use this option for filtering observations.</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = repeat(1:2, 5), x2 = 1:10, x3 = repeat([missing, 2], 5))
+10×3 Dataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         1   missing
+   2 │        2         2         2
+   3 │        1         3   missing
+   4 │        2         4         2
+   5 │        1         5   missing
+   6 │        2         6         2
+   7 │        1         7   missing
+   8 │        2         8         2
+   9 │        1         9   missing
+  10 │        2        10         2
+
+julia&gt; ds[ds.x1 .== 2, :]
+5×3 Dataset
+Row │ x1        x2        x3       
+    │ identity  identity  identity
+    │ Int64?    Int64?    Int64?   
+────┼──────────────────────────────
+  1 │        2         2         2
+  2 │        2         4         2
+  3 │        2         6         2
+  4 │        2         8         2
+  5 │        2        10         2
+
+julia&gt; ds[(ds.x1 .== 1) .&amp; (ds.x2 .&gt; 5), :]
+2×3 Dataset
+Row │ x1        x2        x3       
+    │ identity  identity  identity
+    │ Int64?    Int64?    Int64?   
+────┼──────────────────────────────
+  1 │        1         7   missing
+  2 │        1         9   missing
+
+julia&gt; using BenchmarkTools
+
+julia&gt; ds = Dataset(rand(1:1000, 10^6, 10), :auto);
+
+julia&gt; @btime ds[ds.x1 .== 100, :];
+  3.480 ms (472 allocations: 8.83 MiB)
+
+julia&gt; @btime filter(ds, :x1, by = ==(100));
+  880.436 μs (526 allocations: 1.09 MiB)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../modify/">« Transform columns</a><a class="docs-footer-nextpage" href="../sorting/">Sort »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Sunday 12 December 2021 21:43">Sunday 12 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
