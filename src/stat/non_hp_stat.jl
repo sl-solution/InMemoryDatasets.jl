@@ -67,6 +67,7 @@ end
 function stat_findmax(f, x::AbstractArray{T,1}) where T
     isempty(x) && throw(ArgumentError("input vector cannot be empty"))
     maxval = stat_maximum(f, x)
+    ismissing(maxval) && return (missing, missing)
     (maxval, _arg_minmax_barrier(x, maxval, f))
 end
 stat_findmax(x::AbstractArray{T,1}) where T = stat_findmax(identity, x)

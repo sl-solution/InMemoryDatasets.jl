@@ -205,37 +205,62 @@ function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mi
 end
 row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_maximum(ds, identity, cols)
 
-function _op_for_argminmax!(x, y, f, vals, idx)
+function _op_for_argminmax!(x, y, f, vals, idx, missref)
     idx[] += 1
     for i in 1:length(x)
-        if isequal(vals[i], f(y[i])) && ismissing(x[i])
+        if !ismissing(vals[i]) && isequal(vals[i], f(y[i])) && isequal(x[i], missref)
+            x[i] = idx[]
+        end
+    end
+    x
+end
+function hp_op_for_argminmax!(x, y, f, vals, idx, missref)
+    idx[] += 1
+    Threads.@threads for i in 1:length(x)
+        if !ismissing(vals[i]) && isequal(vals[i], f(y[i])) && isequal(x[i], missref)
             x[i] = idx[]
         end
     end
     x
 end
 
-function row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+
+function row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     minvals = row_minimum(ds, f, cols)
-    colnames_pa = PooledArray(names(ds, colsidx))
+    colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
+    push!(colnames_pa, missing)
+    missref = get(colnames_pa.invpool, missing, missing)
+    init0 = fill(missref, nrow(ds))
     idx = Ref{Int}(0)
-    res = mapreduce(identity, (x,y)->_op_for_argminmax!(x,y, f, minvals, idx), view(_columns(ds),colsidx), init = missings(eltype(colnames_pa.refs), nrow(ds)))
+    if threads
+        res = mapreduce(identity, (x,y)->hp_op_for_argminmax!(x,y, f, minvals, idx, missref), view(_columns(ds),colsidx), init = init0)
+
+    else
+        res = mapreduce(identity, (x,y)->_op_for_argminmax!(x,y, f, minvals, idx, missref), view(_columns(ds),colsidx), init = init0)
+    end
     colnames_pa.refs = res
     colnames_pa
 end
-row_argmin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_argmin(ds, identity, cols)
+row_argmin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_argmin(ds, identity, cols, threads = threads)
 
-function row_argmax(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+function row_argmax(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     maxvals = row_maximum(ds, f, cols)
-    colnames_pa = PooledArray(names(ds, colsidx))
+    colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
+    push!(colnames_pa, missing)
+    missref = get(colnames_pa.invpool, missing, missing)
+    init0 = fill(missref, nrow(ds))
     idx = Ref{Int}(0)
-    res = mapreduce(identity, (x,y)->_op_for_argminmax!(x,y,f, maxvals, idx), view(_columns(ds),colsidx), init = missings(eltype(colnames_pa.refs), nrow(ds)))
+    if threads
+        res = mapreduce(identity, (x,y)->hp_op_for_argminmax!(x,y,f, maxvals, idx, missref), view(_columns(ds),colsidx), init = init0)
+    else
+        res = mapreduce(identity, (x,y)->_op_for_argminmax!(x,y,f, maxvals, idx, missref), view(_columns(ds),colsidx), init = init0)
+    end
     colnames_pa.refs = res
     colnames_pa
 end
-row_argmax(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_argmax(ds, identity, cols)
+row_argmax(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_argmax(ds, identity, cols, threads = threads)
 
 
 # TODO better function for the first component of operator

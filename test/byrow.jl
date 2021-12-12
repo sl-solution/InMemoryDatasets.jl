@@ -20,8 +20,8 @@
     @test isequal(byrow(ds, minimum, r"float", threads = true) , [1.2, missing, -1.4,2.3,-100.0])
 
     @test byrow(ds, argmax, :) == ["x2_int", "x2_int", "x2_float", "x2_int", "x1_float"]
-    @test byrow(ds, argmin, r"float") == ["x1_float", "x1_float", "x3_float", "x1_float", "x3_float"]
-    @test byrow(ds, argmin, r"float", by = abs) == ["x1_float", "x1_float", "x1_float", "x1_float", "x1_float"]
+    @test isequal(byrow(ds, argmin, r"float"), ["x1_float", missing, "x3_float", "x1_float", "x3_float"])
+    @test isequal(byrow(ds, argmin, r"float", by = abs) , ["x1_float", missing, "x1_float", "x1_float", "x1_float"])
     @test byrow(ds, coalesce, ["x2_float", "x1_float", "x1_int"]) == [1.2,0,3.0,2.3,10]
     @test isequal(byrow(ds, var, r"float"), [missing, missing, 5.92, 0.24499999999999922, 6050.0])
     @test isequal(byrow(ds, var, r"float", dof = false), [0.0, missing, 3.9466666666666663, 0.12249999999999961, 3025.0])
@@ -31,6 +31,9 @@
     @test byrow(sds, sum, [:g, :x2_float]) == [2,2.0,2,4,4,4,1,1,1,2,2,2,2,2]
     @test byrow(sds, argmax, [3,2,4,1]) == ["x1_float","x1_float","x1_float","x2_float","x2_float","x2_float","g", "g", "g", "x1_float","x1_float","x1_float","x1_float","x1_float"]
     @test byrow(sds, argmax, [1,2,4,3], by = ismissing) == ["x2_float","x2_float","x2_float", "x1_float","x1_float","x1_float", "x1_float","x1_float","x1_float", "x2_float", "x2_float", "x2_float", "x2_float", "x2_float"]
+    @test isequal(byrow(sds, argmax, [3,4]), ["x1_int","x1_int","x1_int","x2_float","x2_float","x2_float","x1_int","x1_int","x1_int",missing, missing, missing, missing, missing])
+    @test isequal(byrow(sds, argmin, [3,4], threads = true), ["x1_int","x1_int","x1_int","x1_int","x1_int","x1_int","x1_int","x1_int","x1_int",missing, missing, missing, missing, missing])
+
     @test byrow(sds, any, :, by = ismissing) == [true, true, true, false, false, false, true, true, true, true, true, true, true, true]
 
     ds = Dataset(x1 = [1,2,3,4,missing], x2 = [3,2,4,5, missing])
