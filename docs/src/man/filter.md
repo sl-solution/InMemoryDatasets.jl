@@ -262,7 +262,7 @@ julia> mask(ds, [isodd, ==(2)], 2:3, missings = missing) # using a vector of fun
 
 Filtering a data set based on another data set should be done via `contains`, `semijoin`, `semijoin!`, `antijoin`, and `antijoin!` functions. These functions are discussed in the section about joining data sets, and here we just provide some examples about how to use them for filtering a data set.
 
-Additionally, these functions can be used in situations when a data set needed to be filter when a column's values belong to a set of values. In this case, a temporary data set can be formed based on given values and then one of the aforementioned functions can be used.
+Additionally, these functions can be used in situations when a data set needed to be filter based on a set of values. In these cases, a temporary data set can be formed by given values and then one of the aforementioned functions can be used.
 
 ### Examples
 

@@ -80,7 +80,7 @@ julia> select(flights, :DepTime, :ArrTime, :Flight_Number)
                          467382 rows omitted
 ```
 
-`InMemoryDatasets` provide different ways for referring to multiple columns. For instance, let's select all columns between `:FlightDate` and `:IATA` as well as all columns containing "Taxi" or "Delay" in their names. `Between` selects columns between two specified extremes, and regular expressions can be used to select columns with specified patterns.
+`InMemoryDatasets` provides different ways for referring to multiple columns. For instance, let's select all columns between `:FlightDate` and `:IATA` as well as all columns containing "Taxi" or "Delay" in their names. `Between` selects columns between two specified extremes, and regular expressions can be used to select columns with specified patterns.
 
 
 ```julia

@@ -207,7 +207,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 		else
 			if !(ms[i].first isa Tuple)
 				if old_x !== ms[i].first
-					if haskey(index(gds.parent), ms[i].first)
+					if !(ms[i].second.first isa Expr) && haskey(index(gds.parent), ms[i].first)
 						curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1])
 						old_x = ms[i].first
 					else
@@ -228,7 +228,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 			if ms[i].first isa Tuple
 				_combine_f_barrier_tuple(ntuple(j-> _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first[j]]], a[1]), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
 			else
-				_combine_f_barrier(haskey(index(gds.parent), ms[i].first) ? curr_x : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+				_combine_f_barrier(!(ms[i].second.first isa Expr) && haskey(index(gds.parent), ms[i].first) ? curr_x : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
 			end
 		end
 		if !haskey(index(newds), ms[i].second.second)

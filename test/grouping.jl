@@ -368,4 +368,12 @@ end
     @test all(byrow(compare(c1, Dataset(x2=[0, missing], maximum_y=[600.0, 200]), mapformats=true), all))
     @test all(byrow(compare(c2, Dataset(x2=[0, 0, missing], maximum_y=[100, 600.0, 200]), mapformats=true), all))
     @test all(byrow(compare(c3, Dataset(x2=[0,missing], function_x1_y=[(2, 100.0), (2, 200.0)]), mapformats=true), all))
+    ds = Dataset(x1 = [1,2,1,2,2,1], x2=[1.0,missing,1.1,1.1,1.1,1.1],y=100:100:600.0)
+    @test byrow(compare(combine(gatherby(ds, 1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(gatherby(ds, 1), :x2=>[x->sum(x), maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], function_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(groupby(ds, 1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+
+    @test byrow(compare(combine(gatherby(view(ds, :, [2,1]), :x1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(gatherby(view(ds, :, [2,1]), :x1), :x2=>[x->sum(x), maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], function_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(groupby(view(ds, :, [2,1]), :x1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
 end
