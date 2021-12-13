@@ -11,7 +11,7 @@ makedocs(
     # modules = [InMemoryDatasets],
     doctest = false,
     clean = false,
-    sitename = "In Memory Datasets",
+    sitename = "InMemoryDatasets",
     # format = Documenter.HTML(
     #     canonical = "https://sl-solution.github.io/InMemoryDataset.jl/stable/",
     #     edit_link = "main"
@@ -19,8 +19,9 @@ makedocs(
     pages = Any[
         "Introduction" => "index.md",
         "First Steps" => "man/basics.md",
+        "Tutorial" => "man/tutorial.md",
         "User Guide" => Any[
-            "Tutorial" => "man/tutorial.md",
+            "Missing Values" => "man/missing.md",
             "Formats" => "man/formats.md",
             "Call functions on each observation" => "man/map.md",
             "Row-wise operations" => "man/byrow.md",

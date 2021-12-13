@@ -22,7 +22,7 @@ In general (for some special cases InMemoryDatasets may use "hash-join" techniqu
 
 For `leftjoin` and `innerjoin` the order of observations of the output data set is the same as their order in the left data set. However, the order of observations from the right table depends on the stability of the sort algorithm. User can set the `stable` keyword argument to `true` to guarantee a stable sort. For `outerjoin` the order of observations from the left data set in the output data set is also the same as their order in the original data set, however, for those observations which are from the right table, there is no specific order.
 
-By default, the join functions use a modified `Heap Sort` algorithm to sort the observations in the right data set, however, setting `alg = QuickSort` change the default algorithm to the Quick Sort one.
+By default, the join functions use a hybrid `Heap Sort` algorithm to sort the observations in the right data set, however, setting `alg = QuickSort` change the default algorithm to a hybrid Quick Sort one.
 
 For very large data sets, if the sorting of the first key is expensive, setting the `accelerate` keyword argument to `true` may improve the overall performance. By setting `accelerate = true`, InMemoryDatasets first divides all observations in the right data set into multiple parts (up to 1024 parts) based on the first passed key, and then for each observations in the left data set finds the corresponding part in the right data set and searches for the matching observations only within that part.
 

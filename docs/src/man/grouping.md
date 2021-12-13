@@ -2,7 +2,7 @@
 
 ## Introduction
 
-InMemoryDatasets uses two approaches to group observations: sorting, and hashing. In sorting approach, it sorts the data set based on given columns and finds the starts and ends of each group based on the sorted values. In hashing approach, it uses a customised algorithm to group observations. Each of these approaches has some advantages over the other one and for any particular problem one of them might be more suitable than the other one.
+InMemoryDatasets uses two approaches to group observations: sorting, and hashing. In sorting approach, it sorts the data set based on given columns and finds the starts and ends of each group based on the sorted values. In hashing approach, it uses a hybrid algorithm to group observations. Each of these approaches has some advantages over the other one and for any particular problem one of them might be more suitable than the other one.
 
 ## `groupby!` and `groupby`
 
@@ -258,7 +258,7 @@ The `ungroup!` function can be used in scenarios that one needs to modify a data
 
 ## `gatherby`
 
-The `gatherby` function uses the hashing approach to group observations based on a set of columns. InMemoryDatasets uses a customised algorithm to gather observations which sometimes does this without using the `hash` function. The `gatherby` function doesn't sort the data set, instead, it uses the in-house developed algorithm to group observations. `gatherby` can be particularly useful when sorting is computationally expensive. Another benefit of `gatherby` is that, by default, it keeps the order of observations in each group the same as their appearance in the original data set.
+The `gatherby` function uses the hashing approach to group observations based on a set of columns. InMemoryDatasets uses a hybrid algorithm to gather observations which sometimes does this without using the `hash` function. The `gatherby` function doesn't sort the data set, instead, it uses the hybrid algorithm to group observations. `gatherby` can be particularly useful when sorting is computationally expensive. Another benefit of `gatherby` is that, by default, it keeps the order of observations in each group the same as their appearance in the original data set.
 
 The `gatherby` function uses the formatted values for gathering the observations into groups, however, using `mapformats = false` changes this behaviour.
 
