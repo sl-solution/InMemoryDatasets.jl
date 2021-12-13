@@ -197,11 +197,11 @@ stat_mean(x::AbstractArray{T,1}) where T = stat_mean(identity, x)
 
 function stat_wmean(f, x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S
     all(ismissing, x) && return missing
-    _dmiss(y)::T = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])::T
-    _dmiss2(y)::S = ismissing(y[1])||ismissing(y[2]) ? zero(S) : y[2]
-    _op(y1,y2)::Tuple{T,S} = _stat_add_sum.(y1, y2)
-    _f(y)::Tuple{T,S} = (_dmiss(y), _dmiss2(y))
-    sval, n = mapreduce(_f, _op, zip(x,w))::Tuple{T,S}
+    _dmiss(y) = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])
+    _dmiss2(y) = ismissing(y[1])||ismissing(y[2]) ? zero(S) : y[2]
+    _op(y1,y2) = _stat_add_sum.(y1, y2)
+    _f(y) = (_dmiss(y), _dmiss2(y))
+    sval, n = mapreduce(_f, _op, zip(x,w))
     n == 0 ? missing : sval / n
 end
 stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_wmean(identity, x, w)

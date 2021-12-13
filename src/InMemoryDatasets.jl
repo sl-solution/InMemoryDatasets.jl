@@ -85,8 +85,6 @@ export
       # from stat
       stdze,
       rescale,
-      wsum,
-      wmean,
       topk,
       cummax,
       cummax!,
