@@ -124,14 +124,15 @@ function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, usehash = usehash)
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, usehash = usehash)
+
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
+    _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, usehash = usehash)
 end
 """
     leftjoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
@@ -234,14 +235,15 @@ function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = true, accelerate = accelerate, usehash = usehash)
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = true, accelerate = accelerate, usehash)
+
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
+    _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = true, accelerate = accelerate, usehash = usehash)
 end
 
 """
@@ -369,20 +371,23 @@ function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, usehash = usehash)
+        onright_range = nothing
+
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, usehash = usehash)
-    elseif (typeof(on) <: AbstractVector{<:Pair{<:Symbol, <:Any}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:Any}})
+        onright_range = nothing
+
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:Any}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:Any}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on[1:end-1])]
         onright_range = on[end].second
         !(onright_range isa Tuple) && throw(ArgumentError("For range join the last element of `on` keyword argument for the right table must be a Tuple of column names"))
-        _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, droprangecols = droprangecols, strict_inequality = strict_inequality, usehash = usehash)
+
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
+    _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, droprangecols = droprangecols, strict_inequality = strict_inequality, usehash = usehash)
 end
 
 """
@@ -509,14 +514,15 @@ function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        _join_outer(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, usehash = usehash)
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        _join_outer(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, usehash = usehash)
+
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
+    _join_outer(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, usehash = usehash)
 end
 
 """
@@ -580,14 +586,14 @@ function Base.contains(main::Dataset, transaction::AbstractDataset; on = nothing
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(main)[on]
         onright = index(transaction)[on]
-        _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(main)[map(x->x.first, on)]
         onright = index(transaction)[map(x->x.second, on)]
-        _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
+    _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
+
 end
 
 
@@ -1338,7 +1344,7 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], direction = :forward, bo
    5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100     97.99     98.01
 ```
 """
-function closejoin(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false)
+function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol=nothing, allow_exact_match = true)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing))
         throw(ArgumentError("`border` keyword only accept :nearest or :missing"))
@@ -1353,31 +1359,21 @@ function closejoin(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction =
     else
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
     end
+
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
-        if direction == :backward
-            _join_asofback(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-        elseif direction == :forward
-            _join_asoffor(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-        else
-            throw(ArgumentError("`direction` can be only :backward or :forward"))
-        end
-
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
-        if direction == :backward
-            _join_asofback(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-        elseif direction == :forward
-            _join_asoffor(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-        else
-            throw(ArgumentError("`direction` can be only :backward or :forward"))
-        end
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
+    end
+    if direction in (:backward, :forward, :nearest)
+        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, tol=tol, allow_exact_match = allow_exact_match)
+
+    else
+        throw(ArgumentError("`direction` can be only :backward, :forward, or :nearest"))
     end
 end
 
@@ -1645,7 +1641,7 @@ julia> trades # The left table has been changed after joining.
    5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100     97.99     98.01
 ```
 """
-function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false)
+function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol = nothing, allow_exact_match = true)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing))
         throw(ArgumentError("`border` keyword only accept :nearest or :missing"))
@@ -1663,28 +1659,18 @@ function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsl)[on]
         onright = index(dsr)[on]
-        # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
-        if direction == :backward
-            _join_asofback!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-        elseif direction == :forward
-            _join_asoffor!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-        else
-            throw(ArgumentError("`direction` can be only :backward or :forward"))
-        end
 
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsl)[map(x->x.first, on)]
         onright = index(dsr)[map(x->x.second, on)]
-        # length(onleft) > 1 && throw(ArgumentError("for `asofjoin` only one column must be specified for the `on` keyword"))
-        if direction == :backward
-            _join_asofback!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-        elseif direction == :forward
-            _join_asoffor!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-        else
-            throw(ArgumentError("`direction` can be only :backward or :forward"))
-        end
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
+    end
+    if direction in (:backward, :forward, :nearest)
+        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, inplace = true, tol = tol, allow_exact_match = allow_exact_match)
+
+    else
+        throw(ArgumentError("`direction` can be only :backward, :forward, or :nearest"))
     end
 end
 
@@ -1793,14 +1779,14 @@ function update!(dsmain::Dataset, dsupdate::AbstractDataset; on = nothing, allow
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = index(dsmain)[on]
         onright = index(dsupdate)[on]
-        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = index(dsmain)[map(x->x.first, on)]
         onright = index(dsupdate)[map(x->x.second, on)]
-        _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
+    _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
+
     dsmain
 end
 """

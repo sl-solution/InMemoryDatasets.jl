@@ -67,6 +67,10 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
      Union{Missing, String}["MSFT", "MSFT", "GOOG", "GOOG", "GOOG"],
      Union{Missing, Float64}[51.95, 51.97, 720.5, 720.5, 720.5],
      Union{Missing, Float64}[51.96, 51.98, 720.93, 720.93, 720.93]],["time", "ticker", "price", "quantity", "ticker_1", "bid", "ask"])
+closfinance_tol2ms = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.023"), DateTime("2016-05-25T13:30:00.038"), DateTime("2016-05-25T13:30:00.048"), DateTime("2016-05-25T13:30:00.048"), DateTime("2016-05-25T13:30:00.048")], Union{Missing, String}["MSFT", "MSFT", "GOOG", "GOOG", "AAPL"], Union{Missing, Float64}[51.95, 51.95, 720.77, 720.92, 98.0], Union{Missing, Int64}[75, 155, 100, 100, 100], Union{Missing, Float64}[51.95, missing, 720.5, 720.5, missing], Union{Missing, Float64}[51.96, missing, 720.93, 720.93, missing]], ["time", "ticker", "price", "quantity", "bid", "ask"])
+closfinance_tol0ms = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.023"), DateTime("2016-05-25T13:30:00.038"), DateTime("2016-05-25T13:30:00.048"), DateTime("2016-05-25T13:30:00.048"), DateTime("2016-05-25T13:30:00.048")], Union{Missing, String}["MSFT", "MSFT", "GOOG", "GOOG", "AAPL"], Union{Missing, Float64}[51.95, 51.95, 720.77, 720.92, 98.0], Union{Missing, Int64}[75, 155, 100, 100, 100], Union{Missing, Float64}[missing, missing, missing, missing, missing], Union{Missing, Float64}[missing, missing, missing, missing, missing]], ["time", "ticker", "price", "quantity", "bid", "ask"])
+
+closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.023"), DateTime("2016-05-25T13:30:00.038"), DateTime("2016-05-25T13:30:00.048"), DateTime("2016-05-25T13:30:00.048"), DateTime("2016-05-25T13:30:00.048")], Union{Missing, String}["MSFT", "MSFT", "GOOG", "GOOG", "AAPL"], Union{Missing, Float64}[51.95, 51.95, 720.77, 720.92, 98.0], Union{Missing, Int64}[75, 155, 100, 100, 100], Union{Missing, Float64}[missing, 51.97, missing, missing, missing], Union{Missing, Float64}[missing, 51.98, missing, missing, missing]], ["time", "ticker", "price", "quantity", "bid", "ask"])
 
 @testset "general usage" begin
     # Join on symbols or vectors of symbols
@@ -91,6 +95,37 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
     @test antijoin(name, view(job, :, :), on = :ID) == anti
     @test closejoin(classA, view(grades, :, :), on = :mark) == closeone
     @test closejoin(trades, view(quotes, :, :), on = :time, makeunique = true) == closefinance1
+
+    @test closejoin(trades, quotes, on =[:ticker, :time], tol = Millisecond(2)) == closfinance_tol2ms
+    @test closejoin(trades, quotes, on =[:ticker, :time], tol = Day(2)) == closejoin(trades, quotes, on =[:ticker, :time])
+    @test closejoin(trades, quotes, on =[:ticker, :time], tol = Millisecond(0)) == closfinance_tol0ms
+    @test closejoin(trades, quotes, on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false) == closefinance_tol10ms_noexact
+    @test closejoin!(copy(trades), quotes, on =[:ticker, :time], tol = Millisecond(2)) == closfinance_tol2ms
+    @test closejoin!(copy(trades), quotes, on =[:ticker, :time], tol = Day(2)) == closejoin(trades, quotes, on =[:ticker, :time])
+    @test closejoin!(copy(trades), quotes, on =[:ticker, :time], tol = Millisecond(0)) == closfinance_tol0ms
+    @test closejoin!(copy(trades), quotes, on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false) == closefinance_tol10ms_noexact
+
+    @test closejoin(trades, view(quotes, :, :), on =[:ticker, :time], tol = Millisecond(2)) == closfinance_tol2ms
+    @test closejoin(trades, view(quotes, :, :), on =[:ticker, :time], tol = Day(2)) == closejoin(trades, view(quotes, :, :), on =[:ticker, :time])
+    @test closejoin(trades, view(quotes, :, :), on =[:ticker, :time], tol = Millisecond(0)) == closfinance_tol0ms
+    @test closejoin(trades, view(quotes, :, :), on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false) == closefinance_tol10ms_noexact
+    @test closejoin!(copy(trades), view(quotes, :, :), on =[:ticker, :time], tol = Millisecond(2)) == closfinance_tol2ms
+    @test closejoin!(copy(trades), view(quotes, :, :), on =[:ticker, :time], tol = Day(2)) == closejoin(trades, view(quotes, :, :), on =[:ticker, :time])
+    @test closejoin!(copy(trades), view(quotes, :, :), on =[:ticker, :time], tol = Millisecond(0)) == closfinance_tol0ms
+    @test closejoin!(copy(trades), view(quotes, :, :), on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false) == closefinance_tol10ms_noexact
+
+    @test closejoin(view(trades, :, :), view(quotes, :, :), on =[:ticker, :time], tol = Millisecond(2)) == closfinance_tol2ms
+    @test closejoin(view(trades, :, :), view(quotes, :, :), on =[:ticker, :time], tol = Day(2)) == closejoin(view(trades, :, :), view(quotes, :, :), on =[:ticker, :time])
+    @test closejoin(view(trades, :, :), view(quotes, :, :), on =[:ticker, :time], tol = Millisecond(0)) == closfinance_tol0ms
+    @test closejoin(view(trades, :, :), view(quotes, :, :), on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false) == closefinance_tol10ms_noexact
+
+
+    ANS = closejoin(trades, view(quotes, :, :), on =[:ticker, :time], tol = Millisecond(2))
+
+    @test ANS.price.val !== trades.price.val
+    cpy_trades = copy(trades)
+    closejoin!(cpy_trades, view(quotes, :, :), on =[:ticker, :time], tol = Millisecond(2))
+    @test ANS.price.val !== trades.price.val
     # Join with no non-key columns
     on = [:ID]
     nameid = name[:, on]
@@ -531,7 +566,56 @@ closefinance1 = Dataset([Union{Missing, DateTime}[DateTime("2016-05-25T13:30:00.
         @test outerjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1], makeunique=true, check = false) == outerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1], makeunique=true, check = false)
     end
 
+    dsl = Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0])
+    dsr = Dataset(x1 = [320, 250, 260, 120], y = [1,2,3,4])
+    @test closejoin(dsl, dsr, on = :x1) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    dsl = Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0])
+    dsr = Dataset(x1 = PooledArray([320, 250, 260, 120]), y = [1,2,3,4])
+    @test closejoin(dsl, dsr, on = :x1) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    dsl = Dataset(x1 = PooledArray([100, 200, 300]), x2 = [5.0, 6.0, 7.0])
+    dsr = Dataset(x1 = PooledArray([320, 250, 260, 120]), y = [1,2,3,4])
+    @test closejoin(dsl, dsr, on = :x1) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest) == Dataset(x1 = [100, 200, 300], x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    dsl = Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0])
+    dsr = Dataset(x1 = Date.([320, 250, 260, 120]), y = [1,2,3,4])
+    @test closejoin(dsl, dsr, on = :x1) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
 
+    dsl = Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0])
+    dsr = Dataset(x1 = Date.([missing, 250, 260, 120]), y = [1,2,3,4])
+    @test closejoin(dsl, dsr, on = :x1) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 3])
+
+    dsl = Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0])
+    dsr = Dataset(x1 = Date.([missing, 250, 260, 120]), y = [1,2,3,4])
+    @test closejoin(dsl, dsr, on = :x1) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
 end
 
 @testset "Test empty inputs 1" begin
@@ -671,6 +755,15 @@ end
          Union{Missing, Int64}[343, missing, missing, 464, 565, missing]],["x1", "x2", "y"] )
     @test cj == cj_t
     @test cj_v == cj_t
+
+    dsl = Dataset(x1 = [1,2,3,4,5,6], x2= [1,1,1,2,2,2])
+    dsr = Dataset(x1 = [1,1,1,4,5],x2= [1,3,4,5,6], y = [343,54,54,464,565])
+    fmt_close(x) = x < 3 ? 1 : x < 5 ? 2 : x
+    setformat!(dsl, 1=>fmt_close)
+
+    @test byrow(compare(closejoin(dsl, dsr, on = :x1=>:x2, makeunique = true),  Dataset(x1=[1,1,2,2,5,6], x2=[1,1,1,2,2,2], x1_1=[1,1,1,1,4,5], y=[343,343,343,343,464,565]), mapformats = true), all)|>all
+    @test byrow(compare(closejoin(dsl, dsr, on = :x1=>:x2, makeunique = true, direction = :forward),  Dataset(x1=[1,1,2,2,5,6], x2=[1,1,1,2,2,2], x1_1=[1,1,1,1,4,5], y=[343,343,54,54,464,565]), mapformats = true), all)|>all
+
 
     dsl = Dataset(x1 = [Date(2020,11,6), Date(2021,2,24), Date(2021,1,17), Date(2013,5,12)], val = [66,77,88,99])
     dsr = Dataset(x1 = [Date(2010,11,2), Date(2012, 5, 3), Date(2010, 2,2)], x2 = [1,2,3])
