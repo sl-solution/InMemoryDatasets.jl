@@ -2,6 +2,8 @@
 
 `InMemoryDatasets.jl` is a `Julia` package for working with tabular data sets.
 
+The package is developed for Julia 1.6 and later, and only works on 64bit operating systems.
+
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://sl-solution.github.io/InMemoryDatasets.jl/stable) [![CI](https://github.com/sl-solution/InMemoryDatasets.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/sl-solution/InMemoryDatasets.jl/actions/workflows/ci.yml)
 
 # Example
