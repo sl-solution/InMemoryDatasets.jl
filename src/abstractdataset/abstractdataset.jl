@@ -63,6 +63,8 @@ _columns(ds::AbstractDataset) = getfield(ds, :columns)
 Base.show(io::IO, ::MIME"text/plain", col::DatasetColumn) = show(IOContext(io, :limit => true), "text/plain", col.val)
 Base.show(io::IO, ::MIME"text/plain", col::SubDatasetColumn) = show(IOContext(io, :limit => true), "text/plain", view(col.val, col.selected_index))
 
+_getnames(x::NamedTuple) = propertynames(x)
+_getnames(x::AbstractDataset) = _names(x)
 
 # internal function for easy accessing a view of a column
 __!(col1::DatasetColumn) =  col1.val
@@ -124,7 +126,7 @@ Base.isequal(col1::SubOrDSCol, col2::SubOrDSCol) = isequal(__!(col1), __!(col2))
 Base.:(==)(col1::SubOrDSCol, y::Any) = (==)(__!(col1), y)
 Base.:(==)(y::Any, col1::SubOrDSCol) = (==)(y, __!(col1))
 Base.:(==)(col1::SubOrDSCol, col2::SubOrDSCol) = (==)(__!(col1), __!(col2))
-
+Base.fill!(col::SubOrDSCol, i::Int) = fill!(__!(col), i)
 
 Base.:(*)(col1::SubOrDSCol, x::Any) = *(__!(col1), x)
 Base.:(+)(col1::SubOrDSCol, x::Any) = +(__!(col1), x)
