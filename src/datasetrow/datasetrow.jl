@@ -88,6 +88,8 @@ struct DatasetRow{D<:AbstractDataset, S<:AbstractIndex}
         {D<:AbstractDataset, S<:AbstractIndex} = new{D, S}(ds, colindex, row, rownumber)
 end
 
+_getnames(x::DatasetRow) = _names(x)
+
 Base.@propagate_inbounds function DatasetRow(ds::Dataset, row::Integer, cols)
     @boundscheck if !checkindex(Bool, axes(ds, 1), row)
         throw(BoundsError(ds, (row, cols)))

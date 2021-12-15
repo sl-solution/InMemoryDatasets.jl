@@ -812,3 +812,14 @@ function _findall(B::BitVector)::Union{UnitRange{Int}, Vector{Int}}
     end
     @assert false "should not be reached"
 end
+
+# this function is needed as == does not allow for comparison between tuples and vectors
+function _equal_names(r1, r2)
+    n1 = _getnames(r1)
+    n2 = _getnames(r2)
+    length(n1) == length(n2) || return false
+    for (a, b) in zip(n1, n2)
+        a == b || return false
+    end
+    return true
+end

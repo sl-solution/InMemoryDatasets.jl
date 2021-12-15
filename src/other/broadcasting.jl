@@ -164,7 +164,7 @@ function Base.copyto!(col1::SubDatasetColumn, bc::Base.Broadcast.Broadcasted{T})
     if bc isa Base.Broadcast.Broadcasted{<:Base.Broadcast.AbstractArrayStyle{0}}
         bc_tmp = Base.Broadcast.Broadcasted{T}(bc.f, bc.args, ())
         v = Base.Broadcast.materialize(bc_tmp)
-        col = similar(Vector{typeof(v)}, length(col1.selected_index))
+        col = similar(Vector{typeof(v)}, length(col1))
         copyto!(col, bc)
     else
         col = Base.Broadcast.materialize(bc)
@@ -177,7 +177,11 @@ function Base.copyto!(col1::SubDatasetColumn, bc::Base.Broadcast.Broadcasted{T})
     col
 end
 
-
+function _fill_copyto_helper!(incol, bc, col)
+    @inbounds for row in eachindex(incol)
+        incol[row] = bc[CartesianIndex(row, col)]
+    end
+end
 
 function _copyto_helper!(dscol::AbstractVector, bc::Base.Broadcast.Broadcasted, col::Int)
     if axes(dscol, 1) != axes(bc)[1]
@@ -185,20 +189,15 @@ function _copyto_helper!(dscol::AbstractVector, bc::Base.Broadcast.Broadcasted, 
         throw(DimensionMismatch("Dimension mismatch in broadcasting. The updated" *
                                 " data frame is invalid and should not be used"))
     end
-    @inbounds for row in eachindex(dscol)
-        dscol[row] = bc[CartesianIndex(row, col)]
-    end
+    _fill_copyto_helper!(dscol, bc, col)
 end
-
-function _copyto_helper!(dscol::DatasetColumn, bc::Base.Broadcast.Broadcasted, col::Int)
-    if axes(dscol.val, 1) != axes(bc)[1]
+function _copyto_helper!(dscol::Union{SubDatasetColumn, DatasetColumn}, bc::Base.Broadcast.Broadcasted, col::Int)
+    if axes(__!(dscol), 1) != axes(bc)[1]
         # this should never happen unless data frame is corrupted (has unequal column lengths)
         throw(DimensionMismatch("Dimension mismatch in broadcasting. The updated" *
                                 " data frame is invalid and should not be used"))
     end
-    @inbounds for row in eachindex(dscol.val)
-        dscol[row] = bc[CartesianIndex(row, col)]
-    end
+    _fill_copyto_helper!(__!(dscol), bc, col)
     _modified(_attributes(dscol.ds))
 end
 
