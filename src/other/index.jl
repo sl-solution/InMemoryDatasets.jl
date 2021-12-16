@@ -460,7 +460,7 @@ end
 
 ### SubIndex of Index. Used by SubDataset, DatasetRow, and DatasetRows
 
-struct SubIndex{I<:AbstractIndex, S<:AbstractVector{Int}, T<:AbstractVector{Int}} <: AbstractIndex
+mutable struct SubIndex{I<:AbstractIndex, S<:AbstractVector{Int}, T<:AbstractVector{Int}} <: AbstractIndex
     parent::I
     cols::S # columns from idx selected in SubIndex
     remap::T # reverse mapping from cols to their position in the SubIndex
@@ -560,7 +560,11 @@ Base.haskey(x::SubIndex, key::Integer) = 1 <= key <= length(x)
 Base.haskey(x::SubIndex, key::Bool) =
     throw(ArgumentError("invalid key: $key of type Bool"))
 
-Base.getindex(x::SubIndex, idx::Symbol) = x.remap[x.parent[idx]]
+function Base.getindex(x::SubIndex, idx::Symbol)
+     res = x.remap[x.parent[idx]]
+     res == 0 && throw(ArgumentError("column name :$idx is only available in parent data set"))
+     res
+end
 Base.getindex(x::SubIndex, idx::AbstractString) = x[Symbol(idx)]
 
 
@@ -569,6 +573,38 @@ function Base.getindex(x::SubIndex, idx::Union{AbstractVector{Symbol},
     allunique(idx) || throw(ArgumentError("Elements of $idx must be unique"))
     return [x[i] for i in idx]
 end
+
+# This is defined for modifying a grouped by view
+# this function assumes that only one column has been just added to the parent index
+function _update_subindex!(x::SubIndex, px::AbstractIndex, colidx::ColumnIndex) # px is the parent index, and colidx is a column to be added to x
+    # we must assume
+    @assert length(x.remap) == length(px)-1 "the parent data which the view of data set is based on, has been modified, and the current view is not valid anymore"
+    if haskey(px, colidx)
+        col = px[colidx]
+        col != length(px) && throw(ArgumentError("the added column must be the last column in parent"))
+        if x.cols isa AbstractUnitRange
+            if x.cols isa UnitRange
+                x.cols = x.cols.start:col
+            elseif x.cols isa Base.OneTo
+                x.cols = Base.OneTo(col)
+            end
+        else
+            push!(x.cols, col)
+        end
+        if x.remap isa AbstractUnitRange
+            if x.remap isa UnitRange
+                x.remap = x.remap.start:length(x)
+            elseif x.remap isa Base.OneTo
+                x.remap = Base.OneTo(length(x))
+            end
+        else
+            push!(x.remap, length(x))
+        end
+    else
+        throw(ArgumentError("$colidx doesn't exist in parent index"))
+    end
+end
+
 
 rename!(x::SubIndex, nms::AbstractVector{Symbol}; makeunique::Bool=false) =
     throw(ArgumentError("rename! is not supported for views other than created " *
