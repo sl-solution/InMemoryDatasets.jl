@@ -141,7 +141,7 @@ julia> transpose(pop, r"pop_",
 """
 Base.transpose(::Dataset, cols; [id , renamecolid , renamerowid , variable_name, default, threads, mapformats])
 
-function ds_transpose(ds::Dataset, cols::Union{Tuple, MultiColumnIndex}; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", threads = true, mapformats = true)
+function ds_transpose(ds, cols::Union{Tuple, MultiColumnIndex}; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", threads = true, mapformats = true)
     if cols isa Tuple
         tcols = [cols[j] isa ColumnIndex ? index(ds)[[cols[j]]] : index(ds)[cols[j]] for j in 1:length(cols)]
     else
@@ -162,13 +162,13 @@ function ds_transpose(ds::Dataset, cols::Union{Tuple, MultiColumnIndex}; id = no
         if renamecolid === nothing
             renamecolid = _default_renamecolid_function_withid
         end
-        ids_refs, unique_loc  = _find_id_unique_values(parent(ds), ididx, _get_perms(ds); mapformats = mapformats)
+        ids_refs, unique_loc  = _find_id_unique_values(ds, ididx, _get_perms(ds); mapformats = mapformats)
 
         if length(ididx) == 1
             unique_ids = getindex(parent(ds), view(_get_perms(ds), unique_loc), ididx[1]; mapformats = mapformats)
         else
             #TODO not very good way to do this
-            unique_ids = Tables.rowtable(Dataset([getindex(parent(ds), view(_get_perms(ds), unique_loc), ididx[k], mapformats = mapformats) for k in 1:length(ididx)], :auto, copycols = false))
+            unique_ids = Tables.rowtable(Dataset([getindex(ds, view(_get_perms(ds), unique_loc), ididx[k], mapformats = mapformats) for k in 1:length(ididx)], :auto, copycols = false))
         end
         @assert (size(unique_ids,1)) == nrow(ds) "Duplicate ids are not allowed."
     end
@@ -550,7 +550,7 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
     outds
 end
 
-function Base.transpose(ds::Dataset, cols::MultiColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", default = missing, threads = true, mapformats = true)
+function Base.transpose(ds::AbstractDataset, cols::MultiColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", default = missing, threads = true, mapformats = true)
     if !isgrouped(ds)
         ds_transpose(ds, cols; id = id, renamecolid = renamecolid, renamerowid = renamerowid, variable_name = variable_name, threads = threads, mapformats = mapformats)
     else
@@ -561,10 +561,10 @@ end
 Base.transpose(ds::Union{GroupBy, GatherBy}, cols::MultiColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", default = missing, threads = true, mapformats = true) =
     ds_transpose(ds, cols, _groupcols(ds); id = id, renamecolid = renamecolid, renamerowid = renamerowid, variable_name = variable_name, threads = threads, default_fill = default, mapformats = mapformats)
 
-Base.transpose(ds::Union{GatherBy, GroupBy, Dataset}, col::ColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", default = missing, threads = true, mapformats = true) =
+Base.transpose(ds::Union{GatherBy, GroupBy, AbstractDataset}, col::ColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", default = missing, threads = true, mapformats = true) =
     transpose(ds, [col]; id = id, renamecolid = renamecolid, renamerowid = renamerowid, variable_name = variable_name, default = default, threads = threads, mapformats = mapformats)
 
-function Base.transpose(ds::Dataset, cols::Tuple; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = nothing, default = missing, threads = true, mapformats = true)
+function Base.transpose(ds::AbstractDataset, cols::Tuple; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = nothing, default = missing, threads = true, mapformats = true)
     if !isgrouped(ds)
         ds_transpose(ds, cols; id = id, renamecolid = renamecolid, renamerowid = renamerowid, variable_name = variable_name, threads = threads, mapformats = mapformats)
     else
