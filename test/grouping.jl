@@ -377,3 +377,94 @@ end
     @test byrow(compare(combine(gatherby(view(ds, :, [2,1]), :x1), :x2=>[x->sum(x), maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], function_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
     @test byrow(compare(combine(groupby(view(ds, :, [2,1]), :x1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
 end
+
+@testset "modifying and combining views" begin
+    ds = Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0])
+    sds1 = dropmissing(ds, 2, view = true)
+    sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
+
+    @test combine(groupby(sds1, :x), :z => sum) == Dataset(x = [2, 3], sum_z = [-4, 11])
+    @test combine(gatherby(sds1, :x), :z => sum) == Dataset(x = [3, 2], sum_z = [11, -4])
+    @test combine(groupby(sds2, :x), :z => sum) == Dataset(x = [1,2, 3, missing], sum_z = [15, -15, 22, 12])
+    @test combine(gatherby(sds2, :x), :z => sum) == Dataset(x = [1, 3, 2, missing], sum_z = [15, 22, -15, 12])
+
+    @test combine(groupby(sds1, :x), :z => (x->sum(x))=>:sum_z) == Dataset(x = [2, 3], sum_z = [-4, 11])
+    @test combine(gatherby(sds1, :x), :z => (x->sum(x))=>:sum_z) == Dataset(x = [3, 2], sum_z = [11, -4])
+    @test combine(groupby(sds2, :x), :z => (x->sum(x))=>:sum_z) == Dataset(x = [1,2, 3, missing], sum_z = [15, -15, 22, 12])
+    @test combine(gatherby(sds2, :x), :z => (x->sum(x))=>:sum_z) == Dataset(x = [1, 3, 2, missing], sum_z = [15, 22, -15, 12])
+
+    @test combine(groupby(sds1, :x), :y=>(sort!)=>:s_y) == Dataset(x=[2,2,3,3,3], s_y=[-3.0,-1.0,1.1,4.0,5.0])
+    @test combine(gatherby(sds1, :x), :y=>(sort!)=>:s_y) == Dataset(x=[3,3,3,2,2], s_y=[1.1,4.0,5.0,-3.0,-1.0])
+
+    @test combine(groupby(sds2, :x), :z=>(sort!)=>:s_z) == Dataset(x=[1,2,2,2,3,3,3,3,missing], s_z=[15,-11,-11,7,0,0,11,11,12])
+    @test combine(gatherby(sds2, :x), :z=>(sort!)=>:s_z) == Dataset(x=[1,3,3,3,3,2,2,2,missing], s_z=[15,0,0,11,11,-11,-11,7,12])
+
+    @test combine(groupby(sds1, :x), (:y,:z)=>cor) == Dataset(x=[2,3],cor_y_z=[1.0, -0.9690582663799521])
+    @test combine(gatherby(sds1, :x), (:y,:z)=>cor) == Dataset(x=[3,2],cor_y_z=[-0.9690582663799521, 1.0])
+
+    @test combine(groupby(sds2, :x), (1,2)=>((x,y)->maximum(x)/length(y))=>:q) == Dataset(x=[1,2,3,missing], q=[15.0, 7/3,11/4,12.0])
+    @test combine(gatherby(sds2, :x), (1,2)=>((x,y)->maximum(x)/length(y))=>:q) == Dataset(x=[1,3,2,missing], q=[15.0, 11/4,7/3,12.0])
+
+    @test combine(groupby(sds1, :x), :y=>maximum, :z=>maximum, 2:3=>byrow(-)=>:q) == Dataset(x=[2,3], maximum_y=[-1.0,5],maximum_z=[7, 11], q=[-8,-6.0])
+    @test combine(gatherby(sds1, :x), :y=>maximum, :z=>maximum, 2:3=>byrow(-)=>:q) == Dataset(x=[3,2], maximum_y=reverse([-1.0,5]),maximum_z=reverse([7, 11]), q=reverse([-8,-6.0]))
+
+    @test combine(groupby(sds2, :x), :z=>(sort!)=>:s_z, :x=>maximum, :z=>minimum, 3:4=>byrow(-)=>:q) == Dataset([Union{Missing, Int64}[1, 2, 2, 2, 3, 3, 3, 3, missing], Union{Missing, Int64}[15, -11, -11, 7, 0, 0, 11, 11, 12], Union{Missing, Int64}[1, 2, 2, 2, 3, 3, 3, 3, missing], Union{Missing, Int64}[15, -11, -11, -11, 0, 0, 0, 0, 12], Union{Missing, Int64}[-14, 13, 13, 13, 3, 3, 3, 3, missing]], [:x, :s_z, :maximum_x, :minimum_z, :q])
+
+    @test combine(gatherby(sds2, :x), :z=>(sort!)=>:s_z, :x=>maximum, :z=>minimum, 3:4=>byrow(-)=>:q) == Dataset([Union{Missing, Int64}[1, 3, 3, 3, 3, 2, 2, 2, missing], Union{Missing, Int64}[15, 0, 0, 11, 11, -11, -11, 7, 12], Union{Missing, Int64}[1, 3, 3, 3, 3, 2, 2, 2, missing], Union{Missing, Int64}[15, 0, 0, 0, 0, -11, -11, -11, 12], Union{Missing, Int64}[-14, 3, 3, 3, 3, 13, 13, 13, missing]], [:x, :s_z, :maximum_x, :minimum_z, :q])
+
+    @test ds == Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0])
+
+    @test_throws ArgumentError combine(gatherby(sds2, :x), :q=>sum)
+    @test_throws ArgumentError combine(gatherby(sds2, :x), :y=>sum)
+
+    modify!(groupby(sds1, :x), :y=>maximum=>:q)
+    @test ds == Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0], q=[5.0, missing, -1,-1,missing,5,5])
+    modify!(gatherby(sds1, :x), :y=>maximum=>:q2)
+    @test ds == Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0], q=[5.0, missing, -1,-1,missing,5,5], q2=[5.0, missing, -1,-1,missing,5,5])
+
+    # original data set
+    ds = Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0])
+    sds1 = dropmissing(ds, 2, view = true)
+    sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
+
+    modify!(groupby(sds2, :x), :z=>maximum=>:q)
+    @test ds == Dataset([Union{Missing, Int64}[3, 1, 2, 2, missing, 3, 3], Union{Missing, Float64}[1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], Union{Missing, Int64}[11, 15, 7, -11, 12, 0, 0], Union{Missing, Int64}[11, 15, 7, 7, 12, 11, 11]], ["x", "y", "z", "q"])
+    modify!(gatherby(sds2, :x), :z=>maximum=>:q2)
+    @test ds == Dataset([Union{Missing, Int64}[3, 1, 2, 2, missing, 3, 3], Union{Missing, Float64}[1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], Union{Missing, Int64}[11, 15, 7, -11, 12, 0, 0], Union{Missing, Int64}[11, 15, 7, 7, 12, 11, 11], [11, 15, 7, 7, 12, 11, 11]], ["x", "y", "z", "q","q2"])
+
+    # original data set
+    ds = Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0])
+    sds1 = dropmissing(ds, 2, view = true)
+    sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
+
+    modify!(groupby(sds1, :x), (2,3)=>cor)
+    @test ds == Dataset([Union{Missing, Int64}[3, 1, 2, 2, missing, 3, 3], Union{Missing, Float64}[1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], Union{Missing, Int64}[11, 15, 7, -11, 12, 0, 0], Union{Missing, Float64}[-0.9690582663799521, missing, 1.0, 1.0, missing, -0.9690582663799521, -0.9690582663799521]], ["x", "y", "z", "cor_y_z"])
+    modify!(gatherby(sds1, :x), (2,3)=>cor)
+    @test ds == Dataset([Union{Missing, Int64}[3, 1, 2, 2, missing, 3, 3], Union{Missing, Float64}[1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], Union{Missing, Int64}[11, 15, 7, -11, 12, 0, 0], Union{Missing, Float64}[-0.9690582663799521, missing, 1.0, 1.0, missing, -0.9690582663799521, -0.9690582663799521]], ["x", "y", "z", "cor_y_z"])
+    # sds2 is not well defined anymore, since the original data has been changed
+    sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
+
+    modify!(groupby(sds2, :x), (:x, :z)=>((x,y)->length(x)/maximum(y))=>:q, [:z, :q]=>byrow(maximum)=>:q2)
+    @test ds == Dataset([Union{Missing, Int64}[3, 1, 2, 2, missing, 3, 3], Union{Missing, Float64}[1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], Union{Missing, Int64}[11, 15, 7, -11, 12, 0, 0], Union{Missing, Float64}[-0.9690582663799521, missing, 1.0, 1.0, missing, -0.9690582663799521, -0.9690582663799521], Union{Missing, Float64}[0.36363636363636365, 0.06666666666666667, 0.42857142857142855, 0.42857142857142855, 0.08333333333333333, 0.36363636363636365, 0.36363636363636365], Union{Missing, Float64}[11.0, 15.0, 7.0, 0.42857142857142855, 12.0, 0.36363636363636365, 0.36363636363636365]], ["x", "y", "z", "cor_y_z", "q", "q2"])
+
+    @test IMD.index(view(ds,[2,1,1,3,5,6,7,4,4],[:z,:x,:q,:q2])) == IMD.index(sds2)
+
+
+    ds = Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0])
+    groupby!(ds, :y)
+    sds1 = dropmissing(ds, 2, view = true)
+    sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
+
+    modify!(groupby(sds1, :x), (2,3)=>cor)
+    @test ds == Dataset([Union{Missing, Int64}[2, 2, 3, 3, 3, 1, missing], Union{Missing, Float64}[-3.0, -1.0, 1.1, 4.0, 5.0, missing, missing], Union{Missing, Int64}[-11, 7, 11, 0, 0, 15, 12], Union{Missing, Float64}[1.0, 1.0, -0.9690582663799521, -0.9690582663799521, -0.9690582663799521, missing, missing]], ["x", "y", "z", "cor_y_z"])
+    modify!(gatherby(sds1, :x), (2,3)=>cor)
+    @test ds == Dataset([Union{Missing, Int64}[2, 2, 3, 3, 3, 1, missing], Union{Missing, Float64}[-3.0, -1.0, 1.1, 4.0, 5.0, missing, missing], Union{Missing, Int64}[-11, 7, 11, 0, 0, 15, 12], Union{Missing, Float64}[1.0, 1.0, -0.9690582663799521, -0.9690582663799521, -0.9690582663799521, missing, missing]], ["x", "y", "z", "cor_y_z"])
+    # sds2 is not well defined anymore, since the original data has been changed
+    sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
+
+    modify!(groupby(sds2, :x), (:x, :z)=>((x,y)->length(x)/maximum(y))=>:q, [:z, :q]=>byrow(maximum)=>:q2)
+    @test ds == Dataset([Union{Missing, Int64}[2, 2, 3, 3, 3, 1, missing], Union{Missing, Float64}[-3.0, -1.0, 1.1, 4.0, 5.0, missing, missing], Union{Missing, Int64}[-11, 7, 11, 0, 0, 15, 12], Union{Missing, Float64}[1.0, 1.0, -0.9690582663799521, -0.9690582663799521, -0.9690582663799521, missing, missing], Union{Missing, Float64}[0.42857142857142855, 0.42857142857142855, 0.36363636363636365, 0.36363636363636365, 0.36363636363636365, 0.06666666666666667, 0.08333333333333333], Union{Missing, Float64}[0.42857142857142855, 7.0, 11.0, 0.36363636363636365, 0.36363636363636365, 15.0, 12.0]], ["x", "y", "z", "cor_y_z", "q", "q2"])
+
+    @test IMD.index(view(ds,[2,1,1,3,5,6,7,4,4],[:z,:x,:q,:q2])) == IMD.index(sds2)
+
+end

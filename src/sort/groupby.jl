@@ -76,7 +76,11 @@ end
 
 modify(origninal_gds::Union{GroupBy, GatherBy}, @nospecialize(args...)) = modify!(copy(origninal_gds), args...)
 function modify!(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
-	idx_cpy = Index(copy(index(parent(gds)).lookup), copy(index(parent(gds)).names), copy(index(parent(gds)).format))
+	if parent(gds) isa SubDataset
+		idx_cpy = copy(index(parent(gds)))
+	else
+		idx_cpy = Index(copy(index(parent(gds)).lookup), copy(index(parent(gds)).names), copy(index(parent(gds)).format))
+	end
 	norm_var = normalize_modify_multiple!(idx_cpy, index(parent(gds)), args...)
 	allnewvars = map(x -> x.second.second, norm_var)
 	all_new_var = Symbol[]
@@ -102,7 +106,11 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 	ngroups = gds.lastvalid
 	iperm = invperm(perm)
 	if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
-		T = _check_the_output_type(parent(gds), msfirst=>mssecond=>mslast)
+		if parent(gds) isa SubDataset
+			T = _check_the_output_type(parent(parent(gds)), msfirst=>mssecond=>mslast)
+		else
+			T = _check_the_output_type(parent(gds), msfirst=>mssecond=>mslast)
+		end
 		_res = Tables.allocatecolumn(T, nrow(parent(gds)))
 
 		if msfirst isa Tuple
@@ -110,10 +118,35 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 		else
 			_modify_grouped_fill_one_col!(_res, _threaded_permute_for_groupby(_columns(parent(gds))[msfirst], perm), mssecond, starts, ngroups, nrow(parent(gds)))
 		end
-
-		parent(gds)[!, mslast] = _threaded_permute_for_groupby(_res, iperm)
+		# temporary work around for Subdataset, it is EXPERIMENTAL
+		if parent(gds) isa SubDataset
+			if haskey(index(parent(gds)), mslast)
+				parent(gds)[:, mslast] = _threaded_permute_for_groupby(_res, iperm)
+			elseif !haskey(index(parent(parent(gds))), mslast)
+				parent(parent(gds))[!, mslast] = missings(T, nrow(parent(parent(gds))))
+				_update_subindex!(index(parent(gds)), index(parent(parent(gds))), mslast)
+				parent(gds)[:, mslast] = _threaded_permute_for_groupby(_res, iperm)
+			else
+				throw(ArgumentError("modifing a parent's column which doesn't appear in SubDataset is not allowed"))
+			end
+		else
+			parent(gds)[!, mslast] = _threaded_permute_for_groupby(_res, iperm)
+		end
 	elseif (mssecond isa Expr)  && mssecond.head == :BYROW
-		parent(gds)[!, mslast] = byrow(parent(gds), mssecond.args[1], msfirst; mssecond.args[2]...)
+		if parent(gds) isa SubDataset
+			_res = byrow(parent(gds), mssecond.args[1], msfirst; mssecond.args[2]...)
+			if haskey(index(parent(gds)), mslast)
+				parent(gds)[:, mslast] = _res
+			elseif !haskey(index(parent(parent(gds))), mslast)
+				parent(parent(gds))[!, mslast] = missings(eltype(_res), nrow(parent(parent(gds))))
+				_update_subindex!(index(parent(gds)), index(parent(parent(gds))), mslast)
+				parent(gds)[:, mslast] = _res
+			else
+				throw(ArgumentError("modifing a parent's column which doesn't appear in SubDataset is not allowed"))
+			end
+		else
+			parent(gds)[!, mslast] = byrow(parent(gds), mssecond.args[1], msfirst; mssecond.args[2]...)
+		end
 	elseif (mssecond isa Base.Callable) && (mslast isa MultiCol) && (mssecond isa typeof(splitter))
 		_modify_multiple_out!(parent(ds), _columns(parent(gds))[msfirst], mslast.x)
 	else
@@ -220,9 +253,9 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 
 		if i == _first_vector_res
 			if ms[i].first isa Tuple
-				_combine_f_barrier_special_tuple(special_res, ntuple(j-> view(gds.parent[!, ms[i].first[j]].val, a[1]), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+				_combine_f_barrier_special_tuple(special_res, ntuple(j-> view(_columns(gds.parent)[index(gds.parent)[ms[i].first[j]]], a[1]), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
 			else
-				_combine_f_barrier_special(special_res, view(gds.parent[!, ms[i].first].val, a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+				_combine_f_barrier_special(special_res, view(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
 			end
 		else
 			if ms[i].first isa Tuple
