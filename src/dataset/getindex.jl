@@ -60,7 +60,12 @@ function _check_consistency(ds::Dataset)
     nothing
 end
 
-_check_consistency(ds::AbstractDataset) = _check_consistency(parent(ds))
+function _check_consistency(ds::AbstractDataset)
+    if ds isa SubDataset
+        @assert length(index(ds).remap) == length(index(parent(ds))) "The parent data set which this view is based on, has been modified. To fix the issue recreate the view"
+    end
+    _check_consistency(parent(ds))
+end
 
 ##############################################################################
 ##
