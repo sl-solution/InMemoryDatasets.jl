@@ -18,7 +18,7 @@ function _check_ind_and_add!(outidx::Index, val)
 end
 
 # splitting a column to multiple columns
-function normalize_modify!(outidx::Index, idx::Index, @nospecialize(sel::Pair{<:ColumnIndex,
+function normalize_modify!(outidx::Index, idx, @nospecialize(sel::Pair{<:ColumnIndex,
                                                                 <:Pair{<:typeof(splitter),
                                                                     <:Vector{<:Union{Symbol, AbstractString}}}}))
     src, (fun, dst) = sel
@@ -28,7 +28,7 @@ function normalize_modify!(outidx::Index, idx::Index, @nospecialize(sel::Pair{<:
     return outidx[src] => fun => MultiCol(Symbol.(dst))
 
 end
-function normalize_modify!(outidx::Index, idx::Index, @nospecialize(sel::Pair{<:ColumnIndex,
+function normalize_modify!(outidx::Index, idx, @nospecialize(sel::Pair{<:ColumnIndex,
                                                                 <:splitter}
                                                                     ))
     throw(ArgumentError("for `splitter` the destinations must be specified"))
@@ -36,7 +36,7 @@ function normalize_modify!(outidx::Index, idx::Index, @nospecialize(sel::Pair{<:
 end
 
 # col => fun => dst, the job is to create col => fun => :dst
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Pair{<:Union{Base.Callable},
                                                         <:Union{Symbol, AbstractString}}})
@@ -47,7 +47,7 @@ function normalize_modify!(outidx::Index, idx::Index,
 end
 
 # (col1, col2) => fun => dst, the job is to create (col1, col2) => fun => :dst
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
                                                     <:Pair{<:Union{Base.Callable},
                                                         <:Union{Symbol, AbstractString}}})
@@ -59,7 +59,7 @@ function normalize_modify!(outidx::Index, idx::Index,
 end
 
 # col => fun, the job is to create col => fun => :colname
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Union{Base.Callable}}))
 
@@ -68,7 +68,7 @@ function normalize_modify!(outidx::Index, idx::Index,
 end
 
 # (col1, col2) => fun, the job is to create (col1, col2) => fun => :colname
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
                                                     <:Union{Base.Callable}})) where N
 
@@ -88,7 +88,7 @@ end
 
 
 # col => byrow
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Vector{Expr}}))
     colsidx = outidx[sel.first]
@@ -99,7 +99,7 @@ function normalize_modify!(outidx::Index, idx::Index,
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Expr}))
     colsidx = outidx[sel.first]
@@ -111,7 +111,7 @@ function normalize_modify!(outidx::Index, idx::Index,
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
 # col => byrow => dst
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                         <:Pair{<:Vector{Expr},
                                             <:Union{Symbol, AbstractString}}}))
@@ -123,7 +123,7 @@ function normalize_modify!(outidx::Index, idx::Index,
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                         <:Pair{<:Expr,
                                             <:Union{Symbol, AbstractString}}}))
@@ -137,7 +137,7 @@ function normalize_modify!(outidx::Index, idx::Index,
 end
 
 # cols => fun, the job is to create [col1 => fun => :col1name, col2 => fun => :col2name ...]
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Vector{Expr}}))
     colsidx = outidx[sel.first]
@@ -154,7 +154,7 @@ function normalize_modify!(outidx::Index, idx::Index,
     # end
     # return res
 end
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Union{Base.Callable, Expr}}))
     colsidx = outidx[sel.first]
@@ -172,7 +172,7 @@ function normalize_modify!(outidx::Index, idx::Index,
     return res
 end
 # cols => funs which will be normalize as col1=>fun1, col2=>fun2, ...
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Vector{<:Base.Callable}}))
     colsidx = outidx[sel.first]
@@ -186,7 +186,7 @@ function normalize_modify!(outidx::Index, idx::Index,
     return res
 end
 
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Vector{<:Base.Callable}}))
     colsidx = outidx[sel.first]
@@ -198,7 +198,7 @@ function normalize_modify!(outidx::Index, idx::Index,
 end
 
 # special case cols => byrow(...) => :name
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
     @nospecialize(sel::Pair{<:MultiColumnIndex,
                             <:Pair{<:Vector{Expr},
                                 <:Union{Symbol, AbstractString}}}))
@@ -210,7 +210,7 @@ function normalize_modify!(outidx::Index, idx::Index,
         throw(ArgumentError("only byrow operation is supported for cols => fun => :name"))
     end
 end
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
     @nospecialize(sel::Pair{<:MultiColumnIndex,
                             <:Pair{<:Expr,
                                 <:Union{Symbol, AbstractString}}}))
@@ -224,7 +224,7 @@ function normalize_modify!(outidx::Index, idx::Index,
 end
 
 # cols .=> fun .=> dsts, the job is to create col1 => fun => :dst1, col2 => fun => :dst2, ...
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Pair{<:Union{Base.Callable,Vector{Expr}},
                                                         <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
@@ -239,7 +239,7 @@ function normalize_modify!(outidx::Index, idx::Index,
     return res
 end
 # cols .=> fun .=> dsts, the job is to create col1 => fun => :dst1, col2 => fun => :dst2, ...
-function normalize_modify!(outidx::Index, idx::Index,
+function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
                                                     <:Pair{<:Expr,
                                                         <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
@@ -254,7 +254,7 @@ function normalize_modify!(outidx::Index, idx::Index,
     return res
 end
 
-function normalize_modify!(outidx::Index, idx::Index, arg::AbstractVector)
+function normalize_modify!(outidx::Index, idx, arg::AbstractVector)
     res = Any[]
     for i in 1:length(arg)
         _res = normalize_modify!(outidx::Index, idx::Index, arg[i])
@@ -269,7 +269,7 @@ function normalize_modify!(outidx::Index, idx::Index, arg::AbstractVector)
     return res
 end
 
-function normalize_modify_multiple!(outidx::Index, idx::Index, @nospecialize(args...))
+function normalize_modify_multiple!(outidx::Index, idx, @nospecialize(args...))
     res = Any[]
     for i in 1:length(args)
         _res = normalize_modify!(outidx, idx, args[i])
