@@ -19,30 +19,56 @@ byrow(ds::AbstractDataset, ::typeof(count), col::ColumnIndex; by = isequal(true)
 
 # byrow(ds::AbstractDataset, ::typeof(anymissing), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_anymissing(ds, cols)
 
-function byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; by = x->isequal(true, x), threads = nrow(ds)>1000)
+function expand_Base_Fix(f, f2)
+	if f isa Base.Fix2
+		return _bool(x->f.f(f2(x), f.x))
+	elseif f isa Base.Fix1
+		return _bool(x->f.f(f.x, f2(x)))
+	else
+		return x->f(f2(x))
+	end
+end
+
+function byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; by = isequal(true), threads = nrow(ds)>1000, mapformats = false)
 	colsidx = index(ds)[cols]
 	if by isa AbstractVector
-		bys = map(_bool, by)
+		if mapformats
+			bys = map((x,y)->_bool(z->x(getformat(ds, y)(z))), by, colsidx)
+		else
+			bys = map(_bool, by)
+		end
 		threads ? hp_row_any_multi(ds, bys, colsidx) : row_any_multi(ds, bys, colsidx)
 	else
-		bys = repeat([_bool(by)], length(colsidx))
+		if mapformats
+			bys = map(y->_bool(z->by(getformat(ds, y)(z))), colsidx)
+		else
+			bys = repeat([_bool(by)], length(colsidx))
+		end
 		threads ? hp_row_any_multi(ds, bys, colsidx) : row_any_multi(ds, bys, colsidx)
 	end
 end
 
-byrow(ds::AbstractDataset, ::typeof(any), col::ColumnIndex; by = x->isequal(true, x), threads = nrow(ds)>1000) = byrow(ds, any, [col]; by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(any), col::ColumnIndex; by = isequal(true), threads = nrow(ds)>1000, mapformats = false) = byrow(ds, any, [col]; by = by, threads = threads, mapformats = mapformats)
 
-function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; by = x->isequal(true, x), threads = nrow(ds)>1000)
+function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; by = isequal(true), threads = nrow(ds)>1000, mapformats = false)
 	colsidx = index(ds)[cols]
 	if by isa AbstractVector
-		bys = map(_bool, by)
+		if mapformats
+			bys = map((x,y)->expand_Base_Fix(x, getformat(ds, y)), by, colsidx)
+		else
+			bys = map(_bool, by)
+		end
 		threads ? hp_row_all_multi(ds, bys, colsidx) : row_all_multi(ds, bys, colsidx)
 	else
-		bys = repeat([_bool(by)], length(colsidx))
+		if mapformats
+			bys = map(y->expand_Base_Fix(by, getformat(ds, y)), colsidx)
+		else
+			bys = repeat([_bool(by)], length(colsidx))
+		end
 		threads ? hp_row_all_multi(ds, bys, colsidx) : row_all_multi(ds, bys, colsidx)
 	end
 end
-byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; by = x->isequal(true, x), threads = nrow(ds)>1000) = byrow(ds, all, [col]; by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; by = isequal(true), threads = nrow(ds)>1000, mapformats = false) = byrow(ds, all, [col]; by = by, threads = threads, mapformats = mapformats)
 
 byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; threads = nrow(ds)>1000) = row_isequal(ds, cols, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(findfirst), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findfirst(ds, by, cols; threads = threads)
