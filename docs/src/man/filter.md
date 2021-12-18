@@ -11,7 +11,7 @@ four main ways to filter observations based on some conditions, 1) using the `by
 filtering observations. To use `byrow(ds, fun, cols, ...)` for filtering observations, the `fun` argument should
 be set as `all` or `any`, and supply the conditions by using the `by` keyword option. The supplied `by` will be checked for each observation in all selected columns. The function returns a boolean vector where its `j`th elements will be equivalent to the result of `all(by, [col1[j], col2[j], ...])` or `any(by, [col1[j], col2[j], ...])` when `all` or `any` is set as the `fun` argument, respectively.
 
-The main feature of `byrow(ds, fun, cols, by = ...)` when `fun` is `all/any` is that the `by` keyword argument can be a vector of functions. Thus, when a multiple columns are supplied as `cols` each column can have its own `by`.
+The main feature of `byrow(ds, fun, cols, by = ...)` when `fun` is `all/any` is that the `by` keyword argument can be a vector of functions. Thus, when a multiple columns are supplied as `cols` each column can have its own `by`. To filter based on formatted value the `mapformats` keyword argument must be set to `true`.
 
 ### `filter` and `filter!`
 
@@ -154,7 +154,7 @@ however, unlike `map`, the function doesn't return the whole modified dataset, i
  Compared to `byrow`, the `mask` function has some useful features which are handy in some scenarios:
 
 * `mask` returns a boolean data set which shows exactly which observation will be selected when `fun` is called on it.
-* By default, the `mask` function filters observations based on their formatted values. However, this can be changed by setting `mapformats = false`.
+* By default, the `mask` function filters observations based on their formatted values. And to change this we should pass `mapformats = false`.
 * By default, the `mask` function will treat the missing values as `false`, however, this behaviour can be modified by using the keyword option `missings`. This option can be set as `true`, `false`(default value), or `missing`.
 
 ### Examples
