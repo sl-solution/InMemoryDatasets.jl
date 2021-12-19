@@ -133,6 +133,9 @@ end
 function write_vals!(a, pos, ::Missing)
     pos
 end
+function write_vals!(a, pos, ::Nothing)
+    pos
+end
 
 
 function write_vals!(a, pos, x::AbstractString)
@@ -183,7 +186,9 @@ function write_quotechar!(a, pos, quotechar)
     a[pos] = quotechar
     pos+1
 end
-
+function write_quotechar!(a, pos, ::Nothing)
+    pos
+end
 
 
 function _base!(a, pos, base::Integer, x::Integer, pad::Int, neg::Bool)
@@ -191,7 +196,8 @@ function _base!(a, pos, base::Integer, x::Integer, pad::Int, neg::Bool)
     2 <= abs(base) <= 62 || throw(DomainError(base, "base must satisfy 2 ≤ abs(base) ≤ 62"))
     b = (base % Int)::Int
     digits = abs(b) <= 36 ? Base.base36digits : Base.base62digits
-    n = neg + ndigits(x, base=b, pad=pad)
+    # pad = 0 makes issue when x == 0 (n will be 0)
+    n = neg + ndigits(x, base=b)
     i = n
     @inbounds while i > neg
         if b > 0
@@ -222,7 +228,11 @@ function _op_for_row_join!(buffer, currentpos, y, f, delim, quotechar, idx, p)
             end
         end
     else
-        quotecharval = UInt8(quotechar)
+        if nonmissingtype(eltype(y)) <: AbstractString
+            quotecharval = UInt8(quotechar)
+        else
+            quotecharval = nothing
+        end
         if idx[]<p
             Threads.@threads for i in 1:length(y)
                 currentpos[i] = write_quotechar!(view(buffer, :, i), currentpos[i], quotecharval)
