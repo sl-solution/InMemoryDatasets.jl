@@ -33,14 +33,14 @@ function byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; b
 	colsidx = index(ds)[cols]
 	if by isa AbstractVector
 		if mapformats
-			bys = map((x,y)->_bool(z->x(getformat(ds, y)(z))), by, colsidx)
+			bys = map((x,y)->expand_Base_Fix(x, getformat(ds, y)), by, colsidx)
 		else
 			bys = map(_bool, by)
 		end
 		threads ? hp_row_any_multi(ds, bys, colsidx) : row_any_multi(ds, bys, colsidx)
 	else
 		if mapformats
-			bys = map(y->_bool(z->by(getformat(ds, y)(z))), colsidx)
+			bys = map(y->expand_Base_Fix(by, getformat(ds, y)), colsidx)
 		else
 			bys = repeat([_bool(by)], length(colsidx))
 		end
