@@ -224,13 +224,17 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
                   else
                       ""
                   end
-        mainmsg = if !isempty(index(ds).sortedcols) && index(ds).grouped[]
-                "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> Grouped Dataset with $(index(ds).ngroups[]) groups </p><p> Grouped by: $(join(_names(ds)[index(ds).sortedcols],", ")) </p>"
-            elseif !isempty(index(ds).sortedcols)
-                "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> Sorted Dataset </p><p> Sorted by: $(join(_names(ds)[index(ds).sortedcols],", ")) </p>"
-            else
-                "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p>"
-            end
+        if ds isa SubDataset
+            mainmsg = "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> SubDataset (view of Dataset)</p>"
+        else
+            mainmsg = if !isempty(index(ds).sortedcols) && index(ds).grouped[]
+                    "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> Grouped Dataset with $(index(ds).ngroups[]) groups </p><p> Grouped by: $(join(_names(ds)[index(ds).sortedcols],", ")) </p>"
+                elseif !isempty(index(ds).sortedcols)
+                    "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> Sorted Dataset </p><p> Sorted by: $(join(_names(ds)[index(ds).sortedcols],", ")) </p>"
+                else
+                    "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p>"
+                end
+        end
         write(io, mainmsg)
 
     end
