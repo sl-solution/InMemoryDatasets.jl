@@ -512,15 +512,15 @@ Base.@propagate_inbounds parentcols(ind::SubIndex, idx) =
 
 Base.@propagate_inbounds parentcols(ind::SubIndex, ::Colon) = ind.cols
 
-function SubIndex(parent::AbstractIndex, cols::AbstractUnitRange{Int})
-    l = last(cols)
-    f = first(cols)
-    if !checkindex(Bool, Base.OneTo(length(parent)), cols)
-        throw(BoundsError(parent, cols))
-    end
-    remap = (1:l) .- f .+ 1
-    return SubIndex(parent, cols, remap)
-end
+# function SubIndex(parent::AbstractIndex, cols::AbstractUnitRange{Int})
+#     l = last(cols)
+#     f = first(cols)
+#     if !checkindex(Bool, Base.OneTo(length(parent)), cols)
+#         throw(BoundsError(parent, cols))
+#     end
+#     remap = collect((1:l) .- f .+ 1)
+#     return SubIndex(parent, cols, remap)
+# end
 
 function SubIndex(parent::AbstractIndex, cols::AbstractVector{Int})
     ncols = length(parent)
