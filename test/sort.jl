@@ -395,6 +395,10 @@ end
     @test sds == sort(copy(sds), 1) == sort(sds,1)
     @test ds == cpy_ds
     @test issorted(sds,1)
+
+    sds = view(ds, [true, true, true, true, true, false, false, false, false, false], 1:2)
+    sort!(sds, 1)
+    @test sds == sort(sds, 1)
 end
 
 @testset "issorted/issorted!" begin

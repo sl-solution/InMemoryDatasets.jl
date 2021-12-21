@@ -127,7 +127,7 @@ Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVect
         throw(ArgumentError("invalid length of `AbstractVector{Bool}` row index " *
                             "(got $(length(rows)), expected $(nrow(parent)))"))
     end
-    return SubDataset(parent, _findall(rows), cols)
+    return SubDataset(parent, findall(rows), cols)
 end
 
 Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVector, cols)

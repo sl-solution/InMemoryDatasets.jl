@@ -230,7 +230,7 @@ end
         newds
     else
         # Computing integer indices once for all columns is faster
-        selected_rows = T === Bool ? _findall(row_inds) : row_inds
+        selected_rows = T === Bool ? findall(row_inds) : row_inds
         newds = _threaded_getindex(selected_rows, selected_columns, _columns(ds), idx)
         setinfo!(newds, _attributes(ds).meta.info[])
         newds
@@ -251,7 +251,7 @@ end
         newds
     else
         # Computing integer indices once for all columns is faster
-        selected_rows = T === Bool ? _findall(row_inds) : row_inds
+        selected_rows = T === Bool ? findall(row_inds) : row_inds
         newds = _threaded_getindex(selected_rows, 1:ncol(ds), _columns(ds), idx)
         setinfo!(newds, _attributes(ds).meta.info[])
         newds
