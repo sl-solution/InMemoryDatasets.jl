@@ -3,6 +3,7 @@ const FLOATS = Union{Float16, Float32, Float64}
 
 # modified return_type to suit for our purpose
 function return_type(f::Function, x)
+	eltype(x) == Missing && return Missing
     CT = nonmissingtype(eltype(x))
     if CT <: AbstractVector
         return return_type_tuple(f, x)

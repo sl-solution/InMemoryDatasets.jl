@@ -314,14 +314,14 @@ function _check_mutliple_rows_for_each_group(ds, ms)
         # byrow are not checked since they are not going to modify the number of rows
         if ms[i].first isa Tuple
             T = return_type(ms[i].second.first, ntuple(j-> ds[!, ms[i].first[j]].val, length(ms[i].first)))
-            if T <: AbstractVector
+            if T <: AbstractVector && T !== Union{}
                 return i
             end
         elseif !(ms[i].second.first isa Expr) &&
                  haskey(index(ds), ms[i].first) #&&
                     #!(ms[i].first ∈ map(x->x.second.second, view(ms, 1:(i-1)))) #TODO monitor this for any unseen problem
             T = return_type(ms[i].second.first, ds[!, ms[i].first].val)
-            if T <: AbstractVector
+            if T <: AbstractVector && T !== Union{}
                 return i
             end
         end
@@ -409,7 +409,7 @@ function _check_the_output_type(x, mssecond)
     # * AbstractVector{T} where T
     # * Vector{T}
     # * not a Vector
-    CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(mssecond)` on input, you may want to try using `byrow`"))
+    CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(mssecond)` on input, you may want to try using `byrow`."))
     if CT <: AbstractVector
         if hasproperty(CT, :var)
             T = Union{Missing, CT.var.ub}

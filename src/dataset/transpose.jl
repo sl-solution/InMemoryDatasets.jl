@@ -1,6 +1,6 @@
 # a helper function that checks if there is enough memory for the output data frame
 #  If type is not Number, probably something is wrong about setting the variables and it is better to be conservative. here 10^7 threshhold is arbitarary
-_check_allocation_limit(T, rows, cols) = T <: Number ? sizeof(T)*rows*cols / Base.Sys.total_memory() : rows*cols/10^7
+_check_allocation_limit(T, rows, cols) = T !== Union{} && T <: Number ? sizeof(T)*rows*cols / Base.Sys.total_memory() : rows*cols/10^7
 
 _default_renamecolid_function_withoutid(x, y) = "_c" * string(x)
 _default_renamecolid_function_withid(x, y) = identity(string(values(x)))

@@ -474,10 +474,12 @@ end
     @test combine(groupby(sds2, 1), :y=>sum) == Dataset(x=[1,2,3, missing],  sum_y=[missing, -7.0, 11.2,missing])
     @test combine(gatherby(sds2, 1, isgathered = true), :y=>sum) == Dataset(x = [1,3,2,missing,3,2], sum_y=[missing, 2.2, -1,missing, 9,-6])
 
-    ds = Dataset(x = [1,2,1,2,3], y1 = Union{Int8, Missing}[1,2,missing,4,missing], y2 = Union{Int32, Missing}[1,2,3,4,missing], y3=Union{Int16, Missing}[100,20,3000,4,missing], y4=Float16.(rand(5)), y5=rand(BigFloat, 5))
-    sds = view(ds, [1,2,3,4,5], [1,2,3,4,5,6])
+    ds = Dataset(x = [1,2,1,2,3], y1 = Union{Int8, Missing}[1,2,missing,4,missing], y2 = Union{Int32, Missing}[1,2,3,4,missing], y3=Union{Int16, Missing}[100,20,3000,4,missing], y4=Float16.(rand(5)), y5=rand(BigFloat, 5), y6=[missing, missing, missing, missing, missing])
+    sds = view(ds, [1,2,3,4,5], [1,2,3,4,5,6,7])
 
     @test combine(gatherby(sds, 1), 2:4 .=>Ref([sum, mean, maximum, minimum, IMD.n, IMD.nmissing])) == Dataset([Union{Missing, Int64}[1, 2, 3], Union{Missing, Int64}[1, 6, missing], Union{Missing, Float64}[1.0, 3.0, missing], Union{Missing, Int8}[1, 4, missing], Union{Missing, Int8}[1, 2, missing], Union{Missing, Int64}[1, 2, 0], Union{Missing, Int64}[1, 0, 1], Union{Missing, Int64}[4, 6, missing], Union{Missing, Float64}[2.0, 3.0, missing], Union{Missing, Int32}[3, 4, missing], Union{Missing, Int32}[1, 2, missing], Union{Missing, Int64}[2, 2, 0], Union{Missing, Int64}[0, 0, 1], Union{Missing, Int64}[3100, 24, missing], Union{Missing, Float64}[1550.0, 12.0, missing], Union{Missing, Int16}[3000, 20, missing], Union{Missing, Int16}[100, 4, missing], Union{Missing, Int64}[2, 2, 0], Union{Missing, Int64}[0, 0, 1]], ["x", "sum_y1", "mean_y1", "maximum_y1", "minimum_y1", "n_y1", "nmissing_y1", "sum_y2", "mean_y2", "maximum_y2", "minimum_y2", "n_y2", "nmissing_y2", "sum_y3", "mean_y3", "maximum_y3", "minimum_y3", "n_y3", "nmissing_y3"])
+
+    @test combine(gatherby(sds,1), :y6=>sum=>:mm) == combine(gatherby(sds,1), :y6=>minimum=>:mm) == combine(gatherby(sds,1), :y6=>var=>:mm) == combine(gatherby(sds,1), :y6=>(x->sum(x))=>:mm) == combine(gatherby(sds,1), :y6=>(x->var(x))=>:mm) == combine(gatherby(sds,1), :y6=>(x->minimum(x))=>:mm) == Dataset(x = [1,2,3] , mm = [missing, missing, missing])
 
     var1(x) = var(x)
     std1(x) = std(x)

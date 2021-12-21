@@ -323,6 +323,13 @@ const ≅ = isequal
         dst = transpose(ds, :x, variable_name = nothing)
         dst_t = compare(ds, dst, on =[:g1=>:g1, :g2=>:g2, :x=>:_c1], mapformats = true)
         @test all(byrow(dst_t, all, :))
+
+        ds = Dataset(x = [1,2,1,2,3], y = [missing, missing, missing, missing, missing])
+        @test transpose(groupby(ds,1), :y) == Dataset(x = [1,2,3], _variables_=["y","y","y"], _c1=[missing, missing, missing], _c2=[missing, missing, missing])
+        @test transpose(groupby(ds,1), :y, default = 0) == Dataset(x = [1,2,3], _variables_=["y","y","y"], _c1=[missing, missing, missing], _c2=[missing, missing, 0])
+        @test transpose(gatherby(ds,1), :y, default = 0) == Dataset(x = [1,2,3], _variables_=["y","y","y"], _c1=[missing, missing, missing], _c2=[missing, missing, 0])
+
+
 end
 
 

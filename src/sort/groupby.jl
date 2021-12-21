@@ -174,7 +174,6 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 	# the transformation returning multiple rows must not be based on the previous columns in combine
 	# result (which seems reasonable ??)
 	_first_vector_res = _check_mutliple_rows_for_each_group(gds.parent, ms)
-
 	_is_groupingcols_modifed(gds, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
 	groupcols = gds.groupcols
