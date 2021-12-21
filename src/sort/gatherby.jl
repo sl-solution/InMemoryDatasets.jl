@@ -138,11 +138,12 @@ end
 
 
 
-function gatherby_mapreduce(gds::GatherBy, f, op, col::ColumnIndex, nt, init::T) where T
+function gatherby_mapreduce(gds::GatherBy, f, op, col::ColumnIndex, nt, init, ::Val{T}; promotetypes = false) where T
 	CT = T
-    T <: Base.SmallSigned ? CT = Int : nothing
-	T <: Base.SmallUnsigned ? CT = UInt : nothing
-	T <: Float64 ? CT = Float64 : nothing
+	if promotetypes
+	    T <: Base.SmallSigned ? CT = Int : nothing
+		T <: Base.SmallUnsigned ? CT = UInt : nothing
+	end
 	res = Tables.allocatecolumn(Union{CT, Missing}, gds.lastvalid)
     fill!(res, init)
 	if Threads.nthreads() > 1 && gds.lastvalid > 100_000
@@ -153,9 +154,9 @@ function gatherby_mapreduce(gds::GatherBy, f, op, col::ColumnIndex, nt, init::T)
     res
 end
 
-_gatherby_maximum(gds, col; f = identity, nt = Threads.nthreads()) = gatherby_mapreduce(gds, f, _stat_max_fun, col, nt, typemin(nonmissingtype(eltype(gds.parent[!, col]))))
-_gatherby_minimum(gds, col; f = identity, nt = Threads.nthreads()) = gatherby_mapreduce(gds, f, _stat_min_fun, col, nt, typemax(nonmissingtype(eltype(gds.parent[!, col]))))
-_gatherby_sum(gds, col; f = identity, nt = Threads.nthreads()) = gatherby_mapreduce(gds, f, _stat_add_sum, col, nt, zero(Core.Compiler.return_type(f, (eltype(gds.parent[!, col]), ))))
+_gatherby_maximum(gds, col; f = identity, nt = Threads.nthreads()) = gatherby_mapreduce(gds, f, _stat_max_fun, col, nt, missing, Val(nonmissingtype(eltype(gds.parent[!, col]))))
+_gatherby_minimum(gds, col; f = identity, nt = Threads.nthreads()) = gatherby_mapreduce(gds, f, _stat_min_fun, col, nt, missing, Val(nonmissingtype(eltype(gds.parent[!, col]))))
+_gatherby_sum(gds, col; f = identity, nt = Threads.nthreads()) = gatherby_mapreduce(gds, f, _stat_add_sum, col, nt, missing, Val(typeof(zero(Core.Compiler.return_type(f, (eltype(gds.parent[!, col]), ))))), promotetypes = true)
 _gatherby_n(gds, col; nt = Threads.nthreads()) = _gatherby_sum(gds, col, f = _stat_notmissing, nt = nt)
 _gatherby_length(gds, col; nt = Threads.nthreads()) = _gatherby_sum(gds, col, f = x->1, nt = nt)
 _gatherby_cntnan(gds, col; nt = Threads.nthreads()) = _gatherby_sum(gds, col, f = ISNAN, nt = nt)
@@ -221,7 +222,7 @@ function _gatherby_var(gds, col; dof = true, cal_std = false)
 	t1 = Threads.@spawn _gatherby_cntnan(gds, col, nt = nt2)
 	t2 = Threads.@spawn _gatherby_mean(gds, col, nt = nt2)
 	meanval = fetch(t2)
-	t3 = Threads.@spawn gatherby_mapreduce(gds, [x->abs2(x - meanval[i]) for i in 1:length(meanval)], _stat_add_sum, col, nt2, 0.0)
+	t3 = Threads.@spawn gatherby_mapreduce(gds, [x->abs2(x - meanval[i]) for i in 1:length(meanval)], _stat_add_sum, col, nt2, missing, Val(Float64))
 	t4 = Threads.@spawn _gatherby_n(gds, col, nt = nt2)
 	countnan = fetch(t1)
 	ss = fetch(t3)

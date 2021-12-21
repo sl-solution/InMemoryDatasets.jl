@@ -467,4 +467,38 @@ end
 
     @test IMD.index(view(ds,[2,1,1,3,5,6,7,4,4],[:z,:x,:q,:q2])) == IMD.index(sds2)
 
+    ds = Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0])
+    sds2 = view(ds, [2,1,1,3,5,6,7,4,4], 1:2)
+    @test combine(gatherby(sds2, 1), :y=>sum) == Dataset(x=[1,3,2, missing],  sum_y=[missing, 11.2,-7.0,missing])
+    @test combine(gatherby(sds2, 1), :y=>(x->sum(x))=>:sum_y) == Dataset(x=[1,3,2, missing],  sum_y=[missing, 11.2,-7.0,missing])
+    @test combine(groupby(sds2, 1), :y=>sum) == Dataset(x=[1,2,3, missing],  sum_y=[missing, -7.0, 11.2,missing])
+    @test combine(gatherby(sds2, 1, isgathered = true), :y=>sum) == Dataset(x = [1,3,2,missing,3,2], sum_y=[missing, 2.2, -1,missing, 9,-6])
+
+    ds = Dataset(x = [1,2,1,2,3], y1 = Union{Int8, Missing}[1,2,missing,4,missing], y2 = Union{Int32, Missing}[1,2,3,4,missing], y3=Union{Int16, Missing}[100,20,3000,4,missing], y4=Float16.(rand(5)), y5=rand(BigFloat, 5))
+    sds = view(ds, [1,2,3,4,5], [1,2,3,4,5,6])
+
+    @test combine(gatherby(sds, 1), 2:4 .=>Ref([sum, mean, maximum, minimum, IMD.n, IMD.nmissing])) == Dataset([Union{Missing, Int64}[1, 2, 3], Union{Missing, Int64}[1, 6, missing], Union{Missing, Float64}[1.0, 3.0, missing], Union{Missing, Int8}[1, 4, missing], Union{Missing, Int8}[1, 2, missing], Union{Missing, Int64}[1, 2, 0], Union{Missing, Int64}[1, 0, 1], Union{Missing, Int64}[4, 6, missing], Union{Missing, Float64}[2.0, 3.0, missing], Union{Missing, Int32}[3, 4, missing], Union{Missing, Int32}[1, 2, missing], Union{Missing, Int64}[2, 2, 0], Union{Missing, Int64}[0, 0, 1], Union{Missing, Int64}[3100, 24, missing], Union{Missing, Float64}[1550.0, 12.0, missing], Union{Missing, Int16}[3000, 20, missing], Union{Missing, Int16}[100, 4, missing], Union{Missing, Int64}[2, 2, 0], Union{Missing, Int64}[0, 0, 1]], ["x", "sum_y1", "mean_y1", "maximum_y1", "minimum_y1", "n_y1", "nmissing_y1", "sum_y2", "mean_y2", "maximum_y2", "minimum_y2", "n_y2", "nmissing_y2", "sum_y3", "mean_y3", "maximum_y3", "minimum_y3", "n_y3", "nmissing_y3"])
+
+    var1(x) = var(x)
+    std1(x) = std(x)
+    median1(x) = median(x)
+    c1 =combine(gatherby(sds, 1), 2:4 .=>Ref([var, std, median]))
+    c2 =  combine(gatherby(copy(sds), 1), 2:4 .=> Ref([var1, std1, median1]))
+    @test byrow(compare(c1, c2, on = names(c1) .=> names(c2)) , all)|>all
+
+    c3 = combine(gatherby(sds,1), :y4=>sum)
+    @test eltype(c3.sum_y4) == Union{Missing, Float16}
+    c3 = combine(gatherby(sds,1), :y5=>sum)
+    @test eltype(c3.sum_y5) == Union{Missing, BigFloat}
+
+    ds = Dataset(rand(1:10, 300_000,3), :auto)
+    insertcols!(ds, 1, :g => repeat(1:150_000, inner = 2))
+    map!(ds, x->rand()<.7 ? missing : x, r"x")
+    sds = view(ds, :, :)
+
+    @test combine(gatherby(sds, 1), r"x"=>sum) == combine(groupby(sds, 1), r"x"=>sum)
+    @test combine(gatherby(sds, 1), r"x"=>maximum) == combine(groupby(sds, 1), r"x"=>maximum)
+    @test combine(gatherby(sds, 1), r"x"=>minimum) == combine(groupby(sds, 1), r"x"=>minimum)
+    @test combine(gatherby(sds, 1), r"x"=>var) == combine(groupby(sds, 1), r"x"=>var)
+
 end
