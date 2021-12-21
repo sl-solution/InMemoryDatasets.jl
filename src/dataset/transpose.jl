@@ -165,7 +165,7 @@ function ds_transpose(ds, cols::Union{Tuple, MultiColumnIndex}; id = nothing, re
         ids_refs, unique_loc  = _find_id_unique_values(ds, ididx, _get_perms(ds); mapformats = mapformats)
 
         if length(ididx) == 1
-            unique_ids = getindex(parent(ds), view(_get_perms(ds), unique_loc), ididx[1]; mapformats = mapformats)
+            unique_ids = getindex(ds, view(_get_perms(ds), unique_loc), ididx[1]; mapformats = mapformats)
         else
             #TODO not very good way to do this
             unique_ids = Tables.rowtable(Dataset([getindex(ds, view(_get_perms(ds), unique_loc), ididx[k], mapformats = mapformats) for k in 1:length(ididx)], :auto, copycols = false))
@@ -243,9 +243,9 @@ function _fill_gcol!(res, ds, gcolindex, colsidx_length, perms, nrows, threads)
         push!(res, _tmp)
         if DataAPI.refpool(res[i]) !== nothing
             if threads
-                _fill_onecol_for_tr_threaded!(res[i].refs, _columns(ds)[gcolindex[i]].refs, ntimes, perms)
+                _fill_onecol_for_tr_threaded!(res[i].refs, DataAPI.refarray(_columns(ds)[gcolindex[i]]), ntimes, perms)
             else
-                _fill_onecol_for_tr!(res[i].refs, _columns(ds)[gcolindex[i]].refs, ntimes, perms)
+                _fill_onecol_for_tr!(res[i].refs, DataAPI.refarray(_columns(ds)[gcolindex[i]]), ntimes, perms)
             end
         else
             if threads

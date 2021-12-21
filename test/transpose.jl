@@ -525,3 +525,32 @@ end
     @test flatten(ds_vec, :b) == flatten(ds_tup, :b) == ref
     @test flatten(ds_vec, "b") == flatten(ds_tup, "b") == ref
 end
+
+@testset "transpose - views" begin
+        pop = Dataset(country = ["c1","c1","c2","c2","c3","c3"],
+                                sex = [1, 2, 1, 2, 1, 2],
+                                pop_2000 = [100, 120, 150, 155, 170, 190],
+                                pop_2010 = [110, 120, 155, 160, 178, 200],
+                                pop_2020 = [115, 130, 161, 165, 180, 203])
+        fmt(x) = x == 1 ? "male" : "female"
+        setformat!(pop, :sex=>fmt)
+        modify!(pop, [:country, :sex] => byrow(x->join(x))=>:c_s)
+        pop_v1 = view(pop, :, 5:-1:1)
+        pop_v2 = view(pop, [1,2,3,4], [1,2,3,6])
+
+        @test transpose(pop_v2, :pop_2000) == Dataset(_variables_ = "pop_2000", _c1 = 100, _c2=120, _c3=150, _c4=155)
+        @test transpose(pop_v2, :pop_2000, id = :c_s) == Dataset(_variables_ = "pop_2000", c11 = 100, c12=120, c21=150, c22=155)
+        @test transpose(pop_v2, :pop_2000, id = [:country, :sex], renamecolid = x->join(x), mapformats = false) == Dataset(_variables_ = "pop_2000", c11 = 100, c12=120, c21=150, c22=155)
+        @test transpose(copy(pop_v2), :pop_2000, id = :c_s) == Dataset(_variables_ = "pop_2000", c11 = 100, c12=120, c21=150, c22=155)
+
+
+        poptm = Dataset([["c1", "c1", "c1", "c2", "c2", "c2", "c3", "c3", "c3"],
+                ["2000", "2010", "2020", "2000", "2010", "2020", "2000", "2010", "2020"],
+                Union{Missing, Int64}[100, 110, 115, 150, 155, 161, 170, 178, 180],
+                Union{Missing, Int64}[120, 120, 130, 155, 160, 165, 190, 200, 203]],
+                [:country,:year,:male,:female])
+
+        @test transpose(gatherby(pop_v1, :country), [3,2,1], id = :sex, variable_name = "year", renamerowid = x->replace(x, "pop_"=>"")) == poptm
+        @test transpose(gatherby(pop_v1, :country), [3,2,1], id = :sex, variable_name = "year", renamerowid = x->replace(x, "pop_"=>""), mapformats = false) == rename(poptm, ["male"=>"1", "female"=>"2"])
+        @test transpose(groupby(pop_v1, :country), (1,2), id = :sex, renamecolid = (x,y)->x * "|" * y[1]) == Dataset([Union{Missing, String}["c1", "c2", "c3"], Union{Missing, Int64}[115, 161, 180], Union{Missing, Int64}[130, 165, 203], Union{Missing, Int64}[110, 155, 178], Union{Missing, Int64}[120, 160, 200]], ["country", "male|pop_2020", "female|pop_2020", "male|pop_2010", "female|pop_2010"])
+end

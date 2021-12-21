@@ -223,10 +223,10 @@ Base.@propagate_inbounds Base.getindex(sds::SubDataset, rowind::Bool, colind::Co
     throw(ArgumentError("invalid row index of type Bool"))
 
 Base.@propagate_inbounds Base.getindex(sds::SubDataset, rowinds::Union{AbstractVector, Not},
-                                       colind::ColumnIndex) =
-    parent(sds)[rows(sds)[rowinds], parentcols(index(sds), colind)]
-Base.@propagate_inbounds Base.getindex(sds::SubDataset, ::Colon, colind::ColumnIndex) =
-    parent(sds)[rows(sds), parentcols(index(sds), colind)]
+                                       colind::ColumnIndex; mapformats = false) =
+    getindex(parent(sds), rows(sds)[rowinds], parentcols(index(sds), colind); mapformats = mapformats)
+Base.@propagate_inbounds Base.getindex(sds::SubDataset, ::Colon, colind::ColumnIndex; mapformats = false) =
+    getindex(parent(sds), rows(sds), parentcols(index(sds), colind); mapformats = mapformats)
 Base.@propagate_inbounds Base.getindex(sds::SubDataset, ::typeof(!), colind::ColumnIndex) =
     view(parent(sds), rows(sds), parentcols(index(sds), colind))
 

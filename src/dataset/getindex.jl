@@ -98,7 +98,7 @@ end
     @inbounds _columns(ds)[selected_column][row_ind]
 end
 
-_getindex(ds, r, c, f) = map(f, _columns(ds)[c][r])
+_getindex(ds, r, c, f) = map(f, view(_columns(ds)[c], r))
 
 # ds[MultiRowIndex, SingleColumnIndex] => AbstractVector, copy
 @inline function Base.getindex(ds::Dataset, row_inds::AbstractVector, col_ind::ColumnIndex; mapformats = false)
