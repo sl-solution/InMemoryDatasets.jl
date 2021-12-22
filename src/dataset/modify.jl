@@ -284,7 +284,7 @@ function normalize_modify_multiple!(outidx::Index, idx, @nospecialize(args...))
     res
 end
 
-modify(origninal_ds::Dataset, @nospecialize(args...)) = modify!(copy(origninal_ds), args...)
+modify(origninal_ds::AbstractDataset, @nospecialize(args...)) = modify!(copy(origninal_ds), args...)
 
 modify!(ds::Dataset) = parent(ds)
 function modify!(ds::Dataset, @nospecialize(args...))
