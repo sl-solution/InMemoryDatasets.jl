@@ -555,10 +555,14 @@ function make_unique!(names::Vector{Symbol}, src::AbstractVector{Symbol};
     end
     seen = Set{Symbol}()
     dups = Int[]
+	dups_dict = Dict{Symbol, Int}()
     for i in 1:length(names)
         name = src[i]
         if in(name, seen)
             push!(dups, i)
+			if ismissing(get(dups_dict, src[i], missing))
+				dups_dict[src[i]] = 1
+			end
         else
             names[i] = src[i]
             push!(seen, name)
@@ -573,19 +577,26 @@ function make_unique!(names::Vector{Symbol}, src::AbstractVector{Symbol};
             throw(ArgumentError(msg))
         end
     end
-
     for i in dups
         nm = src[i]
-        k = 1
-        while true
-            newnm = Symbol("$(nm)_$k")
-            if !in(newnm, seen)
-                names[i] = newnm
-                push!(seen, newnm)
-                break
-            end
-            k += 1
-        end
+		dup_info = get(dups_dict, src[i], missing)
+		if ismissing(dup_info)
+			throw(ErrorException("Something is wrong"))
+		else
+			k = dup_info
+			cnt = 1
+			while true
+				newnm = Symbol("$(nm)_$(k)")
+				if !in(newnm, seen)
+	                names[i] = newnm
+	                push!(seen, newnm)
+					break
+	            end
+				k += 1
+				cnt += 1
+			end
+			dups_dict[src[i]] += cnt
+		end
     end
 
     return names
