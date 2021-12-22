@@ -205,6 +205,9 @@ function repeat!(ds::Dataset, count::Integer)
     ds
 end
 
+Base.repeat(ds::AbstractDataset, count::Integer) = repeat!(copy(ds), count)
+Base.repeat(ds::AbstractDataset; inner::Integer = 1, outer::Integer = 1) = repeat!(copy(ds), inner = inner, outer = outer)
+
 # This is not exactly copy! as in general we allow axes to be different
 
 # Modify Dataset
