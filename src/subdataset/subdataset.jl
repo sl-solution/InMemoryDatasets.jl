@@ -110,8 +110,14 @@ Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVect
     end
     SubDataset(parent, SubIndex(index(parent), cols), rows)
 end
+Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractUnitRange, cols)
+    @boundscheck if !checkindex(Bool, axes(parent, 1), rows)
+        throw(BoundsError(parent, (rows, cols)))
+    end
+    SubDataset(parent, SubIndex(index(parent), cols), convert(Vector{Int}, rows))
+end
 Base.@propagate_inbounds SubDataset(parent::Dataset, ::Colon, cols) =
-    SubDataset(parent, axes(parent, 1), cols)
+    SubDataset(parent, collect(axes(parent, 1)), cols)
 @inline SubDataset(parent::Dataset, row::Integer, cols) =
     throw(ArgumentError("invalid row index: $row of type $(typeof(row))"))
 
@@ -275,8 +281,8 @@ Base.setproperty!(::SubDataset, ::AbstractString, ::Any) =
 
 Base.copy(sds::SubDataset) = parent(sds)[rows(sds), parentcols(index(sds), :)]
 
-Base.deleteat!(ds::SubDataset, ind) =
-    throw(ArgumentError("SubDataset does not support deleting rows"))
+# Base.deleteat!(ds::SubDataset, ind) =
+    # throw(ArgumentError("SubDataset does not support deleting rows"))
 
 function Dataset(sds::SubDataset)
 

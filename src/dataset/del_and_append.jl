@@ -27,7 +27,7 @@ julia> deleteat!(ds, 2)
 ```
 
 """
-function Base.deleteat!(ds::Dataset, inds)
+function Base.deleteat!(ds::AbstractDataset, inds)
 
 # Modify Dataset
     if !isempty(inds) && size(ds, 2) == 0
@@ -40,7 +40,7 @@ function Base.deleteat!(ds::Dataset, inds)
 end
 
 # Modify Dataset
-function Base.deleteat!(ds::Dataset, inds::AbstractVector{Bool})
+function Base.deleteat!(ds::AbstractDataset, inds::AbstractVector{Bool})
     if length(inds) != size(ds, 1)
         throw(BoundsError(ds, (inds, :)))
     end
@@ -49,13 +49,16 @@ function Base.deleteat!(ds::Dataset, inds::AbstractVector{Bool})
 end
 
 # Modify Dataset
-Base.deleteat!(ds::Dataset, inds::Not) = deleteat!(ds, axes(ds, 1)[inds])
+Base.deleteat!(ds::AbstractDataset, inds::Not) = deleteat!(ds, axes(ds, 1)[inds])
 
 # Modify Dataset
-function _delete!_helper(ds::Dataset, drop)
+function _delete!_helper(ds::AbstractDataset, drop)
     cols = _columns(ds)
     isempty(cols) && return ds
-
+    if ds isa SubDataset
+        deleteat!(getfield(ds, :rows), drop)
+        return ds
+    end
     n = nrow(ds)
     col1 = cols[1]
     deleteat!(col1, drop)

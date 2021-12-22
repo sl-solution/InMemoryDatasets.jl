@@ -222,12 +222,6 @@ end
     @test names(ds) == names(x)[[4, 2]]
 end
 
-@testset "deleteat!" begin
-    y = 1.0:10.0
-    ds = view(Dataset(y=y), 2:6, :)
-    @test_throws ArgumentError deleteat!(ds, 1)
-end
-
 @testset "parent" begin
     ds = Dataset(a=Union{Int, Missing}[1, 2, 3, 1, 2, 2],
                    b=[2.0, missing, 1.2, 2.0, missing, missing],
@@ -293,7 +287,29 @@ end
     if VERSION >= v"1.7.0-DEV"
         @test_throws ArgumentError SubDataset(sds, Integer[true, true, true], :)
     else
-        @test SubDataset(sds, Integer[true, true, true], :) ==
+        @test SubDataset(sds, Int[true, true, true], :) ==
               SubDataset(sds, [1, 1, 1], :)
     end
+end
+
+@testset "deletat! for views" begin
+    ds1 = Dataset(a = Union{String, Missing}["a", "b", "a", "b", "a", "b"],
+                    b = Vector{Union{Int, Missing}}(1:6),
+                    c = Union{Int, Missing}[1:3;1:3])
+    ds = vcat(ds1, ds1)
+    sds = view(ds, 1:4, [1,3])
+    deleteat!(sds, 1)
+    @test sds == ds[2:4, [1,3]]
+    sds = view(ds, 1:4, [1,3])
+    deleteat!(sds, 1:2)
+    @test sds == ds[3:4, [1,3]]
+    sds = view(ds, 1:4, [1,3])
+    deleteat!(sds, [1,3])
+    @test sds == ds[[2,4], [1,3]]
+    sds = view(ds, :, :)
+    deleteat!(sds, Not(1:3))
+    @test sds == ds[1:3, :]
+    sds = view(ds, :, :)
+    deleteat!(sds, [1,3,5,7,9,11])
+    @test sds == ds[[2,4,6,8,10,12], :]
 end
