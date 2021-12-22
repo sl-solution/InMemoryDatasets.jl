@@ -110,7 +110,7 @@ Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVect
     end
     SubDataset(parent, SubIndex(index(parent), cols), rows)
 end
-Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractUnitRange, cols)
+Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractRange, cols)
     @boundscheck if !checkindex(Bool, axes(parent, 1), rows)
         throw(BoundsError(parent, (rows, cols)))
     end

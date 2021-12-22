@@ -312,4 +312,15 @@ end
     sds = view(ds, :, :)
     deleteat!(sds, [1,3,5,7,9,11])
     @test sds == ds[[2,4,6,8,10,12], :]
+
+
+    ds = Dataset(a = repeat([1, 2, 3, 4], outer=[2]),
+                             b = repeat([2, 1], outer=[4]),
+                             c = 1:8)
+    setformat!(ds, 1=>iseven)
+    ds_c = copy(ds)
+    sds = view(ds, 8:-1:1, [1,3])
+    deleteat!(sds, 1:4)
+    @test sds == ds[[4,3,2,1], [1,3]]
+    @test ds_c == ds
 end
