@@ -384,3 +384,35 @@ function _in_use_Set(ldata, rdata, _fl, _fr)
     end
     res
 end
+
+
+function _update!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort) where T
+    _fl = _date_value∘identity
+    _fr = _date_value∘identity
+    if mapformats[1]
+        _fl = _date_value∘getformat(dsl, onleft[1])
+    end
+    if mapformats[2]
+        _fr = _date_value∘getformat(dsr, onright[1])
+    end
+    dict, maxprob, sz, fallback, type = _create_dictionary_for_join(_fr, _columns(dsr)[onright[1]], _fl, _columns(dsl)[onleft[1]], Val(T))
+    # key is not unique, fall back to sort
+    if fallback
+        return false, Dataset()
+    end
+
+    _fill_ranges_for_dict_join!(ranges, dict, maxprob, _fl, _fr, _columns(dsl)[onleft[1]], _columns(dsr)[onright[1]], sz, type)
+
+    for j in 1:length(right_cols)
+        if haskey(index(dsl).lookup, _names(dsr)[right_cols[j]])
+            left_cols_idx = index(dsl)[_names(dsr)[right_cols[j]]]
+            TL = nonmissingtype(eltype(_columns(dsl)[left_cols_idx]))
+            TR = nonmissingtype(eltype(_columns(dsr)[right_cols[j]]))
+            if promote_type(TR, TL) <: TL
+                _update_left_with_right!(_columns(dsl)[left_cols_idx], _columns(dsr)[right_cols[j]], ranges, allowmissing, mode)
+            end
+        end
+    end
+    _modified(_attributes(dsl))
+    true, dsl
+end
