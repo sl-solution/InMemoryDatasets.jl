@@ -1109,11 +1109,19 @@ function _nonunique_barrier!(res, groups, seen_groups; first = true)
     nothing
 end
 
+function _RAND_NONUNIQUE(x)
+    if x == 1
+        1
+    else
+        rand(1:x)
+    end
+end
+
 function _nonunique_random_leave_barrier!(counts, groups)
     for i in 1:length(groups)
         counts[groups[i]] += 1
     end
-    map!(x->rand(1:x), counts, counts)
+    map!(_RAND_NONUNIQUE, counts, counts)
 end
 
 function _fill_nonunique_randomleave!(res, counts, groups)
