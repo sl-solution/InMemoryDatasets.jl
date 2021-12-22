@@ -371,34 +371,6 @@ end
             @test sort(ds, :) == sort(ds[!, 1:2], :)
         end
     end
-
-    ds = Dataset(rand(1:10, 10, 3), :auto)
-    cpy_ds = copy(ds)
-    sds = view(ds, [1,2,3,4,5], 1:2)
-    sort!(sds,1)
-    @test sds == sort(copy(sds), 1) == sort(sds,1)
-    @test ds == cpy_ds
-    @test issorted(sds,1)
-
-    sort!(sds,1, rev = true)
-    @test sds == sort(copy(sds), 1, rev = true) == sort(sds,1, rev = true)
-    @test ds == cpy_ds
-    @test issorted(sds, 1, rev = true)
-
-    setformat!(ds, 1=>iseven)
-    sort!(sds,1, rev = true)
-    @test sds == sort(copy(sds), 1, rev = true) == sort(sds,1, rev = true)
-    @test ds == cpy_ds
-    @test issorted(sds, 1, rev = true)
-
-    sort!(sds,1)
-    @test sds == sort(copy(sds), 1) == sort(sds,1)
-    @test ds == cpy_ds
-    @test issorted(sds,1)
-
-    sds = view(ds, [true, true, true, true, true, false, false, false, false, false], 1:2)
-    sort!(sds, 1)
-    @test sds == sort(sds, 1)
 end
 
 @testset "issorted/issorted!" begin
