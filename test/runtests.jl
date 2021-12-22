@@ -18,6 +18,7 @@ end
 
 my_tests = ["constructors.jl",
             "characters.jl",
+            "utils.jl",
             "subdataset.jl",
             "data.jl",
             "byrow.jl",
