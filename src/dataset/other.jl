@@ -622,7 +622,7 @@ function _unique_none_case(ds::Dataset, cols; mapformats = false)
 end
 
 # Modify Dataset
-function Base.unique!(ds::AbstractDataset; mapformats = false, keep = :first)
+function Base.unique!(ds::Dataset; mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
         rowidx = nonunique(ds, mapformats = mapformats, leave = :or)
@@ -636,7 +636,7 @@ function Base.unique!(ds::AbstractDataset; mapformats = false, keep = :first)
     deleteat!(ds, rowidx)
 end
 # this is for fixing ambiguity
-function Base.unique!(ds::AbstractDataset, cols::AbstractVector; mapformats = false, keep = :first)
+function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or)
@@ -649,7 +649,7 @@ function Base.unique!(ds::AbstractDataset, cols::AbstractVector; mapformats = fa
     end
     deleteat!(ds, rowidx)
 end
-function Base.unique!(ds::AbstractDataset, cols; mapformats = false, keep = :first)
+function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
     !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or)
