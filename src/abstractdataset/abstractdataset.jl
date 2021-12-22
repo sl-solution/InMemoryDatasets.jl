@@ -989,9 +989,10 @@ A row is a duplicate if there exists a prior row with all columns containing
 equal values (according to `isequal`).
 
 If `mapformats = true` the values are checked based on their formatted values.
-`leave = :first` means that everey occurance after the first one be marked as non-unique value, and
-`leave = :last` means that every occurance before the last one be marked as non-unique value.
-`leave = :none` means that no duplicated rows are marked as non-unique value.
+`leave = :first` means that everey occurance after the first one be marked as non-unique value,
+`leave = :last` means that every occurance before the last one be marked as non-unique value,
+`leave = :none` means that no duplicated rows are marked as non-unique value,
+`leave = :random` means that a random occurance of duplicated values be marked as non-unique value.
 
 See also [`unique`](@ref) and [`unique!`](@ref).
 
@@ -1052,13 +1053,16 @@ julia> nonunique(ds, 2)
 """
 function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, leave = :first)
     # :xor, :nor, :and, :or are undocumented
-    !(leave in (:first, :last, :none, :xor, :nand, :nor, :and, :or)) && throw(ArgumentError("`leave` must be either `:first`, `:last`, or `:none`"))
+    !(leave in (:first, :last, :none, :random, :xor, :nand, :nor, :and, :or)) && throw(ArgumentError("`leave` must be either `:first`, `:last`, `:none`, or `random`"))
     if ncol(ds) == 0
         throw(ArgumentError("finding duplicate rows in data set with no " *
                             "columns is not allowed"))
     end
 
     groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats, stable = false)
+    if leave === :random
+        return _nonunique_random_leave(groups, ngroups, nrow(ds))
+    end
     res = trues(nrow(ds))
     seen_groups = falses(ngroups)
     if leave === :first
@@ -1103,6 +1107,29 @@ function _nonunique_barrier!(res, groups, seen_groups; first = true)
         end
     end
     nothing
+end
+
+function _nonunique_random_leave_barrier!(counts, groups)
+    for i in 1:length(groups)
+        counts[groups[i]] += 1
+    end
+    map!(x->rand(1:x), counts, counts)
+end
+
+function _fill_nonunique_randomleave!(res, counts, groups)
+    for i in 1:length(res)
+        res[i] = counts[groups[i]] == 1
+        counts[groups[i]] -= 1
+    end
+end
+
+function _nonunique_random_leave(groups, ngroups, nrows)
+    counts = Vector{nrows < typemax(Int32) ? Int32 : Int64}(undef, ngroups)
+    fill!(counts, 0)
+    _nonunique_random_leave_barrier!(counts, groups)
+    res = falses(nrows)
+    _fill_nonunique_randomleave!(res, counts, groups)
+    .!res
 end
 
 """

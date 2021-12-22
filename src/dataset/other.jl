@@ -622,35 +622,41 @@ function _unique_none_case(ds::Dataset, cols; mapformats = false)
 end
 
 # Modify Dataset
-function Base.unique!(ds::Dataset; mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
+function Base.unique!(ds::AbstractDataset; mapformats = false, keep = :first)
+    !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
         rowidx = nonunique(ds, mapformats = mapformats, leave = :or)
     elseif keep == :only
         rowidx = nonunique(ds, mapformats = mapformats, leave = :none)
+    elseif keep == :random
+        rowidx = nonunique(ds, mapformats = mapformats, leave = :random)
     else
         rowidx = nonunique(ds, mapformats = mapformats, leave = keep)
     end
     deleteat!(ds, rowidx)
 end
 # this is for fixing ambiguity
-function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
+function Base.unique!(ds::AbstractDataset, cols::AbstractVector; mapformats = false, keep = :first)
+    !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or)
     elseif keep == :only
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none)
+    elseif keep == :random
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :random)
     else
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = keep)
     end
     deleteat!(ds, rowidx)
 end
-function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
+function Base.unique!(ds::AbstractDataset, cols; mapformats = false, keep = :first)
+    !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or)
     elseif keep == :only
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none)
+    elseif keep == :random
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :random)
     else
         rowidx = nonunique(ds, cols, mapformats = mapformats, leave = keep)
     end
@@ -660,11 +666,13 @@ end
 
 # Unique rows of an Dataset.
 @inline function Base.unique(ds::AbstractDataset; view::Bool=false, mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
+    !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
         rowidxs = nonunique(ds, mapformats = mapformats, leave = :none)
     elseif keep == :only
         rowidxs = nonunique(ds, mapformats = mapformats, leave = :or)
+    elseif keep == :random
+        rowidxs = .!nonunique(ds, mapformats = mapformats, leave = :random)
     else
         rowidxs = (!).(nonunique(ds, mapformats = mapformats, leave = keep))
     end
@@ -672,11 +680,13 @@ end
 end
 
 @inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false, mapformats = false, keep = :first)
-    !(keep in (:first, :last, :none, :only)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, or :none"))
+    !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
         rowidxs = nonunique(ds, cols, mapformats = mapformats, leave = :none)
     elseif keep == :only
         rowidxs = nonunique(ds, cols, mapformats = mapformats, leave = :or)
+    elseif keep == :random
+        rowidxs = .!nonunique(ds, cols, mapformats = mapformats, leave = :random)
     else
         rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, leave = keep))
     end
@@ -688,10 +698,10 @@ end
     unique(ds::AbstractDataset, cols = : ; [mapformats = false, keep = :first, view::Bool=false])
     unique!(ds::AbstractDataset, cols = : ; [mapformats = false, keep = :first, view::Bool=false])
 
-Return a data set containing only the unique occurrence of unique rows in `ds` where `keep` can be one of the following value: `:first`, `:last`, `:none`, or `:only`. The
+Return a data set containing only the unique occurrence of unique rows in `ds` where `keep` can be one of the following value: `:first`, `:last`, `:none`, `:only`, or `:random`. The
 `keep` keyword argument detemines which occurrence of the unique value should be kept, i.e. when `keep = :first` the
 first occurrence of the unique value will be kept and when `keep = :last` the last occurrence will be kept. When `keep` is set to `:none`
-all duplicates will be dropped from the result, and when `keep` is set to `:only` only duplicated rows are kept.
+all duplicates will be dropped from the result, when `keep` is set to `:only` only duplicated rows are kept, and when `keep` is set ot `:random` a random occurance of duplicates will be kept.
  When `cols` is specified, the unique occurrence is detemined by given combination of values
 in selected columns. `cols` can be any column selector.
 
