@@ -700,9 +700,12 @@ julia> antijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    1 │ 2012        true
 ```
 """
-function DataAPI.antijoin(dsl::Dataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
-
-    dsl[.!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :]
+function DataAPI.antijoin(dsl::Dataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false)
+    if view
+        Base.view(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :)
+    else
+        dsl[.!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :]
+    end
 end
 """
     semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
@@ -809,8 +812,12 @@ julia> semijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    3 │ 2020        true
 ```
 """
-function DataAPI.semijoin(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
-    dsl[contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :]
+function DataAPI.semijoin(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false)
+    if view
+        Base.view(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :)
+    else
+        dsl[contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate), :]
+    end
 end
 """
     antijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
@@ -1879,4 +1886,4 @@ julia> update(dsmain, dsupdate, on = [:group, :id], allowmissing = true, mode = 
    7 │ G2               2        0.0         2
 ```
 """
-update(dsmain::Dataset, dsupdate::AbstractDataset; on = nothing, allowmissing = false, mode = :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode,  mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
+update(dsmain::AbstractDataset, dsupdate::AbstractDataset; on = nothing, allowmissing = false, mode = :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode,  mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
