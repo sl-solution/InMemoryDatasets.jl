@@ -794,7 +794,7 @@ Base.first(ds::AbstractDataset, n::Integer) = ds[1:min(n, nrow(ds)), :]
 
 Get the last row of `ds` as a `DatasetRow`.
 """
-Base.last(ds::AbstractDataset) = ds[nrow(df), :]
+Base.last(ds::AbstractDataset) = ds[nrow(ds), :]
 
 """
     last(ds::AbstractDataset, n::Integer)

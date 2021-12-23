@@ -503,7 +503,7 @@ function Dataset(dsr::DatasetRow)
 end
 
 Base.push!(ds::Dataset, dsr::DatasetRow, cols::Symbol=:setequal, promote::Bool=(cols in [:union, :subset])) =
-    push!(ds, NamedTuple(dsr), cols, promote)
+    push!(ds, NamedTuple(dsr); cols = cols, promote = promote)
 # @noinline pushhelper!(x, r) = push!(x, x[r])
 #
 # function Base.push!(ds::Dataset, dsr::DatasetRow; cols::Symbol=:setequal,
