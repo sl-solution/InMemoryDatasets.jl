@@ -117,6 +117,12 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
         ds2 = ds[nrow(ds):-1:1, ncol(ds):-1:1]
         @test unique(ds2, cols, keep = keepval, mapformats = mfmt) == unique(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), cols, keep = keepval, mapformats = mfmt)
     end
+    ds1 = Dataset(a = Union{String, Missing}["a", "b", "a", "b", "a", "b"],
+                   b = Vector{Union{Int, Missing}}(1:6),
+                   c = Union{Int, Missing}[1:3;1:3])
+   ds = vcat(ds1, ds1)
+   unique!(ds, 1, keep = :random)
+   @test ds == unique(ds, 1)
 end
 
 @testset "completecases and dropmissing" begin
