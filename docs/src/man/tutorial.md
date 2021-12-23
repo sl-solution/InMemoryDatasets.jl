@@ -159,9 +159,9 @@ julia> delayed =  @chain flights begin
 
 ## Reorder rows
 
-Select `:IATA` and `:DepDelay` columns while sorted by `:DepDelay`. Note that in the following code, `flights[!, [:IATA, :DepDelay]]` is equivalent to `view(flights, :, [:IATA, :DepDelay])`. Further notice that calling `sort` on a view of a data set creates a new data set.
+Select `:IATA` and `:DepDelay` columns while sorted by `:DepDelay`. Note that in the following code, `flights[!, [:IATA, :DepDelay]]` is equivalent to `view(flights, :, [:IATA, :DepDelay])`. Further notice that, by default, calling `sort` on a view of a data set creates a new data set, however, passing `view = true` creates a view of sorted values.
 
-> Note `sort!` and `sort` reorder observations instead of sorting observations by reference (i.e. view of sorted data), however, we can use `groupby` or the combination of `sortperm` and `view` to create a sorting data set by reference.
+> Note `sort!` and `sort` reorder observations instead of sorting observations by reference (i.e. view of sorted data), however, we can use `groupby`, the combination of `sortperm` and `view`, or pass a view of a data set and set `view = true` to create a sorting data set by reference.
 
 
 ```julia

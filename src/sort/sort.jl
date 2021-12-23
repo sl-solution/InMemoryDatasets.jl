@@ -87,7 +87,7 @@ end
 
 Base.sort(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable)
 
-function Base.sort(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+function Base.sort(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, view = false)
     _check_consistency(ds)
     colsidx = index(ds)[cols]
     if rev isa AbstractVector
@@ -97,14 +97,18 @@ function Base.sort(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), 
         revs = repeat([rev], length(colsidx))
     end
     starts, idx, last_valid_range =  _sortperm_v(ds, cols, revs, stable = stable, a = alg, mapformats = mapformats)
-    newds = ds[idx, :]
-    append!(index(newds).sortedcols, collect(colsidx))
-    append!(index(newds).rev, revs)
-    append!(index(newds).perm, idx)
-    append!(index(newds).starts, starts)
-    index(newds).ngroups[] = last_valid_range
-    index(newds).fmt[] = mapformats
-    newds
+    if view
+        Base.view(ds, idx, :)
+    else
+        newds = ds[idx, :]
+        append!(index(newds).sortedcols, collect(colsidx))
+        append!(index(newds).rev, revs)
+        append!(index(newds).perm, idx)
+        append!(index(newds).starts, starts)
+        index(newds).ngroups[] = last_valid_range
+        index(newds).fmt[] = mapformats
+        newds
+    end
 end
 
 Base.sort(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable)
