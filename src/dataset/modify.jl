@@ -287,8 +287,12 @@ end
 modify(origninal_ds::AbstractDataset, @nospecialize(args...)) = modify!(copy(origninal_ds), args...)
 
 modify!(ds::Dataset) = parent(ds)
-function modify!(ds::Dataset, @nospecialize(args...))
-    idx_cpy = Index(copy(index(ds).lookup), copy(index(ds).names), copy(index(ds).format))
+function modify!(ds::AbstractDataset, @nospecialize(args...))
+    if ds isa SubDataset
+		idx_cpy = copy(index(parent(ds)))
+	else
+        idx_cpy = Index(copy(index(ds).lookup), copy(index(ds).names), copy(index(ds).format))
+    end
     if isgrouped(ds)
         norm_var = normalize_modify_multiple!(idx_cpy, index(ds), args...)
         allnewvars = map(x -> x.second.second, norm_var)
@@ -339,9 +343,33 @@ end
 function _resize_result!(ds, _res, newcol)
     resize_col = _is_scalar(_res, nrow(ds))
     if resize_col
-        ds[!, newcol] = fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)), _res)
+        if ds isa SubDataset
+            if haskey(index(ds), newcol)
+                ds[:, newcol] = fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)), _res)
+            elseif !haskey(index(parent(ds)), newcol)
+                parent(ds)[!, newcol] = missings(typeof(_res), nrow(parent(ds)))
+                _update_subindex!(index(ds), index(parent(ds)), newcol)
+                ds[:, newcol] = fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)), _res)
+            else
+                throw(ArgumentError("modifing a parent's column which doesn't appear in SubDataset is not allowed"))
+            end
+        else
+            ds[!, newcol] = fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)), _res)
+        end
     else
-        ds[!, newcol] = _res
+        if ds isa SubDataset
+            if haskey(index(ds), mslast)
+                ds[:, newcol] = _res
+            elseif !haskey(index(parent(ds)), newcol)
+                parent(ds)[!, newcol] = missings(eltype(_res), nrow(parent(ds)))
+                _update_subindex!(index(ds), index(parent(ds)), newcol)
+                ds[:, newcol] = _res
+            else
+                throw(ArgumentError("modifing a parent's column which doesn't appear in SubDataset is not allowed"))
+            end
+        else
+            ds[!, newcol] = _res
+        end
     end
 end
 
@@ -377,10 +405,23 @@ function _modify_f_barrier(ds, msfirst, mssecond, mslast)
         end
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
         try
-            ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
+            if ds isa SubDataset
+                _res = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
+                if haskey(index(ds), mslast)
+                    ds[:, mslast] = _res
+                elseif !haskey(index(parent(ds)), mslast)
+                    parent(ds)[!, mslast] = missings(eltype(_res), nrow(parent(ds)))
+                    _update_subindex!(index(ds), index(parent(ds)), mslast)
+                    ds[:, mslast] = _res
+                else
+                    throw(ArgumentError("modifing a parent's column which doesn't appear in SubDataset is not allowed"))
+                end
+            else
+                ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
+            end
         catch e
             if e isa MethodError
-                throw(ArgumentError("output of `byrow` operation must be a vector"))
+                throw(ArgumentError("There is problem in your `byrow`, make sure that the output of `byrow` is a vector"))
             end
             rethrow(e)
         end
