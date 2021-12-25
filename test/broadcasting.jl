@@ -1739,14 +1739,14 @@ end
     @test_throws DimensionMismatch ds[:, 1] .= [1 2 3]
     @test v1 == [100.0, 100.0, 100.0]
 
-    ds = view(copy(refds), :, :)
-    if VERSION >= v"1.7"
-        ds.newcol .= 'd'
-        @test ds.newcol == fill('d', 3)
-    else
-        @test_throws ArgumentError ds.newcol .= 'd'
-        @test ds == refds
-    end
+    # ds = view(copy(refds), :, :)
+    # if VERSION >= v"1.7"
+    #     ds.newcol .= 'd'
+    #     @test ds.newcol == fill('d', 3)
+    # else
+    #     @test_throws ArgumentError ds.newcol .= 'd'
+    #     @test ds == refds
+    # end
 end
 
 @testset "DatasetRow getproperty broadcasted assignment" begin
