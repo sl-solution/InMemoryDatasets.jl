@@ -110,7 +110,7 @@ function write_vals!(a, pos, x::Integer)
     needed_space = neg + ndigits(x)
     available_space = length(a)-pos+1
     needed_space > available_space && throw(ArgumentError("not enough space in buffer to write value into it"))
-    _base!(a, pos, 10, x, 0, neg)
+    _base!(a, pos, 10, n_positive, 0, neg)
     pos+needed_space
 end
 
