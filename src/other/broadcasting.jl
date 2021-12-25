@@ -6,6 +6,17 @@ Base.setindex!(ds::AbstractDataset, val, idx::CartesianIndex{2}) =
     (ds[idx[1], idx[2]] = val)
 
 Base.broadcastable(ds::AbstractDataset) = ds
+Base.broadcastable(col::DatasetColumn) = __!(col)
+Base.broadcastable(col::SubDatasetColumn) = __!(col)
+
+
+function _our_copy(ds::Dataset; copycols = true)
+    # TODO currently if the observation is mutable, copying data set doesn't protect it
+    # Create Dataset
+    newds = Dataset(copy(_columns(ds)), copy(index(ds)); copycols = copycols)
+    setinfo!(newds, _attributes(ds).meta.info[])
+    return newds
+end
 
 struct DatasetStyle <: Base.Broadcast.BroadcastStyle end
 
@@ -38,7 +49,7 @@ end
 function getcolbc(bcf::Base.Broadcast.Broadcasted{Style}, colind) where {Style}
     # we assume that bcf is already flattened and unaliased
     newargs = map(bcf.args) do x
-        Base.Broadcast.extrude(x isa AbstractDataset ? x[!, colind] : x)
+        Base.Broadcast.extrude(x isa AbstractDataset ? _columns(x)[colind] : x)
     end
     return Base.Broadcast.Broadcasted{Style}(bcf.f, newargs, bcf.axes)
 end
@@ -46,18 +57,18 @@ end
 function Base.copy(bc::Base.Broadcast.Broadcasted{DatasetStyle})
     ndim = length(axes(bc))
     if ndim != 2
-        throw(DimensionMismatch("cannot broadcast a data frame into $ndim dimensions"))
+        throw(DimensionMismatch("cannot broadcast a data set into $ndim dimensions"))
     end
     bcf = Base.Broadcast.flatten(bc)
     colnames = unique!(Any[_names(ds) for ds in bcf.args if ds isa AbstractDataset])
     if length(colnames) != 1
         wrongnames = setdiff(union(colnames...), intersect(colnames...))
         if isempty(wrongnames)
-            throw(ArgumentError("Column names in broadcasted data frames " *
+            throw(ArgumentError("Column names in broadcasted data sets " *
                                 "must have the same order"))
         else
             msg = join(wrongnames, ", ", " and ")
-            throw(ArgumentError("Column names in broadcasted data frames must match. " *
+            throw(ArgumentError("Column names in broadcasted data sets must match. " *
                                 "Non matching column names are $msg"))
         end
     end
@@ -152,7 +163,7 @@ function Base.copyto!(lazyds::LazyNewColDataset, bc::Base.Broadcast.Broadcasted{
     if bc isa Base.Broadcast.Broadcasted{<:Base.Broadcast.AbstractArrayStyle{0}}
         bc_tmp = Base.Broadcast.Broadcasted{T}(bc.f, bc.args, ())
         v = Base.Broadcast.materialize(bc_tmp)
-        col = similar(Vector{typeof(v)}, nrow(lazyds.ds))
+        col = similar(Vector{Union{typeof(v), Missing}}, nrow(lazyds.ds))
         copyto!(col, bc)
     else
         col = Base.Broadcast.materialize(bc)
@@ -164,7 +175,7 @@ function Base.copyto!(col1::SubDatasetColumn, bc::Base.Broadcast.Broadcasted{T})
     if bc isa Base.Broadcast.Broadcasted{<:Base.Broadcast.AbstractArrayStyle{0}}
         bc_tmp = Base.Broadcast.Broadcasted{T}(bc.f, bc.args, ())
         v = Base.Broadcast.materialize(bc_tmp)
-        col = similar(Vector{typeof(v)}, length(col1))
+        col = similar(Vector{Union{Missing, typeof(v)}}, length(col1))
         copyto!(col, bc)
     else
         col = Base.Broadcast.materialize(bc)
@@ -202,8 +213,8 @@ function _copyto_helper!(dscol::Union{SubDatasetColumn, DatasetColumn}, bc::Base
 end
 
 function Base.Broadcast.broadcast_unalias(dest::AbstractDataset, src)
-    for col in eachcol(dest)
-        src = Base.Broadcast.unalias(col, src)
+    for i in 1:ncol(dest)
+        src = Base.Broadcast.unalias(_columns(dest)[i], src)
     end
     return src
 end
@@ -211,19 +222,19 @@ end
 function Base.Broadcast.broadcast_unalias(dest, src::AbstractDataset)
     wascopied = false
     for (i, col) in enumerate(eachcol(src))
-        if Base.mightalias(dest, col)
+        if Base.mightalias(dest, __!(col))
             if src isa SubDataset
                 if !wascopied
-                    src = SubDataset(copy(parent(src), copycols=false),
+                    src = SubDataset(_our_copy(parent(src), copycols=false),
                                        index(src), rows(src))
                 end
                 parentidx = parentcols(index(src), i)
-                parent(src)[!, parentidx] = Base.unaliascopy(parent(src)[!, parentidx])
+                parent(src)[!, parentidx] = Base.unaliascopy(_columns(parent(src))[parentidx])
             else
                 if !wascopied
-                    src = copy(src, copycols=false)
+                    src = _our_copy(src, copycols=false)
                 end
-                src[!, i] = Base.unaliascopy(col)
+                src[!, i] = Base.unaliascopy(__!(col))
             end
             wascopied = true
         end
@@ -231,24 +242,26 @@ function Base.Broadcast.broadcast_unalias(dest, src::AbstractDataset)
     return src
 end
 
+#TODO for view of data sets parent columns are copyied, e.g. view(ds, 1:10, :) .+= 1
 function _broadcast_unalias_helper(dest::AbstractDataset, scol::AbstractVector,
                                    src::AbstractDataset, col2::Int, wascopied::Bool)
     # col1 can be checked till col2 point as we are writing broadcasting
     # results from 1 to ncol
     # we go downwards because aliasing when col1 == col2 is most probable
     for col1 in col2:-1:1
-        dcol = dest[!, col1]
+        dcol = _columns(dest)[col1] #dest[!, col1]
         if Base.mightalias(dcol, scol)
             if src isa SubDataset
                 if !wascopied
-                    src =SubDataset(copy(parent(src), copycols=false),
+                    src =SubDataset(_our_copy(parent(src), copycols=false),
                                       index(src), rows(src))
                 end
                 parentidx = parentcols(index(src), col2)
-                parent(src)[!, parentidx] = Base.unaliascopy(parent(src)[!, parentidx])
+                parent(src)[!, parentidx] = Base.unaliascopy(_columns(parent(src))[parentidx])
+                # parent(src)[!, parentidx] = Base.unaliascopy(parent(src)[!, parentidx])
             else
                 if !wascopied
-                    src = copy(src, copycols=false)
+                    src = _our_copy(src, copycols=false)
                 end
                 src[!, col2] = Base.unaliascopy(scol)
             end
@@ -261,6 +274,9 @@ end
 _broadcast_unalias_helper(dest::AbstractDataset, scol::DatasetColumn,
                                    src::AbstractDataset, col2::Int, wascopied::Bool) = _broadcast_unalias_helper(dest, scol.val,
                                                                       src, col2, wascopied)
+_broadcast_unalias_helper(dest::AbstractDataset, scol::SubDatasetColumn,
+                                 src::AbstractDataset, col2::Int, wascopied::Bool) = _broadcast_unalias_helper(dest, __!(scol),
+                                                                    src, col2, wascopied)
 
 function Base.Broadcast.broadcast_unalias(dest::AbstractDataset, src::AbstractDataset)
     if size(dest, 2) != size(src, 2)
@@ -271,6 +287,7 @@ function Base.Broadcast.broadcast_unalias(dest::AbstractDataset, src::AbstractDa
         scol = src[!, col2]
         src, wascopied = _broadcast_unalias_helper(dest, scol, src, col2, wascopied)
     end
+    _modified(_attributes(dest))
     return src
 end
 
@@ -302,8 +319,9 @@ function Base.copyto!(ds::AbstractDataset,
     # special case of fast approach when bc is providing an untransformed scalar
     if bc.f === identity && bc.args isa Tuple{Any} && Base.Broadcast.isflat(bc)
         for col in axes(ds, 2)
-            fill!(ds[!, col], bc.args[1][])
+            fill!(_columns(ds)[col], bc.args[1][])
         end
+        _modified(_attributes(ds))
         return ds
     else
         return copyto!(ds, convert(Base.Broadcast.Broadcasted{Nothing}, bc))
@@ -337,14 +355,14 @@ function Base.copyto!(crds::ColReplaceDataset, bc::Base.Broadcast.Broadcasted)
         if bcf′_col isa Base.Broadcast.Broadcasted{<:Base.Broadcast.AbstractArrayStyle{0}}
             bc_tmp = create_bc_tmp(bcf′_col)
             v = Base.Broadcast.materialize(bc_tmp)
-            newcol = similar(Vector{typeof(v)}, nrow(crds.ds))
+            newcol = similar(Vector{Union{Missing, typeof(v)}}, nrow(crds.ds))
             copyto!(newcol, bc)
         else
             if nrows == 0
                 newcol = Any[]
             else
                 v1 = bcf′_col[CartesianIndex(1, i)]
-                startcol = similar(Vector{typeof(v1)}, nrows)
+                startcol = similar(Vector{Union{Missing, typeof(v1)}}, nrows)
                 startcol[1] = v1
                 newcol = copyto_widen!(startcol, bcf′_col, 2, i)
             end

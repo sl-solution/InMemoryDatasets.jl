@@ -56,6 +56,8 @@ _modified(x::Attributes) = x.meta.modified[] = now()
 #     x.ngroups[] = 1
 # end
 
+_get_lastmodified(x) = x.meta.modified[]
+
 function Index(names::AbstractVector{Symbol}; makeunique::Bool=false)
     u = make_unique(names, makeunique=makeunique)
     lookup = Dict{Symbol, Int}(zip(u, 1:length(u)))

@@ -69,6 +69,11 @@ function Base.setindex!(ds::Dataset, v::AbstractVector, ::typeof(!), col_ind::Co
     return ds
 end
 
+function Base.setindex!(ds::Dataset, v::DatasetColumn, ::typeof(!), col_ind::ColumnIndex)
+    insert_single_column!(ds, __!(v), col_ind)
+    return ds
+end
+
 # ds.col = AbstractVector
 # separate methods are needed due to dispatch ambiguity
 
@@ -82,6 +87,16 @@ end
 # Modify Dataset
 function Base.setproperty!(ds::Dataset, col_ind::AbstractString, v::AbstractVector)
     insert_single_column!(ds, v, col_ind)
+    return ds
+end
+
+function Base.setproperty!(ds::Dataset, col_ind::Symbol, v::DatasetColumn)
+    insert_single_column!(ds, __!(v), col_ind)
+    return ds
+end
+
+function Base.setproperty!(ds::Dataset, col_ind::AbstractString, v::DatasetColumn)
+    insert_single_column!(ds, __!(v), col_ind)
     return ds
 end
 
