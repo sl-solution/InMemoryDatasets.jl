@@ -96,6 +96,33 @@
     @test isequal(byrow(sds, findfirst,[1,4,3,2], by = x->isless(x,0), threads = true), byrow(Dataset(sds), findfirst, [1,4,3,2], by = x->isless(x,0)))
     @test isequal(byrow(sds, findlast,[1,4,3,2], by = x->isless(x,0), threads = true), byrow(Dataset(sds), findlast, [1,4,3,2], by = x->isless(x,0)))
 
+    ds = Dataset(x1 = [1,2,3,4], x2 = [1.5,6.5,3.4,2.4], x3 = [true, false, true, false], y1 = ["x2", "x1", missing, "x2"], y2 = [:x2, :x1, missing, :x2], y3 = [3,1,1,2])
+    @test isequal(byrow(ds, select, 1:2, by = :y1), [1.5, 2,missing,2.4])
+    @test isequal(byrow(ds, select, 1:2, by = :y2), [1.5, 2,missing,2.4])
+    @test isequal(byrow(ds, select, 1:2, by = ds[!, :y1]), [1.5, 2,missing,2.4])
+    @test isequal(byrow(ds, select, 1:2, by = ds[:, :y1]), [1.5, 2,missing,2.4])
+    @test isequal(byrow(ds, select, [2,1], by = ds[:, :y1]), [1.5, 2,missing,2.4])
+    @test isequal(byrow(ds, select, [2,1,3], by = ds[:, :y2]), [1.5, 2,missing,2.4])
+    @test isequal(byrow(ds, select, [2,1,3], by = :y3), [1, 6.5,3.4,4])
+    @test isequal(byrow(ds, select, [2,1,3], by = [3,1,1,2]), [1, 6.5,3.4,4])
+    @test isequal(byrow(ds, select, [2,1,3], by = ds[!,  :y3]), [1, 6.5,3.4,4])
+
+    repeat!(ds, 2)
+    sds = view(ds, [5,6,7,8], [2,1,3,4])
+    @test isequal(byrow(sds, select, 1:2, by = :y1), [1.5, 2,missing,2.4])
+    @test isequal(byrow(sds, select, 1:2, by = sds[!, :y1]), [1.5, 2,missing,2.4])
+    @test isequal(byrow(sds, select, 1:2, by = sds[:, :y1]), [1.5, 2,missing,2.4])
+
+    sds = view(ds, 1:4, 1:6)
+    @test isequal(byrow(sds, select, 1:2, by = :y1), [1.5, 2,missing,2.4])
+    @test isequal(byrow(sds, select, 1:2, by = :y2), [1.5, 2,missing,2.4])
+    @test isequal(byrow(sds, select, 1:2, by = sds[!, :y1]), [1.5, 2,missing,2.4])
+    @test isequal(byrow(sds, select, 1:2, by = sds[:, :y1]), [1.5, 2,missing,2.4])
+    @test isequal(byrow(sds, select, [2,1], by = sds[:, :y1]), [1.5, 2,missing,2.4])
+    @test isequal(byrow(sds, select, [2,1,3], by = sds[:, :y2]), [1.5, 2,missing,2.4])
+    @test isequal(byrow(sds, select, [2,1,3], by = :y3), [1, 6.5,3.4,4])
+    @test isequal(byrow(sds, select, [2,1,3], by = [3,1,1,2]), [1, 6.5,3.4,4])
+    @test isequal(byrow(sds, select, [2,1,3], by = sds[!,  :y3]), [1, 6.5,3.4,4])
 
 end
 

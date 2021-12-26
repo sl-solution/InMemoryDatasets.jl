@@ -157,6 +157,54 @@ function row_findlast(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Nu
     colnames_pa
 end
 
+function _op_for_select!(x, y, colselector, dsnames, idx)
+    idx[] += 1
+    for i in 1:length(x)
+        if isequal(colselector[i], dsnames[idx[]])
+            x[i] = y[i]
+        end
+    end
+    x
+end
+function hp_op_for_select!(x, y, colselector, dsnames, idx)
+    idx[] += 1
+    Threads.@threads for i in 1:length(x)
+        if isequal(colselector[i], dsnames[idx[]])
+            x[i] = y[i]
+        end
+    end
+    x
+end
+
+
+function row_select(ds::AbstractDataset, cols, colselector::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex}; threads = true)
+    if !(colselector isa ColumnIndex)
+        @assert length(colselector) == nrow(ds) "to pick values of selected columns in each row, the length of the column names and the number of rows must match, i.e. the lenght vector passed as `by` must be $(nrow(ds))."
+    end
+    colsidx = index(ds)[cols]
+    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
+    idx = Ref{Int}(0)
+    if colselector isa SubDatasetColumn || colselector isa DatasetColumn
+        colselector = __!(colselector)
+    end
+    if colselector isa ColumnIndex
+        colselector = _columns(ds)[index(ds)[colselector]]
+    end
+    if eltype(colselector) <: Union{Missing, Symbol}
+        nnames = Symbol.(names(ds, colsidx))
+    elseif eltype(colselector) <: Union{Missing, AbstractString}
+        nnames = names(ds, colsidx)
+    elseif eltype(colselector) <: Union{Missing, Integer}
+        nnames = 1:length(colsidx)
+    end
+    init0 = missings(CT, nrow(ds))
+    if threads
+        mapreduce(identity, (x,y)->hp_op_for_select!(x,y,colselector,nnames, idx), view(_columns(ds),colsidx), init = init0)
+    else
+        mapreduce(identity, (x,y)->_op_for_select!(x,y,colselector,nnames, idx), view(_columns(ds),colsidx), init = init0)
+    end
+end
+
 
 
 function _op_for_coalesce!(x, y)

@@ -60,6 +60,7 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `minimum` : Return the minimum value
 * `nunique` : Return the number of unique values
 * `prod` : Return the product of values
+* `select` : Select values of specific columns in each row. The specific columns can be passed using `by = scols`, where `scols` can be a vector of columns names or a column name of the passed data set.
 * `std` : Compute the standard deviation of values
 * `sum` : Return the sum of values
 * `var` : Compute the variance of values
@@ -161,6 +162,46 @@ julia> byrow(ds, count, :, by = !ismissing)
  4
  5
 ```
+
+In the following example, in each row we pick the values of selected columns passed by the `by` keyword argument.
+
+```jldoctest
+julia> ds = Dataset(x1 = 1:4, x2 = [1,2,1,2], NAMES = [:x1, :x2, :x1, :x1])
+4×3 Dataset
+ Row │ x1        x2        NAMES    
+     │ identity  identity  identity
+     │ Int64?    Int64?    Symbol?  
+─────┼──────────────────────────────
+   1 │        1         1  x1
+   2 │        2         2  x2
+   3 │        3         1  x1
+   4 │        4         2  x1
+
+julia> byrow(ds, select, r"x", by = :NAMES)
+4-element Vector{Union{Missing, Int64}}:
+ 1
+ 2
+ 3
+ 4
+
+julia> byrow(ds, select, r"x", by = ["x1", "x2", "x2", "x2"])
+4-element Vector{Union{Missing, Int64}}:
+ 1
+ 2
+ 1
+ 2
+
+julia> byrow(ds, select, [:x2, :x1], by = [1,2,2,1])
+4-element Vector{Union{Missing, Int64}}:
+ 1
+ 2
+ 3
+ 2
+```
+
+In the last example, note that the integers in `by` are mapped to the corresponding columns passed to the function, i.e. 1 is referring to `:x2` (it is the first column passed to the function as the column selector) and 2 is referring to `:x1`.
+
+
 ## `mapreduce`
 
 One special function that can be used as `fun` in the `byrow` function is `mapreduce`. This can be used to implement a customised reduction as row operation. When `mapreduce` is used in `byrow`, two keyword arguments must be passed, `op` and `init`. For example in the following code we use `mapreduce` to `sum` all values in each row: (note that unlike `byrow(ds, sum, :)` the following function will return missing for a row if any of the value in that row is missing)
