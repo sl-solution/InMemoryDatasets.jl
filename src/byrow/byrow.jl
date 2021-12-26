@@ -5,7 +5,7 @@ end
 nunique(::_DUMMY_STRUCT) =  false
 stdze!(::_DUMMY_STRUCT) = false
 stdze(::_DUMMY_STRUCT) = false
-
+select(::_DUMMY_STRUCT) = false
 
 byrow(ds::AbstractDataset, ::typeof(sum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds)>1000) = threads ? hp_row_sum(ds, by, cols) : row_sum(ds, by, cols)
 byrow(ds::AbstractDataset, ::typeof(sum), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, sum, [col]; by = by, threads = threads)
