@@ -207,14 +207,14 @@ end
 function Base.merge!(x::Index, y::AbstractIndex; makeunique::Bool=false)
     adds = add_names(x, y, makeunique=makeunique)
     # if x is sorted, keep it, else, if y is sorted copy the information into x
-    if isempty(x.sortedcols) && !isempty(y.sortedcols)
+    if isempty(x.sortedcols) && !(y isa SubIndex) && !isempty(y.sortedcols)
         _copy_grouping_info!(x, y; yoffset = length(x) + 1)
     end
     i = length(x)
     for add in adds
         i += 1
         x.lookup[add] = i
-        if haskey(y.format, i - length(x))
+        if !(y isa SubIndex) && haskey(y.format, i - length(x))
             x.format[i] = y.format[i - length(x)]
         end
     end
