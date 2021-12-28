@@ -696,28 +696,31 @@ end
 
 """
     unique(ds::AbstractDataset, cols = : ; [mapformats = false, keep = :first, view::Bool=false])
-    unique!(ds::AbstractDataset, cols = : ; [mapformats = false, keep = :first, view::Bool=false])
+    unique!(ds::Dataset, cols = : ; [mapformats = false, keep = :first])
 
-Return a data set containing only the unique occurrence of unique rows in `ds` where `keep` can be one of the following value: `:first`, `:last`, `:none`, `:only`, or `:random`. The
-`keep` keyword argument detemines which occurrence of the unique value should be kept, i.e. when `keep = :first` the
-first occurrence of the unique value will be kept and when `keep = :last` the last occurrence will be kept. When `keep` is set to `:none`
-all duplicates will be dropped from the result, when `keep` is set to `:only` only duplicated rows are kept, and when `keep` is set ot `:random` a random occurance of duplicates will be kept.
- When `cols` is specified, the unique occurrence is detemined by given combination of values
+Return a data set containing only unique rows in `ds`, and the `keep` keyword argument determines which occurance of duplicated rows should be retained. `keep` can be one of the following value: `:first`, `:last`, `:none`, `:only`, or `:random`.
+
+* `keep = :first` the first occurrence of the duplicated rows are kept
+* `keep = :last` the last occurrence are kept
+* `keep = :none` all duplicates are dropped from the result
+* `keep = :only` only duplicated rows are kept,
+* `keep = :random` a random occurance of duplicates rows are kept
+
+When `cols` is specified, the unique occurrence is detemined by given combination of values
 in selected columns. `cols` can be any column selector.
 
 For `unique`, if `view=false` a freshly allocated `Dataset` is returned,
-and if `view=true` then a `SubDataset` view into `ds` is returned.
+and if `view=true` a `SubDataset` view into `ds` is returned.
 
 `unique!` updates `ds` in-place and does not support the `view` keyword argument.
 
 See also [`nonunique`](@ref).
 
 # Arguments
-- `ds` :  AbstractDataset
-- `cols` :  column indicator (Symbol, Int, Vector{Symbol}, Regex, etc.)
-specifying the column(s) to compare.
-- `mapformats` : if it set to `true` the uniqueness of a values is based on its formatted value.
-- `keep` : indicates which occurrence of the duplicate values should be kept
+- `ds` :  a data set
+- `cols` :  column indicator (Symbol, Int, Vector{Symbol}, Regex, etc.) specifying the column(s) to compare.
+- `mapformats` : if `true` then uniqueness of values is determined by their formatted values.
+- `keep` : indicates which occurrence of the duplicate rows should be kept
 
 # Examples
 ```jldoctest
@@ -863,8 +866,8 @@ end
 """
     compare(ds1, ds2; [on = nothing, eq = isequal, mapformats = false, threads = true])
 
-compares values of two data sets column by column and returns a boolean data set which is the result of calling  `eq` on each value of
-corresponding columns. the `on` keyword can be used to specifiy the pair of columns which is needed to be compared. The `mapformats` keyword
+Compare values of two data sets column by column. It returns a boolean data set which is the result of calling  `eq` on each value of
+corresponding columns. The `on` keyword can be used to specifiy the pair of columns which is needed to be compared. The `mapformats` keyword
 controls whether the actual values or the formatted values should be compared.
 
 ```julia
