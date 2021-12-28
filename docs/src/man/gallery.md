@@ -96,7 +96,7 @@ julia> ds = Dataset(rand([1,2,3, missing], 10, 6), :auto)
    9 │        3         1         1         3         1   missing
   10 │  missing         1         3         1         1         3
 
-julia> byrow(ds, fill!, :, by = f_n_m, rolling = true)
+julia> byrow(ds, fill!, :, by = byrow(ds, coalesce, :), rolling = true)
 10×6 Dataset
  Row │ x1        x2        x3        x4        x5        x6       
      │ identity  identity  identity  identity  identity  identity
