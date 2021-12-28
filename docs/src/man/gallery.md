@@ -2,6 +2,38 @@
 
 This gallery contains some random questions about data manipulation that we found on internet. The original questions are posted in different forums and are related to different packages. Whenever, we can remember the original source of a question we provide a link to it, otherwise, we just re-asked the question as we remember it. There is no particular theme about the questions, we just found them interesting since, a) they are not trivial, b) they can be done relatively easy in InMemoryDatasets, c) our solution is more efficient than what we found in the original source.
 
+## General
+
+* [Tally across columns with variable condition in r](https://stackoverflow.com/questions/70501316/tally-across-columns-with-variable-condition-in-r) : I am trying to tally across columns of a data frame with values that exceed a corresponding limit variable.
+
+```julia
+julia> ds
+6×8 Dataset
+ Row │ a          a_lim     b           b_lim     c         c_lim     d         d_lim    
+     │ identity   identity  identity    identity  identity  identity  identity  identity
+     │ Float64?   Float64?  Float64?    Float64?  Float64?  Int64?    Float64?  Float64?
+─────┼───────────────────────────────────────────────────────────────────────────────────
+   1 │  1.66077       0.75   0.709184      0.333  1.47438          1  2.02678       1.25
+   2 │ -1.05298       0.75  -2.53609       0.333  2.01485          1  1.51587       1.25
+   3 │ -0.499206      0.75   0.0130659     0.333  2.49006          1  1.70535       1.25
+   4 │  2.47123       0.75  -0.587867      0.333  1.80345          1  2.51628       1.25
+   5 │  2.45914       0.75   0.55786       0.333  0.569928         1  1.909         1.25
+   6 │  1.14014       0.75   1.60398       0.333  1.58403          1  0.794765      1.25
+
+julia> using Chain
+julia> @chain ds begin
+         compare(_[!, r"lim"], _[!, Not(r"lim")], on = 1:4 .=> 1:4), eq = isless)
+         byrow(count)
+       end
+6-element Vector{Int32}:
+ 4
+ 2
+ 2
+ 3
+ 3
+ 3
+```
+
 ## `map!` and `map`
 
 * How to randomly change about 10% of data values to missing?
@@ -64,14 +96,7 @@ julia> ds = Dataset(rand([1,2,3, missing], 10, 6), :auto)
    9 │        3         1         1         3         1   missing
   10 │  missing         1         3         1         1         3
 
-julia> f_n_m = byrow(ds, coalesce, :); # we will use this if the first column is missing
-
-julia> op(x, y) = y .= ifelse.(ismissing.(y), x, y)
-op (generic function with 1 method)
-
-julia> byrow(ds, mapreduce, :, op = op, init = f_n_m);
-
-julia> ds
+julia> byrow(ds, fill!, :, by = f_n_m, rolling = true)
 10×6 Dataset
  Row │ x1        x2        x3        x4        x5        x6       
      │ identity  identity  identity  identity  identity  identity
@@ -87,14 +112,6 @@ julia> ds
    8 │        3         3         3         1         1         1
    9 │        3         1         1         3         1         1
   10 │        1         1         3         1         1         3
-
-julia> # write our own version of pandas' ffill-bfill
-julia> function fbfill!(ds, cols)
-         f_n_m = byrow(ds, coalesce, cols)
-         op(x, y) = y .= ifelse.(ismissing.(y), x, y)
-         byrow(ds, mapreduce, cols, op = op, init = f_n_m)
-         ds
-      end
 ```
 
 * [A use-case from practice](https://www.juliabloggers.com/news-features-in-dataframes-jl-1-3-part-1/) : We have a data frame
@@ -104,24 +121,42 @@ row with row means of non-missing values.
 
 ```julia
 julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);
-julia> function op(x,y)
-           y .= ifelse.(ismissing.(y), x, y)
-           x
-       end
-julia> byrow(ds, mapreduce, :, op = op, init = byrow(ds, mean, :));
+
+julia> byrow(ds, fill!, :, by = byrow(ds, mean, :));
 ```
 
-to improve performance we can use threaded operator:
+* [Create a new column filled with values from a set of multiple columns conditional on column names](https://stackoverflow.com/questions/70500998/create-a-new-column-a-fill-with-values-from-a-set-of-multiple-columns-conditiona)
 
 ```julia
-julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);
-julia> function threaded_op(x,y)
-          Threads.@threads for i in 1:length(x)
-             y[i] = ifelse(ismissing(y[i]), x[i], y[i])
-          end
-           x
-       end
-julia> byrow(ds, mapreduce, :, op = threaded_op, init = byrow(ds, mean, :));
+julia> ds
+8×8 Dataset
+ Row │ A01       A02       A03       A04       A05       A06       A07       X        
+     │ identity  identity  identity  identity  identity  identity  identity  identity
+     │ Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?   
+─────┼────────────────────────────────────────────────────────────────────────────────
+   1 │        0         0        -5        -1        -1         2         3         2
+   2 │        0        -1        -4        -3        -3        -3        -3         2
+   3 │        2         0         2         3         1         3         3         6
+   4 │        0         1        -4         1        -1         1         1         7
+   5 │        4         4         3         3         3         4         4        12
+   6 │        1         4         2        -3         0         0         0        15
+   7 │       10         9         8         9         7         7         7        22
+   8 │       10        12        12        12        10        12         9        24
+
+julia> modify!(ds, r"A" => byrow(select,  by = :X))
+8×9 Dataset
+ Row │ A01       A02       A03       A04       A05       A06       A07       X         row_select
+     │ identity  identity  identity  identity  identity  identity  identity  identity  identity   
+     │ Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?     
+─────┼────────────────────────────────────────────────────────────────────────────────────────────
+   1 │        0         0        -5        -1        -1         2         3         2           0
+   2 │        0        -1        -4        -3        -3        -3        -3         2          -1
+   3 │        2         0         2         3         1         3         3         6           3
+   4 │        0         1        -4         1        -1         1         1         7           1
+   5 │        4         4         3         3         3         4         4        12     missing
+   6 │        1         4         2        -3         0         0         0        15     missing
+   7 │       10         9         8         9         7         7         7        22     missing
+   8 │       10        12        12        12        10        12         9        24     missing
 ```
 
 ## Filtering

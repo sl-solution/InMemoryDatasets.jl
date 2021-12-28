@@ -916,7 +916,7 @@ function compare(ds1::AbstractDataset, ds2::AbstractDataset; on = nothing, eq = 
     elseif typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         left_col_idx = index(ds1)[on]
         right_col_idx = index(ds2)[names(ds1)[left_col_idx]]
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         left_col_idx = index(ds1)[map(x->x.first, on)]
         right_col_idx = index(ds2)[map(x->x.second, on)]
     else
