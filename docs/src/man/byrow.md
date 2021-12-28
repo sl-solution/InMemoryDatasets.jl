@@ -254,7 +254,7 @@ The main difference between these operations and the previous operations is that
 
 The `fill` and `fill!` functions fill missing values (or any other values which a function passed to the `condition` keyword argument returns `true`) in each row of a given data set by given values passed to the `by` keyword argument. The function passed to the `condition` keyword argument must return `true` or `false`.
 
-> Note that for the `fill` and `fill!` functions the filling happens in-place, thus, if this is not possible Julia will throws errors.
+> Note that for the `fill` and `fill!` functions the filling happens in-place, thus, if this is not possible Julia will throw errors.
 
 ```jldoctest
 julia> ds = Dataset(x1 = [missing, 2, 1], x2 = [1, missing, missing], y = [4,5,3])
