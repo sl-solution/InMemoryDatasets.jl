@@ -125,40 +125,6 @@ julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);
 julia> byrow(ds, fill!, :, by = byrow(ds, mean, :));
 ```
 
-* [Create a new column filled with values from a set of multiple columns conditional on column names](https://stackoverflow.com/questions/70500998/create-a-new-column-a-fill-with-values-from-a-set-of-multiple-columns-conditiona)
-
-```julia
-julia> ds
-8×8 Dataset
- Row │ A01       A02       A03       A04       A05       A06       A07       X        
-     │ identity  identity  identity  identity  identity  identity  identity  identity
-     │ Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?   
-─────┼────────────────────────────────────────────────────────────────────────────────
-   1 │        0         0        -5        -1        -1         2         3         2
-   2 │        0        -1        -4        -3        -3        -3        -3         2
-   3 │        2         0         2         3         1         3         3         6
-   4 │        0         1        -4         1        -1         1         1         7
-   5 │        4         4         3         3         3         4         4        12
-   6 │        1         4         2        -3         0         0         0        15
-   7 │       10         9         8         9         7         7         7        22
-   8 │       10        12        12        12        10        12         9        24
-
-julia> modify!(ds, r"A" => byrow(select,  by = :X))
-8×9 Dataset
- Row │ A01       A02       A03       A04       A05       A06       A07       X         row_select
-     │ identity  identity  identity  identity  identity  identity  identity  identity  identity   
-     │ Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?    Int64?     
-─────┼────────────────────────────────────────────────────────────────────────────────────────────
-   1 │        0         0        -5        -1        -1         2         3         2           0
-   2 │        0        -1        -4        -3        -3        -3        -3         2          -1
-   3 │        2         0         2         3         1         3         3         6           3
-   4 │        0         1        -4         1        -1         1         1         7           1
-   5 │        4         4         3         3         3         4         4        12     missing
-   6 │        1         4         2        -3         0         0         0        15     missing
-   7 │       10         9         8         9         7         7         7        22     missing
-   8 │       10        12        12        12        10        12         9        24     missing
-```
-
 ## Filtering
 
 * [Filtering based on conditions comparing one column to other columns](https://discourse.julialang.org/t/dataframe-filtering-based-on-conditions-comparing-one-column-to-other-columns/70802) : In the following example we like to filter rows where columns `:x1` and `:x2` are greater than `:x5`.
