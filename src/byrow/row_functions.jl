@@ -179,7 +179,7 @@ end
 
 function row_select(ds::AbstractDataset, cols, colselector::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex}; threads = true)
     if !(colselector isa ColumnIndex)
-        @assert length(colselector) == nrow(ds) "to pick values of selected columns in each row, the length of the column names and the number of rows must match, i.e. the lenght vector passed as `by` must be $(nrow(ds))."
+        @assert length(colselector) == nrow(ds) "to pick values of selected columns in each row, the length of the column names and the number of rows must match, i.e. the lenght of the vector passed as `by` must be $(nrow(ds))."
     end
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
@@ -205,6 +205,57 @@ function row_select(ds::AbstractDataset, cols, colselector::Union{AbstractVector
     end
 end
 
+function _op_for_fill!(x,y,f)
+    y .= ifelse.(f.(y), x, y)
+    x
+end
+function hp_op_for_fill!(x,y,f)
+  Threads.@threads for i in 1:length(x)
+     y[i] = ifelse(f(y[i]), x[i], y[i])
+  end
+   x
+end
+function _op_for_fill_roll!(x,y,f)
+    y .= ifelse.(f.(y), x, y)
+    y
+end
+function hp_op_for_fill_roll!(x,y,f)
+  Threads.@threads for i in 1:length(x)
+     y[i] = ifelse(f(y[i]), x[i], y[i])
+  end
+  y
+end
+
+
+# rolling = true, means fill a column an use its value for next filling
+function row_fill!(ds::AbstractDataset, cols, val::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex}; f = ismissing, threads = true, rolling = false)
+    if !(val isa ColumnIndex)
+        @assert length(val) == nrow(ds) "to fill values in each row, the length of passed values and the number of rows must match."
+    end
+    colsidx = index(ds)[cols]
+    if val isa SubDatasetColumn || val isa DatasetColumn
+        val = __!(val)
+    end
+    if val isa ColumnIndex
+        val = _columns(ds)[index(ds)[val]]
+    end
+    if threads
+        if rolling
+            mapreduce(identity, (x,y)->hp_op_for_fill_roll!(x,y, f), view(_columns(ds),colsidx), init = val)
+        else
+            mapreduce(identity, (x,y)->hp_op_for_fill!(x,y, f), view(_columns(ds),colsidx), init = val)
+        end
+    else
+        if rolling
+            mapreduce(identity, (x,y)->_op_for_fill_roll!(x,y, f), view(_columns(ds),colsidx), init = val)
+        else
+            mapreduce(identity, (x,y)->_op_for_fill!(x,y, f), view(_columns(ds),colsidx), init = val)
+        end
+    end
+    any(index(parent(ds)).sortedcols .∈ Ref(IMD.parentcols.(Ref(IMD.index(ds)), cols))) && _reset_grouping_info!(parent(ds))
+    _modified(_attributes(parent(ds)))
+    ds
+end
 
 
 function _op_for_coalesce!(x, y)
@@ -385,7 +436,7 @@ function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
-    nothing
+    ds
 end
 # row_cumsum!(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_cumsum!(identity, ds, cols)
 
@@ -423,7 +474,7 @@ function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}); mis
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
-    nothing
+    ds
 end
 
 function row_cumprod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
@@ -462,7 +513,7 @@ function row_cummin!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
-    nothing
+    ds
 end
 # row_cumsum!(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_cumsum!(identity, ds, cols)
 
@@ -501,7 +552,7 @@ function row_cummax!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
-    nothing
+    ds
 end
 # row_cumsum!(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_cumsum!(identity, ds, cols)
 

@@ -74,7 +74,13 @@ byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; threads = 
 byrow(ds::AbstractDataset, ::typeof(findfirst), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findfirst(ds, by, cols; threads = threads)
 byrow(ds::AbstractDataset, ::typeof(findlast), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findlast(ds, by, cols; threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(select), cols::MultiColumnIndex; by, threads = nrow(ds)>10000) = row_select(ds, cols, by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(select), cols::MultiColumnIndex; by, threads = nrow(ds)>1000) = row_select(ds, cols, by, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(fill!), cols::MultiColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(ds, cols, by, f = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill!), col::ColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(ds, fill!, [col], by = by, f = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill), cols::MultiColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(copy(ds), cols, by, f = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill), col::ColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(copy(ds), fill!, [col], by = by, f = condition, threads = threads, rolling = rolling)
+
 
 byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_coalesce(ds, cols) : row_coalesce(ds, cols)
 
@@ -142,7 +148,7 @@ byrow(ds::AbstractDataset, ::typeof(stdze!), cols::MultiColumnIndex = names(ds, 
 byrow(ds::AbstractDataset, ::typeof(hash), cols::MultiColumnIndex = :; by = identity, threads = nrow(ds)>1000) = threads ? row_hash_hp(ds, by, cols) : row_hash(ds, by, cols)
 byrow(ds::AbstractDataset, ::typeof(hash), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, hash, [col]; by = by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); op = .+, f = identity,  init = missings(mapreduce(eltype, promote_type, view(_columns(ds),index(ds)[cols])), nrow(ds)), kwargs...) = mapreduce(f, op, view(_columns(ds), index(ds)[cols]), init = init; kwargs...)
+byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); op = .+, f = identity,  init = missings(mapreduce(eltype, promote_type, view(_columns(ds),index(ds)[cols])), nrow(ds)), kwargs...) = mapreduce(f, op, eachcol(ds[!, cols]), init = init; kwargs...)
 
 
 function byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = nrow(ds)>1000)
