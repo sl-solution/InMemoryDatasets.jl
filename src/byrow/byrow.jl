@@ -77,9 +77,9 @@ byrow(ds::AbstractDataset, ::typeof(findlast), cols::MultiColumnIndex; by = iden
 byrow(ds::AbstractDataset, ::typeof(select), cols::MultiColumnIndex; by, threads = nrow(ds)>1000) = row_select(ds, cols, by, threads = threads)
 
 byrow(ds::AbstractDataset, ::typeof(fill!), cols::MultiColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(ds, cols, by, f = condition, threads = threads, rolling = rolling)
-byrow(ds::AbstractDataset, ::typeof(fill!), col::ColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(ds, fill!, [col], by = by, f = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill!), col::ColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(ds, fill!, [col], by = by, condition = condition, threads = threads, rolling = rolling)
 byrow(ds::AbstractDataset, ::typeof(fill), cols::MultiColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(copy(ds), cols, by, f = condition, threads = threads, rolling = rolling)
-byrow(ds::AbstractDataset, ::typeof(fill), col::ColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(copy(ds), fill!, [col], by = by, f = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill), col::ColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(copy(ds), fill!, [col], by = by, condition = condition, threads = threads, rolling = rolling)
 
 
 byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_coalesce(ds, cols) : row_coalesce(ds, cols)
