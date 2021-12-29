@@ -358,7 +358,7 @@ function _resize_result!(ds, _res, newcol)
         end
     else
         if ds isa SubDataset
-            if haskey(index(ds), mslast)
+            if haskey(index(ds), newcol)
                 ds[:, newcol] = _res
             elseif !haskey(index(parent(ds)), newcol)
                 parent(ds)[!, newcol] = missings(eltype(_res), nrow(parent(ds)))
