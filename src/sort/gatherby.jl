@@ -83,22 +83,32 @@ function _group_creator!(groups, starts, ngroups)
 	end
 end
 
-function gatherby(ds::AbstractDataset, cols::MultiColumnIndex; mapformats = true, stable = true, isgathered = false)
+# eachrow = true tells gatherby that each row of passed dataset is a new group - this is useful for transpose()
+function gatherby(ds::AbstractDataset, cols::MultiColumnIndex; mapformats::Bool = true, stable::Bool = true, isgathered::Bool = false, eachrow::Bool = false)
     colsidx = index(ds)[cols]
 	T = nrow(ds) < typemax(Int32) ? Int32 : Int64
 	_check_consistency(ds)
 	if isgathered
-		# TODO _find_starts_of_groups() needs improvement
-		 colindex, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, Val(T); mapformats = mapformats)
-		 groups = Vector{T}(undef, nrow(ds))
-		 _group_creator!(groups, ranges, last_valid_index)
-		 return GatherBy(ds, colindex, groups, last_valid_index, mapformats, 1:nrow(ds), ranges)
+		if eachrow
+			return GatherBy(ds, colsidx, 1:nrow(ds), nrow(ds), mapformats, 1:nrow(ds), 1:nrow(ds))
+		else
+			colindex, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, Val(T); mapformats = mapformats)
+		 	groups = Vector{T}(undef, nrow(ds))
+		 	_group_creator!(groups, ranges, last_valid_index)
+		 	return GatherBy(ds, colindex, groups, last_valid_index, mapformats, 1:nrow(ds), ranges)
+		end
 	else
-		a = _gather_groups(ds, colsidx, Val(T), mapformats = mapformats, stable = stable)
-    	return GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
+		if eachrow
+			a = _gather_groups(ds, colsidx, Val(T), mapformats = mapformats, stable = stable)
+			b = compute_indices(a[1], a[3], nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+			return GatherBy(ds, colsidx, 1:nrow(ds), nrow(ds), mapformats, b[1], 1:nrow(ds))
+		else
+			a = _gather_groups(ds, colsidx, Val(T), mapformats = mapformats, stable = stable)
+    		return GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
+		end
 	end
 end
-gatherby(ds::AbstractDataset, col::ColumnIndex; mapformats = true, stable = true, isgathered = false) = gatherby(ds, [col], mapformats = mapformats, stable = stable, isgathered = isgathered)
+gatherby(ds::AbstractDataset, col::ColumnIndex; mapformats = true, stable = true, isgathered = false, eachrow = false) = gatherby(ds, [col], mapformats = mapformats, stable = stable, isgathered = isgathered, eachrow = eachrow)
 
 
 function _fill_mapreduce_col!(x, f, op, y, loc)
