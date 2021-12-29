@@ -418,6 +418,11 @@ _op_for_cumsum_ignore!(x, y) = y .= _add_sum.(x, y)
 function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
     colsidx = index(ds)[cols]
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
+    if T <: Union{Missing, INTEGERS}
+        T <: Union{Missing, Base.SmallSigned}
+        T = T <: Union{Missing, Base.SmallSigned, Bool} ? Union{Int, Missing} : T
+        T = T <: Union{Missing, Base.SmallUnsigned} ?  Union{Missing, UInt} : T
+    end
     for i in colsidx
         if eltype(ds[!, i]) >: Missing
             _columns(ds)[i] = convert(Vector{Union{Missing, T}}, _columns(ds)[i])

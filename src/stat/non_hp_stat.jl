@@ -1,6 +1,8 @@
 # _stat_add_sum(x::T, y::S) where T where S = convert(promote_type(S,T), x + y)
 _stat_add_sum(x, y) = Base.add_sum(x, y)
 _stat_add_sum(x::Bool, y::Bool) = x + y
+_stat_add_sum(x::Missing, y::Bool) = Int(y)
+_stat_add_sum(x::Bool, y::Missing) = Int(x)
 _stat_add_sum(x, ::Missing) = x
 _stat_add_sum(::Missing, x) = x
 _stat_add_sum(::Missing, ::Missing) = missing
