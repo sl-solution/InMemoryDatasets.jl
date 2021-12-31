@@ -53,7 +53,7 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `findfirst` : Return the column name of the first true value
 * `findlast` : Return the column name of the last true value
 * `hash` : Compute an integer hash code
-* `isequal` : Return `true` when all values are equal
+* `isequal` : Return `true` when all values are equal. Optionally, a vector of values can be passed via the `by` keyword to compare equality with it.
 * `isless` : Return `true` when all values are less than passed vector(or column specified by its name) as `by`. Passing `rev = true` change `less` to `greater`.
 * `issorted` : Check if the values are sorted
 * `maximum` : Return the maximum value
@@ -66,7 +66,7 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `sum` : Return the sum of values
 * `var` : Compute the variance of values
 
-The common syntax of `byrow` for all of these functions except `nunique`, `coalesce`, `isequal`, and `issorted` is:
+The common syntax of `byrow` for all of these functions except `nunique`, `coalesce`, `isless`, and `issorted`, is:
 
 `byrow(ds, fun, cols; [by , threads = true])`
 
@@ -74,7 +74,7 @@ The `by` keyword argument is for specifying a function to call on each value bef
 
 The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique values of each row, and `count_missing = true` counts missings as a unique value.
 
-The `coalesce`, `isequal`, and `issorted` functions don't accept `by` argument, however, `issorted` accepts extra keyword argument `rev` which is set to `false` by default.
+The `coalesce` and `issorted` functions don't accept `by` argument, however, `issorted` and `isless` accept extra keyword argument `rev` which is set to `false` by default.
 
 
 ### Examples

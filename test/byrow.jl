@@ -48,6 +48,19 @@
     @test byrow(sds, isequal, :, threads = true) == [0,1,1,0,0,0, 1,1,1]
     @test byrow(sds, isequal, [1], threads = true) == ones(9)
 
+    ds = Dataset(x1 = [1,2,3,1,1], x2 =[2,2,3,missing, 1], x3 = [1,1,1,1,1])
+
+    @test byrow(ds, isequal, 1:2, by = :x3) == [false, false, false, false, true]
+    @test byrow(ds, isequal, 1:3, by = :x3) == [false, false, false, false, true]
+    @test byrow(ds, isequal, [1,3], by = [1,1,1,1,1]) == [true, false, false, true, true]
+    @test byrow(ds, isequal, 1:2, by = ds[!, :x3]) == [false, false, false, false, true]
+    @test byrow(ds, isequal, 1:3, by = ds[:,3]) == [false, false, false, false, true]
+    @test byrow(ds, isequal, 1, by = ds[:,3]) == [true, false, false, true, true]
+
+    @test byrow(view(ds, :, :), isequal, 1:2, by = :x3) == [false, false, false, false, true]
+    @test byrow(view(ds, :, :), isequal, 1:3, by = :x3) == [false, false, false, false, true]
+    @test byrow(view(ds, :, :), isequal, [1,3], by = [1,1,1,1,1]) == [true, false, false, true, true]
+
     ds = Dataset(x1 = [1,2,3,4,missing], x2 = [3,2,4,5, missing])
     @test byrow(ds, issorted, :) == [true, true, true, true, true]
     @test byrow(ds, issorted, :, rev = true) == [false, true, false, false, true]
@@ -195,6 +208,8 @@
     @test byrow(ds, isless, r"int", by = :x1_float, rev = true) == [0,0,1,1,0]
     @test byrow(ds, isless, r"int", by = ds[!,:x1_float]) == [0,1,0,0,1]
     @test byrow(ds, isless, r"int", by = ds[!,:x1_float], rev = true) == [0,0,1,1,0]
+    @test byrow(ds, isless, r"int", by = ds[:,:x1_float]) == [0,1,0,0,1]
+    @test byrow(ds, isless, r"int", by = ds[:,:x1_float], rev = true) == [0,0,1,1,0]
     @test byrow(view(ds, :, :), isless, r"int", by = :x1_float) == [0,1,0,0,1]
     @test byrow(view(ds, :, :), isless, r"int", by = :x1_float, rev = true) == [0,0,1,1,0]
     @test byrow(view(ds, :, :), isless, r"int", by = view(ds, :, :)[!,:x1_float]) == [0,1,0,0,1]

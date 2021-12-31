@@ -80,11 +80,21 @@ function hp_op_for_isequal!(x,y, x1)
     x
 end
 
-function row_isequal(ds::AbstractDataset, cols = :; threads = true)
+function row_isequal(ds::AbstractDataset, cols = :; by::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex, Nothing} = nothing, threads = true)
     colsidx = index(ds)[cols]
-    init0 = ones(Bool, nrow(ds))
-    length(colsidx) ==  1 && return init0
-    x1 = _columns(ds)[colsidx[1]]
+    if !(by isa ColumnIndex) && by !== nothing
+        @assert length(by) == nrow(ds) "to compare values of selected columns in each row, the length of the passed vector and the number of rows must match"
+    end
+    if by isa SubDatasetColumn || by isa DatasetColumn
+        x1 = __!(by)
+    elseif by isa ColumnIndex
+        x1 = _columns(ds)[index(ds)[by]]
+    elseif by === nothing
+        x1 = _columns(ds)[colsidx[1]]
+    else
+        x1 = by
+    end
+    init0 = ones(Bool, nrow(ds))    
     if threads
         mapreduce(identity, (x,y)->hp_op_for_isequal!(x,y,x1), view(_columns(ds),colsidx), init = init0)
     else
