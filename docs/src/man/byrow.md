@@ -61,7 +61,7 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `minimum` : Return the minimum value
 * `nunique` : Return the number of unique values
 * `prod` : Return the product of values
-* `select` : Select values of specific columns in each row. The specific columns can be passed using `by = scols`, where `scols` can be a vector of columns names or a column name of the passed data set.
+* `select` : Select values of specific columns in each row. The specific columns can be passed using `with = scols`, where `scols` can be a vector of columns names or a column name of the passed data set.
 * `std` : Compute the standard deviation of values
 * `sum` : Return the sum of values
 * `var` : Compute the variance of values
@@ -185,7 +185,7 @@ julia> julia> byrow(ds, isless, r"int", with = :x1_float, rev = true) # greater
 ```
 
 
-In the following example, in each row we pick the values of selected columns passed by the `by` keyword argument.
+In the following example, in each row we pick the values of selected columns passed by the `with` keyword argument.
 
 ```jldoctest
 julia> ds = Dataset(x1 = 1:4, x2 = [1,2,1,2], NAMES = [:x1, :x2, :x1, :x1])
@@ -199,21 +199,21 @@ julia> ds = Dataset(x1 = 1:4, x2 = [1,2,1,2], NAMES = [:x1, :x2, :x1, :x1])
    3 │        3         1  x1
    4 │        4         2  x1
 
-julia> byrow(ds, select, r"x", by = :NAMES)
+julia> byrow(ds, select, r"x", with = :NAMES)
 4-element Vector{Union{Missing, Int64}}:
  1
  2
  3
  4
 
-julia> byrow(ds, select, r"x", by = ["x1", "x2", "x2", "x2"])
+julia> byrow(ds, select, r"x", with = ["x1", "x2", "x2", "x2"])
 4-element Vector{Union{Missing, Int64}}:
  1
  2
  1
  2
 
-julia> byrow(ds, select, [:x2, :x1], by = [1,2,2,1])
+julia> byrow(ds, select, [:x2, :x1], with = [1,2,2,1])
 4-element Vector{Union{Missing, Int64}}:
  1
  2
@@ -221,7 +221,7 @@ julia> byrow(ds, select, [:x2, :x1], by = [1,2,2,1])
  2
 ```
 
-In the last example, note that the integers in `by` are mapped to the corresponding columns passed to the function, i.e. 1 is referring to `:x2` (it is the first column passed to the function as the column selector) and 2 is referring to `:x1`.
+In the last example, note that the integers in `with` are mapped to the corresponding columns passed to the function, i.e. 1 is referring to `:x2` (it is the first column passed to the function as the column selector) and 2 is referring to `:x1`.
 
 
 ## `mapreduce`
@@ -274,7 +274,7 @@ Note that `avg` is missing if any of the values in `x` is missing.
 
 The main difference between these operations and the previous operations is that these operations return a data set with the corresponding row has been updated with the operation. For the operations with `!` the updated version of the original data set is returned and for the operations without `!` a modified copy of the original data set is returned.
 
-The `fill` and `fill!` functions fill missing values (or any other values which a function passed to the `condition` keyword argument returns `true`) in each row of a given data set by given values passed to the `with` keyword argument. The function passed to the `condition` keyword argument must return `true` or `false`.
+The `fill` and `fill!` functions fill values which calling the function passed as `by` on them returns true with values passed to the `with` keyword argument. The function passed to the `by` keyword argument must return `true` or `false` and by default it is set to `by = ismissing`.
 
 > Note that for the `fill` and `fill!` functions the filling happens in-place, thus, if this is not possible Julia will throw errors.
 
@@ -309,7 +309,7 @@ julia> byrow(ds, fill, 1:2, with = [0,2,1])
    2 │        2         2         5
    3 │        1         1         3
 
-julia> byrow(ds, fill, 1:2, with = [0,2,1], condition = x->ismissing(x) || isequal(x, 1))
+julia> byrow(ds, fill, 1:2, with = [0,2,1], by = x->ismissing(x) || isequal(x, 1))
 3×3 Dataset
  Row │ x1        x2        y        
      │ identity  identity  identity

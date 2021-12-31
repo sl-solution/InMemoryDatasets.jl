@@ -80,12 +80,12 @@ byrow(ds::AbstractDataset, ::typeof(isless), col::ColumnIndex; with, threads = n
 byrow(ds::AbstractDataset, ::typeof(findfirst), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findfirst(ds, by, cols; threads = threads)
 byrow(ds::AbstractDataset, ::typeof(findlast), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findlast(ds, by, cols; threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(select), cols::MultiColumnIndex; by, threads = nrow(ds)>1000) = row_select(ds, cols, by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(select), cols::MultiColumnIndex; with, threads = nrow(ds)>1000) = row_select(ds, cols, with, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(fill!), cols::MultiColumnIndex; with , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(ds, cols, with, f = condition, threads = threads, rolling = rolling)
-byrow(ds::AbstractDataset, ::typeof(fill!), col::ColumnIndex; with , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(ds, fill!, [col], with = with, condition = condition, threads = threads, rolling = rolling)
-byrow(ds::AbstractDataset, ::typeof(fill), cols::MultiColumnIndex; with , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(copy(ds), cols, with, f = condition, threads = threads, rolling = rolling)
-byrow(ds::AbstractDataset, ::typeof(fill), col::ColumnIndex; with , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(copy(ds), fill!, [col], with = with, condition = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill!), cols::MultiColumnIndex; with , by = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(ds, cols, with, f = by, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill!), col::ColumnIndex; with , by = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(ds, fill!, [col], with = with, by = by, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill), cols::MultiColumnIndex; with , by = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(copy(ds), cols, with, f = by, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill), col::ColumnIndex; with , by = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(copy(ds), fill!, [col], with = with, by = by, threads = threads, rolling = rolling)
 
 
 byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_coalesce(ds, cols) : row_coalesce(ds, cols)
