@@ -621,8 +621,21 @@ function gennames(n::Integer)
 end
 
 function funname(f)
-    n = nameof(f)
-    String(n)[1] == '#' ? :function : n
+    local n
+    try
+        n = nameof(f)
+    catch
+        return :function
+    end
+    if String(n)[1] == '#'
+        :function
+    elseif String(n) == "Fix2"
+        nameof(f.f)
+    elseif String(n) == "Fix1"
+        nameof(f.f)
+    else
+        n
+    end
 end
 
 if isdefined(Base, :ComposedFunction) # Julia >= 1.6.0-DEV.85

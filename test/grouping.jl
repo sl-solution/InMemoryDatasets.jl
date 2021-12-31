@@ -378,6 +378,25 @@ end
     @test byrow(compare(combine(groupby(view(ds, :, [2,1]), :x1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
 end
 
+@testset "combine - set4 - checking normalize_combine" begin
+    ds = Dataset(g1 = [1,2,1,2,2,1], g2 = [2,3,1,1,2,3], x2=[1.0,missing,1.1,1.1,1.1,1.1],y=100:100:600.0)
+    @test combine(groupby(ds, 2), [1,3] => [maximum, minimum])== Dataset(g2 = [1,2,3], maximum_g1 = [2,2,2], minimum_g1 = [1,1,1], maximum_x2 = [1.1,1.1,1.1], minimum_x2 = [1.1,1,1.1])
+    @test combine(gatherby(ds, 2), [1,3] => [maximum, minimum])== Dataset(g2 = [2,3,1], maximum_g1 = [2,2,2], minimum_g1 = [1,1,1], maximum_x2 = [1.1,1.1,1.1], minimum_x2 = [1.,1.1,1.1])
+    @test combine(groupby(ds, [2,1]), r"x"=>sum) == Dataset(g2 = [1,1,2,2,3,3], g1=[1,2,1,2,1,2], sum_x2 = [1.1,1.1,1,1.1,1.1, missing])
+    @test combine(gatherby(ds, [2,1]), r"x"=>sum) == Dataset(g2 = [2,3,1,1,2,3], g1=[1,2,1,2,2,1], sum_x2 = [1, missing, 1.1,1.1,1.1,1.1])
+    groupby!(ds, [2,1])
+    @test combine(ds, r"x"=>sum) == Dataset(g2 = [1,1,2,2,3,3], g1=[1,2,1,2,1,2], sum_x2 = [1.1,1.1,1,1.1,1.1, missing])
+    @test combine(groupby(ds, 2), [1,3] => [maximum, minimum])== Dataset(g2 = [1,2,3], maximum_g1 = [2,2,2], minimum_g1 = [1,1,1], maximum_x2 = [1.1,1.1,1.1], minimum_x2 = [1.1,1,1.1])
+    @test combine(groupby(ds, [2,1]), r"x"=>sum) == Dataset(g2 = [1,1,2,2,3,3], g1=[1,2,1,2,1,2], sum_x2 = [1.1,1.1,1,1.1,1.1, missing])
+
+    @test combine(groupby(ds, 1), 3:4 => sum,  2:3=> byrow.([maximum, minimum])) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2])
+    @test combine(groupby(ds, 1), 3:4 => sum,  2:3=> byrow.([maximum, minimum]), 4:5=>byrow(sum)) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2], row_sum = [1003.2, 1102.2])
+
+    @test combine(groupby(view(ds, :, [4,3,2,1]), 4), [2,1] => sum,  2:3=> byrow.([maximum, minimum])) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2])
+    @test combine(groupby(view(ds,:, [4,3,2,1]), 4), [:x2, :y] => sum,  2:3=> byrow.([maximum, minimum]), 4:5=>byrow(sum)) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2], row_sum = [1003.2, 1102.2])
+
+end
+
 @testset "modifying and combining views" begin
     ds = Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0])
     sds1 = dropmissing(ds, 2, view = true)

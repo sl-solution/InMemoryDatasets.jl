@@ -190,10 +190,7 @@ function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Vector{<:Base.Callable}}))
     colsidx = outidx[sel.first]
-    res = Any[]
-    for i in 1:length(sel.second)
-        push!(res, normalize_modify!(outidx, idx, colsidx => sel.second[i]))
-    end
+    normalize_modify!(outidx, idx, colsidx .=> sel.second[i])
     return res
 end
 

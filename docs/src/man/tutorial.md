@@ -248,13 +248,13 @@ julia> combine(groupby(flights, :Dest), :ArrDelay => mean)
                100 rows omitted
 ```
 
-we can summarise several columns at the same time, e.g. for each carrier, calculate the minimum and maximum arrival and departure delays:
+we can summarise several columns at the same time, e.g. for each carrier, calculate the minimum and maximum arrival and departure delays:(Note that in the following code, `r"Delay" => [minimum, maximum]` is normalised as `names(flights, r"Delay") .=> Ref([minimum, maximum])`) 
 
 
 ```julia
 julia> @chain flights begin
            groupby(:IATA)
-           combine(names(flights, r"Delay") .=> Ref([minimum, maximum]))
+           combine(r"Delay" => [minimum, maximum])
         end
 14×5 Dataset
  Row │ IATA      minimum_DepDelay  maximum_DepDelay  minimum_ArrDelay  maximum_ArrDelay
@@ -386,7 +386,7 @@ julia> @chain flights begin
 
 In the previous section, we always applied functions that reduced a vector to a single value.
 Non-reduction functions instead take a vector and return a vector. For example we can rank, within each `:IATA`, how much
-delay a given flight had and figure out the day and month with the two greatest delays:
+delay a given flight had and figure out the day and month with the two greatest delays: (Note that for using a multivariate function in `combine`, the input columns must pass as `Tuple`)
 
 
 ```julia

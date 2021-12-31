@@ -159,7 +159,13 @@ end
 
 function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgroupcols = false)
 	idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
-	ms = normalize_combine_multiple!(length(_groupcols(gds)),idx_cpy, index(gds.parent), args...)
+	if !dropgroupcols
+        for i in gds.groupcols
+            push!(idx_cpy, Symbol(names(gds)[i]))
+        end
+    end
+
+	ms = normalize_combine_multiple!(idx_cpy, index(gds.parent), args...)
 	# the rule is that in combine, byrow must only be used for already aggregated columns
 	# so, we should check every thing pass to byrow has been assigned in args before it
 	# if this is not the case, throw ArgumentError and ask user to use modify instead

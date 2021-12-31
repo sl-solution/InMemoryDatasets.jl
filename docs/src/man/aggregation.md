@@ -2,11 +2,11 @@
 
 ## Introduction
 
-We discuss the main functions (`groupby!`, `groupby`, and `gatherby`) to group observations in a data set in previous sections. In this section we introduce a function which can be used to apply a function on each group of observations.
+In previous sections we discuss the main functions (`groupby!`, `groupby`, and `gatherby`) to group observations in a data set. In this section we introduce a function which can be used to apply a function on each group of observations.
 
 ## `combine`
 
-`combine` is a function which accepts a grouped data set - created by `groupby!`, `groupby`, or `gatherby` - and a set of operations in the form of `cols => fun`, where `cols` is a column selector and applies `fun` on each columns in `cols`. The operations can be passed as `col => fun => :newname` if user likes to have a specific column name for the output column. All columns selected by `cols` are assumed to be referring to the same columns in the input data set. However, when the passed `fun` is a `byrow` function then `combine` assumes every column in `cols` are referring to the existing columns in the output data set. Thus, unlike `modify!`/`modify`, `combine` only can access to the existing columns in the output data set when the `fun` is a `byrow` function.
+`combine` is a function which accepts a grouped data set - created by `groupby!`, `groupby`, or `gatherby` - and a set of operations in the form of `cols => fun`, where `cols` is a column selector, and applies `fun` on each columns in `cols`. The operations can be passed as `col => fun => :newname` if user likes to have a specific column name for the output column. All columns selected by `cols` are assumed to be referring to the same columns in the input data set. However, when the passed `fun` is a `byrow` function then `combine` assumes every column in `cols` are referring to the existing columns in the output data set. Thus, unlike `modify!`/`modify`, `combine` only can access to the existing columns in the output data set when the `fun` is a `byrow` function.
 
 The order of the output data set depends on the passed data set, i.e. for `groupby` the order of the output is sorted order of the grouping columns, and for `gatherby` data set the order of the output is based on the appearance of observations in the original data set. Since for most situations, the stability of grouping is not needed, passing `stable = false` in `groupby/gatherby` can improve the performance, but when `stable = false` for `gatherby`, the order of the output is undefined.
 
@@ -99,7 +99,7 @@ julia> combine(gatherby(ds, :g), :x=>[maximum, minimum], 2:3=>byrow(-)=>:range, 
    2 │         6          2         4
 ```
 
-`combine` treats each columns in `cols` individually, thus, a function can be applied to each column by `cols => fun` form. `Julia` broadcasting can be used to apply multiple functions on multiple columns, however, note that `Julia` broadcasting can only be used properly when the column selector is in the form of an abstract vector, i.e. vector of column names or column indices. If other form of column selector is needed to be used in this case, it must be transformed into the abstract vector form, e.g. by using `names` , like `names(ds, r"x")`.
+`combine` treats each columns in `cols` individually, thus, a function can be applied to each column by `cols => fun` form. `combine` normalises `cols => funs` to `col1 => funs`, `col2 => funs`, ..., where `col1` refers to the first column in the column selector `cols`, `col2` refers to the second one, .... When `col => funs` is passed to the function where `col` refers to a single column, `combine` normalises it as `col => fun1`, `col => fun2`, ..., where `fun1`, `fun2`,... are the first, second, ... functions in passed `funs`. 
 
 Any reduction on multiple columns should be go through a `byrow` approach.
 

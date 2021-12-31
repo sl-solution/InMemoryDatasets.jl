@@ -1,41 +1,36 @@
+#  we assume
+# * outidx already has grouping columns
+# * any fun except byrow will get input from input data set, and byrow gets input from the output data set.
+# * except Tuple every other column selector will assume funcions are univariate (byrow is exception)
+
+
 # col => fun => dst, the job is to create col => fun => :dst
-function normalize_combine!(offset, outidx::Index, idx,
-                            @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Pair{<:Union{Function},
-                                                        <:Union{Symbol, AbstractString}}})
-                                                        )
+function normalize_combine!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:ColumnIndex,
+                            <:Pair{<:Union{Function},
+                                <:Union{Symbol, AbstractString}}})
+                                )
     src, (fun, dst) = sel
     _check_ind_and_add!(outidx, Symbol(dst))
     return _names(idx)[idx[src]] => fun => Symbol(dst)
 end
 
-function normalize_combine!(offset, outidx::Index, idx,
-                            @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
-                                                    <:Pair{<:Union{Function},
-                                                        <:Union{Symbol, AbstractString}}})
-                                                        ) where N
+# Tuple => fun => dst, the job is to create Tuple => fun => :dst
+function normalize_combine!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                            <:Pair{<:Union{Function},
+                                <:Union{Symbol, AbstractString}}})
+                                ) where N
     src, (fun, dst) = sel
     N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
     _check_ind_and_add!(outidx, Symbol(dst))
     return ntuple(i -> _names(idx)[idx[src[i]]], N) => fun => Symbol(dst)
 end
 
-# col => fun => dst, the job is to create col => fun => :dst
-function normalize_combine!(offset, outidx::Index, idx,
-                            @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Pair{<:Union{Function},
-                                                        <:Vector{<:Union{Symbol, AbstractString}}}})
-                                                        )
-    src, (fun, dst) = sel
-    for i in 1:length(dst)
-        _check_ind_and_add!(outidx, Symbol(dst[i]))
-    end
-    return _names(idx)[idx[src]] => fun => MultiCol(Symbol.(dst))
-end
 # col => fun, the job is to create col => fun => :colname
-function normalize_combine!(offset, outidx::Index, idx,
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Union{Function}}))
+                                <:Union{Function}}))
 
     src, fun = sel
     nname = Symbol(funname(fun), "_", _names(idx)[idx[src]])
@@ -43,9 +38,10 @@ function normalize_combine!(offset, outidx::Index, idx,
     return _names(idx)[idx[src]] => fun => nname
 end
 
-function normalize_combine!(offset, outidx::Index, idx,
+# Tuple => fun  normalise as Tuple => fun => :genname
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
-                                                    <:Union{Function}})) where N
+                                <:Union{Function}})) where N
 
     src, fun = sel
     N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
@@ -62,208 +58,158 @@ function normalize_combine!(offset, outidx::Index, idx,
     return ntuple(i -> _names(idx)[idx[src[i]]], N) => fun => nname
 end
 
-
+# handling vector of tuples
+function normalize_combine!(outidx::Index, idx,
+                            @nospecialize(sel::Pair{<:Vector{<:NTuple{N, ColumnIndex}},
+                                <:Union{Function}})) where N
+    normalize_combine!(outidx, idx, sel.first .=> sel.second)
+end
+function normalize_combine!(outidx::Index, idx,
+                            @nospecialize(sel::Pair{<:Vector{<:NTuple{N, ColumnIndex}},
+                                <:Vector{<:Function}})) where N
+    normalize_combine!(outidx, idx, Ref(sel.first) .=> sel.second)
+end
 
 # col => byrow
-function normalize_combine!(offset, outidx::Index, idx,
+#TODO if we define byrow(fun) as a type rather than an Expr, we should modify this part
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Vector{Expr}}))
+                                <:Vector{Expr}}))
     if sel.second[1].head == :BYROW
-        # TODO needs a better name for destination
-        if sel.first isa AbstractVector{<:Integer}
-            colsidx = sel.first .- offset
-        else
-            colsidx = outidx[sel.first]
-        end
+        colsidx = outidx[sel.first]
         dsc_sym = Symbol(funname(sel.second[1].args[1]), "_", _names(outidx)[outidx[sel.first]])
         _check_ind_and_add!(outidx, dsc_sym )
         return _names(outidx)[outidx[colsidx]] => sel.second[1] => dsc_sym
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
-function normalize_combine!(offset, outidx::Index, idx,
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Expr}))
+                                <:Expr}))
     if sel.second.head == :BYROW
-        # TODO needs a better name for destination
-        # _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
-        if sel.first isa AbstractVector{<:Integer}
-            colsidx = sel.first .- offset
-        else
-            colsidx = outidx[sel.first]
-        end
-         dsc_sym = Symbol(funname(sel.second.args[1]), "_", _names(outidx)[outidx[sel.first]])
+        colsidx = outidx[sel.first]
+    
+        dsc_sym = Symbol(funname(sel.second.args[1]), "_", _names(outidx)[outidx[sel.first]])
         _check_ind_and_add!(outidx, dsc_sym )
         return _names(outidx)[outidx[colsidx]] => sel.second => dsc_sym
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
+
 # col => byrow => dst
-function normalize_combine!(offset, outidx::Index, idx,
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
-                                        <:Pair{<:Vector{Expr},
-                                            <:Union{Symbol, AbstractString}}}))
-    if sel.second.first[1].head == :BYROW
-        # TODO needs a better name for destination
-        if sel.first isa AbstractVector{<:Integer}
-            colsidx = sel.first .- offset
-        else
-            colsidx = outidx[sel.first]
-        end
+                                <:Pair{<:Vector{Expr},
+                                    <:Union{Symbol, AbstractString}}}))
+    if sel.second.first[1].head == :BYROW   
+        colsidx = outidx[sel.first]
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
         return _names(outidx)[outidx[colsidx]] => sel.second.first[1] => Symbol(sel.second.second)
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
-function normalize_combine!(offset, outidx::Index, idx,
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
-                                        <:Pair{<:Expr,
-                                            <:Union{Symbol, AbstractString}}}))
+                                <:Pair{<:Expr,
+                                    <:Union{Symbol, AbstractString}}}))
     if sel.second.first.head == :BYROW
-        # TODO needs a better name for destination
-        if sel.first isa AbstractVector{<:Integer}
-            colsidx = sel.first .- offset
-        else
-            colsidx = outidx[sel.first]
-        end
+        colsidx = outidx[sel.first]
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
         return _names(outidx)[outidx[colsidx]] => sel.second.first => Symbol(sel.second.second)
     end
     throw(ArgumentError("only byrow is accepted when using expressions"))
 end
 
-function normalize_combine!(offset, outidx::Index, idx,
+# cols => byrow
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Vector{Expr}}))
+                                <:Vector{Expr}}))
     if sel.second[1] isa Expr
         if sel.second[1].head == :BYROW
-            # TODO needs a better name for destination
-            if sel.first isa AbstractVector{<:Integer}
-                colsidx = sel.first .- offset
-            else
-                colsidx = outidx[sel.first]
-            end
-            _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second[1].args[1])))
-            return _names(outidx)[outidx[colsidx]] => sel.second[1] => Symbol("row_", funname(sel.second[1].args[1]))
+            colsidx = outidx[sel.first]
         end
+        _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second[1].args[1])))
+        return _names(outidx)[outidx[colsidx]] => sel.second[1] => Symbol("row_", funname(sel.second[1].args[1]))
     end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
 end
-function normalize_combine!(offset, outidx::Index, idx,
+# cols => fun/byrow normalise as cols .=> fun or cols => byrow
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Union{Function,Expr}}))
+                                <:Union{Function,Expr}}))
     if sel.second isa Expr
         if sel.second.head == :BYROW
-            if sel.first isa AbstractVector{<:Integer}
-                colsidx = sel.first .- offset
-            else
-                colsidx = outidx[sel.first]
-            end
-            # TODO needs a better name for destination
-            _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
-            return _names(outidx)[outidx[colsidx]] => sel.second => Symbol("row_", funname(sel.second.args[1]))
+            colsidx = outidx[sel.first]
         end
+    # TODO needs a better name for destination
+        _check_ind_and_add!(outidx, Symbol("row_", funname(sel.second.args[1])))
+        return _names(outidx)[outidx[colsidx]] => sel.second => Symbol("row_", funname(sel.second.args[1]))
     end
-    colsidx = idx[sel.first]
-    res = Any[]
-    for i in 1:length(colsidx)
-        push!(res, normalize_combine!(offset, outidx, idx, _names(idx)[colsidx[i]] => sel.second))
-    end
-    return res
+    normalize_combine!(outidx, idx, idx[sel.first] .=> sel.second)
 end
-# cols => funs which will be normalize as col1=>fun1, col2=>fun2, ...
-function normalize_combine!(offset, outidx::Index, idx,
+
+# cols => funs normalize cols .=> Ref(funs)
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Vector{<:Function}}))
+                                <:Vector{<:Function}}))
     colsidx = idx[sel.first]
-    if !(length(colsidx) == length(sel.second))
-        throw(ArgumentError("The input number of columns and the length of the number of functions should match"))
-    end
-    res = Any[]
-    for i in 1:length(colsidx)
-        push!(res, normalize_combine!(offset, outidx, idx, _names(idx)[colsidx[i]] => sel.second[i]))
-    end
-    return res
+    normalize_combine!(outidx, idx, colsidx .=> Ref(sel.second))
 end
 
-function normalize_combine!(offset, outidx::Index, idx,
+# col => funs normalise as col .=> funs
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
-                                                    <:Vector{<:Function}}))
+                                <:Vector{<:Function}}))
     colsidx = idx[sel.first]
-
-    res = Any[]
-    for i in 1:length(sel.second)
-        push!(res, normalize_combine!(offset, outidx, idx, _names(idx)[colsidx] => sel.second[i]))
-    end
-    return res
+    normalize_combine!(outidx, idx, colsidx .=> sel.second)
 end
 
 # special case cols => byrow(...) => :name
-function normalize_combine!(offset, outidx::Index, idx,
-    @nospecialize(sel::Pair{<:MultiColumnIndex,
-                            <:Pair{<:Vector{Expr},
-                                <:Union{Symbol, AbstractString}}}))
+function normalize_combine!(outidx::Index, idx,
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
+                                <:Pair{<:Vector{Expr},
+                                    <:Union{Symbol, AbstractString}}}))
     if sel.second.first[1].head == :BYROW
-        if sel.first isa AbstractVector{<:Integer}
-            colsidx = sel.first .- offset
-        else
-            colsidx = outidx[sel.first]
-        end
+        colsidx = outidx[sel.first]
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
         return _names(outidx)[outidx[colsidx]] => sel.second.first[1] => Symbol(sel.second.second)
-    else
-        throw(ArgumentError("only byrow operation is supported for cols => fun => :name"))
     end
+    throw(ArgumentError("only byrow operation is supported for cols => fun => :name"))
 end
-function normalize_combine!(offset, outidx::Index, idx,
-    @nospecialize(sel::Pair{<:MultiColumnIndex,
-                            <:Pair{<:Expr,
-                                <:Union{Symbol, AbstractString}}}))
+function normalize_combine!(outidx::Index, idx,
+                            @nospecialize(sel::Pair{<:MultiColumnIndex,
+                                <:Pair{<:Expr,
+                                    <:Union{Symbol, AbstractString}}}))
     if sel.second.first.head == :BYROW
-        if sel.first isa AbstractVector{<:Integer}
-            colsidx = sel.first .- offset
-        else
-            colsidx = outidx[sel.first]
-        end
+        colsidx = outidx[sel.first]
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
         return _names(outidx)[outidx[colsidx]] => sel.second.first => Symbol(sel.second.second)
-    else
-        throw(ArgumentError("only byrow operation is supported for cols => fun => :name"))
     end
+    throw(ArgumentError("only byrow operation is supported for cols => fun => :name"))
 end
 
-# cols .=> fun .=> dsts, the job is to create col1 => fun => :dst1, col2 => fun => :dst2, ...
-function normalize_combine!(offset, outidx::Index, idx,
+# cols => fun => names normalise as cols .=> fun .=> names
+function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Pair{<:Vector{Expr},
-                                                        <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
-    if !(length(colsidx) == length(sel.second.second))
-        throw(ArgumentError("The input number of columns and the length of the output names should match"))
-    end
-    res = Any[normalize_combine!(offset, outidx, idx, _names(outidx)[colsidx[1]] => sel.second.first[1] => sel.second.second[1])]
-    for i in 2:length(colsidx)
-        push!(res, normalize_combine!(offset, outidx, idx, _names(outidx)[colsidx[i]] => sel.second.first[1] => sel.second.second[i]))
-    end
-    return res
-end
-function normalize_combine!(offset, outidx::Index, idx,
-                            @nospecialize(sel::Pair{<:MultiColumnIndex,
-                                                    <:Pair{<:Union{Function},
-                                                        <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
+                                <:Pair{<:Union{Function},
+                                    <:AbstractVector{<:Union{Symbol, AbstractString}}}}))
     colsidx = idx[sel.first]
     if !(length(colsidx) == length(sel.second.second))
         throw(ArgumentError("The input number of columns and the length of the output names should match"))
     end
-    res = Any[normalize_combine!(offset, outidx, idx, _names(idx)[colsidx[1]] => sel.second.first => sel.second.second[1])]
-    for i in 2:length(colsidx)
-        push!(res, normalize_combine!(offset, outidx, idx, _names(idx)[colsidx[i]] => sel.second.first => sel.second.second[i]))
-    end
-    return res
+    normalize_combine!(outidx, idx, colsidx .=> sel.second.first .=> sel.second.second)
 end
 
-function normalize_combine!(offset, outidx::Index, idx, arg::AbstractVector)
+# handling special case
+function normalize_combine!(outidx::Index, idx,
+                            @nospecialize(sel::Pair{<:Union{ColumnIndex, MultiColumnIndex}, <:AbstractVector}))
+    normalize_combine!(outidx, idx, Ref(sel.first) .=> sel.second)
+end
+
+function normalize_combine!(outidx::Index, idx, arg::AbstractVector)
     res = Any[]
     for i in 1:length(arg)
-        _res = normalize_combine!(offset, outidx::Index, idx, arg[i])
+        _res = normalize_combine!(outidx::Index, idx, arg[i])
         if _res isa AbstractVector
             for j in 1:length(_res)
                 push!(res, _res[j])
@@ -275,10 +221,10 @@ function normalize_combine!(offset, outidx::Index, idx, arg::AbstractVector)
     return res
 end
 
-function normalize_combine_multiple!(offset, outidx::Index, idx, @nospecialize(args...))
+function normalize_combine_multiple!(outidx::Index, idx, @nospecialize(args...))
     res = Any[]
     for i in 1:length(args)
-        _res = normalize_combine!(offset, outidx, idx, args[i])
+        _res = normalize_combine!(outidx, idx, args[i])
         if typeof(_res) <: Pair
             push!(res, _res)
         else
@@ -579,7 +525,12 @@ end
 function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false)
     !isgrouped(ds) &&  return combine_ds(ds, args...)#throw(ArgumentError("`combine` is only for grouped data sets, use `modify` instead"))
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
-    ms = normalize_combine_multiple!(length(_groupcols(ds)), idx_cpy, index(ds), args...)
+    if !dropgroupcols
+        for i in _sortedcols(ds)
+            push!(idx_cpy, Symbol(names(ds)[i]))
+        end
+    end
+    ms = normalize_combine_multiple!(idx_cpy, index(ds), args...)
     # the rule is that in combine, byrow must only be used for already aggregated columns
     # so, we should check every thing pass to byrow has been assigned in args before it
     # if this is not the case, throw ArgumentError and ask user to use modify instead
@@ -680,13 +631,12 @@ end
 
 function combine_ds(ds::Dataset, @nospecialize(args...))
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
-    ms = normalize_combine_multiple!(length(_groupcols(ds)), idx_cpy, index(ds), args...)
+    ms = normalize_combine_multiple!(idx_cpy, index(ds), args...)
     newlookup, new_nm = _create_index_for_newds(ds, ms, index(ds).sortedcols)
     !(_is_byrow_valid(Index(newlookup, new_nm, Dict{Int, Function}()), ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` otherwise"))
     _first_vector_res = _check_mutliple_rows_for_each_group(ds, ms)
 
 
-    groupcols = index(ds).sortedcols
     starts = [1]
     ngroups::Int = 1
 
