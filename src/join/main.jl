@@ -598,7 +598,7 @@ end
 
 
 """
-    antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
+    antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false)
 
 Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
@@ -708,7 +708,7 @@ function DataAPI.antijoin(dsl::Dataset, dsr::AbstractDataset; on = nothing,  map
     end
 end
 """
-    semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
+    semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false)
 
 Perform a semi join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
@@ -1090,7 +1090,8 @@ in the close match phase, only one of them will be selected, and the selected on
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `border`: `:missing` is used by default for the border value,
-  `:nearest` can also be used to set border values to the nearest value rather than a `missing`.
+  `:nearest` can be used to set border values to the nearest value rather than a `missing`,
+  by setting `border = :none` any observation out of left data set range will be set as missing.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
@@ -1353,8 +1354,8 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], direction = :forward, bo
 """
 function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol=nothing, allow_exact_match = true)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
-    if !(border ∈ (:nearest, :missing))
-        throw(ArgumentError("`border` keyword only accept :nearest or :missing"))
+    if !(border ∈ (:nearest, :missing, :none))
+        throw(ArgumentError("`border` keyword only accept :nearest, :missing, or :none"))
     end
     if !(on isa AbstractVector)
         on = [on]
@@ -1404,7 +1405,8 @@ in the close match phase, only one of them will be selected, and the selected on
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `border`: `:missing` is used by default for the border value,
-  `:nearest` can also be used to set border values to the nearest value rather than a `missing`.
+  `:nearest` can be used to set border values to the nearest value rather than a `missing`,
+  by setting `border = :none` any observation out of left data set range will be set as missing.
 - `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
@@ -1650,8 +1652,8 @@ julia> trades # The left table has been changed after joining.
 """
 function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol = nothing, allow_exact_match = true)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
-    if !(border ∈ (:nearest, :missing))
-        throw(ArgumentError("`border` keyword only accept :nearest or :missing"))
+    if !(border ∈ (:nearest, :missing, :none))
+        throw(ArgumentError("`border` keyword only accept :nearest, :missing, or :none"))
     end
     if !(on isa AbstractVector)
         on = [on]

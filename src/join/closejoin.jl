@@ -50,82 +50,184 @@ end
 
 _IST_(x,y)=true
 
-function  _fill_right_cols_table_close!(_res, x, ranges, total, bordervalue, fill_val; nn = false, rnn = nothing, lnn = nothing, tol = nothing, aem = _IST_ )
+function  _fill_right_cols_table_close!(_res, x, ranges, total, borderval, fill_val, direction; nn = false, rnn = nothing, lnn = nothing, tol = nothing, aem = _IST_ )
+    if borderval == :nearest
+        bordervalue = true
+    elseif borderval == :none 
+        bordervalue = missing
+    elseif borderval == :missing 
+        bordervalue = false
+    end
     if tol === nothing
         if nn
-            Threads.@threads for i in 1:length(ranges)
-                if ranges[i] == 0:0
-                    _res[i] = missing
-                else
-                    r1 = rnn[ranges[i].stop]
-                    if ranges[i].start == 0
-                        _res[i] = x[ranges[i].stop]
+            if ismissing(bordervalue)
+                Threads.@threads for i in 1:length(ranges)
+                    if ranges[i] == 0:0
+                        _res[i] = missing
                     else
-                        r2 = rnn[ranges[i].start]
-                        if isless(abs(r2-lnn[i]), abs(r1-lnn[i]))
-                            _res[i] = x[ranges[i].start]
+                        r1 = rnn[ranges[i].stop]
+                        if ranges[i].start == 0
+                            _res[i] = missing
                         else
+                            r2 = rnn[ranges[i].start]
+                            if isless(abs(r2-lnn[i]), abs(r1-lnn[i]))
+                                _res[i] = x[ranges[i].start]
+                            else
+                                _res[i] = x[ranges[i].stop]
+                            end
+                        end
+                    end
+                end
+            else
+                Threads.@threads for i in 1:length(ranges)
+                    if ranges[i] == 0:0
+                        _res[i] = missing
+                    else
+                        r1 = rnn[ranges[i].stop]
+                        if ranges[i].start == 0
                             _res[i] = x[ranges[i].stop]
+                        else
+                            r2 = rnn[ranges[i].start]
+                            if isless(abs(r2-lnn[i]), abs(r1-lnn[i]))
+                                _res[i] = x[ranges[i].start]
+                            else
+                                _res[i] = x[ranges[i].stop]
+                            end
                         end
                     end
                 end
             end
         else
-            Threads.@threads for i in 1:length(ranges)
-                if ranges[i] == 0:0
-                    _res[i] = missing
-                else
-                    _res[i] = x[ranges[i].stop]
-                    if !bordervalue && ranges[i].start == 0
+            if ismissing(bordervalue)
+                Threads.@threads for i in 1:length(ranges)
+                    if ranges[i] == 0:0
                         _res[i] = missing
+                    else
+                        if ranges[i].start == 0
+                            _res[i] = missing
+                        else
+    
+                            if direction == :backward
+                                _res[i] = x[ranges[i].start]
+                            else
+                                _res[i] = x[ranges[i].stop]
+                            end
+                        end
+                    end
+                end
+            else
+                Threads.@threads for i in 1:length(ranges)
+                    if ranges[i] == 0:0
+                        _res[i] = missing
+                    else
+                        _res[i] = x[ranges[i].stop]
+                        if !bordervalue && ranges[i].start == 0
+                            _res[i] = missing
+                        end
                     end
                 end
             end
         end
     else
         if nn
-            Threads.@threads for i in 1:length(ranges)
-                if ranges[i] == 0:0
-                    _res[i] = missing
-                else
-                    r1 = rnn[ranges[i].stop]
-                    if ranges[i].start == 0
-                        if isless(abs(r1-lnn[i]), tol) && aem(r1, lnn[i])
-                            _res[i] = x[ranges[i].stop]
-                        else
-                            _res[i] = missing
-                        end
+            if ismissing(bordervalue)
+                Threads.@threads for i in 1:length(ranges)
+                    if ranges[i] == 0:0
+                        _res[i] = missing
                     else
-                        r2 = rnn[ranges[i].start]
-                        if isless(abs(r2-lnn[i]), abs(r1-lnn[i]))
-                            if isless(abs(r2-lnn[i]), tol) && aem(r2, lnn[i])
-                                _res[i] = x[ranges[i].start]
-                            else
-                                _res[i] = missing
-                            end
+                        r1 = rnn[ranges[i].stop]
+                        if ranges[i].start == 0
+                            _res[i] = missing
                         else
+                            r2 = rnn[ranges[i].start]
+                            if isless(abs(r2-lnn[i]), abs(r1-lnn[i]))
+                                if isless(abs(r2-lnn[i]), tol) && aem(r2, lnn[i])
+                                    _res[i] = x[ranges[i].start]
+                                else
+                                    _res[i] = missing
+                                end
+                            else
+                                if isless(abs(r1-lnn[i]), tol) && aem(r1, lnn[i])
+                                    _res[i] = x[ranges[i].stop]
+                                else
+                                    _res[i] = missing
+                                end
+                            end
+                        end
+                    end
+                end
+            else
+                Threads.@threads for i in 1:length(ranges)
+                    if ranges[i] == 0:0
+                        _res[i] = missing
+                    else
+                        r1 = rnn[ranges[i].stop]
+                        if ranges[i].start == 0
                             if isless(abs(r1-lnn[i]), tol) && aem(r1, lnn[i])
                                 _res[i] = x[ranges[i].stop]
                             else
                                 _res[i] = missing
+                            end
+                        else
+                            r2 = rnn[ranges[i].start]
+                            if isless(abs(r2-lnn[i]), abs(r1-lnn[i]))
+                                if isless(abs(r2-lnn[i]), tol) && aem(r2, lnn[i])
+                                    _res[i] = x[ranges[i].start]
+                                else
+                                    _res[i] = missing
+                                end
+                            else
+                                if isless(abs(r1-lnn[i]), tol) && aem(r1, lnn[i])
+                                    _res[i] = x[ranges[i].stop]
+                                else
+                                    _res[i] = missing
+                                end
                             end
                         end
                     end
                 end
             end
         else
-            Threads.@threads for i in 1:length(ranges)
-                if ranges[i] == 0:0
-                    _res[i] = missing
-                else
-                    r1 = rnn[ranges[i].stop]
-                    if isless(abs(r1-lnn[i]), tol) && aem(r1, lnn[i])
-                        _res[i] = x[ranges[i].stop]
+            if ismissing(bordervalue)
+                Threads.@threads for i in 1:length(ranges)
+                    if ranges[i] == 0:0
+                        _res[i] = missing
                     else
-                        _res[i] = missing
+                        if ranges[i].start == 0
+                            _res[i] = missing
+                        else
+                            if direction == :backward
+                                r1 = rnn[ranges[i].start]
+                                if isless(abs(r1-lnn[i]), tol) && aem(r1, lnn[i])
+                                    _res[i] = x[ranges[i].start]
+                                else
+                                    _res[i] = missing
+                                end
+                            else
+                                r1 = rnn[ranges[i].stop]
+                                if isless(abs(r1-lnn[i]), tol) && aem(r1, lnn[i])
+                                    _res[i] = x[ranges[i].stop]
+                                else
+                                    _res[i] = missing
+                                end
+                            end
+                        end                        
                     end
-                    if !bordervalue && ranges[i].start == 0
+                end
+            else
+                Threads.@threads for i in 1:length(ranges)
+                    if ranges[i] == 0:0
                         _res[i] = missing
+                    else
+                        r1 = rnn[ranges[i].stop]
+                        if isless(abs(r1-lnn[i]), tol) && aem(r1, lnn[i])
+                            _res[i] = x[ranges[i].stop]
+                        else
+                            _res[i] = missing
+                        end
+                        if !bordervalue && ranges[i].start == 0
+                            _res[i] = missing
+                        end
                     end
                 end
             end
@@ -170,7 +272,6 @@ end
 # border = :nearest | :missing
 function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, direction = :backward, inplace = false, tol = nothing,  allow_exact_match = true) where T
     isempty(dsl) && return copy(dsl)
-
     if !allow_exact_match
         #aem is the function to check allow_exact_match
         aem = !isequal
@@ -200,7 +301,8 @@ function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, m
         _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
     end
 
-    _change_refpool_find_range_for_close!(ranges, dsl, dsr, idx, oncols_left, oncols_right, direction, mapformats[1], mapformats[2], length(oncols_left); nsfpaj = nsfpaj)
+    # if border = :none , we should :nearest direction
+    _change_refpool_find_range_for_close!(ranges, dsl, dsr, idx, oncols_left, oncols_right, border == :none ? :nearest : direction, mapformats[1], mapformats[2], length(oncols_left); nsfpaj = nsfpaj)
     total_length = nrow(dsl)
 
     if inplace
@@ -221,9 +323,9 @@ function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, m
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_close!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, total_length, border == :nearest, fill_val; nn = direction == :nearest, rnn = view(_columns(dsr)[oncols_right[end]], idx), lnn = _columns(dsl)[oncols_left[end]], tol = tol, aem = aem)
+            _fill_right_cols_table_close!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, total_length, border, fill_val, direction; nn = direction == :nearest, rnn = view(_columns(dsr)[oncols_right[end]], idx), lnn = _columns(dsl)[oncols_left[end]], tol = tol, aem = aem)
         else
-            _fill_right_cols_table_close!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, total_length, border == :nearest, missing; nn = direction == :nearest, rnn = view(_columns(dsr)[oncols_right[end]], idx), lnn = _columns(dsl)[oncols_left[end]], tol = tol, aem = aem)
+            _fill_right_cols_table_close!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, total_length, border, missing, direction; nn = direction == :nearest, rnn = view(_columns(dsr)[oncols_right[end]], idx), lnn = _columns(dsl)[oncols_left[end]], tol = tol, aem = aem)
         end
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]

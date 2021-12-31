@@ -155,6 +155,8 @@ The `closejoin` function joins two data sets based on exact match on the key var
 
 The `closejoin!` function does a close join in-place.
 
+A tolerance for finding close matches can be passed via the `tol` keyword argument, and for the situations where the exact match is not allowed, user can pass `allow_exact_match = false`.
+
 ### Examples
 
 ```jldoctest
@@ -274,7 +276,9 @@ julia> closejoin(trades, quotes, on = :time, makeunique = true)
 
 In the above example, the `closejoin` for each `ticker` can be done by passing `ticker` as the first variable for the `on` keyword, i.e. when more than one key is used for `on` the last one will be used for "close match" and the rest are used for exact match.
 
- When `border` is set to `:missing` (default value) for the `:backward` direction the value below the smallest value will be set to `missing`, and for the `:forward` direction the value above the largest value will be set to `missing`. And when `border = :nearest` the closest non-missing value will be fetched.
+When `border` is set to `:missing` (default value) for the `:backward` direction the value below the smallest value will be set to `missing`, and for the `:forward` direction the value above the largest value will be set to `missing`. And when `border = :nearest` the closest non-missing value will be fetched.
+
+Passing `border = :none`, sets missing for values in left data set which are out of the right data set's range.
 
 ```jldoctest
 julia> closejoin(trades, quotes, on = [:ticker, :time], border = :missing)

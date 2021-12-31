@@ -616,6 +616,23 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
     @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
     @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+
+
+    dsl = Dataset(x1 = [.3,.74,.53,.30, .65, 1])
+    dsr = Dataset(x1 = [.31,.97,.6,.34], y = [1,2,3,4])
+
+    @test closejoin(dsl, dsr, on = :x1) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [missing, 3,4,missing, 3,2])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [1,2,3,1,2, missing])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [1,3,3,1,3,2])
+
+    @test closejoin(dsl, dsr, on = :x1, border = :nearest) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [1, 3,4,1, 3,2])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward, border = :nearest) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [1,2,3,1,2,2])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest, border = :nearest) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [1,3,3,1,3,2])
+
+    @test closejoin(dsl, dsr, on = :x1, border = :none) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [missing, 3,4,missing, 3,missing])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward, border = :none) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [missing,2,3,missing,2, missing])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest, border = :none) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [missing,3,3,missing,3, missing])
+
 end
 
 @testset "Test empty inputs 1" begin
