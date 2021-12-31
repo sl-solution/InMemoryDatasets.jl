@@ -92,7 +92,45 @@ function row_isequal(ds::AbstractDataset, cols = :; threads = true)
     end
 end
 
+function _op_for_isless!(x, y, vals, rev)
+    if !rev
+        x .&= isless.(y, vals)
+    else
+        x .&= isless.(vals, y)
+    end
+    x
+end
+function hp_op_for_isless!(x, y, vals, rev)
+    if !rev
+        Threads.@threads for i in 1:length(x)
+            x[i] &= isless(y[i], vals[i])
+        end
+    else
+        Threads.@threads for i in 1:length(x)
+            x[i] &= isless(vals[i], y[i])
+        end
+    end
+    x
+end
 
+function row_isless(ds::AbstractDataset, cols, colselector::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex}; threads = true, rev = false)
+    if !(colselector isa ColumnIndex)
+        @assert length(colselector) == nrow(ds) "to compare values of selected columns in each row, the length of the passed vector and the number of rows must match"
+    end
+    colsidx = index(ds)[cols]
+    if colselector isa SubDatasetColumn || colselector isa DatasetColumn
+        colselector = __!(colselector)
+    end
+    if colselector isa ColumnIndex
+        colselector = _columns(ds)[index(ds)[colselector]]
+    end
+    init0 = ones(Bool, nrow(ds))
+    if threads
+        mapreduce(identity, (x,y)->hp_op_for_isless!(x,y,colselector, rev), view(_columns(ds),colsidx), init = init0)
+    else
+        mapreduce(identity, (x,y)->_op_for_isless!(x,y,colselector,rev), view(_columns(ds),colsidx), init = init0)
+    end
+end
 
 
 # TODO probably we should use this approach instead of mapreduce_indexed

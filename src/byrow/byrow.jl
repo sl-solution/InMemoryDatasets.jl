@@ -71,6 +71,10 @@ end
 byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; by = isequal(true), threads = nrow(ds)>1000, mapformats = false) = byrow(ds, all, [col]; by = by, threads = threads, mapformats = mapformats)
 
 byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; threads = nrow(ds)>1000) = row_isequal(ds, cols, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(isless), cols::MultiColumnIndex; by, threads = nrow(ds)>1000, rev::Bool = false) = row_isless(ds, cols, by, threads = threads, rev = rev)
+byrow(ds::AbstractDataset, ::typeof(isless), col::ColumnIndex; by, threads = nrow(ds)>1000, rev::Bool = false) = row_isless(ds, [col], by, threads = threads, rev = rev)
+
 byrow(ds::AbstractDataset, ::typeof(findfirst), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findfirst(ds, by, cols; threads = threads)
 byrow(ds::AbstractDataset, ::typeof(findlast), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findlast(ds, by, cols; threads = threads)
 

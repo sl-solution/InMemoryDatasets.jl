@@ -54,6 +54,7 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `findlast` : Return the column name of the last true value
 * `hash` : Compute an integer hash code
 * `isequal` : Return `true` when all values are equal
+* `isless` : Return `true` when all values are less than passed vector(or column specified by its name) as `by`. Passing `rev = true` change `less` to `greater`.
 * `issorted` : Check if the values are sorted
 * `maximum` : Return the maximum value
 * `mean` : Compute the mean value
@@ -162,6 +163,27 @@ julia> byrow(ds, count, :, by = !ismissing)
  4
  5
 ```
+
+To check if in each row all integer columns are less(greater) than `x1_float` we should use the following code:
+
+```jldoctest
+julia> byrow(ds, isless, r"int", by = :x1_float)
+5-element Vector{Bool}:
+ 0
+ 1
+ 0
+ 0
+ 1
+
+julia> julia> byrow(ds, isless, r"int", by = :x1_float, rev = true) # greater
+5-element Vector{Bool}:
+ 0
+ 0
+ 1
+ 1
+ 0
+```
+
 
 In the following example, in each row we pick the values of selected columns passed by the `by` keyword argument.
 

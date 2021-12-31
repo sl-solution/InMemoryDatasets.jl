@@ -184,6 +184,25 @@
     @test byrow(ds, fill, :, by = missings(Int, nrow(ds)), condition = isequal(1), threads = false) == byrow(ds, fill, :, by = missings(Int, nrow(ds)), condition = isequal(1), threads = true)
     byrow(ds, fill!, :, by = missings(Int, nrow(ds)), condition = isequal(1))
     @test minimum.(eachcol(ds)) == [2,2,2,2]
+
+    ds = Dataset(g = [1, 1, 1, 2, 2],
+                        x1_int = [0, 0, 1, missing, 2],
+                        x2_int = [3, 2, 1, 3, -2],
+                        x1_float = [1.2, missing, -1.0, 2.3, 10],
+                        x2_float = [missing, missing, 3.0, missing, missing],
+                        x3_float = [missing, missing, -1.4, 3.0, -100.0])
+    @test byrow(ds, isless, r"int", by = :x1_float) == [0,1,0,0,1]
+    @test byrow(ds, isless, r"int", by = :x1_float, rev = true) == [0,0,1,1,0]
+    @test byrow(ds, isless, r"int", by = ds[!,:x1_float]) == [0,1,0,0,1]
+    @test byrow(ds, isless, r"int", by = ds[!,:x1_float], rev = true) == [0,0,1,1,0]
+    @test byrow(view(ds, :, :), isless, r"int", by = :x1_float) == [0,1,0,0,1]
+    @test byrow(view(ds, :, :), isless, r"int", by = :x1_float, rev = true) == [0,0,1,1,0]
+    @test byrow(view(ds, :, :), isless, r"int", by = view(ds, :, :)[!,:x1_float]) == [0,1,0,0,1]
+    @test byrow(view(ds, :, :), isless, r"int", by = ds[!,:x1_float], rev = true) == [0,0,1,1,0]
+
+    ds = Dataset(rand(100, 10), :auto)
+    _tval = byrow(view(ds, :, 1:9) .> ds[!, 10], all)
+    @test byrow(ds, isless, 1:9, by=:x10, rev = true) == _tval
 end
 
 @testset "cum*/!" begin
