@@ -17,7 +17,7 @@ The rows of a data set haven't got names, thus, InMemoryDatasets uses automatic 
 
 ### Examples
 
-```jldocttest
+```jldoctest
 julia> ds = Dataset(x1 = [1,2,3,4], x2 = [1,4,9,16])
 4×2 Dataset
  Row │ x1        x2       
@@ -456,7 +456,7 @@ julia> ds = Dataset(A = ["foo", "foo", "foo", "foo", "foo",
 julia> # This first example aggregates values by taking the sum.
 julia> _tmp = combine(groupby(ds, 1:3), 4=>sum);
 
-julia> transpose(groupby(_tmp, 1:2), :D_sum, id = :C, variable_name = nothing)
+julia> transpose(gatherby(_tmp, 1:2, isgathered = true), :sum_D, id = :C, variable_name = nothing)
 4×4 Dataset
  Row │ A         B         large     small    
      │ identity  identity  identity  identity
@@ -467,7 +467,7 @@ julia> transpose(groupby(_tmp, 1:2), :D_sum, id = :C, variable_name = nothing)
    3 │ foo       one              4         1
    4 │ foo       two        missing         6
 
-julia> transpose(groupby(_tmp, 1:2), :D_sum, id = :C, variable_name = nothing, default = 0)
+julia> transpose(gatherby(_tmp, 1:2, isgathered = true), :sum_D, id = :C, variable_name = nothing, default = 0)
 4×4 Dataset
  Row │ A         B         large     small    
      │ identity  identity  identity  identity
@@ -481,7 +481,7 @@ julia> transpose(groupby(_tmp, 1:2), :D_sum, id = :C, variable_name = nothing, d
 julia> # The next example aggregates by taking the mean across multiple columns. Here we don't need transposing
 julia> combine(groupby(ds, [:A, :C]), [:D, :E] => mean)
 4×4 Dataset
- Row │ A         C         D_mean    E_mean   
+ Row │ A         C         mean_D    mean_E   
      │ identity  identity  identity  identity
      │ String?   String?   Float64?  Float64?
 ─────┼────────────────────────────────────────
@@ -492,7 +492,7 @@ julia> combine(groupby(ds, [:A, :C]), [:D, :E] => mean)
 
 julia> combine(groupby(ds, [:A, :C]), :D => mean, :E => [minimum, maximum, mean])
 4×6 Dataset
- Row │ A         C         D_mean    E_minimum  E_maximum  E_mean   
+ Row │ A         C         mean_D    minimum_E  maximum_E  mean_E   
      │ identity  identity  identity  identity   identity   identity
      │ String?   String?   Float64?  Int64?     Int64?     Float64?
 ─────┼──────────────────────────────────────────────────────────────
