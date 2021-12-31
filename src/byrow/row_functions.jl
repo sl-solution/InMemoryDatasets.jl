@@ -102,28 +102,28 @@ function row_isequal(ds::AbstractDataset, cols = :; by::Union{AbstractVector, Da
     end
 end
 
-function _op_for_isless!(x, y, vals, rev)
+function _op_for_isless!(x, y, vals, rev,lt)
     if !rev
-        x .&= isless.(y, vals)
+        x .&= lt.(y, vals)
     else
-        x .&= isless.(vals, y)
+        x .&= lt.(vals, y)
     end
     x
 end
-function hp_op_for_isless!(x, y, vals, rev)
+function hp_op_for_isless!(x, y, vals, rev,lt)
     if !rev
         Threads.@threads for i in 1:length(x)
-            x[i] &= isless(y[i], vals[i])
+            x[i] &= lt(y[i], vals[i])
         end
     else
         Threads.@threads for i in 1:length(x)
-            x[i] &= isless(vals[i], y[i])
+            x[i] &= lt(vals[i], y[i])
         end
     end
     x
 end
 
-function row_isless(ds::AbstractDataset, cols, colselector::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex}; threads = true, rev = false)
+function row_isless(ds::AbstractDataset, cols, colselector::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex}; threads = true, rev = false, lt = isless)
     if !(colselector isa ColumnIndex)
         @assert length(colselector) == nrow(ds) "to compare values of selected columns in each row, the length of the passed vector and the number of rows must match"
     end
@@ -136,9 +136,9 @@ function row_isless(ds::AbstractDataset, cols, colselector::Union{AbstractVector
     end
     init0 = ones(Bool, nrow(ds))
     if threads
-        mapreduce(identity, (x,y)->hp_op_for_isless!(x,y,colselector, rev), view(_columns(ds),colsidx), init = init0)
+        mapreduce(identity, (x,y)->hp_op_for_isless!(x,y,colselector, rev, lt), view(_columns(ds),colsidx), init = init0)
     else
-        mapreduce(identity, (x,y)->_op_for_isless!(x,y,colselector,rev), view(_columns(ds),colsidx), init = init0)
+        mapreduce(identity, (x,y)->_op_for_isless!(x,y,colselector,rev, lt), view(_columns(ds),colsidx), init = init0)
     end
 end
 
@@ -657,22 +657,22 @@ function row_sort(ds::AbstractDataset, cols = names(ds, Union{Missing, Number});
     dscopy
 end
 
-function _op_for_issorted!(x, y, res)
-    res .&= .!isless.(y, x)
+function _op_for_issorted!(x, y, res, lt)
+    res .&= .!lt.(y, x)
     y
 end
-function _op_for_issorted_rev!(x, y, res)
-    res .&= .!isless.(x, y)
+function _op_for_issorted_rev!(x, y, res, lt)
+    res .&= .!lt.(x, y)
     y
 end
 
-function row_issorted(ds::AbstractDataset, cols; rev = false)
+function row_issorted(ds::AbstractDataset, cols; rev = false, lt = isless)
     colsidx = index(ds)[cols]
     init0 = ones(Bool, nrow(ds))
     if rev
-        mapreduce(identity, (x, y)->_op_for_issorted_rev!(x, y, init0), view(_columns(ds),colsidx))
+        mapreduce(identity, (x, y)->_op_for_issorted_rev!(x, y, init0, lt), view(_columns(ds),colsidx))
     else
-        mapreduce(identity, (x, y)->_op_for_issorted!(x, y, init0), view(_columns(ds),colsidx))
+        mapreduce(identity, (x, y)->_op_for_issorted!(x, y, init0, lt), view(_columns(ds),colsidx))
     end
     init0
 end

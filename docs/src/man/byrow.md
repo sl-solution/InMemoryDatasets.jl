@@ -76,6 +76,7 @@ The `nunique` function doesn't accept `threads` argument, however, it has an ext
 
 The `coalesce` and `issorted` functions don't accept `by` argument, however, `issorted` and `isless` accept extra keyword argument `rev` which is set to `false` by default, and `isequal`, `select`, and `isless` accept extra keyword argument `with` for passing a vector of values or a column name.
 
+By default, `issorted` and `isless` use the `isless` function for comparing values, however, user can pass any other function via the `lt` keyword argument.
 
 ### Examples
 

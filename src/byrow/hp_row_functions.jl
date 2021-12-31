@@ -208,26 +208,26 @@ function hp_row_sort(ds::AbstractDataset, cols = names(ds, Union{Missing, Number
     dscopy
 end
 
-function hp_op_for_issorted!(x, y, res)
+function hp_op_for_issorted!(x, y, res, lt)
     Threads.@threads for i in 1:length(x)
-        res[i] &= !isless(y[i], x[i])
+        res[i] &= !lt(y[i], x[i])
     end
     y
 end
-function hp_op_for_issorted_rev!(x, y, res)
+function hp_op_for_issorted_rev!(x, y, res, lt)
     Threads.@threads for i in 1:length(x)
-        res[i] &= !isless(x[i], y[i])
+        res[i] &= !lt(x[i], y[i])
     end
     y
 end
 
-function hp_row_issorted(ds::AbstractDataset, cols; rev = false)
+function hp_row_issorted(ds::AbstractDataset, cols; rev = false, lt = isless)
     colsidx = index(ds)[cols]
     init0 = ones(Bool, nrow(ds))
     if rev
-        mapreduce(identity, (x, y)->hp_op_for_issorted_rev!(x, y, init0), view(_columns(ds),colsidx))
+        mapreduce(identity, (x, y)->hp_op_for_issorted_rev!(x, y, init0, lt), view(_columns(ds),colsidx))
     else
-        mapreduce(identity, (x, y)->hp_op_for_issorted!(x, y, init0), view(_columns(ds),colsidx))
+        mapreduce(identity, (x, y)->hp_op_for_issorted!(x, y, init0, lt), view(_columns(ds),colsidx))
     end
     init0
 end
