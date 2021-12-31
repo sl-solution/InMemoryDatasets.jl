@@ -53,8 +53,8 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `findfirst` : Return the column name of the first true value
 * `findlast` : Return the column name of the last true value
 * `hash` : Compute an integer hash code
-* `isequal` : Return `true` when all values are equal. Optionally, a vector of values can be passed via the `by` keyword to compare equality with it.
-* `isless` : Return `true` when all values are less than passed vector(or column specified by its name) as `by`. Passing `rev = true` change `less` to `greater`.
+* `isequal` : Return `true` when all values are equal. Optionally, a vector of values can be passed via the `with` keyword to compare equality with it.
+* `isless` : Return `true` when all values are less than passed vector(or column specified by its name) as `with`. Passing `rev = true` change `less` to `greater`.
 * `issorted` : Check if the values are sorted
 * `maximum` : Return the maximum value
 * `mean` : Compute the mean value
@@ -74,7 +74,7 @@ The `by` keyword argument is for specifying a function to call on each value bef
 
 The `nunique` function doesn't accept `threads` argument, however, it has an extra keyword argument `count_missing`. `nunique` counts the number of unique values of each row, and `count_missing = true` counts missings as a unique value.
 
-The `coalesce` and `issorted` functions don't accept `by` argument, however, `issorted` and `isless` accept extra keyword argument `rev` which is set to `false` by default.
+The `coalesce` and `issorted` functions don't accept `by` argument, however, `issorted` and `isless` accept extra keyword argument `rev` which is set to `false` by default, and `isequal` and `isless` accept extra keyword argument `with` for passing a vector of values or a column name to compare values with it.
 
 
 ### Examples
@@ -167,7 +167,7 @@ julia> byrow(ds, count, :, by = !ismissing)
 To check if in each row all integer columns are less(greater) than `x1_float` we should use the following code:
 
 ```jldoctest
-julia> byrow(ds, isless, r"int", by = :x1_float)
+julia> byrow(ds, isless, r"int", with = :x1_float)
 5-element Vector{Bool}:
  0
  1
@@ -175,7 +175,7 @@ julia> byrow(ds, isless, r"int", by = :x1_float)
  0
  1
 
-julia> julia> byrow(ds, isless, r"int", by = :x1_float, rev = true) # greater
+julia> julia> byrow(ds, isless, r"int", with = :x1_float, rev = true) # greater
 5-element Vector{Bool}:
  0
  0
@@ -274,7 +274,7 @@ Note that `avg` is missing if any of the values in `x` is missing.
 
 The main difference between these operations and the previous operations is that these operations return a data set with the corresponding row has been updated with the operation. For the operations with `!` the updated version of the original data set is returned and for the operations without `!` a modified copy of the original data set is returned.
 
-The `fill` and `fill!` functions fill missing values (or any other values which a function passed to the `condition` keyword argument returns `true`) in each row of a given data set by given values passed to the `by` keyword argument. The function passed to the `condition` keyword argument must return `true` or `false`.
+The `fill` and `fill!` functions fill missing values (or any other values which a function passed to the `condition` keyword argument returns `true`) in each row of a given data set by given values passed to the `with` keyword argument. The function passed to the `condition` keyword argument must return `true` or `false`.
 
 > Note that for the `fill` and `fill!` functions the filling happens in-place, thus, if this is not possible Julia will throw errors.
 
@@ -289,7 +289,7 @@ julia> ds = Dataset(x1 = [missing, 2, 1], x2 = [1, missing, missing], y = [4,5,3
    2 │        2   missing         5
    3 │        1   missing         3
 
-julia> byrow(ds, fill, 1:2, by = :y)
+julia> byrow(ds, fill, 1:2, with = :y)
 3×3 Dataset
  Row │ x1        x2        y        
      │ identity  identity  identity
@@ -299,7 +299,7 @@ julia> byrow(ds, fill, 1:2, by = :y)
    2 │        2         5         5
    3 │        1         3         3
 
-julia> byrow(ds, fill, 1:2, by = [0,2,1])
+julia> byrow(ds, fill, 1:2, with = [0,2,1])
 3×3 Dataset
  Row │ x1        x2        y        
      │ identity  identity  identity
@@ -309,7 +309,7 @@ julia> byrow(ds, fill, 1:2, by = [0,2,1])
    2 │        2         2         5
    3 │        1         1         3
 
-julia> byrow(ds, fill, 1:2, by = [0,2,1], condition = x->ismissing(x) || isequal(x, 1))
+julia> byrow(ds, fill, 1:2, with = [0,2,1], condition = x->ismissing(x) || isequal(x, 1))
 3×3 Dataset
  Row │ x1        x2        y        
      │ identity  identity  identity

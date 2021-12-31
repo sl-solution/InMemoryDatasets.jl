@@ -70,22 +70,22 @@ function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; b
 end
 byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; by = isequal(true), threads = nrow(ds)>1000, mapformats = false) = byrow(ds, all, [col]; by = by, threads = threads, mapformats = mapformats)
 
-byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; by = nothing, threads = nrow(ds)>1000) = row_isequal(ds, cols, by = by, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(isequal), cols::ColumnIndex; by = nothing, threads = nrow(ds)>1000) = row_isequal(ds, cols, by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; with = nothing, threads = nrow(ds)>1000) = row_isequal(ds, cols, by = with, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(isequal), cols::ColumnIndex; with = nothing, threads = nrow(ds)>1000) = row_isequal(ds, cols, by = with, threads = threads)
 
 
-byrow(ds::AbstractDataset, ::typeof(isless), cols::MultiColumnIndex; by, threads = nrow(ds)>1000, rev::Bool = false) = row_isless(ds, cols, by, threads = threads, rev = rev)
-byrow(ds::AbstractDataset, ::typeof(isless), col::ColumnIndex; by, threads = nrow(ds)>1000, rev::Bool = false) = row_isless(ds, [col], by, threads = threads, rev = rev)
+byrow(ds::AbstractDataset, ::typeof(isless), cols::MultiColumnIndex; with, threads = nrow(ds)>1000, rev::Bool = false) = row_isless(ds, cols, with, threads = threads, rev = rev)
+byrow(ds::AbstractDataset, ::typeof(isless), col::ColumnIndex; with, threads = nrow(ds)>1000, rev::Bool = false) = row_isless(ds, [col], with, threads = threads, rev = rev)
 
 byrow(ds::AbstractDataset, ::typeof(findfirst), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findfirst(ds, by, cols; threads = threads)
 byrow(ds::AbstractDataset, ::typeof(findlast), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findlast(ds, by, cols; threads = threads)
 
 byrow(ds::AbstractDataset, ::typeof(select), cols::MultiColumnIndex; by, threads = nrow(ds)>1000) = row_select(ds, cols, by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(fill!), cols::MultiColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(ds, cols, by, f = condition, threads = threads, rolling = rolling)
-byrow(ds::AbstractDataset, ::typeof(fill!), col::ColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(ds, fill!, [col], by = by, condition = condition, threads = threads, rolling = rolling)
-byrow(ds::AbstractDataset, ::typeof(fill), cols::MultiColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(copy(ds), cols, by, f = condition, threads = threads, rolling = rolling)
-byrow(ds::AbstractDataset, ::typeof(fill), col::ColumnIndex; by , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(copy(ds), fill!, [col], by = by, condition = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill!), cols::MultiColumnIndex; with , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(ds, cols, with, f = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill!), col::ColumnIndex; with , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(ds, fill!, [col], with = with, condition = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill), cols::MultiColumnIndex; with , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(copy(ds), cols, with, f = condition, threads = threads, rolling = rolling)
+byrow(ds::AbstractDataset, ::typeof(fill), col::ColumnIndex; with , condition = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(copy(ds), fill!, [col], with = with, condition = condition, threads = threads, rolling = rolling)
 
 
 byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_coalesce(ds, cols) : row_coalesce(ds, cols)

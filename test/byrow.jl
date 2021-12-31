@@ -50,16 +50,16 @@
 
     ds = Dataset(x1 = [1,2,3,1,1], x2 =[2,2,3,missing, 1], x3 = [1,1,1,1,1])
 
-    @test byrow(ds, isequal, 1:2, by = :x3) == [false, false, false, false, true]
-    @test byrow(ds, isequal, 1:3, by = :x3) == [false, false, false, false, true]
-    @test byrow(ds, isequal, [1,3], by = [1,1,1,1,1]) == [true, false, false, true, true]
-    @test byrow(ds, isequal, 1:2, by = ds[!, :x3]) == [false, false, false, false, true]
-    @test byrow(ds, isequal, 1:3, by = ds[:,3]) == [false, false, false, false, true]
-    @test byrow(ds, isequal, 1, by = ds[:,3]) == [true, false, false, true, true]
+    @test byrow(ds, isequal, 1:2, with = :x3) == [false, false, false, false, true]
+    @test byrow(ds, isequal, 1:3, with = :x3) == [false, false, false, false, true]
+    @test byrow(ds, isequal, [1,3], with = [1,1,1,1,1]) == [true, false, false, true, true]
+    @test byrow(ds, isequal, 1:2, with = ds[!, :x3]) == [false, false, false, false, true]
+    @test byrow(ds, isequal, 1:3, with = ds[:,3]) == [false, false, false, false, true]
+    @test byrow(ds, isequal, 1, with = ds[:,3]) == [true, false, false, true, true]
 
-    @test byrow(view(ds, :, :), isequal, 1:2, by = :x3) == [false, false, false, false, true]
-    @test byrow(view(ds, :, :), isequal, 1:3, by = :x3) == [false, false, false, false, true]
-    @test byrow(view(ds, :, :), isequal, [1,3], by = [1,1,1,1,1]) == [true, false, false, true, true]
+    @test byrow(view(ds, :, :), isequal, 1:2, with = :x3) == [false, false, false, false, true]
+    @test byrow(view(ds, :, :), isequal, 1:3, with = :x3) == [false, false, false, false, true]
+    @test byrow(view(ds, :, :), isequal, [1,3], with = [1,1,1,1,1]) == [true, false, false, true, true]
 
     ds = Dataset(x1 = [1,2,3,4,missing], x2 = [3,2,4,5, missing])
     @test byrow(ds, issorted, :) == [true, true, true, true, true]
@@ -139,63 +139,63 @@
 
 
     ds = Dataset(x1 = [1.0,missing,3,4], x2 = [1.5,6.5,missing,2.4], y3 = [3,1,1,2])
-    @test byrow(ds, fill, r"x", by = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
-    @test byrow(ds, fill, [1, 2], by = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
-    @test byrow(ds, fill, 1:2, by = 3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
-    @test byrow(ds, fill, r"x", by = :y3, rolling = true) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,3,2.4], y3 = [3,1,1,2])
-    @test byrow(ds, fill, r"x", by = :y3, condition = x->isless(2,x)) == Dataset(x1 = [1.0,1,1,2], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
-    @test byrow(ds, fill, r"x", by = :y3, condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,1,1,2.0], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
-    @test byrow(ds, fill, r"x", by = [missing, missing, missing, missing], condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,missing, missing, missing], x2 = [1.5,missing, missing, missing], y3 = [3,1,1,2])
+    @test byrow(ds, fill, r"x", with = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
+    @test byrow(ds, fill, [1, 2], with = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
+    @test byrow(ds, fill, 1:2, with = 3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
+    @test byrow(ds, fill, r"x", with = :y3, rolling = true) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,3,2.4], y3 = [3,1,1,2])
+    @test byrow(ds, fill, r"x", with = :y3, condition = x->isless(2,x)) == Dataset(x1 = [1.0,1,1,2], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
+    @test byrow(ds, fill, r"x", with = :y3, condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,1,1,2.0], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
+    @test byrow(ds, fill, r"x", with = [missing, missing, missing, missing], condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,missing, missing, missing], x2 = [1.5,missing, missing, missing], y3 = [3,1,1,2])
 
     repeat!(ds, 2)
     sds = view(ds, [5,6,7,8], [1,2,3])
-    @test byrow(sds, fill, r"x", by = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
-    @test byrow(sds, fill, [1, 2], by = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
-    @test byrow(sds, fill, 1:2, by = 3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
-    @test byrow(sds, fill, r"x", by = :y3, rolling = true) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,3,2.4], y3 = [3,1,1,2])
-    @test byrow(sds, fill, r"x", by = :y3, condition = x->isless(2,x)) == Dataset(x1 = [1.0,1,1,2], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
-    @test byrow(sds, fill, r"x", by = :y3, condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,1,1,2.0], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
-    @test byrow(sds, fill, r"x", by = [missing, missing, missing, missing], condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,missing, missing, missing], x2 = [1.5,missing, missing, missing], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
+    @test byrow(sds, fill, [1, 2], with = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
+    @test byrow(sds, fill, 1:2, with = 3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = :y3, rolling = true) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,3,2.4], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = :y3, condition = x->isless(2,x)) == Dataset(x1 = [1.0,1,1,2], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = :y3, condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,1,1,2.0], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = [missing, missing, missing, missing], condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,missing, missing, missing], x2 = [1.5,missing, missing, missing], y3 = [3,1,1,2])
 
     sds = view(ds, 1:4, 1:3)
-    @test byrow(sds, fill, r"x", by = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
-    @test byrow(sds, fill, [1, 2], by = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
-    @test byrow(sds, fill, 1:2, by = 3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
-    @test byrow(sds, fill, r"x", by = :y3, rolling = true) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,3,2.4], y3 = [3,1,1,2])
-    @test byrow(sds, fill, r"x", by = :y3, condition = x->isless(2,x)) == Dataset(x1 = [1.0,1,1,2], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
-    @test byrow(sds, fill, r"x", by = :y3, condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,1,1,2.0], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
-    @test byrow(sds, fill, r"x", by = [missing, missing, missing, missing], condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,missing, missing, missing], x2 = [1.5,missing, missing, missing], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
+    @test byrow(sds, fill, [1, 2], with = :y3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
+    @test byrow(sds, fill, 1:2, with = 3) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = :y3, rolling = true) == Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,3,2.4], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = :y3, condition = x->isless(2,x)) == Dataset(x1 = [1.0,1,1,2], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = :y3, condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,1,1,2.0], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
+    @test byrow(sds, fill, r"x", with = [missing, missing, missing, missing], condition = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,missing, missing, missing], x2 = [1.5,missing, missing, missing], y3 = [3,1,1,2])
 
     ds = Dataset(x1 = [1.0,missing,3,4], x2 = [1.5,6.5,missing,2.4], y3 = [3,1,1,2])
     setformat!(ds,:x1=>sqrt)
-    byrow(ds, fill!, r"x", by = :y3)
+    byrow(ds, fill!, r"x", with = :y3)
     @test getformat(ds,:x1) == sqrt
     ds = Dataset(x1 = [1.0,missing,3,4], x2 = [1.5,6.5,missing,2.4], y3 = [3,1,1,2])
     setformat!(ds,:x1=>sqrt)
     repeat!(ds, 2)
     sds = view(ds, [5,6,7,8], [1,2,3])
-    byrow(sds, fill!, r"x", by = :y3)
+    byrow(sds, fill!, r"x", with = :y3)
     @test getformat(ds,:x1) == sqrt
 
     ds = Dataset(x1 = [1.0,missing,3,4], x2 = [1.5,6.5,missing,2.4], y3 = [3,1,1,2])
     sort!(ds, 2)
-    byrow(ds, fill!, r"x", by = :y3)
+    byrow(ds, fill!, r"x", with = :y3)
     @test IMD.index(ds).sortedcols == []
     ds = Dataset(x1 = [1.0,missing,3,4], x2 = [1.5,6.5,missing,2.4], y3 = [3,1,1,2])
     repeat!(ds, 2)
     sort!(ds, 2)
     sds = view(ds, [5,6,7,8], [3,1,2])
-    byrow(sds, fill!, r"x", by = [0,0,0,0])
+    byrow(sds, fill!, r"x", with = [0,0,0,0])
     @test IMD.index(ds).sortedcols == []
 
     ds = Dataset(x1 = [1.0,missing,3,4], x2 = [1.5,6.5,missing,2.4], y3 = [3,1,1,2])
     sort!(ds, 3)
-    byrow(ds, fill!, 1:2, by = 3)
+    byrow(ds, fill!, 1:2, with = 3)
     @test IMD.index(ds).sortedcols == [3]
 
     ds = Dataset(rand(1:10, 10000, 4), :auto)
-    @test byrow(ds, fill, :, by = missings(Int, nrow(ds)), condition = isequal(1), threads = false) == byrow(ds, fill, :, by = missings(Int, nrow(ds)), condition = isequal(1), threads = true)
-    byrow(ds, fill!, :, by = missings(Int, nrow(ds)), condition = isequal(1))
+    @test byrow(ds, fill, :, with = missings(Int, nrow(ds)), condition = isequal(1), threads = false) == byrow(ds, fill, :, with = missings(Int, nrow(ds)), condition = isequal(1), threads = true)
+    byrow(ds, fill!, :, with = missings(Int, nrow(ds)), condition = isequal(1))
     @test minimum.(eachcol(ds)) == [2,2,2,2]
 
     ds = Dataset(g = [1, 1, 1, 2, 2],
@@ -204,20 +204,20 @@
                         x1_float = [1.2, missing, -1.0, 2.3, 10],
                         x2_float = [missing, missing, 3.0, missing, missing],
                         x3_float = [missing, missing, -1.4, 3.0, -100.0])
-    @test byrow(ds, isless, r"int", by = :x1_float) == [0,1,0,0,1]
-    @test byrow(ds, isless, r"int", by = :x1_float, rev = true) == [0,0,1,1,0]
-    @test byrow(ds, isless, r"int", by = ds[!,:x1_float]) == [0,1,0,0,1]
-    @test byrow(ds, isless, r"int", by = ds[!,:x1_float], rev = true) == [0,0,1,1,0]
-    @test byrow(ds, isless, r"int", by = ds[:,:x1_float]) == [0,1,0,0,1]
-    @test byrow(ds, isless, r"int", by = ds[:,:x1_float], rev = true) == [0,0,1,1,0]
-    @test byrow(view(ds, :, :), isless, r"int", by = :x1_float) == [0,1,0,0,1]
-    @test byrow(view(ds, :, :), isless, r"int", by = :x1_float, rev = true) == [0,0,1,1,0]
-    @test byrow(view(ds, :, :), isless, r"int", by = view(ds, :, :)[!,:x1_float]) == [0,1,0,0,1]
-    @test byrow(view(ds, :, :), isless, r"int", by = ds[!,:x1_float], rev = true) == [0,0,1,1,0]
+    @test byrow(ds, isless, r"int", with = :x1_float) == [0,1,0,0,1]
+    @test byrow(ds, isless, r"int", with = :x1_float, rev = true) == [0,0,1,1,0]
+    @test byrow(ds, isless, r"int", with = ds[!,:x1_float]) == [0,1,0,0,1]
+    @test byrow(ds, isless, r"int", with = ds[!,:x1_float], rev = true) == [0,0,1,1,0]
+    @test byrow(ds, isless, r"int", with = ds[:,:x1_float]) == [0,1,0,0,1]
+    @test byrow(ds, isless, r"int", with = ds[:,:x1_float], rev = true) == [0,0,1,1,0]
+    @test byrow(view(ds, :, :), isless, r"int", with = :x1_float) == [0,1,0,0,1]
+    @test byrow(view(ds, :, :), isless, r"int", with = :x1_float, rev = true) == [0,0,1,1,0]
+    @test byrow(view(ds, :, :), isless, r"int", with = view(ds, :, :)[!,:x1_float]) == [0,1,0,0,1]
+    @test byrow(view(ds, :, :), isless, r"int", with = ds[!,:x1_float], rev = true) == [0,0,1,1,0]
 
     ds = Dataset(rand(100, 10), :auto)
     _tval = byrow(view(ds, :, 1:9) .> ds[!, 10], all)
-    @test byrow(ds, isless, 1:9, by=:x10, rev = true) == _tval
+    @test byrow(ds, isless, 1:9, with=:x10, rev = true) == _tval
 end
 
 @testset "cum*/!" begin

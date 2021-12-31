@@ -96,7 +96,7 @@ julia> ds = Dataset(rand([1,2,3, missing], 10, 6), :auto)
    9 │        3         1         1         3         1   missing
   10 │  missing         1         3         1         1         3
 
-julia> byrow(ds, fill!, :, by = byrow(ds, coalesce, :), rolling = true)
+julia> byrow(ds, fill!, :, with = byrow(ds, coalesce, :), rolling = true)
 10×6 Dataset
  Row │ x1        x2        x3        x4        x5        x6       
      │ identity  identity  identity  identity  identity  identity
@@ -122,7 +122,7 @@ row with row means of non-missing values.
 ```julia
 julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);
 
-julia> byrow(ds, fill!, :, by = byrow(ds, mean, :));
+julia> byrow(ds, fill!, :, with = byrow(ds, mean, :));
 ```
 
 ## Filtering
@@ -147,7 +147,7 @@ julia> ds = Dataset(rand(10, 5), :auto)
    9 │ 0.681305    0.23287    0.35492    0.754141   0.134459
   10 │ 0.0739887   0.157783   0.697812   0.421743   0.229453
 
-julia> filter(ds, 1:2, type = isless, by = :x5, rev = true)
+julia> filter(ds, 1:2, type = isless, with = :x5, rev = true)
 3×5 Dataset
  Row │ x1        x2        x3        x4        x5        
      │ identity  identity  identity  identity  identity  
