@@ -78,8 +78,8 @@ byrow(ds::AbstractDataset, ::typeof(isless), col::ColumnIndex; with, threads = n
 
 byrow(ds::AbstractDataset, ::typeof(in), cols::MultiColumnIndex; item, threads = nrow(ds)>1000, eq = isequal) = row_in(ds, cols, item; threads = threads, eq = eq)
 
-byrow(ds::AbstractDataset, ::typeof(findfirst), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findfirst(ds, by, cols; threads = threads)
-byrow(ds::AbstractDataset, ::typeof(findlast), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000) = row_findlast(ds, by, cols; threads = threads)
+byrow(ds::AbstractDataset, ::typeof(findfirst), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000, item = nothing, eq = isequal) = row_findfirst(ds, by, cols; threads = threads, item = item, eq = eq)
+byrow(ds::AbstractDataset, ::typeof(findlast), cols::MultiColumnIndex; by = identity, threads = nrow(ds)> 1000, item = nothing, eq = isequal) = row_findlast(ds, by, cols; threads = threads, item = item, eq = eq)
 
 byrow(ds::AbstractDataset, ::typeof(select), cols::MultiColumnIndex; with, threads = nrow(ds)>1000) = row_select(ds, cols, with, threads = threads)
 

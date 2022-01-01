@@ -70,12 +70,12 @@ end
 row_all(ds::AbstractDataset, cols = :) = row_all(ds, isequal(true), cols)
 
 function _op_for_isequal!(x,y, x1)
-    x .&= isequal.(y, x1)
+    x .&= isequal.(x1, y)
     x
 end
 function hp_op_for_isequal!(x,y, x1)
     Threads.@threads for i in 1:length(x)
-        x[i] &= isequal(y[i], x1[i])
+        x[i] &= isequal(x1[i], y[i])
     end
     x
 end
@@ -157,6 +157,19 @@ function hp_op_for_findfirst!(x, y, f, idx, missref)
     end
     x
 end
+function _op_for_findfirst!(x, y, item, idx, missref, eq)
+    idx[] += 1
+    x .= ifelse.(isequal.(missref, x) .& eq.(item, y), idx, x)
+    x
+end
+
+function hp_op_for_findfirst!(x, y, item, idx, missref, eq)
+    idx[] += 1
+    Threads.@threads for i in 1:length(x)
+        x[i] = ifelse(isequal(missref, x[i]) & eq(item[i], y[i]), idx[], x[i])
+    end
+    x
+end
 
 function _op_for_findlast!(x, y, f, idx, missref)
     idx[] += 1
@@ -172,34 +185,78 @@ function hp_op_for_findlast!(x, y, f, idx, missref)
     x
 end
 
+function _op_for_findlast!(x, y, item, idx, missref, eq)
+    idx[] += 1
+    x .= ifelse.(eq.(item, y), idx, x)
+    x
+end
+
+function hp_op_for_findlast!(x, y, item, idx, missref, eq)
+    idx[] += 1
+    Threads.@threads for i in 1:length(x)
+        x[i] = ifelse(eq(item[i], y[i]), idx[], x[i])
+    end
+    x
+end
+
 # TODO probably we should use threads argument instead of seperate functions for hp version
-function row_findfirst(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Number}); threads = true)
+function row_findfirst(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Number});item::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex, Nothing} = nothing, threads = true, eq = isequal)
+    if !(item isa ColumnIndex) && item !== nothing
+        @assert length(item) == nrow(ds) "length of item values must be the same as the number of rows"
+    elseif item isa SubDatasetColumn || item isa DatasetColumn
+        item = __!(item)
+    elseif item isa ColumnIndex
+        item = _columns(ds)[index(ds)[item]]
+    end
     colsidx = index(ds)[cols]
     idx = Ref{Int}(0)
     colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, 0)
     init0 = fill(missref, nrow(ds))
-    if threads
-        mapreduce(identity, (x,y)->hp_op_for_findfirst!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+    if item === nothing
+        if threads
+            mapreduce(identity, (x,y)->hp_op_for_findfirst!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+        else
+            mapreduce(identity, (x,y)->_op_for_findfirst!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+        end
     else
-        mapreduce(identity, (x,y)->_op_for_findfirst!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+        if threads
+            mapreduce(identity, (x,y)->hp_op_for_findfirst!(x,y,item,idx, missref, eq), view(_columns(ds),colsidx), init = init0)
+        else
+            mapreduce(identity, (x,y)->_op_for_findfirst!(x,y,item,idx, missref, eq), view(_columns(ds),colsidx), init = init0)
+        end
     end
     colnames_pa.refs = init0
     colnames_pa
 end
 
-function row_findlast(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Number}); threads = true)
+function row_findlast(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Number}); item::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex, Nothing} = nothing, threads = true, eq = isequal)
+    if !(item isa ColumnIndex) && item !== nothing
+        @assert length(item) == nrow(ds) "length of item values must be the same as the number of rows"
+    elseif item isa SubDatasetColumn || item isa DatasetColumn
+        item = __!(item)
+    elseif item isa ColumnIndex
+        item = _columns(ds)[index(ds)[item]]
+    end
     colsidx = index(ds)[cols]
     idx = Ref{Int}(0)
     colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, 0)
     init0 = fill(missref, nrow(ds))
-    if threads
-        mapreduce(identity, (x,y)->hp_op_for_findlast!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+    if item === nothing
+        if threads
+            mapreduce(identity, (x,y)->hp_op_for_findlast!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+        else
+            mapreduce(identity, (x,y)->_op_for_findlast!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+        end
     else
-        mapreduce(identity, (x,y)->_op_for_findlast!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+        if threads
+            mapreduce(identity, (x,y)->hp_op_for_findlast!(x,y,item,idx, missref, eq), view(_columns(ds),colsidx), init = init0)
+        else
+            mapreduce(identity, (x,y)->_op_for_findlast!(x,y,item,idx, missref, eq), view(_columns(ds),colsidx), init = init0)
+        end
     end
     colnames_pa.refs = init0
     colnames_pa
@@ -207,13 +264,13 @@ end
 
 function _op_for_in!(x,y,x1,eq)
     for i in 1:length(x)
-        !x[i] ? x[i] = eq(y[i], x1[i]) : nothing
+        !x[i] ? x[i] = eq(x1[i], y[i]) : nothing
     end
     x
 end
 function hp_op_for_in!(x,y,x1,eq)
     Threads.@threads for i in 1:length(x)
-        !x[i] ? x[i] = eq(y[i], x1[i]) : nothing
+        !x[i] ? x[i] = eq(x1[i], y[i]) : nothing
     end
     x
 end
