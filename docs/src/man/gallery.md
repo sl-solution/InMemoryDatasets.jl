@@ -125,7 +125,7 @@ julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);
 julia> byrow(ds, fill!, :, with = byrow(ds, mean, :));
 ```
 
-* [How to determine whether two sets of variables have a shared value](https://stackoverflow.com/questions/70452064/how-to-determine-whether-two-sets-of-variables-have-a-shared-value-in-r) : I have a data that contains two sets of variables, and I want to compare whether the two sets have the same value. Here we provide a scalable solution where the columns for the first set are contain "1" in their names, and the columns for the second set contain "2" in their names.
+* [How to determine whether two sets of variables have a shared value](https://stackoverflow.com/questions/70452064/how-to-determine-whether-two-sets-of-variables-have-a-shared-value-in-r) : I have a data that contains two sets of variables, and I want to compare whether the two sets have the same value. Here we provide a scalable solution where the columns for the first set  have "1" in their names, and the columns for the second set have "2" in their names.
 
 ```julia
 julia> a1 = Dataset(z1=[1,missing,3,4,5],x1=string.(3:7),z2=[2,missing,4,5,6],x2=[3,5,4,7,5])
