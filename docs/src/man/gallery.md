@@ -4,7 +4,7 @@ This gallery contains some random questions about data manipulation that we foun
 
 ## General
 
-* [Tally across columns with variable condition in r](https://stackoverflow.com/questions/70501316/tally-across-columns-with-variable-condition-in-r) : I am trying to tally across columns of a data frame with values that exceed a corresponding limit variable.
+* [Tally across columns with variable condition](https://stackoverflow.com/questions/70501316/tally-across-columns-with-variable-condition-in-r) : I am trying to tally across columns of a data frame with values that exceed a corresponding limit variable.
 
 ```julia
 julia> ds
@@ -131,7 +131,7 @@ julia> byrow(ds, fill!, :, with = byrow(ds, mean, :));
 julia> a1 = Dataset(z1=[1,missing,3,4,5],x1=string.(3:7),z2=[2,missing,4,5,6],x2=[3,5,4,7,5])
 5×4 Dataset
  Row │ z1        x1        z2        x2       
-     │ identity  identity  identity  identity 
+     │ identity  identity  identity  identity
      │ Int64?    String?   Int64?    Int64?   
 ─────┼────────────────────────────────────────
    1 │        1  3                2         3
