@@ -50,8 +50,8 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `argmin` : Return the column name of the minimum element
 * `coalesce` : Return the first value which is not equal to `missing`
 * `count` : Count the number of `trues`
-* `findfirst` : Return the column name of the first true value
-* `findlast` : Return the column name of the last true value
+* `findfirst` : Return the column name of the first true value. Alternatively, user can pass a vector of values to `item` to search for the first column with the same value.
+* `findlast` : Return the column name of the last true value. Alternatively, user can pass a vector of values to `item` to search for the first column with the same value.
 * `hash` : Compute an integer hash code
 * `in` : Determine whether values passed via the `item` keyword argument are in the given collection of columns.
 * `isequal` : Return `true` when all values are equal. Optionally, a vector of values can be passed via the `with` keyword to compare equality with it.
@@ -79,7 +79,7 @@ The `coalesce` and `issorted` functions don't accept `by` argument, however, `is
 
 By default, `issorted` and `isless` use the `isless` function for comparing values, however, user can pass any other function via the `lt` keyword argument.
 
-A column name or a vector of values must be passed via `item` if `in` operation is used in `byrow`. By default, `in` operation uses `isequal` for determining whether an item is in the given collection, however, any user defined function passed via the `eq` keyword argument can replace it.
+A column name or a vector of values must be passed via `item` if `in` operation is used in `byrow`. By default, `in` operation uses `isequal(item, collection)` for determining whether an item is in the given collection, however, any user defined function passed via the `eq` keyword argument can replace it. Both `findfirst` and `findlast` support the `eq` keyword argument.
 
 ### Examples
 
