@@ -93,23 +93,6 @@ function hp_row_all(ds::AbstractDataset, f::Function, cols = :)
 end
 hp_row_all(ds::AbstractDataset, cols = :) = hp_row_all(ds, isequal(true), cols)
 
-function hp_op_coalesce!(x, y)
-    if all(!ismissing, x) # TODO this for performance, is it ok for large ds?
-        x
-    else
-        Threads.@threads for i in 1:length(x)
-            @inbounds x[i] = ifelse(ismissing(x[i]), y[i], x[i])
-        end
-    end
-    x
-end
-
-function hp_row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}))
-    colsidx = index(ds)[cols]
-    CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    init0 = fill!(Vector{Union{CT, Missing}}(undef, size(ds,1)), missing)
-    mapreduce(identity, hp_op_coalesce!, view(_columns(ds),colsidx), init = init0)
-end
 
 function hp_row_mean(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
     hp_row_sum(ds, f, cols) ./ hp_row_count(ds, x -> !ismissing(x), cols)

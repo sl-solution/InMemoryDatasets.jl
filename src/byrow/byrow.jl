@@ -88,7 +88,7 @@ byrow(ds::AbstractDataset, ::typeof(fill!), col::ColumnIndex; with , by = ismiss
 byrow(ds::AbstractDataset, ::typeof(fill), cols::MultiColumnIndex; with , by = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(copy(ds), cols, with, f = by, threads = threads, rolling = rolling)
 byrow(ds::AbstractDataset, ::typeof(fill), col::ColumnIndex; with , by = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(copy(ds), fill!, [col], with = with, by = by, threads = threads, rolling = rolling)
 
-byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_coalesce(ds, cols) : row_coalesce(ds, cols)
+byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = nrow(ds)>1000) = row_coalesce(ds, cols; threads = threads)
 
 byrow(ds::AbstractDataset, ::typeof(mean), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds)>1000) = threads ? hp_row_mean(ds, by, cols) : row_mean(ds, by, cols)
 byrow(ds::AbstractDataset, ::typeof(mean), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, mean, [col]; by = by, threads = threads)

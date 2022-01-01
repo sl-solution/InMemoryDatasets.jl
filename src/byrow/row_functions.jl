@@ -73,11 +73,13 @@ row_all(ds::AbstractDataset, cols = :) = row_all(ds, isequal(true), cols)
 # if the keyword argument is `with` then eq(y, with)
 # if the keyword argument is `item` then eq(item, y)
 
-function _op_for_isequal!(x,y, x1)
-    x .&= isequal.(y, x1)
+Base.@propagate_inbounds function _op_for_isequal!(x,y, x1)
+    @simd for i in 1:length(x)
+        x[i] &= isequal(y[i], x1[i])
+    end
     x
 end
-function hp_op_for_isequal!(x,y, x1)
+Base.@propagate_inbounds function hp_op_for_isequal!(x,y, x1)
     Threads.@threads for i in 1:length(x)
         x[i] &= isequal(y[i], x1[i])
     end
@@ -106,15 +108,19 @@ function row_isequal(ds::AbstractDataset, cols = :; by::Union{AbstractVector, Da
     end
 end
 
-function _op_for_isless!(x, y, vals, rev,lt)
+Base.@propagate_inbounds function _op_for_isless!(x, y, vals, rev,lt)
     if !rev
-        x .&= lt.(y, vals)
+        @simd for i in 1:length(x)
+            x[i] &= lt(y[i], vals[i])
+        end
     else
-        x .&= lt.(vals, y)
+        @simd for i in 1:length(x)
+            x[i] &= lt(vals[i], y[i])
+        end
     end
     x
 end
-function hp_op_for_isless!(x, y, vals, rev,lt)
+Base.@propagate_inbounds function hp_op_for_isless!(x, y, vals, rev,lt)
     if !rev
         Threads.@threads for i in 1:length(x)
             x[i] &= lt(y[i], vals[i])
@@ -150,34 +156,40 @@ end
 # TODO probably we should use this approach instead of mapreduce_indexed
 function _op_for_findfirst!(x, y, f, idx, missref)
     idx[] += 1
-    x .= ifelse.(isequal.(missref, x) .& isequal.(true, f.(y)), idx, x)
+    for i in 1:length(x)
+        x[i] = ifelse(isequal(missref, x[i]) && isequal(true, f(y[i])), idx[], x[i])
+    end
     x
 end
 
 function hp_op_for_findfirst!(x, y, f, idx, missref)
     idx[] += 1
     Threads.@threads for i in 1:length(x)
-        x[i] = ifelse(isequal(missref, x[i]) & isequal(true, f(y[i])), idx[], x[i])
+        x[i] = ifelse(isequal(missref, x[i]) && isequal(true, f(y[i])), idx[], x[i])
     end
     x
 end
 function _op_for_findfirst!(x, y, item, idx, missref, eq)
     idx[] += 1
-    x .= ifelse.(isequal.(missref, x) .& eq.(item, y), idx, x)
+    for i in 1:length(x)
+        x[i] = ifelse(isequal(missref, x[i]) && eq(item[i], y[i]), idx[], x[i])
+    end
     x
 end
 
 function hp_op_for_findfirst!(x, y, item, idx, missref, eq)
     idx[] += 1
     Threads.@threads for i in 1:length(x)
-        x[i] = ifelse(isequal(missref, x[i]) & eq(item[i], y[i]), idx[], x[i])
+        x[i] = ifelse(isequal(missref, x[i]) && eq(item[i], y[i]), idx[], x[i])
     end
     x
 end
 
 function _op_for_findlast!(x, y, f, idx, missref)
     idx[] += 1
-    x .= ifelse.(isequal.(true, f.(y)), idx, x)
+    for i in 1:length(x)
+        x[i] = ifelse(isequal(true, f(y[i])), idx[], x[i])
+    end
     x
 end
 
@@ -191,7 +203,9 @@ end
 
 function _op_for_findlast!(x, y, item, idx, missref, eq)
     idx[] += 1
-    x .= ifelse.(eq.(item, y), idx, x)
+    for i in 1:length(x)
+        x[i] = ifelse(eq(item[i], y[i]), idx[], x[i])
+    end
     x
 end
 
@@ -347,21 +361,25 @@ function row_select(ds::AbstractDataset, cols, colselector::Union{AbstractVector
     end
 end
 
-function _op_for_fill!(x,y,f)
-    y .= ifelse.(f.(y), x, y)
+Base.@propagate_inbounds function _op_for_fill!(x,y,f)
+    @simd for i in 1:length(x)
+       y[i] = ifelse(f(y[i]), x[i], y[i])
+    end
     x
 end
-function hp_op_for_fill!(x,y,f)
+Base.@propagate_inbounds function hp_op_for_fill!(x,y,f)
   Threads.@threads for i in 1:length(x)
      y[i] = ifelse(f(y[i]), x[i], y[i])
   end
    x
 end
-function _op_for_fill_roll!(x,y,f)
-    y .= ifelse.(f.(y), x, y)
+Base.@propagate_inbounds function _op_for_fill_roll!(x,y,f)
+    @simd for i in 1:length(x)
+       y[i] = ifelse(f(y[i]), x[i], y[i])
+    end
     y
 end
-function hp_op_for_fill_roll!(x,y,f)
+Base.@propagate_inbounds function hp_op_for_fill_roll!(x,y,f)
   Threads.@threads for i in 1:length(x)
      y[i] = ifelse(f(y[i]), x[i], y[i])
   end
@@ -404,16 +422,33 @@ function _op_for_coalesce!(x, y)
     if all(!ismissing, x)
         x
     else
-        x .= ifelse.(ismissing.(x), y, x)
+        for i in 1:length(x)
+            x[i] = ifelse(ismissing(x[i]), y[i], x[i])
+        end
     end
+    x
+end
+function hp_op_coalesce!(x, y)
+    if all(!ismissing, x) # TODO this for performance, is it ok for large ds?
+        x
+    else
+        Threads.@threads for i in 1:length(x)
+            @inbounds x[i] = ifelse(ismissing(x[i]), y[i], x[i])
+        end
+    end
+    x
 end
 
-function row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}))
+function row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
 
     init0 = fill!(Vector{Union{Missing, CT}}(undef, size(ds,1)), missing)
-    mapreduce(identity, _op_for_coalesce!, view(_columns(ds),colsidx), init = init0)
+    if threads
+        mapreduce(identity, hp_op_coalesce!, view(_columns(ds),colsidx), init = init0)
+    else
+        mapreduce(identity, _op_for_coalesce!, view(_columns(ds),colsidx), init = init0)
+    end
 end
 
 function row_mean(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
