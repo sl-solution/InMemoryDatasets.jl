@@ -69,13 +69,17 @@ function row_all(ds::AbstractDataset, f::Function, cols = :)
 end
 row_all(ds::AbstractDataset, cols = :) = row_all(ds, isequal(true), cols)
 
+# this is a general rule for order of arguments in isequal, isless, findfirst, ...
+# if the keyword argument is `with` then eq(y, with)
+# if the keyword argument is `item` then eq(item, y)
+
 function _op_for_isequal!(x,y, x1)
-    x .&= isequal.(x1, y)
+    x .&= isequal.(y, x1)
     x
 end
 function hp_op_for_isequal!(x,y, x1)
     Threads.@threads for i in 1:length(x)
-        x[i] &= isequal(x1[i], y[i])
+        x[i] &= isequal(y[i], x1[i])
     end
     x
 end
