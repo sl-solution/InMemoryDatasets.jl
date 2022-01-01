@@ -19,9 +19,9 @@
     @test isequal(byrow(ds, maximum, r"float", by = abs, threads = true) , [1.2, missing, 3,3.0,100.0])
     @test isequal(byrow(ds, minimum, r"float", threads = true) , [1.2, missing, -1.4,2.3,-100.0])
 
-    @test byrow(ds, argmax, :) == ["x2_int", "x2_int", "x2_float", "x2_int", "x1_float"]
-    @test isequal(byrow(ds, argmin, r"float"), ["x1_float", missing, "x3_float", "x1_float", "x3_float"])
-    @test isequal(byrow(ds, argmin, r"float", by = abs) , ["x1_float", missing, "x1_float", "x1_float", "x1_float"])
+    @test byrow(ds, argmax, :) == Symbol.(["x2_int", "x2_int", "x2_float", "x2_int", "x1_float"])
+    @test isequal(byrow(ds, argmin, r"float"), [:x1_float, missing, :x3_float, :x1_float, :x3_float])
+    @test isequal(byrow(ds, argmin, r"float", by = abs) , [:x1_float, missing, :x1_float, :x1_float, :x1_float])
     @test byrow(ds, coalesce, ["x2_float", "x1_float", "x1_int"]) == [1.2,0,3.0,2.3,10]
     @test isequal(byrow(ds, var, r"float"), [missing, missing, 5.92, 0.24499999999999922, 6050.0])
     @test isequal(byrow(ds, var, r"float", dof = false), [0.0, missing, 3.9466666666666663, 0.12249999999999961, 3025.0])
@@ -29,10 +29,10 @@
     sds = view(ds, [5,5,5,3,3,3,2,2,2,4,4,4,4,4], [4,1,2,5])
     @test byrow(sds, sum, :) == [14.0,14.,14,4,4,4,1,1,1,4.3,4.3,4.3,4.3,4.3]
     @test byrow(sds, sum, [:g, :x2_float]) == [2,2.0,2,4,4,4,1,1,1,2,2,2,2,2]
-    @test byrow(sds, argmax, [3,2,4,1]) == ["x1_float","x1_float","x1_float","x2_float","x2_float","x2_float","g", "g", "g", "x1_float","x1_float","x1_float","x1_float","x1_float"]
-    @test byrow(sds, argmax, [1,2,4,3], by = ismissing) == ["x2_float","x2_float","x2_float", "x1_float","x1_float","x1_float", "x1_float","x1_float","x1_float", "x2_float", "x2_float", "x2_float", "x2_float", "x2_float"]
-    @test isequal(byrow(sds, argmax, [3,4]), ["x1_int","x1_int","x1_int","x2_float","x2_float","x2_float","x1_int","x1_int","x1_int",missing, missing, missing, missing, missing])
-    @test isequal(byrow(sds, argmin, [3,4], threads = true), ["x1_int","x1_int","x1_int","x1_int","x1_int","x1_int","x1_int","x1_int","x1_int",missing, missing, missing, missing, missing])
+    @test byrow(sds, argmax, [3,2,4,1]) == Symbol.(["x1_float","x1_float","x1_float","x2_float","x2_float","x2_float","g", "g", "g", "x1_float","x1_float","x1_float","x1_float","x1_float"])
+    @test byrow(sds, argmax, [1,2,4,3], by = ismissing) == Symbol.(["x2_float","x2_float","x2_float", "x1_float","x1_float","x1_float", "x1_float","x1_float","x1_float", "x2_float", "x2_float", "x2_float", "x2_float", "x2_float"])
+    @test isequal(byrow(sds, argmax, [3,4]), [:x1_int,:x1_int,:x1_int,:x2_float,:x2_float,:x2_float,:x1_int,:x1_int,:x1_int,missing, missing, missing, missing, missing])
+    @test isequal(byrow(sds, argmin, [3,4], threads = true), [:x1_int,:x1_int,:x1_int,:x1_int,:x1_int,:x1_int,:x1_int,:x1_int,:x1_int,missing, missing, missing, missing, missing])
 
     @test byrow(sds, any, :, by = ismissing) == [true, true, true, false, false, false, true, true, true, true, true, true, true, true]
 
@@ -81,13 +81,13 @@
                         x1_float = [1.2, missing, -1.0, 2.3, 10],
                         x2_float = [missing, missing, 3.0, missing, missing],
                         x3_float = [missing, missing, -1.4, 3.0, -100.0])
-    @test isequal(byrow(ds, findfirst, :, by = ismissing), ["x2_float", "x1_float", missing, "x1_int", "x2_float"])
-    @test isequal(byrow(ds, findlast, :, by = ismissing), ["x3_float", "x3_float", missing, "x2_float", "x2_float"])
-    @test isequal(byrow(ds, findfirst, :, by = x->isless(x,0)), [missing, missing, "x1_float", missing, "x2_int"])
-    @test isequal(byrow(ds, findlast, :, by = x->isless(x,0)), [missing, missing, "x3_float", missing, "x3_float"])
-    @test isequal(byrow(ds, findfirst, :, by = x->1), ["g","g","g", "g","g"])
-    @test isequal(byrow(ds, findfirst, :), ["g","g","g", missing, missing])
-    @test isequal(byrow(ds, findlast, :), ["g","g","x2_int", missing, missing])
+    @test isequal(byrow(ds, findfirst, :, by = ismissing), [:x2_float, :x1_float, missing, :x1_int, :x2_float])
+    @test isequal(byrow(ds, findlast, :, by = ismissing), [:x3_float, :x3_float, missing, :x2_float, :x2_float])
+    @test isequal(byrow(ds, findfirst, :, by = x->isless(x,0)), [missing, missing, :x1_float, missing, :x2_int])
+    @test isequal(byrow(ds, findlast, :, by = x->isless(x,0)), [missing, missing, :x3_float, missing, :x3_float])
+    @test isequal(byrow(ds, findfirst, :, by = x->1), [:g,:g,:g, :g,:g])
+    @test isequal(byrow(ds, findfirst, :), [:g,:g,:g, missing, missing])
+    @test isequal(byrow(ds, findlast, :), [:g,:g,:x2_int, missing, missing])
     @test isequal(byrow(ds, findfirst, [3,2,1], by = isequal(2)) ,byrow(ds, findlast, 1:3, by = isequal(2)))
     @test isequal(byrow(ds, findfirst, 1:3, by = isequal(2)) ,byrow(ds, findlast, [3,2,1], by = isequal(2)))
 
@@ -109,27 +109,27 @@
                         x1_float = [1.2, missing, -1.0, 2.3, 10],
                         x2_float = [missing, missing, 3.0, missing, missing],
                         x3_float = [missing, missing, -1.4, 3.0, -100.0])
-    @test isequal(byrow(ds, findfirst, r"int", item = [missing, missing, missing, missing, missing]), [missing, missing, missing, "x1_int", missing])
-    @test isequal(byrow(ds, findfirst, r"int", item = [1,1,1,1,1]), [missing, missing, "x1_int", missing, missing])
-    @test isequal(byrow(ds, findlast, r"int", item = [1,1,1,1,1]), [missing, missing, "x2_int", missing, missing])
-    @test isequal(byrow(ds, findfirst, r"int", item = :x1_float, eq = isless), ["x2_int", missing, "x1_int", "x1_int", missing])
-    @test isequal(byrow(ds, findlast, r"int", item = :x1_float, eq = isless), ["x2_int", missing, "x2_int", "x2_int", missing])
+    @test isequal(byrow(ds, findfirst, r"int", item = [missing, missing, missing, missing, missing]), [missing, missing, missing, :x1_int, missing])
+    @test isequal(byrow(ds, findfirst, r"int", item = [1,1,1,1,1]), [missing, missing, :x1_int, missing, missing])
+    @test isequal(byrow(ds, findlast, r"int", item = [1,1,1,1,1]), [missing, missing, :x2_int, missing, missing])
+    @test isequal(byrow(ds, findfirst, r"int", item = :x1_float, eq = isless), [:x2_int, missing, :x1_int, :x1_int, missing])
+    @test isequal(byrow(ds, findlast, r"int", item = :x1_float, eq = isless), [:x2_int, missing, :x2_int, :x2_int, missing])
 
     repeat!(ds, 2)
     sds1 = view(ds, [6,7,8,9,10], [6,5,4,2,3,1])
     sds2 = view(ds, 6:10, 1:6)
 
-    @test isequal(byrow(sds1, findfirst, r"int", item = [missing, missing, missing, missing, missing]), [missing, missing, missing, "x1_int", missing])
-    @test isequal(byrow(sds1, findfirst, r"int", item = [1,1,1,1,1]), [missing, missing, "x1_int", missing, missing])
-    @test isequal(byrow(sds1, findlast, r"int", item = [1,1,1,1,1]), [missing, missing, "x2_int", missing, missing])
-    @test isequal(byrow(sds1, findfirst, r"int", item = :x1_float, eq = isless), ["x2_int", missing, "x1_int", "x1_int", missing])
-    @test isequal(byrow(sds1, findlast, r"int", item = :x1_float, eq = isless), ["x2_int", missing, "x2_int", "x2_int", missing])
+    @test isequal(byrow(sds1, findfirst, r"int", item = [missing, missing, missing, missing, missing]), [missing, missing, missing, :x1_int, missing])
+    @test isequal(byrow(sds1, findfirst, r"int", item = [1,1,1,1,1]), [missing, missing, :x1_int, missing, missing])
+    @test isequal(byrow(sds1, findlast, r"int", item = [1,1,1,1,1]), [missing, missing, :x2_int, missing, missing])
+    @test isequal(byrow(sds1, findfirst, r"int", item = :x1_float, eq = isless), [:x2_int, missing, :x1_int, :x1_int, missing])
+    @test isequal(byrow(sds1, findlast, r"int", item = :x1_float, eq = isless), [:x2_int, missing, :x2_int, :x2_int, missing])
 
-    @test isequal(byrow(sds2, findfirst, r"int", item = [missing, missing, missing, missing, missing]), [missing, missing, missing, "x1_int", missing])
-    @test isequal(byrow(sds2, findfirst, r"int", item = [1,1,1,1,1]), [missing, missing, "x1_int", missing, missing])
-    @test isequal(byrow(sds2, findlast, r"int", item = [1,1,1,1,1]), [missing, missing, "x2_int", missing, missing])
-    @test isequal(byrow(sds2, findfirst, r"int", item = :x1_float, eq = isless), ["x2_int", missing, "x1_int", "x1_int", missing])
-    @test isequal(byrow(sds2, findlast, r"int", item = :x1_float, eq = isless), ["x2_int", missing, "x2_int", "x2_int", missing])
+    @test isequal(byrow(sds2, findfirst, r"int", item = [missing, missing, missing, missing, missing]), [missing, missing, missing, :x1_int, missing])
+    @test isequal(byrow(sds2, findfirst, r"int", item = [1,1,1,1,1]), [missing, missing, :x1_int, missing, missing])
+    @test isequal(byrow(sds2, findlast, r"int", item = [1,1,1,1,1]), [missing, missing, :x2_int, missing, missing])
+    @test isequal(byrow(sds2, findfirst, r"int", item = :x1_float, eq = isless), [:x2_int, missing, :x1_int, :x1_int, missing])
+    @test isequal(byrow(sds2, findlast, r"int", item = :x1_float, eq = isless), [:x2_int, missing, :x2_int, :x2_int, missing])
 
     sds = view(ds, rand(1:5, 100), [2,1,3,4])
     @test isequal(byrow(sds, findfirst,[1,4,3,2], by = x->isless(x,0)), byrow(Dataset(sds), findfirst, [1,4,3,2], by = x->isless(x,0)))

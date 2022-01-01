@@ -98,7 +98,7 @@ function row_isequal(ds::AbstractDataset, cols = :; by::Union{AbstractVector, Da
     else
         x1 = by
     end
-    init0 = ones(Bool, nrow(ds))    
+    init0 = ones(Bool, nrow(ds))
     if threads
         mapreduce(identity, (x,y)->hp_op_for_isequal!(x,y,x1), view(_columns(ds),colsidx), init = init0)
     else
@@ -214,7 +214,7 @@ function row_findfirst(ds::AbstractDataset, f, cols = names(ds, Union{Missing, N
     end
     colsidx = index(ds)[cols]
     idx = Ref{Int}(0)
-    colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
+    colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, 0)
     init0 = fill(missref, nrow(ds))
@@ -245,7 +245,7 @@ function row_findlast(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Nu
     end
     colsidx = index(ds)[cols]
     idx = Ref{Int}(0)
-    colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
+    colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, 0)
     init0 = fill(missref, nrow(ds))
@@ -291,7 +291,7 @@ function row_in(ds::AbstractDataset, collections, items::Union{AbstractVector, D
         items = _columns(ds)[index(ds)[items]]
     end
     init0 = zeros(Bool, nrow(ds))
-    if threads 
+    if threads
         mapreduce(identity, (x,y)->hp_op_for_in!(x,y,items,eq), view(_columns(ds),colsidx), init = init0)
     else
         mapreduce(identity, (x,y)->_op_for_in!(x,y,items,eq), view(_columns(ds),colsidx), init = init0)
@@ -469,7 +469,7 @@ end
 function row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     minvals = row_minimum(ds, f, cols)
-    colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
+    colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, missing)
     init0 = fill(missref, nrow(ds))
@@ -488,7 +488,7 @@ row_argmin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); thread
 function row_argmax(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     maxvals = row_maximum(ds, f, cols)
-    colnames_pa = allowmissing(PooledArray(names(ds, colsidx)))
+    colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, missing)
     init0 = fill(missref, nrow(ds))
