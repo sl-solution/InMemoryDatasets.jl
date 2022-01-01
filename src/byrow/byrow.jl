@@ -73,7 +73,6 @@ byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; by = isequal(true), 
 byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; with = nothing, threads = nrow(ds)>1000) = row_isequal(ds, cols, by = with, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(isequal), cols::ColumnIndex; with = nothing, threads = nrow(ds)>1000) = row_isequal(ds, cols, by = with, threads = threads)
 
-
 byrow(ds::AbstractDataset, ::typeof(isless), cols::MultiColumnIndex; with, threads = nrow(ds)>1000, rev::Bool = false, lt = isless) = row_isless(ds, cols, with, threads = threads, rev = rev, lt = lt)
 byrow(ds::AbstractDataset, ::typeof(isless), col::ColumnIndex; with, threads = nrow(ds)>1000, rev::Bool = false, lt = isless) = row_isless(ds, [col], with, threads = threads, rev = rev, lt = lt)
 
@@ -89,12 +88,10 @@ byrow(ds::AbstractDataset, ::typeof(fill!), col::ColumnIndex; with , by = ismiss
 byrow(ds::AbstractDataset, ::typeof(fill), cols::MultiColumnIndex; with , by = ismissing, threads = nrow(ds)>1000, rolling = false) = row_fill!(copy(ds), cols, with, f = by, threads = threads, rolling = rolling)
 byrow(ds::AbstractDataset, ::typeof(fill), col::ColumnIndex; with , by = ismissing, threads = nrow(ds)>1000, rolling = false) = byrow(copy(ds), fill!, [col], with = with, by = by, threads = threads, rolling = rolling)
 
-
 byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads = nrow(ds)>1000) = threads ? hp_row_coalesce(ds, cols) : row_coalesce(ds, cols)
 
 byrow(ds::AbstractDataset, ::typeof(mean), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds)>1000) = threads ? hp_row_mean(ds, by, cols) : row_mean(ds, by, cols)
 byrow(ds::AbstractDataset, ::typeof(mean), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, mean, [col]; by = by, threads = threads)
-
 
 byrow(ds::AbstractDataset, ::typeof(maximum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds)>1000) = threads ? hp_row_maximum(ds, by, cols) : row_maximum(ds, by, cols)
 byrow(ds::AbstractDataset, ::typeof(maximum), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, maximum, [col]; by = by, threads = threads)
@@ -157,7 +154,6 @@ byrow(ds::AbstractDataset, ::typeof(hash), cols::MultiColumnIndex = :; by = iden
 byrow(ds::AbstractDataset, ::typeof(hash), col::ColumnIndex; by = identity, threads = nrow(ds)>1000) = byrow(ds, hash, [col]; by = by, threads = threads)
 
 byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); op = .+, f = identity,  init = missings(mapreduce(eltype, promote_type, view(_columns(ds),index(ds)[cols])), nrow(ds)), kwargs...) = mapreduce(f, op, eachcol(ds[!, cols]), init = init; kwargs...)
-
 
 function byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = nrow(ds)>1000)
 	colsidx = index(ds)[cols]
