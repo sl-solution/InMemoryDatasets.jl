@@ -125,6 +125,36 @@ julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);
 julia> byrow(ds, fill!, :, with = byrow(ds, mean, :));
 ```
 
+* [How to determine whether two sets of variables have a shared value](https://stackoverflow.com/questions/70452064/how-to-determine-whether-two-sets-of-variables-have-a-shared-value-in-r) : I have a data that contains two sets of variables, and I want to compare whether the two sets have the same value. Here we provide a scalable solution where the columns for the first set are contain "1" in their names, and the columns for the second set contain "2" in their names.
+
+```julia
+julia> a1 = Dataset(z1=[1,missing,3,4,5],x1=string.(3:7),z2=[2,missing,4,5,6],x2=[3,5,4,7,5])
+5×4 Dataset
+ Row │ z1        x1        z2        x2       
+     │ identity  identity  identity  identity 
+     │ Int64?    String?   Int64?    Int64?   
+─────┼────────────────────────────────────────
+   1 │        1  3                2         3
+   2 │  missing  4          missing         5
+   3 │        3  5                4         4
+   4 │        4  6                5         7
+   5 │        5  7                6         5
+
+julia> # since in the original post there are some specifications for checking equality of values we define a customised equality function
+julia> eq(x, y) = isequal(x, y)
+julia> eq(x::String, y) = isequal(parse(Int,x), y)
+julia> eq(x, y::String) = isequal(x,parse(Int, y))
+julia> eq(x::String, y::String) = isequal(parse(Int, x),parse(Int, y))
+julia> eq(::Missing, ::Missing) = false
+julia> a1.result = reduce((x,y)-> x .|= byrow(a1, in, r"2", item = y, eq = eq), names(a1, r"1"), init = zeros(Bool, nrow(a1)))
+5-element Vector{Bool}:
+ 1
+ 0
+ 0
+ 0
+ 1
+```
+
 ## Filtering
 
 * [Filtering based on conditions comparing one column to other columns](https://discourse.julialang.org/t/dataframe-filtering-based-on-conditions-comparing-one-column-to-other-columns/70802) : In the following example we like to filter rows where columns `:x1` and `:x2` are greater than `:x5`.
