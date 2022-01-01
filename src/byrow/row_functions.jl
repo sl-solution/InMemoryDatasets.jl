@@ -205,6 +205,39 @@ function row_findlast(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Nu
     colnames_pa
 end
 
+function _op_for_in!(x,y,x1,eq)
+    for i in 1:length(x)
+        !x[i] ? x[i] = eq(y[i], x1[i]) : nothing
+    end
+    x
+end
+function hp_op_for_in!(x,y,x1,eq)
+    Threads.@threads for i in 1:length(x)
+        !x[i] ? x[i] = eq(y[i], x1[i]) : nothing
+    end
+    x
+end
+
+function row_in(ds::AbstractDataset, collections, items::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex}; threads = true, eq = isequal)
+    if !(items isa ColumnIndex)
+        @assert length(items) == nrow(ds) "length of item values must be the same as the number of rows"
+    end
+    colsidx = index(ds)[collections]
+    if items isa SubDatasetColumn || items isa DatasetColumn
+        items = __!(items)
+    end
+    if items isa ColumnIndex
+        items = _columns(ds)[index(ds)[items]]
+    end
+    init0 = zeros(Bool, nrow(ds))
+    if threads 
+        mapreduce(identity, (x,y)->hp_op_for_in!(x,y,items,eq), view(_columns(ds),colsidx), init = init0)
+    else
+        mapreduce(identity, (x,y)->_op_for_in!(x,y,items,eq), view(_columns(ds),colsidx), init = init0)
+    end
+
+end
+
 function _op_for_select!(x, y, colselector, dsnames, idx)
     idx[] += 1
     for i in 1:length(x)

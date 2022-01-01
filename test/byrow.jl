@@ -218,6 +218,21 @@
     ds = Dataset(rand(100, 10), :auto)
     _tval = byrow(view(ds, :, 1:9) .> ds[!, 10], all)
     @test byrow(ds, isless, 1:9, with=:x10, rev = true) == _tval
+
+    ds = Dataset(x1 = [1,2,3,1,1], x2 = [4,3,1,2,5], x3 = 1:5)
+    @test byrow(ds, in, 1:2, item = :x3) == [1,1,1,0,1]
+    @test byrow(ds, in, 1:2, item = ds[!, 3])== [1,1,1,0,1]
+    @test byrow(ds, in, 1:2, item = ds[:, 3])== [1,1,1,0,1]
+
+    repeat!(ds, 2)
+    sds1 = view(ds, [6,7,8,9,10], [2,1,3])
+    sds2 = view(ds, 6:10, 1:3)
+    @test byrow(sds1, in, 1:2, item = :x3) == [1,1,1,0,1]
+    @test byrow(sds1, in, 1:2, item = sds1[!, 3])== [1,1,1,0,1]
+    @test byrow(sds1, in, 1:2, item = sds1[:, 3])== [1,1,1,0,1]
+    @test byrow(sds2, in, 1:2, item = :x3) == [1,1,1,0,1]
+    @test byrow(sds2, in, 1:2, item = sds2[!, 3])== [1,1,1,0,1]
+    @test byrow(sds2, in, 1:2, item = sds2[:, 3])== [1,1,1,0,1]
 end
 
 @testset "cum*/!" begin
