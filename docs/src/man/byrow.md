@@ -53,6 +53,7 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `findfirst` : Return the column name of the first true value
 * `findlast` : Return the column name of the last true value
 * `hash` : Compute an integer hash code
+* `in` : Determine whether values passed via the `item` keyword argument are in the given collection of columns.
 * `isequal` : Return `true` when all values are equal. Optionally, a vector of values can be passed via the `with` keyword to compare equality with it.
 * `isless` : Return `true` when all values are less than passed vector(or column specified by its name) as `with`. Passing `rev = true` change `less` to `greater`.
 * `issorted` : Check if the values are sorted
@@ -77,6 +78,8 @@ The `nunique` function doesn't accept `threads` argument, however, it has an ext
 The `coalesce` and `issorted` functions don't accept `by` argument, however, `issorted` and `isless` accept extra keyword argument `rev` which is set to `false` by default, and `isequal`, `select`, and `isless` accept extra keyword argument `with` for passing a vector of values or a column name.
 
 By default, `issorted` and `isless` use the `isless` function for comparing values, however, user can pass any other function via the `lt` keyword argument.
+
+A column name or a vector of values must be passed via `item` if `in` operation is used in `byrow`. By default, `in` operation uses `isequal` for determining whether an item is in the given collection, however, any user defined function passed via the `eq` keyword argument can replace it.
 
 ### Examples
 
