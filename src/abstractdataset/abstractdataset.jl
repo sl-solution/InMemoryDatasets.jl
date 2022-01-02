@@ -811,7 +811,7 @@ Base.last(ds::AbstractDataset, n::Integer) = ds[max(1, nrow(ds)-n+1):nrow(ds), :
 ##############################################################################
 
 """
-    completecases(ds::AbstractDataset, cols=:; mapformats = false, threads = nrow(ds)>1000)
+    completecases(ds::AbstractDataset, cols=:; mapformats = false, threads)
 
 Return a Boolean vector with `true` entries indicating rows without missing values
 (complete cases) in data set `ds`.
@@ -865,7 +865,7 @@ julia> completecases(ds, [:x, :y])
  1
 ```
 """
-function completecases(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, threads = nrow(ds)>1000)
+function completecases(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, threads = nrow(ds)>__NCORES*10)
     if mapformats
         colsidx = index(ds)[cols]
         by = Function[]
@@ -877,10 +877,10 @@ function completecases(ds::AbstractDataset, cols::MultiColumnIndex = :; mapforma
         byrow(ds, all, cols, by = !ismissing, threads = threads)
     end
 end
-completecases(ds::AbstractDataset, col::ColumnIndex; mapformats = false, threads = nrow(ds)>1000) = completecases(ds, [col]; mapformats = mapformats, threads = threads)
+completecases(ds::AbstractDataset, col::ColumnIndex; mapformats = false, threads = nrow(ds)>__NCORES*10) = completecases(ds, [col]; mapformats = mapformats, threads = threads)
 
 """
-    dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, mapformats = false, threads = nrow(ds)>1000)
+    dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, mapformats = false, threads)
 
 Return a data set excluding rows with missing values in `ds`.
 
@@ -940,7 +940,7 @@ julia> dropmissing(ds, [:x, :y])
 """
 @inline function dropmissing(ds::AbstractDataset,
                              cols::Union{ColumnIndex, MultiColumnIndex}=:;
-                             view::Bool=false, mapformats = false, threads = nrow(ds)>1000)
+                             view::Bool=false, mapformats = false, threads = nrow(ds)>__NCORES*10)
     rowidxs = completecases(ds, cols; mapformats = mapformats, threads = threads)
     if view
         return Base.view(ds, rowidxs, :)
