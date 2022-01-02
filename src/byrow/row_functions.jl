@@ -16,75 +16,192 @@ _max_fun(::Missing, y) = y
 _max_fun(::Missing, ::Missing) = missing
 _bool(f) = x->f(x)::Bool
 
+const __NCORES = Threads.nthreads()
+
 struct _Prehashed
     hash::UInt64
 end
 Base.hash(x::_Prehashed) = x.hash
 
 
-function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missing, Number}))
+Base.@propagate_inbounds function _op_for_sum!(x, y, f, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _add_sum(x[i], f(y[i]))
+    end
+    x
+end
+
+function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
-    _op_for_sum!(x, y) = x .= _add_sum.(x, f.(y))
-    init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
-    mapreduce(identity, _op_for_sum!, view(_columns(ds),colsidx), init = init0)
+    init0 = missings(T, nrow(ds))
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_sum!(x,y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
+    else
+        mapreduce(identity, (x,y) -> _op_for_sum!(x,y, f, 1, length(x)), view(_columns(ds),colsidx), init = init0)
+    end
+    init0
 end
-row_sum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_sum(ds, identity, cols)
+
+row_sum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_sum(ds, identity, cols, threads = threads)
 
 
-function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+
+Base.@propagate_inbounds function _op_for_prod!(x, y, f, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _mul_prod(x[i], f(y[i]))
+    end
+    x
+end
+
+function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
-    _op_for_prod!(x, y) = x .= _mul_prod.(x, f.(y))
-    init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
-    mapreduce(identity, _op_for_prod!, view(_columns(ds),colsidx), init = init0)
+    init0 = missings(T, nrow(ds))
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_prod!(x,y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
+    else
+        mapreduce(identity, (x,y) -> _op_for_prod!(x,y, f, 1, length(x)), view(_columns(ds),colsidx), init = init0)
+    end
+    init0
 end
-row_prod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_prod(ds, identity, cols)
+
+row_prod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_prod(ds, identity, cols; threads = threads)
+
+Base.@propagate_inbounds function _op_for_count!(x, y, f, lo, hi)
+    @simd for i in lo:hi
+        x[i] += f(y[i])
+    end
+    x
+end
 
 
-function row_count(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+function row_count(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
-    _op_for_count!(x, y) = x .+= (_bool(f).(y))
-    mapreduce(identity, _op_for_count!, view(_columns(ds),colsidx), init = zeros(Int32, size(ds,1)))
-end
-row_count(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_count(ds, x->true, cols)
+    init0 = zeros(Int32, size(ds,1))
 
-function row_any(ds::AbstractDataset, f::Function, cols = :)
-    colsidx = index(ds)[cols]
-    _op_bool_add(x::Bool,y::Bool) = x | y ? true : false
-    op_for_any!(x,y) = x .= _op_bool_add.(x, _bool(f).(y))
-    # mapreduce(identity, op_for_anymissing!, eachcol(ds)[colsidx[sel_colsidx]], init = zeros(Bool, size(ds,1)))
-    mapreduce(identity, op_for_any!, view(_columns(ds),colsidx), init = zeros(Bool, size(ds,1)))
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_count!(x, y, _bool(f), lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
+    else
+        mapreduce(identity, (x,y) -> _op_for_count!(x, y, _bool(f), 1, length(x)), view(_columns(ds),colsidx), init = init0)
+    end
+    init0
 end
-row_any(ds::AbstractDataset, cols = :) = row_any(ds, isequal(true), cols)
 
-function row_all(ds::AbstractDataset, f::Function, cols = :)
-    colsidx = index(ds)[cols]
-    _op_bool_mult(x::Bool,y::Bool) = x & y ? true : false
-    op_for_all!(x,y) = x .= _op_bool_mult.(x, _bool(f).(y))
-    # mapreduce(identity, op_for_anymissing!, eachcol(ds)[colsidx[sel_colsidx]], init = zeros(Bool, size(ds,1)))
-    mapreduce(identity, op_for_all!, view(_columns(ds),colsidx), init = ones(Bool, size(ds,1)))
+row_count(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_count(ds, x->true, cols; threads = threads)
+
+_op_bool_add(x::Bool,y::Bool) = x | y ? true : false
+Base.@propagate_inbounds function op_for_any!(x, y, f, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _op_bool_add(x[i], f(y[i]))
+    end
+    x
 end
-row_all(ds::AbstractDataset, cols = :) = row_all(ds, isequal(true), cols)
+
+function row_any(ds::AbstractDataset, f::Union{AbstractVector{<:Function}, Function}, cols = :; threads = true)
+    colsidx = index(ds)[cols]
+    init0 = zeros(Bool, size(ds,1))
+
+    multi_f = false
+    if f isa AbstractVector
+        @assert length(f) == length(colsidx) "number of provided functions must match the number of selected columns"
+        multi_f = true
+    end
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if multi_f
+                mapreduce_index(f, (x, y, func) -> op_for_any!(x, y, _bool(func), lo, hi), view(_columns(ds),colsidx), init0)
+            else
+                mapreduce(identity, (x,y) -> op_for_any!(x,y, _bool(f), lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
+        end
+    else
+        if multi_f
+            mapreduce_index(f, (x, y, func) -> op_for_any!(x, y, _bool(func), 1, length(x)), view(_columns(ds),colsidx), init0)
+        else
+            mapreduce(identity, (x,y) -> op_for_any!(x,y, _bool(f), 1, length(x)), view(_columns(ds),colsidx), init = init0)
+        end
+    end
+    init0
+end
+
+row_any(ds::AbstractDataset, cols = :; threads = true) = row_any(ds, isequal(true), cols; threads = threads)
+
+_op_bool_mult(x::Bool,y::Bool) = x & y ? true : false
+
+Base.@propagate_inbounds function op_for_all!(x, y, f, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _op_bool_mult(x[i], f(y[i]))
+    end
+    x
+end
+
+function row_all(ds::AbstractDataset, f::Union{AbstractVector{<:Function}, Function}, cols = :; threads = true)
+    colsidx = index(ds)[cols]
+    init0 = ones(Bool, size(ds,1))
+
+    multi_f = false
+    if f isa AbstractVector
+        @assert length(f) == length(colsidx) "number of provided functions must match the number of selected columns"
+        multi_f = true
+    end
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if multi_f
+                mapreduce_index(f, (x, y, func) -> op_for_all!(x, y, _bool(func), lo, hi), view(_columns(ds),colsidx), init0)
+            else
+                mapreduce(identity, (x,y) -> op_for_all!(x,y, _bool(f), lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
+        end
+    else
+        if multi_f
+            mapreduce_index(f, (x, y, func) -> op_for_all!(x, y, _bool(func), 1, length(x)), view(_columns(ds),colsidx), init0)
+        else
+            mapreduce(identity, (x,y) -> op_for_all!(x,y, _bool(f), 1, length(x)), view(_columns(ds),colsidx), init = init0)
+        end
+    end
+    init0
+end
+row_all(ds::AbstractDataset, cols = :; threads = true) = row_all(ds, isequal(true), cols; threads = threads)
 
 # this is a general rule for order of arguments in isequal, isless, findfirst, ...
 # if the keyword argument is `with` then eq(y, with)
 # if the keyword argument is `item` then eq(item, y)
 
-Base.@propagate_inbounds function _op_for_isequal!(x,y, x1)
-    @simd for i in 1:length(x)
+Base.@propagate_inbounds function _op_for_isequal!(x, y, x1, lo, hi)
+    @simd for i in lo:hi
         x[i] &= isequal(y[i], x1[i])
     end
     x
 end
-Base.@propagate_inbounds function hp_op_for_isequal!(x,y, x1)
-    Threads.@threads for i in 1:length(x)
-        x[i] &= isequal(y[i], x1[i])
-    end
-    x
-end
+
 
 function row_isequal(ds::AbstractDataset, cols = :; by::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex, Nothing} = nothing, threads = true)
     colsidx = index(ds)[cols]
@@ -101,37 +218,33 @@ function row_isequal(ds::AbstractDataset, cols = :; by::Union{AbstractVector, Da
         x1 = by
     end
     init0 = ones(Bool, nrow(ds))
+
     if threads
-        mapreduce(identity, (x,y)->hp_op_for_isequal!(x,y,x1), view(_columns(ds),colsidx), init = init0)
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_isequal!(x,y, x1, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
     else
-        mapreduce(identity, (x,y)->_op_for_isequal!(x,y,x1), view(_columns(ds),colsidx), init = init0)
+        mapreduce(identity, (x,y) -> _op_for_isequal!(x,y, x1, 1, length(x)), view(_columns(ds),colsidx), init = init0)
     end
+    init0
 end
 
-Base.@propagate_inbounds function _op_for_isless!(x, y, vals, rev,lt)
+Base.@propagate_inbounds function _op_for_isless!(x, y, vals, rev,lt, lo, hi)
     if !rev
-        @simd for i in 1:length(x)
+        @simd for i in lo:hi
             x[i] &= lt(y[i], vals[i])
         end
     else
-        @simd for i in 1:length(x)
+        @simd for i in lo:hi
             x[i] &= lt(vals[i], y[i])
         end
     end
     x
 end
-Base.@propagate_inbounds function hp_op_for_isless!(x, y, vals, rev,lt)
-    if !rev
-        Threads.@threads for i in 1:length(x)
-            x[i] &= lt(y[i], vals[i])
-        end
-    else
-        Threads.@threads for i in 1:length(x)
-            x[i] &= lt(vals[i], y[i])
-        end
-    end
-    x
-end
+
 
 function row_isless(ds::AbstractDataset, cols, colselector::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex}; threads = true, rev = false, lt = isless)
     if !(colselector isa ColumnIndex)
@@ -140,84 +253,59 @@ function row_isless(ds::AbstractDataset, cols, colselector::Union{AbstractVector
     colsidx = index(ds)[cols]
     if colselector isa SubDatasetColumn || colselector isa DatasetColumn
         colselector = __!(colselector)
-    end
-    if colselector isa ColumnIndex
+    elseif colselector isa ColumnIndex
         colselector = _columns(ds)[index(ds)[colselector]]
     end
     init0 = ones(Bool, nrow(ds))
+
     if threads
-        mapreduce(identity, (x,y)->hp_op_for_isless!(x,y,colselector, rev, lt), view(_columns(ds),colsidx), init = init0)
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_isless!(x, y, colselector, rev, lt, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
     else
-        mapreduce(identity, (x,y)->_op_for_isless!(x,y,colselector,rev, lt), view(_columns(ds),colsidx), init = init0)
+        mapreduce(identity, (x,y) -> _op_for_isless!(x, y, colselector, rev, lt, 1, length(x)), view(_columns(ds),colsidx), init = init0)
     end
+    init0
+
 end
 
 
 # TODO probably we should use this approach instead of mapreduce_indexed
-function _op_for_findfirst!(x, y, f, idx, missref)
+Base.@propagate_inbounds function _op_for_findfirst!(x, y, f, idx, missref, lo, hi)
     idx[] += 1
-    for i in 1:length(x)
+    @simd for i in lo:hi
         x[i] = ifelse(isequal(missref, x[i]) && isequal(true, f(y[i])), idx[], x[i])
     end
     x
 end
 
-function hp_op_for_findfirst!(x, y, f, idx, missref)
+Base.@propagate_inbounds function _op_for_findfirst!(x, y, item, idx, missref, eq, lo, hi)
     idx[] += 1
-    Threads.@threads for i in 1:length(x)
-        x[i] = ifelse(isequal(missref, x[i]) && isequal(true, f(y[i])), idx[], x[i])
-    end
-    x
-end
-function _op_for_findfirst!(x, y, item, idx, missref, eq)
-    idx[] += 1
-    for i in 1:length(x)
+    @simd for i in lo:hi
         x[i] = ifelse(isequal(missref, x[i]) && eq(item[i], y[i]), idx[], x[i])
     end
     x
 end
 
-function hp_op_for_findfirst!(x, y, item, idx, missref, eq)
+Base.@propagate_inbounds function _op_for_findlast!(x, y, f, idx, missref, lo, hi)
     idx[] += 1
-    Threads.@threads for i in 1:length(x)
-        x[i] = ifelse(isequal(missref, x[i]) && eq(item[i], y[i]), idx[], x[i])
-    end
-    x
-end
-
-function _op_for_findlast!(x, y, f, idx, missref)
-    idx[] += 1
-    for i in 1:length(x)
+    @simd for i in lo:hi
         x[i] = ifelse(isequal(true, f(y[i])), idx[], x[i])
     end
     x
 end
 
-function hp_op_for_findlast!(x, y, f, idx, missref)
+Base.@propagate_inbounds function _op_for_findlast!(x, y, item, idx, missref, eq, lo, hi)
     idx[] += 1
-    Threads.@threads for i in 1:length(x)
-        x[i] = ifelse(isequal(true, f(y[i])), idx[], x[i])
-    end
-    x
-end
-
-function _op_for_findlast!(x, y, item, idx, missref, eq)
-    idx[] += 1
-    for i in 1:length(x)
+    @simd for i in lo:hi
         x[i] = ifelse(eq(item[i], y[i]), idx[], x[i])
     end
     x
 end
 
-function hp_op_for_findlast!(x, y, item, idx, missref, eq)
-    idx[] += 1
-    Threads.@threads for i in 1:length(x)
-        x[i] = ifelse(eq(item[i], y[i]), idx[], x[i])
-    end
-    x
-end
-
-# TODO probably we should use threads argument instead of seperate functions for hp version
 function row_findfirst(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Number});item::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex, Nothing} = nothing, threads = true, eq = isequal)
     if !(item isa ColumnIndex) && item !== nothing
         @assert length(item) == nrow(ds) "length of item values must be the same as the number of rows"
@@ -227,22 +315,30 @@ function row_findfirst(ds::AbstractDataset, f, cols = names(ds, Union{Missing, N
         item = _columns(ds)[index(ds)[item]]
     end
     colsidx = index(ds)[cols]
-    idx = Ref{Int}(0)
+
     colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, 0)
     init0 = fill(missref, nrow(ds))
-    if item === nothing
-        if threads
-            mapreduce(identity, (x,y)->hp_op_for_findfirst!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
-        else
-            mapreduce(identity, (x,y)->_op_for_findfirst!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        idx = [Ref{Int}(0) for _ in 1:__NCORES]
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if item === nothing
+                mapreduce(identity, (x,y) -> _op_for_findfirst!(x, y, f, idx[i], missref, lo, hi), view(_columns(ds),colsidx), init = init0)
+            else
+                mapreduce(identity, (x,y) -> _op_for_findfirst!(x, y, item, idx[i], missref, eq, lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
         end
     else
-        if threads
-            mapreduce(identity, (x,y)->hp_op_for_findfirst!(x,y,item,idx, missref, eq), view(_columns(ds),colsidx), init = init0)
+        idx = Ref{Int64}(0)
+        if item === nothing
+            mapreduce(identity, (x,y) -> _op_for_findfirst!(x, y, f, idx, missref, 1, length(x)), view(_columns(ds),colsidx), init = init0)
         else
-            mapreduce(identity, (x,y)->_op_for_findfirst!(x,y,item,idx, missref, eq), view(_columns(ds),colsidx), init = init0)
+            mapreduce(identity, (x,y) -> _op_for_findfirst!(x, y, item, idx, missref, eq, 1, length(x)), view(_columns(ds),colsidx), init = init0)
         end
     end
     colnames_pa.refs = init0
@@ -258,36 +354,37 @@ function row_findlast(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Nu
         item = _columns(ds)[index(ds)[item]]
     end
     colsidx = index(ds)[cols]
-    idx = Ref{Int}(0)
     colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, 0)
     init0 = fill(missref, nrow(ds))
-    if item === nothing
-        if threads
-            mapreduce(identity, (x,y)->hp_op_for_findlast!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
-        else
-            mapreduce(identity, (x,y)->_op_for_findlast!(x,y,f,idx, missref), view(_columns(ds),colsidx), init = init0)
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        idx = [Ref{Int}(0) for _ in 1:__NCORES]
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if item === nothing
+                mapreduce(identity, (x,y) -> _op_for_findlast!(x, y, f, idx[i], missref, lo, hi), view(_columns(ds),colsidx), init = init0)
+            else
+                mapreduce(identity, (x,y) -> _op_for_findlast!(x, y, item, idx[i], missref, eq, lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
         end
     else
-        if threads
-            mapreduce(identity, (x,y)->hp_op_for_findlast!(x,y,item,idx, missref, eq), view(_columns(ds),colsidx), init = init0)
+        idx = Ref{Int}(0)
+        if item === nothing
+            mapreduce(identity, (x,y) -> _op_for_findlast!(x, y, f, idx, missref, 1, length(x)), view(_columns(ds),colsidx), init = init0)
         else
-            mapreduce(identity, (x,y)->_op_for_findlast!(x,y,item,idx, missref, eq), view(_columns(ds),colsidx), init = init0)
+            mapreduce(identity, (x,y) -> _op_for_findlast!(x, y, item, idx, missref, eq, 1, length(x)), view(_columns(ds),colsidx), init = init0)
         end
     end
     colnames_pa.refs = init0
     colnames_pa
 end
 
-function _op_for_in!(x,y,x1,eq)
-    for i in 1:length(x)
-        !x[i] ? x[i] = eq(x1[i], y[i]) : nothing
-    end
-    x
-end
-function hp_op_for_in!(x,y,x1,eq)
-    Threads.@threads for i in 1:length(x)
+Base.@propagate_inbounds function _op_for_in!(x, y, x1, eq, lo, hi)
+    @simd for i in lo:hi
         !x[i] ? x[i] = eq(x1[i], y[i]) : nothing
     end
     x
@@ -300,46 +397,40 @@ function row_in(ds::AbstractDataset, collections, items::Union{AbstractVector, D
     colsidx = index(ds)[collections]
     if items isa SubDatasetColumn || items isa DatasetColumn
         items = __!(items)
-    end
-    if items isa ColumnIndex
+    elseif items isa ColumnIndex
         items = _columns(ds)[index(ds)[items]]
     end
     init0 = zeros(Bool, nrow(ds))
+
     if threads
-        mapreduce(identity, (x,y)->hp_op_for_in!(x,y,items,eq), view(_columns(ds),colsidx), init = init0)
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_in!(x, y, items, eq, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
     else
-        mapreduce(identity, (x,y)->_op_for_in!(x,y,items,eq), view(_columns(ds),colsidx), init = init0)
+        mapreduce(identity, (x,y) -> _op_for_in!(x, y, items, eq, 1, length(x)), view(_columns(ds),colsidx), init = init0)
     end
-
+    init0
 end
 
-function _op_for_select!(x, y, colselector, dsnames, idx)
+Base.@propagate_inbounds function _op_for_select!(x, y, colselector, dsnames, idx, lo, hi)
     idx[] += 1
-    for i in 1:length(x)
+    @simd for i in lo:hi
         if isequal(colselector[i], dsnames[idx[]])
             x[i] = y[i]
         end
     end
     x
 end
-function hp_op_for_select!(x, y, colselector, dsnames, idx)
-    idx[] += 1
-    Threads.@threads for i in 1:length(x)
-        if isequal(colselector[i], dsnames[idx[]])
-            x[i] = y[i]
-        end
-    end
-    x
-end
-
 
 function row_select(ds::AbstractDataset, cols, colselector::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex}; threads = true)
     if !(colselector isa ColumnIndex)
-        @assert length(colselector) == nrow(ds) "to pick values of selected columns in each row, the length of the column names and the number of rows must match, i.e. the lenght of the vector passed as `by` must be $(nrow(ds))."
+        @assert length(colselector) == nrow(ds) "to pick values of selected columns in each row, the length of the column names and the number of rows must match, i.e. the length of the vector passed as `by` must be $(nrow(ds))."
     end
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    idx = Ref{Int}(0)
     if colselector isa SubDatasetColumn || colselector isa DatasetColumn
         colselector = __!(colselector)
     end
@@ -354,36 +445,34 @@ function row_select(ds::AbstractDataset, cols, colselector::Union{AbstractVector
         nnames = 1:length(colsidx)
     end
     init0 = missings(CT, nrow(ds))
+
     if threads
-        mapreduce(identity, (x,y)->hp_op_for_select!(x,y,colselector,nnames, idx), view(_columns(ds),colsidx), init = init0)
+        cz = div(length(init0), __NCORES)
+        idx = [Ref{Int}(0) for _ in 1:__NCORES]
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_select!(x, y, colselector, nnames, idx[i], lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
     else
-        mapreduce(identity, (x,y)->_op_for_select!(x,y,colselector,nnames, idx), view(_columns(ds),colsidx), init = init0)
+        idx = Ref{Int}(0)
+        mapreduce(identity, (x,y) -> _op_for_select!(x, y, colselector, nnames, idx, 1, length(x)), view(_columns(ds),colsidx), init = init0)
     end
+    init0
 end
 
-Base.@propagate_inbounds function _op_for_fill!(x,y,f)
-    @simd for i in 1:length(x)
+Base.@propagate_inbounds function _op_for_fill!(x, y, f, lo, hi)
+    @simd for i in lo:hi
        y[i] = ifelse(f(y[i]), x[i], y[i])
     end
     x
 end
-Base.@propagate_inbounds function hp_op_for_fill!(x,y,f)
-  Threads.@threads for i in 1:length(x)
-     y[i] = ifelse(f(y[i]), x[i], y[i])
-  end
-   x
-end
-Base.@propagate_inbounds function _op_for_fill_roll!(x,y,f)
-    @simd for i in 1:length(x)
+
+Base.@propagate_inbounds function _op_for_fill_roll!(x, y, f, lo, hi)
+    @simd for i in lo:hi
        y[i] = ifelse(f(y[i]), x[i], y[i])
     end
     y
-end
-Base.@propagate_inbounds function hp_op_for_fill_roll!(x,y,f)
-  Threads.@threads for i in 1:length(x)
-     y[i] = ifelse(f(y[i]), x[i], y[i])
-  end
-  y
 end
 
 
@@ -399,17 +488,24 @@ function row_fill!(ds::AbstractDataset, cols, val::Union{AbstractVector, Dataset
     if val isa ColumnIndex
         val = _columns(ds)[index(ds)[val]]
     end
+    init0 = val
+
     if threads
-        if rolling
-            mapreduce(identity, (x,y)->hp_op_for_fill_roll!(x,y, f), view(_columns(ds),colsidx), init = val)
-        else
-            mapreduce(identity, (x,y)->hp_op_for_fill!(x,y, f), view(_columns(ds),colsidx), init = val)
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if rolling
+                mapreduce(identity, (x,y) -> _op_for_fill_roll!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
+            else
+                mapreduce(identity, (x,y) -> _op_for_fill!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
         end
     else
         if rolling
-            mapreduce(identity, (x,y)->_op_for_fill_roll!(x,y, f), view(_columns(ds),colsidx), init = val)
+            mapreduce(identity, (x,y) -> _op_for_fill_roll!(x, y, f, 1, length(x)), view(_columns(ds),colsidx), init = init0)
         else
-            mapreduce(identity, (x,y)->_op_for_fill!(x,y, f), view(_columns(ds),colsidx), init = val)
+            mapreduce(identity, (x,y) -> _op_for_fill!(x, y, f, 1, length(x)), view(_columns(ds),colsidx), init = init0)
         end
     end
     any(index(parent(ds)).sortedcols .∈ Ref(IMD.parentcols.(Ref(IMD.index(ds)), cols))) && _reset_grouping_info!(parent(ds))
@@ -418,88 +514,106 @@ function row_fill!(ds::AbstractDataset, cols, val::Union{AbstractVector, Dataset
 end
 
 
-function _op_for_coalesce!(x, y)
-    if all(!ismissing, x)
+Base.@propagate_inbounds function _op_for_coalesce!(x, y, lo, hi)
+    if all(!ismissing, view(x, lo:hi))
         x
     else
-        for i in 1:length(x)
+        @simd for i in lo:hi
             x[i] = ifelse(ismissing(x[i]), y[i], x[i])
         end
     end
     x
 end
-function hp_op_coalesce!(x, y)
-    if all(!ismissing, x) # TODO this for performance, is it ok for large ds?
-        x
-    else
-        Threads.@threads for i in 1:length(x)
-            @inbounds x[i] = ifelse(ismissing(x[i]), y[i], x[i])
-        end
-    end
-    x
-end
+
 
 function row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
 
     init0 = fill!(Vector{Union{Missing, CT}}(undef, size(ds,1)), missing)
+
     if threads
-        mapreduce(identity, hp_op_coalesce!, view(_columns(ds),colsidx), init = init0)
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_coalesce!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
     else
-        mapreduce(identity, _op_for_coalesce!, view(_columns(ds),colsidx), init = init0)
+        mapreduce(identity, (x,y) -> _op_for_coalesce!(x, y, 1, length(x)), view(_columns(ds),colsidx), init = init0)
     end
+    init0
 end
 
-function row_mean(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
-    row_sum(ds, f, cols) ./ row_count(ds, x -> !ismissing(x), cols)
+function row_mean(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
+    row_sum(ds, f, cols; threads = threads) ./ row_count(ds, x -> !ismissing(x), cols; threads = threads)
 end
-row_mean(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_mean(ds, identity, cols)
+row_mean(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_mean(ds, identity, cols; threads = threads)
 
-# TODO not safe if the first column is Vector{Missing}
 
-function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+Base.@propagate_inbounds function _op_for_min!(x, y, f, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _min_fun(x[i], f(y[i]))
+    end
+    x
+end
+
+Base.@propagate_inbounds function _op_for_max!(x, y, f, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _max_fun(x[i], f(y[i]))
+    end
+    x
+end
+
+function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
-    _op_for_min!(x, y) = x .= _min_fun.(x, f.(y))
-    init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemax(T))
-    mapreduce(identity, _op_for_min!, view(_columns(ds),colsidx), init = init0)
+    init0 = missings(T, nrow(ds))
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_min!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
+    else
+        mapreduce(identity, (x,y) -> _op_for_min!(x, y, f, 1, length(x)), view(_columns(ds),colsidx), init = init0)
+    end
+    init0
 end
-row_minimum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_minimum(ds, identity, cols)
+row_minimum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_minimum(ds, identity, cols; threads = threads)
 
-# TODO not safe if the first column is Vector{Missing}
-
-function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}))
+function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
-    _op_for_max!(x, y) = x .= _max_fun.(x, f.(y))
-    # TODO the type of zeros after applying f???
-    init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : typemin(T))
-    mapreduce(identity, _op_for_max!, view(_columns(ds),colsidx), init = init0)
-end
-row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_maximum(ds, identity, cols)
+    init0 = missings(T, nrow(ds))
 
-function _op_for_argminmax!(x, y, f, vals, idx, missref)
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_max!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
+    else
+        mapreduce(identity, (x,y) -> _op_for_max!(x, y, f, 1, length(x)), view(_columns(ds),colsidx), init = init0)
+    end
+    init0
+end
+row_maximum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_maximum(ds, identity, cols; threads = threads)
+
+Base.@propagate_inbounds function _op_for_argminmax!(x, y, f, vals, idx, missref, lo, hi)
     idx[] += 1
-    for i in 1:length(x)
+    @simd for i in lo:hi
         if !ismissing(vals[i]) && isequal(vals[i], f(y[i])) && isequal(x[i], missref)
             x[i] = idx[]
         end
     end
     x
 end
-function hp_op_for_argminmax!(x, y, f, vals, idx, missref)
-    idx[] += 1
-    Threads.@threads for i in 1:length(x)
-        if !ismissing(vals[i]) && isequal(vals[i], f(y[i])) && isequal(x[i], missref)
-            x[i] = idx[]
-        end
-    end
-    x
-end
-
 
 function row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
@@ -508,14 +622,21 @@ function row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mis
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, missing)
     init0 = fill(missref, nrow(ds))
-    idx = Ref{Int}(0)
-    if threads
-        res = mapreduce(identity, (x,y)->hp_op_for_argminmax!(x,y, f, minvals, idx, missref), view(_columns(ds),colsidx), init = init0)
 
+    if threads
+        cz = div(length(init0), __NCORES)
+        idx = [Ref{Int}(0) for _ in 1:__NCORES]
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_argminmax!(x, y, f, minvals, idx[i], missref, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
     else
-        res = mapreduce(identity, (x,y)->_op_for_argminmax!(x,y, f, minvals, idx, missref), view(_columns(ds),colsidx), init = init0)
+        idx = Ref{Int}(0)
+        mapreduce(identity, (x,y) -> _op_for_argminmax!(x, y, f, minvals, idx, missref, 1, length(x)), view(_columns(ds),colsidx), init = init0)
     end
-    colnames_pa.refs = res
+
+    colnames_pa.refs = init0
     colnames_pa
 end
 row_argmin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_argmin(ds, identity, cols, threads = threads)
@@ -527,13 +648,21 @@ function row_argmax(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mis
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, missing)
     init0 = fill(missref, nrow(ds))
-    idx = Ref{Int}(0)
+
     if threads
-        res = mapreduce(identity, (x,y)->hp_op_for_argminmax!(x,y,f, maxvals, idx, missref), view(_columns(ds),colsidx), init = init0)
+        cz = div(length(init0), __NCORES)
+        idx = [Ref{Int}(0) for _ in 1:__NCORES]
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_argminmax!(x, y, f, maxvals, idx[i], missref, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
     else
-        res = mapreduce(identity, (x,y)->_op_for_argminmax!(x,y,f, maxvals, idx, missref), view(_columns(ds),colsidx), init = init0)
+        idx = Ref{Int}(0)
+        mapreduce(identity, (x,y) -> _op_for_argminmax!(x, y, f, maxvals, idx, missref, 1, length(x)), view(_columns(ds),colsidx), init = init0)
     end
-    colnames_pa.refs = res
+
+    colnames_pa.refs = init0
     colnames_pa
 end
 row_argmax(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_argmax(ds, identity, cols, threads = threads)
@@ -559,14 +688,14 @@ end
 
 # TODO needs type stability
 # TODO need abs2 for calculations
-function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
+function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true, threads = true)
     colsidx = index(ds)[cols]
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
     _sq_(x) = x^2
-    ss = row_sum(ds, _sq_ ∘ f, cols)
-    sval = row_sum(ds, f, cols)
-    n = row_count(ds, x -> !ismissing(x), cols)
+    ss = row_sum(ds, _sq_ ∘ f, cols; threads = threads)
+    sval = row_sum(ds, f, cols; threads = threads)
+    n = row_count(ds, x -> !ismissing(x), cols; threads = threads)
     T2 = Core.Compiler.return_type(/, (eltype(ss), eltype(n)))
     res = Vector{Union{Missing, T2}}(undef, length(ss))
     res .= ss ./ n .- (sval ./ n) .^ 2
@@ -577,22 +706,33 @@ function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missin
     res
     # _row_wise_var(ss, sval, n, dof, T)
 end
-row_var(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); dof = true) = row_var(ds, identity, cols, dof = dof)
+row_var(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); dof = true, threads = true) = row_var(ds, identity, cols, dof = dof, threads = threads)
 
-function row_std(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true)
-    sqrt.(row_var(ds, f, cols, dof = dof))
+function row_std(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true, threads = true)
+    sqrt.(row_var(ds, f, cols, dof = dof, threads = threads))
 end
-row_std(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); dof = true) = row_std(ds, identity, cols, dof = dof)
+row_std(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); dof = true, threads = true) = row_std(ds, identity, cols, dof = dof, threads = threads)
 
-function _op_for_cumsum_skip!(x, y)
-    x .= _add_sum.(x,y)
-    y .= ifelse.(ismissing.(y), missing, x)
+Base.@propagate_inbounds function _op_for_cumsum_skip!(x, y, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _add_sum(x[i], y[i])
+    end
+    @simd for i in lo:hi
+        y[i] = ifelse(ismissing(y[i]), missing, x[i])
+    end
     x
 end
-_op_for_cumsum_ignore!(x, y) = y .= _add_sum.(x, y)
+
+Base.@propagate_inbounds function _op_for_cumsum_ignore!(x, y, lo, hi)
+    @simd for i in lo:hi
+        y[i] = _add_sum(x[i], y[i])
+    end
+    y
+end
 
 
-function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
+function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore, threads = true)
+    !(missings in (:ignore, :skip)) && throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
     colsidx = index(ds)[cols]
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     if T <: Union{Missing, INTEGERS}
@@ -607,35 +747,58 @@ function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
-    if missings == :ignore
-        mapreduce(identity,  _op_for_cumsum_ignore!, view(_columns(ds),colsidx), init = init0)
-    elseif missings == :skip
-        mapreduce(identity, _op_for_cumsum_skip!, view(_columns(ds),colsidx), init = init0)
+    init0 = Missings.missings(T, nrow(ds))
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if missings == :ignore
+                mapreduce(identity, (x,y) -> _op_for_cumsum_ignore!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
+            else
+                mapreduce(identity, (x,y) -> _op_for_cumsum_skip!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
+        end
     else
-        throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
+        if missings == :ignore
+            mapreduce(identity, (x,y) -> _op_for_cumsum_ignore!(x, y, 1, length(init0)), view(_columns(ds),colsidx), init = init0)
+        else
+            mapreduce(identity, (x,y) -> _op_for_cumsum_skip!(x, y, 1, length(init0)), view(_columns(ds),colsidx), init = init0)
+        end
     end
+
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
     ds
 end
-# row_cumsum!(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_cumsum!(identity, ds, cols)
 
-function row_cumsum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
+function row_cumsum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore, threads = true)
     dscopy = copy(ds)
-    row_cumsum!(dscopy, cols, missings = missings)
+    row_cumsum!(dscopy, cols, missings = missings, threads = threads)
     dscopy
 end
 
-function _op_for_cumprod_skip!(x, y)
-    x .= _mul_prod.(x,y)
-    y .= ifelse.(ismissing.(y), missing, x)
+Base.@propagate_inbounds function _op_for_cumprod_skip!(x, y, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _mul_prod(x[i], y[i])
+    end
+    @simd for i in lo:hi
+        y[i] = ifelse(ismissing(y[i]), missing, x[i])
+    end
     x
 end
-_op_for_cumprod_ignore!(x, y) = y .= _mul_prod.(x, y)
 
-function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
+Base.@propagate_inbounds function _op_for_cumprod_ignore!(x, y, lo, hi)
+    @simd for i in lo:hi
+        y[i] = _mul_prod(x[i], y[i])
+    end
+    y
+end
+
+function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore, threads = true)
+    !(missings in (:ignore, :skip)) && throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
     colsidx = index(ds)[cols]
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     for i in colsidx
@@ -645,36 +808,60 @@ function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}); mis
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : one(T))
-    if missings == :ignore
-        mapreduce(identity, _op_for_cumprod_ignore!, view(_columns(ds),colsidx), init = init0)
-    elseif missings == :skip
-        mapreduce(identity, _op_for_cumprod_skip!, view(_columns(ds),colsidx), init = init0)
+    init0 = Missings.missings(T, nrow(ds))
+
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if missings == :ignore
+                mapreduce(identity, (x,y) -> _op_for_cumprod_ignore!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
+            else
+                mapreduce(identity, (x,y) -> _op_for_cumprod_skip!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
+        end
     else
-        throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
+        if missings == :ignore
+            mapreduce(identity, (x,y) -> _op_for_cumprod_ignore!(x, y, 1, length(init0)), view(_columns(ds),colsidx), init = init0)
+        else
+            mapreduce(identity, (x,y) -> _op_for_cumprod_skip!(x, y, 1, length(init0)), view(_columns(ds),colsidx), init = init0)
+        end
     end
+
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
     ds
 end
 
-function row_cumprod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
+function row_cumprod(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore, threads = true)
     dscopy = copy(ds)
-    row_cumprod!(dscopy, cols; missings = missings)
+    row_cumprod!(dscopy, cols; missings = missings, threads = threads)
     dscopy
 end
 
 
-function _op_for_cummin_skip!(x, y)
-    x .= _min_fun.(x,y)
-    y .= ifelse.(ismissing.(y), missing, x)
+Base.@propagate_inbounds function _op_for_cummin_skip!(x, y, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _min_fun(x[i], y[i])
+    end
+    @simd for i in lo:hi
+        y[i] = ifelse(ismissing(y[i]), missing, x[i])
+    end
     x
 end
-_op_for_cummin_ignore!(x, y) = y .= _min_fun.(x, y)
 
+Base.@propagate_inbounds function _op_for_cummin_ignore!(x, y, lo, hi)
+    @simd for i in lo:hi
+        y[i] = _min_fun(x[i], y[i])
+    end
+    y
+end
 
-function row_cummin!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
+function row_cummin!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore, threads = true)
+    !(missings in (:ignore, :skip)) && throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
     colsidx = index(ds)[cols]
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     for i in colsidx
@@ -684,14 +871,28 @@ function row_cummin!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
-    if missings == :ignore
-        mapreduce(identity,  _op_for_cummin_ignore!, view(_columns(ds),colsidx), init = init0)
-    elseif missings == :skip
-        mapreduce(identity, _op_for_cummin_skip!, view(_columns(ds),colsidx), init = init0)
+    init0 = Missings.missings(T, nrow(ds))
+
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if missings == :ignore
+                mapreduce(identity, (x,y) -> _op_for_cummin_ignore!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
+            else
+                mapreduce(identity, (x,y) -> _op_for_cummin_skip!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
+        end
     else
-        throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
+        if missings == :ignore
+            mapreduce(identity, (x,y) -> _op_for_cummin_ignore!(x, y, 1, length(init0)), view(_columns(ds),colsidx), init = init0)
+        else
+            mapreduce(identity, (x,y) -> _op_for_cummin_skip!(x, y, 1, length(init0)), view(_columns(ds),colsidx), init = init0)
+        end
     end
+
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
@@ -699,21 +900,32 @@ function row_cummin!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
 end
 # row_cumsum!(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_cumsum!(identity, ds, cols)
 
-function row_cummin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
+function row_cummin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore, threads = true)
     dscopy = copy(ds)
-    row_cummin!(dscopy, cols, missings = missings)
+    row_cummin!(dscopy, cols, missings = missings, threads = threads)
     dscopy
 end
 
-function _op_for_cummax_skip!(x, y)
-    x .= _max_fun.(x,y)
-    y .= ifelse.(ismissing.(y), missing, x)
+
+Base.@propagate_inbounds function _op_for_cummax_skip!(x, y, lo, hi)
+    @simd for i in lo:hi
+        x[i] = _max_fun(x[i], y[i])
+    end
+    @simd for i in lo:hi
+        y[i] = ifelse(ismissing(y[i]), missing, x[i])
+    end
     x
 end
-_op_for_cummax_ignore!(x, y) = y .= _max_fun.(x, y)
 
+Base.@propagate_inbounds function _op_for_cummax_ignore!(x, y, lo, hi)
+    @simd for i in lo:hi
+        y[i] = _max_fun(x[i], y[i])
+    end
+    y
+end
 
-function row_cummax!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
+function row_cummax!(ds::Dataset, cols = names(ds, Union{Missing, Number}); missings = :ignore, threads = true)
+    !(missings in (:ignore, :skip)) && throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
     colsidx = index(ds)[cols]
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     for i in colsidx
@@ -723,14 +935,28 @@ function row_cummax!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    init0 = fill!(Vector{T}(undef, size(ds,1)), T >: Missing ? missing : zero(T))
-    if missings == :ignore
-        mapreduce(identity,  _op_for_cummax_ignore!, view(_columns(ds),colsidx), init = init0)
-    elseif missings == :skip
-        mapreduce(identity, _op_for_cummax_skip!, view(_columns(ds),colsidx), init = init0)
+    init0 = Missings.missings(T, nrow(ds))
+
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if missings == :ignore
+                mapreduce(identity, (x,y) -> _op_for_cummax_ignore!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
+            else
+                mapreduce(identity, (x,y) -> _op_for_cummax_skip!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
+        end
     else
-        throw(ArgumentError("`missings` can be either `:ignore` or `:skip`"))
+        if missings == :ignore
+            mapreduce(identity, (x,y) -> _op_for_cummax_ignore!(x, y, 1, length(init0)), view(_columns(ds),colsidx), init = init0)
+        else
+            mapreduce(identity, (x,y) -> _op_for_cummax_skip!(x, y, 1, length(init0)), view(_columns(ds),colsidx), init = init0)
+        end
     end
+
     removeformat!(ds, cols)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
@@ -738,9 +964,9 @@ function row_cummax!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
 end
 # row_cumsum!(ds::AbstractDataset, cols = names(ds, Union{Missing, Number})) = row_cumsum!(identity, ds, cols)
 
-function row_cummax(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore)
+function row_cummax(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); missings = :ignore, threads = true)
     dscopy = copy(ds)
-    row_cummax!(dscopy, cols, missings = missings)
+    row_cummax!(dscopy, cols, missings = missings, threads = threads)
     dscopy
 end
 
@@ -786,22 +1012,40 @@ function row_sort(ds::AbstractDataset, cols = names(ds, Union{Missing, Number});
     dscopy
 end
 
-function _op_for_issorted!(x, y, res, lt)
-    res .&= .!lt.(y, x)
+Base.@propagate_inbounds function _op_for_issorted!(x, y, res, lt, lo, hi)
+    @simd for i in lo:hi
+        res[i] &= !lt(y[i], x[i])
+    end
     y
 end
-function _op_for_issorted_rev!(x, y, res, lt)
-    res .&= .!lt.(x, y)
+Base.@propagate_inbounds function _op_for_issorted_rev!(x, y, res, lt, lo, hi)
+    @simd for i in lo:hi
+        res[i] &= !lt(x[i], y[i])
+    end
     y
 end
 
-function row_issorted(ds::AbstractDataset, cols; rev = false, lt = isless)
+function row_issorted(ds::AbstractDataset, cols; rev = false, lt = isless, threads = true)
     colsidx = index(ds)[cols]
     init0 = ones(Bool, nrow(ds))
-    if rev
-        mapreduce(identity, (x, y)->_op_for_issorted_rev!(x, y, init0, lt), view(_columns(ds),colsidx))
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            if rev
+                mapreduce(identity, (x,y) -> _op_for_issorted_rev!(x, y, init0, lt, lo, hi), view(_columns(ds),colsidx))
+            else
+                mapreduce(identity, (x,y) -> _op_for_issorted!(x, y, init0, lt, lo, hi), view(_columns(ds),colsidx))
+            end
+        end
     else
-        mapreduce(identity, (x, y)->_op_for_issorted!(x, y, init0, lt), view(_columns(ds),colsidx))
+        if rev
+            mapreduce(identity, (x,y) -> _op_for_issorted_rev!(x, y, init0, lt, 1, length(init0)), view(_columns(ds),colsidx))
+        else
+            mapreduce(identity, (x,y) -> _op_for_issorted!(x, y, init0, lt, 1, length(init0)), view(_columns(ds),colsidx))
+        end
     end
     init0
 end
@@ -843,12 +1087,30 @@ function row_nunique(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mi
 end
 row_nunique(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); count_missing = true) = row_nunique(ds, identity, cols; count_missing = count_missing)
 
-function row_hash(ds::AbstractDataset, f::Function, cols = :)
-    colsidx = index(ds)[cols]
-    _op_hash(x, y) = x .= hash.(f.(y), x)
-    mapreduce(identity, _op_hash, view(_columns(ds),colsidx), init = zeros(UInt64, size(ds,1)))
+Base.@propagate_inbounds function _op_for_hash!(x, y, f, lo, hi)
+    @simd for i in lo:hi
+        x[i] = hash(f(y[i]), x[i])
+    end
+    x
 end
-row_hash(ds::AbstractDataset, cols = :) = row_hash(ds, identity, cols)
+
+function row_hash(ds::AbstractDataset, f::Function, cols = :; threads = true)
+    colsidx = index(ds)[cols]
+    init0 = zeros(UInt64, nrow(ds))
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_hash!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
+    else
+        mapreduce(identity, (x,y) -> _op_for_hash!(x, y, f, 1, length(x)), view(_columns(ds),colsidx), init = init0)
+    end
+    init0
+end
+row_hash(ds::AbstractDataset, cols = :; threads = true) = row_hash(ds, identity, cols; threads = threads)
 
 function _fill_col!(inmat, column, rows, j)
     for i in 1:length(rows)

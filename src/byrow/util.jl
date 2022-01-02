@@ -213,16 +213,16 @@ function _base!(a, pos, base::Integer, x::Integer, pad::Int, neg::Bool)
     a
 end
 
-function _op_for_row_join!(buffer, currentpos, y, f, delim, quotechar, idx, p)
+function _op_for_row_join!(buffer, currentpos, y, f, delim, quotechar, idx, p, lo, hi)
     idx[] += 1
     if quotechar === nothing
         if idx[] < p
-            Threads.@threads for i in 1:length(y)
+            for i in lo:hi
                 currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f[idx[]](y[i]))
                 currentpos[i] = write_delim!(view(buffer, :, i), currentpos[i], delim)
             end
         else
-            Threads.@threads for i in 1:length(y)
+            for i in lo:hi
                 currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f[idx[]](y[i]))
                 currentpos[i] = write_eol!(view(buffer, :, i), currentpos[i])
             end
@@ -234,14 +234,14 @@ function _op_for_row_join!(buffer, currentpos, y, f, delim, quotechar, idx, p)
             quotecharval = nothing
         end
         if idx[]<p
-            Threads.@threads for i in 1:length(y)
+            for i in lo:hi
                 currentpos[i] = write_quotechar!(view(buffer, :, i), currentpos[i], quotecharval)
                 currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f[idx[]](y[i]))
                 currentpos[i] = write_quotechar!(view(buffer, :, i), currentpos[i], quotecharval)
                 currentpos[i] = write_delim!(view(buffer, :, i), currentpos[i], delim)
             end
         else
-            Threads.@threads for i in 1:length(y)
+            for i in lo:hi
                 currentpos[i] = write_quotechar!(view(buffer, :, i), currentpos[i], quotecharval)
                 currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f[idx[]](y[i]))
                 currentpos[i] = write_quotechar!(view(buffer, :, i), currentpos[i], quotecharval)
@@ -254,12 +254,23 @@ end
 
 # buffer = Matrix{UInt8}(undef, lsize , nrow(ds))
 # currentpos = ones(Int, nrow(ds))
-function row_join!(buffer, currentpos, ds::AbstractDataset, f::Vector{<:Function}, cols = :; delim = ',', quotechar = nothing)
+function row_join!(buffer, currentpos, ds::AbstractDataset, f::Vector{<:Function}, cols = :; delim = ',', quotechar = nothing, threads = true)
     colsidx = index(ds)[cols]
-    idx = Ref{Int}(0)
     p = length(colsidx)
     dlm = UInt8.(delim)
-    mapreduce(identity, (x,y)->_op_for_row_join!(buffer,x,y,f, dlm, quotechar, idx, p), view(_columns(ds), colsidx), init = currentpos)
+
+    if threads
+        cz = div(nrow(ds), __NCORES)
+        idx = [Ref{Int}(0) for _ in 1:__NCORES]
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = nrow(ds) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_row_join!(buffer, x, y, f, dlm, quotechar, idx[i], p, lo, hi), view(_columns(ds),colsidx), init = currentpos)
+        end
+    else
+        idx = Ref{Int64}(0)
+        mapreduce(identity, (x,y) -> _op_for_row_join!(buffer, x, y, f, dlm, quotechar, idx, p, 1, nrow(ds)), view(_columns(ds),colsidx), init = currentpos)
+    end
     currentpos, buffer
 end
 

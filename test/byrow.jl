@@ -6,11 +6,19 @@
                         x2_float = [missing, missing, 3.0, missing, missing],
                         x3_float = [missing, missing, -1.4, 3.0, -100.0])
     @test byrow(ds, sum, r"int") == [3,2,2,3,0]
+    @test byrow(repeat(ds,100), sum, r"int") == repeat([3,2,2,3,0], 100)
+
     @test isequal(byrow(ds, sum, r"float") , [1.2, missing, 0.6000000000000001,5.3,-90])
+    @test isequal(byrow(repeat(ds, 100), sum, r"float") , repeat([1.2, missing, 0.6000000000000001,5.3,-90], 100))
     @test byrow(ds, mean, r"int") == [3/2,2/2,1.0,3.0,0]
+    @test byrow(repeat(ds,100), mean, r"int") == repeat([3/2,2/2,1.0,3.0,0],100)
     @test isequal(byrow(ds, maximum, r"float") , [1.2, missing, 3,3.0,10.0])
     @test isequal(byrow(ds, maximum, r"float", by = abs) , [1.2, missing, 3,3.0,100.0])
     @test isequal(byrow(ds, minimum, r"float") , [1.2, missing, -1.4,2.3,-100.0])
+
+    @test isequal(byrow(repeat(ds,100), maximum, r"float") , repeat([1.2, missing, 3,3.0,10.0], 100))
+    @test isequal(byrow(repeat(ds,100), maximum, r"float", by = abs) , repeat([1.2, missing, 3,3.0,100.0], 100))
+    @test isequal(byrow(repeat(ds,100), minimum, r"float") , repeat([1.2, missing, -1.4,2.3,-100.0], 100))
 
     @test byrow(ds, sum, r"int", threads = true) == [3,2,2,3,0]
     @test isequal(byrow(ds, sum, r"float", threads = true) , [1.2, missing, 0.6000000000000001,5.3,-90])
@@ -26,6 +34,15 @@
     @test isequal(byrow(ds, var, r"float"), [missing, missing, 5.92, 0.24499999999999922, 6050.0])
     @test isequal(byrow(ds, var, r"float", dof = false), [0.0, missing, 3.9466666666666663, 0.12249999999999961, 3025.0])
     @test byrow(ds, count, :, by=  ismissing) == [2,3,0,2,1]
+
+    @test byrow(repeat(ds, 100), argmax, :) == repeat(Symbol.(["x2_int", "x2_int", "x2_float", "x2_int", "x1_float"]),100)
+    @test isequal(byrow(repeat(ds, 100), argmin, r"float"), repeat([:x1_float, missing, :x3_float, :x1_float, :x3_float],100))
+    @test isequal(byrow(repeat(ds, 100), argmin, r"float", by = abs) , repeat([:x1_float, missing, :x1_float, :x1_float, :x1_float],100))
+    @test byrow(repeat(ds, 100), coalesce, ["x2_float", "x1_float", "x1_int"]) == repeat([1.2,0,3.0,2.3,10],100)
+    @test isequal(byrow(repeat(ds, 100), var, r"float"), repeat([missing, missing, 5.92, 0.24499999999999922, 6050.0],100))
+    @test isequal(byrow(repeat(ds, 100), var, r"float", dof = false), repeat([0.0, missing, 3.9466666666666663, 0.12249999999999961, 3025.0],100))
+    @test byrow(repeat(ds, 100), count, :, by=  ismissing) == repeat([2,3,0,2,1],100)
+
     sds = view(ds, [5,5,5,3,3,3,2,2,2,4,4,4,4,4], [4,1,2,5])
     @test byrow(sds, sum, :) == [14.0,14.,14,4,4,4,1,1,1,4.3,4.3,4.3,4.3,4.3]
     @test byrow(sds, sum, [:g, :x2_float]) == [2,2.0,2,4,4,4,1,1,1,2,2,2,2,2]
@@ -61,6 +78,15 @@
     @test byrow(view(ds, :, :), isequal, 1:3, with = :x3) == [false, false, false, false, true]
     @test byrow(view(ds, :, :), isequal, [1,3], with = [1,1,1,1,1]) == [true, false, false, true, true]
 
+
+    @test byrow(repeat(ds,100), isequal, 1:2, with = :x3) == repeat([false, false, false, false, true],100)
+    @test byrow(repeat(ds,100), isequal, 1:3, with = :x3) == repeat([false, false, false, false, true],100)
+    @test byrow(repeat(ds,100), isequal, [1,3], with = repeat([1,1,1,1,1],100)) == repeat([true, false, false, true, true],100)
+    @test byrow(repeat(ds,100), isequal, 1:2, with = repeat(ds,100)[!, :x3]) == repeat([false, false, false, false, true],100)
+    @test byrow(repeat(ds,100), isequal, 1:3, with = repeat(ds,100)[:,3]) == repeat([false, false, false, false, true],100)
+    @test byrow(repeat(ds,100), isequal, 1, with = repeat(ds,100)[:,3]) == repeat([true, false, false, true, true],100)
+
+
     ds = Dataset(x1 = [1,2,3,4,missing], x2 = [3,2,4,5, missing])
     @test byrow(ds, issorted, :) == [true, true, true, true, true]
     @test byrow(ds, issorted, :, rev = true) == [false, true, false, false, true]
@@ -90,6 +116,16 @@
     @test isequal(byrow(ds, findlast, :), [:g,:g,:x2_int, missing, missing])
     @test isequal(byrow(ds, findfirst, [3,2,1], by = isequal(2)) ,byrow(ds, findlast, 1:3, by = isequal(2)))
     @test isequal(byrow(ds, findfirst, 1:3, by = isequal(2)) ,byrow(ds, findlast, [3,2,1], by = isequal(2)))
+
+    @test isequal(byrow(repeat(ds,100), findfirst, :, by = ismissing), repeat([:x2_float, :x1_float, missing, :x1_int, :x2_float],100))
+    @test isequal(byrow(repeat(ds,100), findlast, :, by = ismissing), repeat([:x3_float, :x3_float, missing, :x2_float, :x2_float],100))
+    @test isequal(byrow(repeat(ds,100), findfirst, :, by = x->isless(x,0)), repeat([missing, missing, :x1_float, missing, :x2_int],100))
+    @test isequal(byrow(repeat(ds,100), findlast, :, by = x->isless(x,0)), repeat([missing, missing, :x3_float, missing, :x3_float],100))
+    @test isequal(byrow(repeat(ds,100), findfirst, :, by = x->1), repeat([:g,:g,:g, :g,:g],100))
+    @test isequal(byrow(repeat(ds,100), findfirst, :), repeat([:g,:g,:g, missing, missing],100))
+    @test isequal(byrow(repeat(ds,100), findlast, :), repeat([:g,:g,:x2_int, missing, missing],100))
+    @test isequal(byrow(repeat(ds,100), findfirst, [3,2,1], by = isequal(2)) ,byrow(repeat(ds,100), findlast, 1:3, by = isequal(2)))
+    @test isequal(byrow(repeat(ds,100), findfirst, 1:3, by = isequal(2)) ,byrow(repeat(ds,100), findlast, [3,2,1], by = isequal(2)))
 
 
     sds = view(ds, rand(1:5, 100), [2,1,6,5,3,4])
@@ -148,6 +184,16 @@
     @test isequal(byrow(ds, select, [2,1,3], with = [3,1,1,2]), [1, 6.5,3.4,4])
     @test isequal(byrow(ds, select, [2,1,3], with = ds[!,  :y3]), [1, 6.5,3.4,4])
 
+    @test isequal(byrow(repeat(ds,100), select, 1:2, with = :y1), repeat([1.5, 2,missing,2.4],100))
+    @test isequal(byrow(repeat(ds,100), select, 1:2, with = :y2), repeat([1.5, 2,missing,2.4],100))
+    @test isequal(byrow(repeat(ds,100), select, 1:2, with = repeat(ds,100)[!, :y1]), repeat([1.5, 2,missing,2.4],100))
+    @test isequal(byrow(repeat(ds,100), select, 1:2, with = repeat(ds,100)[:, :y1]), repeat([1.5, 2,missing,2.4],100))
+    @test isequal(byrow(repeat(ds,100), select, [2,1], with = repeat(ds,100)[:, :y1]), repeat([1.5, 2,missing,2.4],100))
+    @test isequal(byrow(repeat(ds,100), select, [2,1,3], with = repeat(ds,100)[:, :y2]), repeat([1.5, 2,missing,2.4],100))
+    @test isequal(byrow(repeat(ds,100), select, [2,1,3], with = :y3), repeat([1, 6.5,3.4,4],100))
+    @test isequal(byrow(repeat(ds,100), select, [2,1,3], with = repeat([3,1,1,2],100)), repeat([1, 6.5,3.4,4],100))
+    @test isequal(byrow(repeat(ds,100), select, [2,1,3], with = repeat(ds,100)[!,  :y3]), repeat([1, 6.5,3.4,4],100))
+
     repeat!(ds, 2)
     sds = view(ds, [5,6,7,8], [2,1,3,4])
     @test isequal(byrow(sds, select, 1:2, with = :y1), [1.5, 2,missing,2.4])
@@ -174,6 +220,14 @@
     @test byrow(ds, fill, r"x", with = :y3, by = x->isless(2,x)) == Dataset(x1 = [1.0,1,1,2], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
     @test byrow(ds, fill, r"x", with = :y3, by = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,1,1,2.0], x2 = [1.5,1,1,2], y3 = [3,1,1,2])
     @test byrow(ds, fill, r"x", with = [missing, missing, missing, missing], by = x->isless(2,x), rolling = true) == Dataset(x1 = [1.0,missing, missing, missing], x2 = [1.5,missing, missing, missing], y3 = [3,1,1,2])
+
+    @test byrow(repeat(ds,100), fill, r"x", with = :y3) == repeat(Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2]),100)
+    @test byrow(repeat(ds,100), fill, [1, 2], with = :y3) == repeat(Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2]),100)
+    @test byrow(repeat(ds,100), fill, 1:2, with = 3) == repeat(Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,1,2.4], y3 = [3,1,1,2]),100)
+    @test byrow(repeat(ds,100), fill, r"x", with = :y3, rolling = true) == repeat(Dataset(x1 = [1.0,1,3,4], x2 = [1.5,6.5,3,2.4], y3 = [3,1,1,2]),100)
+    @test byrow(repeat(ds,100), fill, r"x", with = :y3, by = x->isless(2,x)) == repeat(Dataset(x1 = [1.0,1,1,2], x2 = [1.5,1,1,2], y3 = [3,1,1,2]),100)
+    @test byrow(repeat(ds,100), fill, r"x", with = :y3, by = x->isless(2,x), rolling = true) == repeat(Dataset(x1 = [1.0,1,1,2.0], x2 = [1.5,1,1,2], y3 = [3,1,1,2]),100)
+    @test byrow(repeat(ds,100), fill, r"x", with = repeat([missing, missing, missing, missing],100), by = x->isless(2,x), rolling = true) == repeat(Dataset(x1 = [1.0,missing, missing, missing], x2 = [1.5,missing, missing, missing], y3 = [3,1,1,2]),100)
 
     repeat!(ds, 2)
     sds = view(ds, [5,6,7,8], [1,2,3])
@@ -263,12 +317,17 @@
     @test byrow(sds2, in, 1:2, item = sds2[:, 3])== [1,1,1,0,1]
 end
 
-@testset "cum*/!" begin
+@testset "cum*/! - sort/!" begin
     ds = Dataset(x1 = [1,missing,3,missing], x2 = [1.0,2.0,missing,4.0], x3 = [1,missing,3,4])
     @test byrow(ds, cumsum, :) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [2.0, 2.0, 3.0, 4.0], x3 = [3.0, 2.0, 6.0, 8.0])
     @test byrow(ds, cumsum, :, missings = :skip) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [2.0, 2.0, missing, 4.0], x3=[3.0, missing, 6.0, 8.0])
     @test byrow(ds, cumprod, :) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, 3.0, 4.0], x3=[1.0, 2.0, 9.0, 16.0])
     @test byrow(ds, cumprod, :, missings = :skip) == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, missing, 4.0], x3=[1.0, missing, 9.0, 16.0])
+
+    @test byrow(repeat(ds,100), cumsum, :) == repeat(Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [2.0, 2.0, 3.0, 4.0], x3 = [3.0, 2.0, 6.0, 8.0]),100)
+    @test byrow(repeat(ds,100), cumsum, :, missings = :skip) == repeat(Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [2.0, 2.0, missing, 4.0], x3=[3.0, missing, 6.0, 8.0]),100)
+    @test byrow(repeat(ds,100), cumprod, :) == repeat(Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, 3.0, 4.0], x3=[1.0, 2.0, 9.0, 16.0]),100)
+    @test byrow(repeat(ds,100), cumprod, :, missings = :skip) == repeat(Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [1.0, 2.0, missing, 4.0], x3=[1.0, missing, 9.0, 16.0]),100)
 
     byrow(ds, cumsum!, :, missings = :skip)
     @test ds == Dataset(x1 = [1.0, missing, 3.0, missing], x2 = [2.0, 2.0, missing, 4.0], x3=[3.0, missing, 6.0, 8.0])
@@ -303,4 +362,14 @@ end
     sds = view(ds, [1,2,1,3,1,4], [3,1,2])
     @test byrow(sds, cummax, :) == Dataset(x3 = [1.0, missing, 1,3,1,6], x1 = [1, missing, 1,3,1,6.0], x2 = [1.0,2.0, 1.0,3.0,1.0,6.0])
     @test byrow(sds, cummax, :, missings = :skip) == Dataset(x3 = [1.0, missing, 1,3,1,6], x1 = [1, missing, 1,3,1.0, missing], x2 = [1.0,2.0, 1.0,missing,1.0,6.0])
+
+    ds = Dataset(rand(1:100, 1000, 10), :auto)
+    ds2 = byrow(ds, sort, :)
+    @test all(byrow(ds2, issorted, :))
+    @test Matrix(ds2) == sort(Matrix(ds), dims = 2)
+
+    ds = Dataset(rand(1:100, 1000, 10), :auto)
+    ds2 = byrow(view(ds, :, :), sort, :)
+    @test all(byrow(ds2, issorted, :))
+    @test Matrix(ds2) == sort(Matrix(ds), dims = 2)
 end

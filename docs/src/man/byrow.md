@@ -32,10 +32,10 @@ As it can be observed the function syntax is very straightforward, and to examin
 ```jldoctest
 julia> using BenchmarkTools
 julia> @btime byrow(ds, sum, 1:100);
-  7.874 ms (2143 allocations: 1.02 MiB)
+  4.528 ms (1587 allocations: 919.97 KiB)
 julia> m = Matrix(ds)
 julia> @btime sum(m, dims = 2)
-  20.773 ms (7 allocations: 879.11 KiB)
+  14.867 ms (7 allocations: 879.11 KiB)
 ```
 
 In the above benchmark, `byrow` should be even more performant when the data set has a group of heterogeneous columns.

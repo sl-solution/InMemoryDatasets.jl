@@ -587,12 +587,16 @@ function _fill_mask!(fv, v, format, fj, threads, missings)
     Threads.@threads for i in 1:length(fv)
       fv[i] = _bool_mask(fj)(format(v[i]))
     end
-    Threads.@threads for i in 1:length(fv)
-      ismissing(fv[i]) ? fv[i] = missings : nothing
+    if !ismissing(missings)
+        Threads.@threads for i in 1:length(fv)
+          ismissing(fv[i]) ? fv[i] = missings : nothing
+        end
     end
   else
     map!(_bool_mask(fj∘format), fv, v)
-    map!(x->ismissing(x) ? x = missings : x, fv, fv)
+    if !ismissing(missings)
+        map!(x->ismissing(x) ? x = missings : x, fv, fv)
+    end
   end
 end
 # not using formats
@@ -601,12 +605,16 @@ function _fill_mask!(fv, v, fj, threads, missings)
     Threads.@threads for i in 1:length(fv)
       fv[i] = _bool_mask(fj)(v[i])
     end
-    Threads.@threads for i in 1:length(fv)
-      ismissing(fv[i]) ? fv[i] = missings : nothing
+    if !ismissing(missings)
+        Threads.@threads for i in 1:length(fv)
+          ismissing(fv[i]) ? fv[i] = missings : nothing
+        end
     end
   else
     map!(_bool_mask(fj), fv, v)
-    map!(x->ismissing(x) ? x = missings : x, fv, fv)
+    if !ismissing(missings)
+        map!(x->ismissing(x) ? x = missings : x, fv, fv)
+    end
   end
 end
 _bool_mask(f) = x->f(x)::Union{Bool, Missing}
