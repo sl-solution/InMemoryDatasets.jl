@@ -1,4 +1,4 @@
-using InMemoryDatasets
+using Test, InMemoryDatasets, PooledArrays, Random, CategoricalArrays
 
 @testset "make_unique - from DataFrames"  begin
     @test IMD.make_unique([:x, :x, :x_1, :x2], makeunique=true) == [:x, :x_2, :x_1, :x2]
@@ -87,4 +87,22 @@ end
 @testset "funname- from DataFrames" begin
     @test IMD.funname(sum ∘ skipmissing ∘ Base.div12) ==
           :sum_skipmissing_div12
+end
+
+@testset "repeat - passing `freq`" begin
+    ds = Dataset(x1 = [1,2, missing, 0], x2 = PooledArray([1,3,1,2]), x3 = [1.2,1.2,1.1,-10.0], x4 = [2,1,1,1])
+    @test repeat(ds, freq = 2) == ds[[1,2,2,2,3,4,4], :]
+    @test repeat(ds, freq = :x2) == ds[[1,2,2,2,3,4,4], :]
+    @test repeat(ds, freq = :x4) == ds[[1,1,2,3,4], :]
+    @test repeat(ds, freq = ds[!, :x4]) == ds[[1,1,2,3,4], :]
+    @test repeat(view(ds, :, :), freq = :x4) == ds[[1,1,2,3,4], :]
+    @test repeat(view(ds, :, :), freq = 4) == ds[[1,1,2,3,4], :]
+    @test_throws ArgumentError repeat(ds, freq = :x1)
+    @test_throws ArgumentError repeat(ds, freq = 3)
+
+    repeat!(ds, 1000)
+    @test repeat(ds, freq = 2) == ds[repeat([1,2,2,2,3,4,4], 1000), :]
+    @test repeat(ds, freq = :x2) == ds[repeat([1,2,2,2,3,4,4], 1000), :]
+    @test repeat(ds, freq = :x4) == ds[repeat([1,1,2,3,4],1000), :]
+    @test repeat(ds, freq = ds[!, :x4]) == ds[repeat([1,1,2,3,4],1000), :]
 end

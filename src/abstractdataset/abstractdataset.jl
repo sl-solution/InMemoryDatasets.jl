@@ -1749,7 +1749,7 @@ function _fill_flatten!(_res, col_to_flatten, lengths)
 end
 
 function repeat_lengths_v2!(longnew::AbstractVector, shortold::AbstractVector,
-                         lengths::AbstractVector{Int})
+                         lengths)
     counter = 1
     @inbounds for i in eachindex(shortold)
         l = lengths[i]
@@ -1757,6 +1757,7 @@ function repeat_lengths_v2!(longnew::AbstractVector, shortold::AbstractVector,
         fill!(view(longnew, counter:(counter + l - 1)),  shortold[i])
         counter += l
     end
+    longnew
 end
 
 function repeat_lengths!(longnew::AbstractVector, shortold::AbstractVector,

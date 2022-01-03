@@ -141,33 +141,81 @@ julia> ds
   12 │     2      4
 ```
 """
-function repeat!(ds::Dataset; inner::Integer = 1, outer::Integer = 1)
+function repeat!(ds::Dataset; inner::Integer = 1, outer::Integer = 1, freq::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex, Nothing} = nothing)
 
 # Modify Dataset
-    inner <= 0 && throw(ArgumentError("inner keyword argument must be greater than zero"))
-    outer <= 0 && throw(ArgumentError("outer keyword argument must be greater than zero"))
-    if outer == 1
+    if freq === nothing
+        inner <= 0 && throw(ArgumentError("inner keyword argument must be greater than zero"))
+        outer <= 0 && throw(ArgumentError("outer keyword argument must be greater than zero"))
+        if outer == 1
+            for j in 1:ncol(ds)
+                _columns(ds)[j] = repeat(_columns(ds)[j], inner = Int(inner), outer = 1)
+            end
+            _reset_grouping_info!(ds)
+            # ngroups = index(ds).ngroups[]
+            # diffs = diff(index(ds).starts[1:ngroups]) .* inner
+            # @show diffs
+            # cumsum!(diffs, diffs)
+            # @show diffs
+            # for j in 2:ngroups
+            #     index(ds).starts[j] = diffs[j-1]
+            # end
+            # @show index(ds).starts
+        elseif outer > 1
+            for j in 1:ncol(ds)
+                _columns(ds)[j] = repeat(_columns(ds)[j], inner = Int(inner), outer = Int(outer))
+            end
+            _reset_grouping_info!(ds)
+        end
+        _modified(_attributes(ds))
+        ds
+    else
+        if freq isa SubDatasetColumn || freq isa DatasetColumn
+            lengths = __!(freq)
+        elseif freq isa ColumnIndex
+            lengths = _columns(ds)[index(ds)[freq]]
+        elseif freq isa AbstractVector
+            lengths = freq
+        end
+        if !(eltype(lengths) <: Union{Missing, Integer}) || any(ismissing, lengths) || any(x->isless(x, 1), lengths)
+            throw(ArgumentError("The column selected for repeating must be an Intger column with all values greater than zero and no missing value"))
+        end
+        if length(lengths) != nrow(ds)
+            throw(ArgumentError("The length of repeating weights must be the same as the number of row of the passed data set"))
+        end
+        lengths = copy(lengths)
+        total_new = sum(lengths)
         for j in 1:ncol(ds)
-            _columns(ds)[j] = repeat(_columns(ds)[j], inner = Int(inner), outer = 1)
+            if DataAPI.refpool(_columns(ds)[j]) !== nothing
+                _res = allocatecol(_columns(ds)[j], total_new, addmissing = false)
+                _columns(ds)[j].refs = repeat_lengths_v2!(_res.refs, DataAPI.refarray(_columns(ds)[j]), lengths)
+            else
+                _res = allocatecol(_columns(ds)[j], total_new)
+                _columns(ds)[j] = repeat_lengths_v2!(_res, _columns(ds)[j], lengths)
+            end
+
         end
         _reset_grouping_info!(ds)
-        # ngroups = index(ds).ngroups[]
-        # diffs = diff(index(ds).starts[1:ngroups]) .* inner
-        # @show diffs
-        # cumsum!(diffs, diffs)
-        # @show diffs
-        # for j in 2:ngroups
-        #     index(ds).starts[j] = diffs[j-1]
-        # end
-        # @show index(ds).starts
-    elseif outer > 1
-        for j in 1:ncol(ds)
-            _columns(ds)[j] = repeat(_columns(ds)[j], inner = Int(inner), outer = Int(outer))
-        end
-        _reset_grouping_info!(ds)
+        _modified(_attributes(ds))
+        ds
     end
-    _modified(_attributes(ds))
-    ds
+end
+function _fill_index_for_repeat!(res, w)
+    counter = 1
+    for i in 1:length(w)
+
+        l = w[i]
+        fill!(view(res, counter:(counter + l - 1)),  i)
+        counter += l
+    end
+end
+# use this to create index for new data set
+# and then use getindex with the result of this function for repeating
+# This should be better for repeating large data set/ since getindex is threaded
+function _create_index_for_repeat(w)
+    res = Vector{Int}(undef, sum(w))
+    _fill_index_for_repeat!(res, w)
+    res
 end
 
 """
@@ -206,7 +254,13 @@ function repeat!(ds::Dataset, count::Integer)
 end
 
 Base.repeat(ds::AbstractDataset, count::Integer) = repeat!(copy(ds), count)
-Base.repeat(ds::AbstractDataset; inner::Integer = 1, outer::Integer = 1) = repeat!(copy(ds), inner = inner, outer = outer)
+function Base.repeat(ds::AbstractDataset; inner::Integer = 1, outer::Integer = 1, freq = nothing)
+    if freq === nothing
+        repeat!(copy(ds), inner = inner, outer = outer)
+    else
+        repeat!(copy(ds), freq = freq)
+    end
+end
 
 # This is not exactly copy! as in general we allow axes to be different
 
