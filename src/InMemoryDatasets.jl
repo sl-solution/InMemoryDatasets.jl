@@ -116,6 +116,7 @@ include("stat/non_hp_stat.jl")
 include("stat/hp_stat.jl")
 include("stat/stat.jl")
 include("abstractdataset/abstractdataset.jl")
+include("abstractdataset/dscol.jl")
 # create dataset
 include("dataset/constructor.jl")
 # get elements
