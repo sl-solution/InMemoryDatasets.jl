@@ -37,6 +37,8 @@ Base.:(==)(y::Any, col1::SubOrDSCol) = (==)(y, __!(col1))
 Base.:(==)(col1::SubOrDSCol, col2::SubOrDSCol) = isequal(__!(col1), __!(col2))
 function Base.fill!(col::SubOrDSCol, i)
     fill!(__!(col), i)
+    removeformat!(col.ds, col.col)
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
     _modified(_attributes(parent(col.ds)))
     col
 end
@@ -76,6 +78,7 @@ Statistics.std(col::SubOrDSCol, dof = true) = std(identity, __!(col), dof)
 Statistics.median(col::SubOrDSCol) = median(__!(col))
 function Statistics.median!(col::SubOrDSCol)
     median!(__!(col))
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
     _modified(_attributes(parent(col.ds)))
     col
 end
@@ -98,6 +101,7 @@ Base.Sort.defalg(col::SubOrDSCol) = Base.Sort.defalg(__!(col))
 function Base.sort!(col::SubOrDSCol; alg::Base.Sort.Algorithm=Base.Sort.defalg(col), lt=isless, by=identity, rev::Bool=false, order::Base.Order.Ordering=Base.Order.Forward)
      sort!(__!(col), alg = alg, lt = lt, by = by, rev = rev, order = order)
      _modified(_attributes(parent(col.ds)))
+     col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
      col
 end
 function Base.sort(col::SubOrDSCol; alg::Base.Sort.Algorithm=Base.Sort.defalg(col), lt=isless, by=identity, rev::Bool=false, order::Base.Order.Ordering=Base.Order.Forward)
