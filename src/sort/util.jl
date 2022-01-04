@@ -118,26 +118,3 @@ function _mark_start_of_groups_sorted!(inbits, x, lo, hi, o, ::Val{T}) where T
         end
     end
 end
-
-function _permute_ds_after_sort!(ds, perm)
-    @assert nrow(ds) == length(perm) "the length of perm and the nrow of the data set must match"
-    if issorted(perm)
-        return ds
-    end
-    for j in 1:ncol(ds)
-        if DataAPI.refpool(_columns(ds)[j]) !== nothing
-            # if _columns(ds)[j] isa PooledArray
-            #     pa = _columns(ds)[j]
-            #     _columns(ds)[j] = PooledArray(PooledArrays.RefArray(_threaded_permute(pa.refs, perm)), DataAPI.invrefpool(pa), DataAPI.refpool(pa), PooledArrays.refcount(pa))
-            # else
-            #     # TODO must be optimised
-            #     _columns(ds)[j] = _columns(ds)[j][perm]
-            # end
-            # since we don't support copycols for external usage it is safe to only permute refs
-            _columns(ds)[j].refs = _threaded_permute(_columns(ds)[j].refs, perm)
-        else
-            _columns(ds)[j] = _threaded_permute(_columns(ds)[j], perm)
-        end
-    end
-    _modified(_attributes(ds))
-end
