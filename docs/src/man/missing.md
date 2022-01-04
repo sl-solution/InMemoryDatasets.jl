@@ -1,5 +1,9 @@
 # How InMemoryDatasets treats missing values?
 
+## Comparing data sets
+
+`==` of two data sets or two columns fall back to `isequal`.
+
 ## Every column supports `missing`
 
 The `Dataset()` constructor automatically converts each column of a data set to allow ‍‍‍‍‍`missing` when constructs a data set. All algorithms in InMemoryDatasets are optimised to minimised the overhead of supporting `missing` type.
