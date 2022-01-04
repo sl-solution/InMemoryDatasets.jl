@@ -574,3 +574,192 @@ end
 
 Base.transpose(ds::Union{GroupBy, GatherBy}, cols::Tuple; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = nothing, default = missing, threads = true, mapformats = true) =
     ds_transpose(ds, cols, _groupcols(ds); id = id, renamecolid = renamecolid, renamerowid = renamerowid, variable_name = variable_name, threads = threads, default_fill = default, mapformats = mapformats)
+
+
+#### flatten
+
+
+"""
+    flatten(ds::AbstractDataset, cols)
+
+When columns `cols` of data set `ds` have iterable elements that define
+`length` (for example a `Vector` of `Vector`s), return a `Dataset` where each
+element of each `col` in `cols` is flattened, meaning the column corresponding
+to `col` becomes a longer vector where the original entries are concatenated.
+Elements of row `i` of `ds` in columns other than `cols` will be repeated
+according to the length of `ds[i, col]`. These lengths must therefore be the
+same for each `col` in `cols`, or else an error is raised. Note that these
+elements are not copied, and thus if they are mutable changing them in the
+returned `Dataset` will affect `ds`.
+
+`cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
+
+# Examples
+
+```jldoctest
+julia> ds1 = Dataset(a = [1, 2], b = [[1, 2], [3, 4]], c = [[5, 6], [7, 8]])
+2×3 Dataset
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Array…?   Array…?
+─────┼──────────────────────────────
+   1 │        1  [1, 2]    [5, 6]
+   2 │        2  [3, 4]    [7, 8]
+
+julia> flatten(ds1, :b)
+4×3 Dataset
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Int64?    Array…?
+─────┼──────────────────────────────
+   1 │        1         1  [5, 6]
+   2 │        1         2  [5, 6]
+   3 │        2         3  [7, 8]
+   4 │        2         4  [7, 8]
+
+julia> flatten(ds1, [:b, :c])
+4×3 Dataset
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         1         5
+   2 │        1         2         6
+   3 │        2         3         7
+   4 │        2         4         8
+
+julia> ds2 = Dataset(a = [1, 2], b = [("p", "q"), ("r", "s")])
+2×2 Dataset
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Tuple…?
+─────┼──────────────────────
+   1 │        1  ("p", "q")
+   2 │        2  ("r", "s")
+
+julia> flatten(ds2, :b)
+4×2 Dataset
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    String?
+─────┼────────────────────
+   1 │        1  p
+   2 │        1  q
+   3 │        2  r
+   4 │        2  s
+
+julia> ds3 = Dataset(a = [1, 2], b = [[1, 2], [3, 4]], c = [[5, 6], [7]])
+2×3 Dataset
+ Row │ a         b         c
+     │ identity  identity  identity
+     │ Int64?    Array…?   Array…?
+─────┼──────────────────────────────
+   1 │        1  [1, 2]    [5, 6]
+   2 │        2  [3, 4]    [7]
+
+julia> flatten(ds3, [:b, :c])
+ERROR: ArgumentError: Lengths of iterables stored in columns :b and :c are not the same in row 2
+```
+"""
+flatten(ds, cols)
+
+
+_ELTYPE(x) = eltype(x)
+_ELTYPE(::Missing) = Missing
+_LENGTH(x) = length(x)
+_LENGTH(::Missing) = 1
+
+function flatten!(ds::Dataset,
+                 cols::Union{ColumnIndex, MultiColumnIndex})
+     _check_consistency(ds)
+
+     idxcols = index(ds)[cols]
+     isempty(idxcols) && return copy(ds)
+     col1 = first(idxcols)
+     lengths = _LENGTH.(_columns(ds)[col1])
+     for col in idxcols
+         v = _columns(ds)[col]
+         if any(x -> _LENGTH(x[1]) != x[2], zip(v, lengths))
+             r = findfirst(x -> x != 0, _LENGTH.(v) .- lengths)
+             colnames = _names(ds)
+             throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
+                                 "and :$(colnames[col]) are not the same in row $r"))
+         end
+     end
+     r_index = _create_index_for_repeat(lengths, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
+     _permute_ds_after_sort!(ds, r_index, check = false, cols = Not(cols))
+     new_total = sum(lengths)
+     length(idxcols) > 1 && sort!(idxcols)
+     for col in idxcols
+         col_to_flatten = _columns(ds)[col]
+         T = mapreduce(_ELTYPE, promote_type, col_to_flatten)
+         _res = allocatecol(T, new_total)
+         _fill_flatten!(_res, col_to_flatten, lengths)
+         if length(idxcols) == ncol(ds)
+             _columns(ds)[col] = _res
+         else
+             ds[!, col] = _res
+         end
+     end
+     _reset_grouping_info!(ds)
+     _modified(_attributes(ds))
+     ds
+end
+
+
+function flatten(ds::AbstractDataset,
+                 cols::Union{ColumnIndex, MultiColumnIndex})
+     _check_consistency(ds)
+
+     idxcols = index(ds)[cols]
+     isempty(idxcols) && return copy(ds)
+     col1 = first(idxcols)
+     lengths = _LENGTH.(_columns(ds)[col1])
+     for col in idxcols
+         v = _columns(ds)[col]
+         if any(x -> _LENGTH(x[1]) != x[2], zip(v, lengths))
+             r = findfirst(x -> x != 0, _LENGTH.(v) .- lengths)
+             colnames = _names(ds)
+             throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
+                                 "and :$(colnames[col]) are not the same in row $r"))
+         end
+     end
+     new_total = sum(lengths)
+     new_ds = similar(ds[!, Not(cols)], new_total)
+     for name in _names(new_ds)
+        repeat_lengths_v2!(new_ds[!, name].val, ds[!, name].val, lengths)
+     end
+     length(idxcols) > 1 && sort!(idxcols)
+     for col in idxcols
+         col_to_flatten = _columns(ds)[col]
+         T = mapreduce(_ELTYPE, promote_type, col_to_flatten)
+         _res = allocatecol(T, new_total)
+         _fill_flatten!(_res, col_to_flatten, lengths)
+         insertcols!(new_ds, col, _names(ds)[col] => _res)
+     end
+     setformat!(new_ds, copy(index(ds).format))
+     setinfo!(new_ds, _attributes(ds).meta.info[])
+     _reset_grouping_info!(new_ds)
+     new_ds
+end
+
+
+function _fill_flatten!_barrier(_res, val, counter)
+    for j in val
+        _res[counter] = j
+        counter += 1
+    end
+    counter
+end
+
+function _fill_flatten!(_res, col_to_flatten, lengths)
+    counter = 1
+    for i in 1:length(col_to_flatten)
+        if ismissing(col_to_flatten[i])
+            _res[counter] = missing
+            counter += 1
+        else
+            counter = _fill_flatten!_barrier(_res, col_to_flatten[i], counter)
+        end
+    end
+end

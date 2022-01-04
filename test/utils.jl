@@ -105,4 +105,12 @@ end
     @test repeat(ds, freq = :x2) == ds[repeat([1,2,2,2,3,4,4], 1000), :]
     @test repeat(ds, freq = :x4) == ds[repeat([1,1,2,3,4],1000), :]
     @test repeat(ds, freq = ds[!, :x4]) == ds[repeat([1,1,2,3,4],1000), :]
+
+     ds = Dataset(a = 0:2, b = 2:4)
+     @test repeat(ds, freq = :a) == Dataset(a = [1,2,2], b = [3,4,4])
+     @test repeat(ds, freq = [2,0,2]) == Dataset(a = [0,0,2,2], b=[2,2,4,4])
+
+     @test repeat(ds, freq = [1000, 1000, 0]) == Dataset(a = [fill(0,1000);fill(1, 1000)], b=[fill(2,1000);fill(3, 1000)])
+     @test repeat(view(ds,[1,2,3], [1,2]), freq = [1000, 1000, 0]) == Dataset(a = [fill(0,1000);fill(1, 1000)], b=[fill(2,1000);fill(3, 1000)])
+     @test repeat(view(ds,[1,2,3], [1,2]), freq = [1000, 1000, 0], view  = true) == Dataset(a = [fill(0,1000);fill(1, 1000)], b=[fill(2,1000);fill(3, 1000)])
 end

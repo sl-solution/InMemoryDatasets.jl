@@ -59,6 +59,7 @@ export
       dropmissing,
       dropmissing!,
       flatten,
+      flatten!,
       repeat!,
       select,
       select!,
