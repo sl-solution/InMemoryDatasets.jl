@@ -408,7 +408,7 @@ julia> innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :
 
 ## Update a data set by values from another data set
 
-`update!` updates a data set values by using values from a transaction data set. The function uses the given keys (`on = ...`) to select rows for updating. By default, the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true` changes this behaviour. If there are multiple rows in the main data set which match the key(s), using `mode = :all` causes all of them to be updated, and `mode = :missing` causes only the ones which are missing in the main data set to be updated. If there are multiple rows in the transaction data set which match the key, only the last one will be used to update the main data set.
+`update!` updates a data set values by using values from a transaction data set. The function uses the given keys (`on = ...`) to select rows for updating. By default, the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true` changes this behaviour. If there are multiple rows in the main data set which match the key(s), using `mode = :all` causes all of them to be updated, `mode = :missing` causes only the ones which are missing in the main data set to be updated, and `mode = fun` updates the values which calling `fun` on them returns `true`. If there are multiple rows in the transaction data set which match the key, only the last one (given `stable = true` is passed) will be used to update the main data set.
 
 The `update!` functions replace the main data set with the updated version, however, if a copy of the updated data set is required, the `update` function can be used instead.
 
@@ -474,4 +474,19 @@ julia> update(main, transaction, on = [:group, :id],
    5 │ G2                 1       1.3         3
    6 │ G2                 1       2.1         3
    7 │ G2                 2       0.0         2
+
+julia> update(main, transaction, on = [:group, :id],
+                              mode = isequal(2.3))
+7×4 Dataset
+ Row │ group     id        x1         x2       
+     │ identity  identity  identity   identity
+     │ String?   Int64?    Float64?   Int64?   
+─────┼─────────────────────────────────────────
+   1 │ G1               1        1.2         5
+   2 │ G1               1        2.3         4
+   3 │ G1               2  missing           4
+   4 │ G1               2        2.5         2
+   5 │ G2               1        1.3         1
+   6 │ G2               1        2.1   missing
+   7 │ G2               2        0.0         2
 ```

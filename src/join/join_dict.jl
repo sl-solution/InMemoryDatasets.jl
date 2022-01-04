@@ -403,13 +403,21 @@ function _update!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; 
 
     _fill_ranges_for_dict_join!(ranges, dict, maxprob, _fl, _fr, _columns(dsl)[onleft[1]], _columns(dsr)[onright[1]], sz, type)
 
+    if mode == :all
+        f_mode = x->true
+    elseif mode == :missing || mode == :missings
+        f_mode = x->ismissing(x)
+    else
+        f_mode = x->mode(x)::Bool
+    end
+
     for j in 1:length(right_cols)
         if haskey(index(dsl).lookup, _names(dsr)[right_cols[j]])
             left_cols_idx = index(dsl)[_names(dsr)[right_cols[j]]]
             TL = nonmissingtype(eltype(_columns(dsl)[left_cols_idx]))
             TR = nonmissingtype(eltype(_columns(dsr)[right_cols[j]]))
             if promote_type(TR, TL) <: TL
-                _update_left_with_right!(_columns(dsl)[left_cols_idx], _columns(dsr)[right_cols[j]], ranges, allowmissing, mode)
+                _update_left_with_right!(_columns(dsl)[left_cols_idx], _columns(dsr)[right_cols[j]], ranges, allowmissing, f_mode)
             end
         end
     end
