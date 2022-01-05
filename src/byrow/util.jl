@@ -63,44 +63,50 @@ function hp_row_all_multi(ds::AbstractDataset, f::Vector{<:Function}, cols = :)
     mapreduce_index(f, _hp_op_for_all_multi!, view(_columns(ds),colsidx), ones(Bool, size(ds,1)))
 end
 
-STRING(x) = string(x)
-STRING(::Missing) = ""
-STRING(x::Bool) = x ? "1" : "0"
-STRING(::Nothing) = ""
+__STRING(x) = string(x)
+__STRING(x::AbstractString) = x
+__STRING(::Missing) = ""
+__STRING(x::Bool) = x ? "1" : "0"
+__STRING(::Nothing) = ""
 
-function _op_for_row_join(x, y, f, delim, quotechar, idx, p)
-    idx[] += 1
-    if quotechar === nothing
-        if idx[] < p
-            x .*= STRING.(f[idx[]].(y))
-            x .*= delim
-        else
-            x .*= STRING.(f[idx[]].(y))
-            x .*= '\n'
-        end
-    else
-        if idx[] < p
-            x .*= quotechar
-            x .*= STRING.(f[idx[]].(y))
-            x .*= quotechar
-            x .*= delim
-        else
-            x .*= quotechar
-            x .*= STRING.(f[idx[]].(y))
-            x .*= quotechar
-            x .*= '\n'
-        end
-    end
-    x
-end
+__CODEUNIT(x) = Base.CodeUnits(__STRING(x))
 
-function row_join(ds::AbstractDataset, f::Vector{<:Function}, cols  = :; delim = ',', quotechar = nothing)
-    colsidx = index(ds)[cols]
-    idx = Ref{Int}(0)
-    p = length(colsidx)
-    init0 = fill("", nrow(ds))
-    mapreduce(identity, (x,y)->_op_for_row_join(x,y,f, delim, quotechar, idx, p), view(_columns(ds), colsidx), init = init0)
-end
+
+
+#
+# function _op_for_row_join(x, y, f, delim, quotechar, idx, p)
+#     idx[] += 1
+#     if quotechar === nothing
+#         if idx[] < p
+#             x .*= STRING.(f[idx[]].(y))
+#             x .*= delim
+#         else
+#             x .*= STRING.(f[idx[]].(y))
+#             x .*= '\n'
+#         end
+#     else
+#         if idx[] < p
+#             x .*= quotechar
+#             x .*= STRING.(f[idx[]].(y))
+#             x .*= quotechar
+#             x .*= delim
+#         else
+#             x .*= quotechar
+#             x .*= STRING.(f[idx[]].(y))
+#             x .*= quotechar
+#             x .*= '\n'
+#         end
+#     end
+#     x
+# end
+#
+# function row_join(ds::AbstractDataset, f::Vector{<:Function}, cols  = :; delim = ',', quotechar = nothing)
+#     colsidx = index(ds)[cols]
+#     idx = Ref{Int}(0)
+#     p = length(colsidx)
+#     init0 = fill("", nrow(ds))
+#     mapreduce(identity, (x,y)->_op_for_row_join(x,y,f, delim, quotechar, idx, p), view(_columns(ds), colsidx), init = init0)
+# end
 
 # some experimental ideas
 
@@ -255,10 +261,9 @@ end
 # buffer = Matrix{UInt8}(undef, lsize , nrow(ds))
 # currentpos = ones(Int, nrow(ds))
 function row_join!(buffer, currentpos, ds::AbstractDataset, f::Vector{<:Function}, cols = :; delim = ',', quotechar = nothing, threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     p = length(colsidx)
     dlm = UInt8.(delim)
-
     if threads
         cz = div(nrow(ds), __NCORES)
         idx = [Ref{Int}(0) for _ in 1:__NCORES]

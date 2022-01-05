@@ -1112,40 +1112,52 @@ function row_hash(ds::AbstractDataset, f::Function, cols = :; threads = true)
 end
 row_hash(ds::AbstractDataset, cols = :; threads = true) = row_hash(ds, identity, cols; threads = threads)
 
-Base.@propagate_inbounds function _op_for_join!(x, y, delim, last, p, idx, lo, hi)
-    idx[] += 1
-    @simd for i in lo:hi
-        if idx[] == 1
-            x[i] = STRING(y[i])
-            x[i] *= delim
-        elseif idx[] < p
-            x[i] *= STRING(y[i])
-            x[i] *= delim
-        else
-            x[i] *= STRING(y[i])
-            x[i] *= last
-        end
-    end
-    x
-end
-
-function row_join2(ds::AbstractDataset, cols = :; threads = true, delim = ",", last = "")
-    colsidx = multiple_getindex(index(ds), cols)
-    init0 = Vector{Union{Missing, String}}(undef, nrow(ds))
-
+function _convert_uint8_to_string!(res, init0, curr_pos, ds, threads)
     if threads
-        cz = div(length(init0), __NCORES)
-        idx = [Ref{Int}(0) for _ in 1:__NCORES]
-        Threads.@threads for i in 1:__NCORES
-            lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
-            mapreduce(identity, (x,y) -> _op_for_join!(x, y, delim, last, length(colsidx), idx[i], lo, hi), view(_columns(ds),colsidx), init = init0)
+        Threads.@threads for i in 1:nrow(ds)
+            res[i] = String(view(init0, 1:curr_pos[i]-1, i))
         end
     else
-        idx = Ref{Int}(0)
-        mapreduce(identity, (x,y) -> _op_for_join!(x, y, delim, last, length(colsidx), idx, 1, length(x)), view(_columns(ds),colsidx), init = init0)
+        for i in 1:nrow(ds)
+            res[i] = String(view(init0, 1:curr_pos[i]-1, i))
+        end
     end
-    init0
+end
+function _add_last_for_join!(init0, curr_pos, ds, last_uint, last_len, threads)
+    if threads
+        Threads.@threads for i in 1:nrow(ds)
+            init0[curr_pos[i]-1:curr_pos[i]+last_len-2, i] = last_uint
+            curr_pos[i] += last_len-1
+        end
+    else
+        for i in 1:nrow(ds)
+            init0[curr_pos[i]-1:curr_pos[i]+last_len-2, i] = last_uint
+            curr_pos[i] += last_len-1
+        end
+    end
+end
+
+function row_join(ds::AbstractDataset, cols = :; threads = true, delim::AbstractString = ",", last::AbstractString = "")
+    colsidx = multiple_getindex(index(ds), cols)
+
+    max_line_size = maximum(byrow(ds, sum, colsidx, by = y->length(__STRING(y)), threads = threads))
+    max_line_size += length(delim)*(length(colsidx)) + length(last)+1
+    init0 = Matrix{UInt8}(undef, max_line_size, nrow(ds))
+    curr_pos = ones(Int, nrow(ds))
+
+    delimiter = Base.CodeUnits(delim)
+    row_join!(init0, curr_pos, ds, repeat([identity], length(colsidx)), colsidx; delim = delimiter, quotechar = nothing, threads = threads)
+    if length(last)>0
+        last_uint = Base.CodeUnits(last)
+        last_len = length(last_uint)
+        _add_last_for_join!(init0, curr_pos, ds, last_uint, last_len, threads)
+    else
+        curr_pos .-= 1
+    end
+    res = Vector{Union{String, Missing}}(undef, nrow(ds))
+    _convert_uint8_to_string!(res, init0, curr_pos, ds, threads)
+    res
+
 end
 
 

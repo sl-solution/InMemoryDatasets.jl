@@ -143,7 +143,7 @@ byrow(ds::AbstractDataset, ::typeof(stdze!), cols::MultiColumnIndex = names(ds, 
 byrow(ds::AbstractDataset, ::typeof(hash), cols::MultiColumnIndex = :; by = identity, threads = nrow(ds) > __NCORES*10) = row_hash(ds, by, cols, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(hash), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, hash, [col]; by = by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(join), col::MultiColumnIndex; threads = nrow(ds) > __NCORES*10, delim = "", last = "") = row_join2(ds, col, threads = threads, delim = delim, last = last)
+byrow(ds::AbstractDataset, ::typeof(join), col::MultiColumnIndex; threads = nrow(ds) > __NCORES*10, delim = "", last = "") = row_join(ds, col, threads = threads, delim = delim, last = last)
 
 byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); op = .+, f = identity,  init = missings(mapreduce(eltype, promote_type, view(_columns(ds),index(ds)[cols])), nrow(ds)), kwargs...) = mapreduce(f, op, eachcol(ds[!, cols]), init = init; kwargs...)
 
