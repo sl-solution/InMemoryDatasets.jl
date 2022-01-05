@@ -1,3 +1,5 @@
+# TODO the docstring needs some updates, also some of the keyword arguments are missing int he docstring, e.g. accelerate, usehash
+
 """
     leftjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true)
 
@@ -15,7 +17,7 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
+- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
@@ -122,12 +124,12 @@ function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     end
 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(dsl)[on]
-        onright = index(dsr)[on]
+        onleft = multiple_getindex(index(dsl), on)
+        onright = multiple_getindex(index(dsr), on)
 
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(dsl)[map(x->x.first, on)]
-        onright = index(dsr)[map(x->x.second, on)]
+        onleft = multiple_getindex(index(dsl), map(x->x.first, on))
+        onright = multiple_getindex(index(dsr), map(x->x.second, on))
 
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
@@ -153,12 +155,12 @@ function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique 
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
     end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(dsl)[on]
-        onright = index(dsr)[on]
+        onleft = multiple_getindex(index(dsl), on)
+        onright = multiple_getindex(index(dsr), on)
 
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(dsl)[map(x->x.first, on)]
-        onright = index(dsr)[map(x->x.second, on)]
+        onleft = multiple_getindex(index(dsl), map(x->x.first, on))
+        onright = multiple_getindex(index(dsr), map(x->x.second, on))
 
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
@@ -180,13 +182,15 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
 
 # Key Arguments
-- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
+- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like innerjoin is needed, the last key for the right data set should be passed as `Tuple`.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
+- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
+- `droprangecols`: determine whether the range columns should be dropped from the final output in case of inequality-like innerjoin. Default is set to `true`
+- `strict_inequality`: determine if the inequlities in inequlity-like innerjoins are strict. Default is set to `false`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -289,18 +293,18 @@ function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
         length(strict_inequality) !== 2 && throw(ArgumentError("`strict_inequality` must be a Bool or a vector of Bool with size two"))
     end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(dsl)[on]
-        onright = index(dsr)[on]
+        onleft = multiple_getindex(index(dsl), on)
+        onright = multiple_getindex(index(dsr), on)
         onright_range = nothing
 
     elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(dsl)[map(x->x.first, on)]
-        onright = index(dsr)[map(x->x.second, on)]
+        onleft = multiple_getindex(index(dsl), map(x->x.first, on))
+        onright = multiple_getindex(index(dsr), map(x->x.second, on))
         onright_range = nothing
 
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:Any}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:Any}})
-        onleft = index(dsl)[map(x->x.first, on)]
-        onright = index(dsr)[map(x->x.second, on[1:end-1])]
+        onleft = multiple_getindex(index(dsl), map(x->x.first, on))
+        onright = multiple_getindex(index(dsr), map(x->x.second, on[1:end-1]))
         onright_range = on[end].second
         !(onright_range isa Tuple) && throw(ArgumentError("For range join the last element of `on` keyword argument for the right table must be a Tuple of column names"))
 
@@ -328,7 +332,7 @@ will be added after the first part. No rule governs the order of observation for
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
+- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
@@ -432,12 +436,12 @@ function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
     end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(dsl)[on]
-        onright = index(dsr)[on]
+        onleft = multiple_getindex(index(dsl), on)
+        onright = multiple_getindex(index(dsr), on)
 
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(dsl)[map(x->x.first, on)]
-        onright = index(dsr)[map(x->x.second, on)]
+        onleft = multiple_getindex(index(dsl), map(x->x.first, on))
+        onright = multiple_getindex(index(dsr), map(x->x.second, on))
 
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
@@ -504,11 +508,11 @@ function Base.contains(main::Dataset, transaction::AbstractDataset; on = nothing
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
     end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(main)[on]
-        onright = index(transaction)[on]
+        onleft = multiple_getindex(index(main), on)
+        onright = multiple_getindex(index(transaction), on)
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(main)[map(x->x.first, on)]
-        onright = index(transaction)[map(x->x.second, on)]
+        onleft = multiple_getindex(index(main), map(x->x.first, on))
+        onright = multiple_getindex(index(transaction), map(x->x.second, on))
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
@@ -534,7 +538,7 @@ rows that have key values appear in `dsr` will be removed.
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
+- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
@@ -644,7 +648,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
+- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
@@ -756,7 +760,7 @@ rows that have key values appear in `dsr` will be removed.
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
+- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
@@ -877,7 +881,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
+- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
@@ -996,7 +1000,7 @@ end
 Variant of `closejoin!` that returns an updated copy of `dsl` leaving `dsl` itself unmodified.
 ```
 """
-function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol=nothing, allow_exact_match = true)
+function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol=nothing, allow_exact_match = true, op = nothing)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing, :none))
         throw(ArgumentError("`border` keyword only accept :nearest, :missing, or :none"))
@@ -1013,16 +1017,16 @@ function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, dir
     end
 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(dsl)[on]
-        onright = index(dsr)[on]
+        onleft = multiple_getindex(index(dsl), on)
+        onright = multiple_getindex(index(dsr), on)
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(dsl)[map(x->x.first, on)]
-        onright = index(dsr)[map(x->x.second, on)]
+        onleft = multiple_getindex(index(dsl), map(x->x.first, on))
+        onright = multiple_getindex(index(dsr), map(x->x.second, on))
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
     if direction in (:backward, :forward, :nearest)
-        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, tol=tol, allow_exact_match = allow_exact_match)
+        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, tol=tol, allow_exact_match = allow_exact_match, op = op)
 
     else
         throw(ArgumentError("`direction` can be only :backward, :forward, or :nearest"))
@@ -1030,7 +1034,7 @@ function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, dir
 end
 
 """
-    closejoin!(dsl, dsr; on=nothing, direction=:backward, makeunique=false, border=:missing, mapformats=true, alg=HeapSort, stable=true, accelerate = false, tol = nothing, allow_exact_match = true)
+    closejoin!(dsl, dsr; on=nothing, direction=:backward, makeunique=false, border=:missing, mapformats=true, alg=HeapSort, stable=true, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing)
 
 Perform a close join for two `Datasets` `dsl` & `dsr` and change the left table into a `Dataset`
 based on exact matches on the key variable or the closest matches when the exact match doesn't exist.
@@ -1051,17 +1055,17 @@ in the close match phase, only one of them will be selected, and the selected on
 - `border`: `:missing` is used by default for the border value,
   `:nearest` can be used to set border values to the nearest value rather than a `missing`,
   by setting `border = :none` any observation out of left data set range will be set as missing.
-- `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
+- `mapformats`: is set to `true` by default, which means formatted values are used to match observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `tol`: Select close match only if the distance is less than it.
 - `allow_exact_match`: If `true`, allows matching with the same key.
+- `op`: When `direction = :nearest` user can supply an operator where `closejoin!` call on two nearest points from the right data set close to the currrent observation in the left data set. The order of the argument to `op` is the same as the sorted order of point. It is important that `op` be able to handle misssing values. If there are multiple columns in the right table to be joint to the left table, the `op` operation applies to all of them.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `true`, means that the sorting results have to be stable;
   if it is set to `false`, then sorting for `dsr` have not to be stable.
-
 See also: [`closejoin`](@ref)
 
 # Examples
@@ -1296,7 +1300,7 @@ julia> trades # The left table has been changed after joining.
    5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100     97.99     98.01
 ```
 """
-function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol = nothing, allow_exact_match = true)
+function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing)
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing, :none))
         throw(ArgumentError("`border` keyword only accept :nearest, :missing, or :none"))
@@ -1312,17 +1316,17 @@ function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction 
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
     end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(dsl)[on]
-        onright = index(dsr)[on]
+        onleft = multiple_getindex(index(dsl), on)
+        onright = multiple_getindex(index(dsr), on)
 
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(dsl)[map(x->x.first, on)]
-        onright = index(dsr)[map(x->x.second, on)]
+        onleft = multiple_getindex(index(dsl), map(x->x.first, on))
+        onright = multiple_getindex(index(dsr), map(x->x.second, on))
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
     if direction in (:backward, :forward, :nearest)
-        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, inplace = true, tol = tol, allow_exact_match = allow_exact_match)
+        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, inplace = true, tol = tol, allow_exact_match = allow_exact_match, op = op)
 
     else
         throw(ArgumentError("`direction` can be only :backward, :forward, or :nearest"))
@@ -1348,7 +1352,7 @@ the order of selected observation from the right table.
   change this to `true` can update `dsmain` using `missing` values in `dsupdate`.
 - `mode`: by default is set to `:missings`, means that only rows in `dsmain` with `missing` values will be updated.
     changing it to `:all` means all matching rows based `on` keys will be updated. Otherwise a function can be passed as `mode` to update only observations which return true when `mode` call on them.
-- `mapformats`: is set to `true` by default, which means formatted values are used for both `dsl` and `dsr`;
+- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
@@ -1418,11 +1422,11 @@ function update!(dsmain::Dataset, dsupdate::AbstractDataset; on = nothing, allow
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
     end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-        onleft = index(dsmain)[on]
-        onright = index(dsupdate)[on]
+        onleft = multiple_getindex(index(dsmain), on)
+        onright = multiple_getindex(index(dsupdate), on)
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-        onleft = index(dsmain)[map(x->x.first, on)]
-        onright = index(dsupdate)[map(x->x.second, on)]
+        onleft = multiple_getindex(index(dsmain), map(x->x.first, on))
+        onright = multiple_getindex(index(dsupdate), map(x->x.second, on))
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end

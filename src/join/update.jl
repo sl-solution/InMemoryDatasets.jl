@@ -14,8 +14,8 @@ end
 
 function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, usehash = true) where T
     isempty(dsl) && return dsl
-    oncols_left = index(dsl)[onleft]
-    oncols_right = index(dsr)[onright]
+    oncols_left = onleft
+    oncols_right = onright
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
 
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))

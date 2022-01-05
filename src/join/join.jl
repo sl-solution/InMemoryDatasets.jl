@@ -376,8 +376,8 @@ end
 
 function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
     isempty(dsl) && return copy(dsl)
-    oncols_left = index(dsl)[onleft]
-    oncols_right = index(dsr)[onright]
+    oncols_left = onleft
+    oncols_right = onright
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
@@ -443,8 +443,8 @@ end
 
 function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
     isempty(dsl) && return dsl
-    oncols_left = index(dsl)[onleft]
-    oncols_right = index(dsr)[onright]
+    oncols_left = onleft
+    oncols_right = onright
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
@@ -492,8 +492,8 @@ end
 
 function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], usehash = false) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
-    oncols_left = index(dsl)[onleft]
-    oncols_right = index(dsr)[onright]
+    oncols_left = onleft
+    oncols_right = onright
     type = :both
     right_range_cols = Int[]
     if onright_range !== nothing
@@ -612,8 +612,8 @@ end
 
 function _in(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false) where T
     isempty(dsl) && return Bool[]
-    oncols_left = index(dsl)[onleft]
-    oncols_right = index(dsr)[onright]
+    oncols_left = onleft
+    oncols_right = onright
 
     # use Set when there is only one column in `on`
     if length(oncols_right) == 1
@@ -656,8 +656,8 @@ end
 
 function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
-    oncols_left = index(dsl)[onleft]
-    oncols_right = index(dsr)[onright]
+    oncols_left = onleft
+    oncols_right = onright
     right_cols = setdiff(1:length(index(dsr)), oncols_right)
     if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))

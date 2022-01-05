@@ -607,6 +607,13 @@ function _update_subindex!(x::SubIndex, px::AbstractIndex, colidx::ColumnIndex) 
     end
 end
 
+# a variant of getindex(index, i), for scenarios where a function can accept duplicate columns
+multiple_getindex(x::AbstractIndex, idx) = getindex(x, idx)
+function multiple_getindex(x::AbstractIndex, idx::Union{AbstractVector{Symbol},
+                                               AbstractVector{AbstractString}, AbstractVector{Int}})
+    [x[i] for i in idx]
+end
+
 
 rename!(x::SubIndex, nms::AbstractVector{Symbol}; makeunique::Bool=false) =
     throw(ArgumentError("rename! is not supported for views other than created " *

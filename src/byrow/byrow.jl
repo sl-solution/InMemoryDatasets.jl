@@ -29,7 +29,7 @@ function expand_Base_Fix(f, f2)
 end
 
 function byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; by = isequal(true), threads = nrow(ds) > __NCORES*10, mapformats = false)
-	colsidx = index(ds)[cols]
+	colsidx = multiple_getindex(index(ds), cols)
 	if by isa AbstractVector
 		if mapformats
 			by = map((x,y)->expand_Base_Fix(x, getformat(ds, y)), by, colsidx)
@@ -46,7 +46,7 @@ end
 byrow(ds::AbstractDataset, ::typeof(any), col::ColumnIndex; by = isequal(true), threads = nrow(ds) > __NCORES*10, mapformats = false) = byrow(ds, any, [col]; by = by, threads = threads, mapformats = mapformats)
 
 function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; by = isequal(true), threads = nrow(ds) > __NCORES*10, mapformats = false)
-	colsidx = index(ds)[cols]
+	colsidx =  multiple_getindex(index(ds), cols)
 	if by isa AbstractVector
 		if mapformats
 			by = map((x,y)->expand_Base_Fix(x, getformat(ds, y)), by, colsidx)
@@ -146,7 +146,7 @@ byrow(ds::AbstractDataset, ::typeof(hash), col::ColumnIndex; by = identity, thre
 byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); op = .+, f = identity,  init = missings(mapreduce(eltype, promote_type, view(_columns(ds),index(ds)[cols])), nrow(ds)), kwargs...) = mapreduce(f, op, eachcol(ds[!, cols]), init = init; kwargs...)
 
 function byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = nrow(ds)>1000)
-	colsidx = index(ds)[cols]
+	colsidx = multiple_getindex(index(ds), cols)
 	length(colsidx) == 1 && return byrow(ds, f, colsidx[1]; threads = threads)
 	threads ?  hp_row_generic(ds, f, cols) : row_generic(ds, f, cols)
 end

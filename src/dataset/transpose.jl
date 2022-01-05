@@ -143,9 +143,9 @@ Base.transpose(::Dataset, cols; [id , renamecolid , renamerowid , variable_name,
 
 function ds_transpose(ds, cols::Union{Tuple, MultiColumnIndex}; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", threads = true, mapformats = true)
     if cols isa Tuple
-        tcols = [cols[j] isa ColumnIndex ? index(ds)[[cols[j]]] : index(ds)[cols[j]] for j in 1:length(cols)]
+        tcols = [cols[j] isa ColumnIndex ? index(ds)[[cols[j]]] : multiple_getindex(index(ds), cols[j]) for j in 1:length(cols)]
     else
-        tcols = [index(ds)[cols]]
+        tcols = [multiple_getindex(index(ds), cols)]
     end
     max_num_col = maximum(length, tcols)
     if variable_name isa AbstractString || variable_name isa Symbol || variable_name === nothing
@@ -157,7 +157,7 @@ function ds_transpose(ds, cols::Union{Tuple, MultiColumnIndex}; id = nothing, re
         throw(ArgumentError("`variable_name` must be a string, symbol, nothing, or a vector of them"))
     end
     if id !== nothing
-        ididx = index(ds)[id]
+        ididx = multiple_getindex(index(ds), id)
 
         if renamecolid === nothing
             renamecolid = _default_renamecolid_function_withid
@@ -422,9 +422,9 @@ end
 
 function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, MultiColumnIndex}, gcols::MultiColumnIndex; id = nothing, renamecolid = nothing, renamerowid = _default_renamerowid_function, variable_name = "_variables_", default_fill = missing, threads = true, mapformats = true)
     if cols isa Tuple
-        tcols = [cols[j] isa ColumnIndex ? index(ds)[[cols[j]]] : index(ds)[cols[j]] for j in 1:length(cols)]
+        tcols = [cols[j] isa ColumnIndex ? index(ds)[[cols[j]]] : multiple_getindex(index(ds), cols[j]) for j in 1:length(cols)]
     else
-        tcols = [index(ds)[cols]]
+        tcols = [multiple_getindex(index(ds), cols)]
     end
     max_num_col = maximum(length, tcols)
     gcolsidx = gcols
@@ -461,7 +461,7 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
                 end
             end
             if var_name[j] !== nothing
-                _repeat_row_names = allowmissing(PooledArray(renamerowid.(names(ds, sel_cols))))
+                _repeat_row_names = allowmissing(PooledArray(renamerowid.(names(ds)[sel_cols])))
                 _extend_repeat_row_names!(_repeat_row_names, max_num_col)
                 _repeat_row_names.refs = repeat(_repeat_row_names.refs, nrow(ds))
                 new_var_label = Symbol(var_name[j])
@@ -471,7 +471,7 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
             _fill_col_val!(res, ECol, length(sel_cols), max_num_col, nrow(ds), _get_perms(ds), threads)
             local new_col_id
             try
-                new_col_id = Symbol(renamecolid(1, names(ds, sel_cols)))
+                new_col_id = Symbol(renamecolid(1, names(ds)[sel_cols]))
             catch e
                 if (e isa MethodError)
                     new_col_id = Symbol(renamecolid(1))
@@ -485,7 +485,7 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
 
     end
     if id !== nothing
-        ididx = index(ds)[id]
+        ididx = multiple_getindex(index(ds), id)
         if renamecolid === nothing
             renamecolid = _default_renamecolid_function_withid
         end

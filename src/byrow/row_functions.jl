@@ -32,7 +32,7 @@ Base.@propagate_inbounds function _op_for_sum!(x, y, f, lo, hi)
 end
 
 function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missing, Number}); threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
     init0 = missings(T, nrow(ds))
@@ -62,7 +62,7 @@ Base.@propagate_inbounds function _op_for_prod!(x, y, f, lo, hi)
 end
 
 function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
     init0 = missings(T, nrow(ds))
@@ -91,7 +91,7 @@ end
 
 
 function row_count(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     init0 = zeros(Int32, size(ds,1))
 
     if threads
@@ -118,7 +118,7 @@ Base.@propagate_inbounds function op_for_any!(x, y, f, lo, hi)
 end
 
 function row_any(ds::AbstractDataset, f::Union{AbstractVector{<:Function}, Function}, cols = :; threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     init0 = zeros(Bool, size(ds,1))
 
     multi_f = false
@@ -160,7 +160,7 @@ Base.@propagate_inbounds function op_for_all!(x, y, f, lo, hi)
 end
 
 function row_all(ds::AbstractDataset, f::Union{AbstractVector{<:Function}, Function}, cols = :; threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     init0 = ones(Bool, size(ds,1))
 
     multi_f = false
@@ -204,7 +204,7 @@ end
 
 
 function row_isequal(ds::AbstractDataset, cols = :; by::Union{AbstractVector, DatasetColumn, SubDatasetColumn, ColumnIndex, Nothing} = nothing, threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     if !(by isa ColumnIndex) && by !== nothing
         @assert length(by) == nrow(ds) "to compare values of selected columns in each row, the length of the passed vector and the number of rows must match"
     end
@@ -250,7 +250,7 @@ function row_isless(ds::AbstractDataset, cols, colselector::Union{AbstractVector
     if !(colselector isa ColumnIndex)
         @assert length(colselector) == nrow(ds) "to compare values of selected columns in each row, the length of the passed vector and the number of rows must match"
     end
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     if colselector isa SubDatasetColumn || colselector isa DatasetColumn
         colselector = __!(colselector)
     elseif colselector isa ColumnIndex
@@ -314,7 +314,7 @@ function row_findfirst(ds::AbstractDataset, f, cols = names(ds, Union{Missing, N
     elseif item isa ColumnIndex
         item = _columns(ds)[index(ds)[item]]
     end
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
 
     colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
@@ -353,7 +353,7 @@ function row_findlast(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Nu
     elseif item isa ColumnIndex
         item = _columns(ds)[index(ds)[item]]
     end
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, 0)
@@ -429,7 +429,7 @@ function row_select(ds::AbstractDataset, cols, colselector::Union{AbstractVector
     if !(colselector isa ColumnIndex)
         @assert length(colselector) == nrow(ds) "to pick values of selected columns in each row, the length of the column names and the number of rows must match, i.e. the length of the vector passed as `by` must be $(nrow(ds))."
     end
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     if colselector isa SubDatasetColumn || colselector isa DatasetColumn
         colselector = __!(colselector)
@@ -481,7 +481,7 @@ function row_fill!(ds::AbstractDataset, cols, val::Union{AbstractVector, Dataset
     if !(val isa ColumnIndex)
         @assert length(val) == nrow(ds) "to fill values in each row, the length of passed values and the number of rows must match."
     end
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     if val isa SubDatasetColumn || val isa DatasetColumn
         val = __!(val)
     end
@@ -527,7 +527,7 @@ end
 
 
 function row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
 
     init0 = fill!(Vector{Union{Missing, CT}}(undef, size(ds,1)), missing)
@@ -566,7 +566,7 @@ Base.@propagate_inbounds function _op_for_max!(x, y, f, lo, hi)
 end
 
 function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
     init0 = missings(T, nrow(ds))
@@ -586,7 +586,7 @@ end
 row_minimum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_minimum(ds, identity, cols; threads = threads)
 
 function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
     init0 = missings(T, nrow(ds))
@@ -616,7 +616,7 @@ Base.@propagate_inbounds function _op_for_argminmax!(x, y, f, vals, idx, missref
 end
 
 function row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     minvals = row_minimum(ds, f, cols)
     colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
@@ -642,7 +642,7 @@ end
 row_argmin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads = true) = row_argmin(ds, identity, cols, threads = threads)
 
 function row_argmax(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     maxvals = row_maximum(ds, f, cols)
     colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
@@ -689,7 +689,7 @@ end
 # TODO needs type stability
 # TODO need abs2 for calculations
 function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true, threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
     _sq_(x) = x^2
@@ -1026,7 +1026,7 @@ Base.@propagate_inbounds function _op_for_issorted_rev!(x, y, res, lt, lo, hi)
 end
 
 function row_issorted(ds::AbstractDataset, cols; rev = false, lt = isless, threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     init0 = ones(Bool, nrow(ds))
 
     if threads
@@ -1068,7 +1068,7 @@ function _fill_dict_and_add!(init0, dict, prehashed, n, p)
 end
 
 function row_nunique(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); count_missing = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     prehashed = Matrix{_Prehashed}(undef, size(ds,1), length(colsidx))
     allcols = view(_columns(ds),colsidx)
 
@@ -1095,7 +1095,7 @@ Base.@propagate_inbounds function _op_for_hash!(x, y, f, lo, hi)
 end
 
 function row_hash(ds::AbstractDataset, f::Function, cols = :; threads = true)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     init0 = zeros(UInt64, nrow(ds))
 
     if threads
@@ -1124,7 +1124,7 @@ function _fill_matrix!(inmat, all_data, rows, cols)
 end
 
 function row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     if length(colsidx) == 2
         try
             allowmissing(f.(_columns(ds)[colsidx[1]], _columns(ds)[colsidx[2]]))

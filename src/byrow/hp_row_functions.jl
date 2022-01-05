@@ -26,7 +26,7 @@ function hp_row_sort(ds::AbstractDataset, cols = names(ds, Union{Missing, Number
 end
 
 function hp_row_generic(ds::AbstractDataset, f::Function, cols::MultiColumnIndex)
-    colsidx = index(ds)[cols]
+    colsidx = multiple_getindex(index(ds), cols)
     if length(colsidx) == 2
         try
             allowmissing(f.(_columns(ds)[colsidx[1]], _columns(ds)[colsidx[2]]))
