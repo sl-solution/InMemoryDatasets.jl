@@ -1112,6 +1112,43 @@ function row_hash(ds::AbstractDataset, f::Function, cols = :; threads = true)
 end
 row_hash(ds::AbstractDataset, cols = :; threads = true) = row_hash(ds, identity, cols; threads = threads)
 
+Base.@propagate_inbounds function _op_for_join!(x, y, delim, last, p, idx, lo, hi)
+    idx[] += 1
+    @simd for i in lo:hi
+        if idx[] == 1
+            x[i] = STRING(y[i])
+            x[i] *= delim
+        elseif idx[] < p
+            x[i] *= STRING(y[i])
+            x[i] *= delim
+        else
+            x[i] *= STRING(y[i])
+            x[i] *= last
+        end
+    end
+    x
+end
+
+function row_join2(ds::AbstractDataset, cols = :; threads = true, delim = ",", last = "")
+    colsidx = multiple_getindex(index(ds), cols)
+    init0 = Vector{Union{Missing, String}}(undef, nrow(ds))
+
+    if threads
+        cz = div(length(init0), __NCORES)
+        idx = [Ref{Int}(0) for _ in 1:__NCORES]
+        Threads.@threads for i in 1:__NCORES
+            lo = (i-1)*cz+1
+            i == __NCORES ? hi = length(init0) : hi = i*cz
+            mapreduce(identity, (x,y) -> _op_for_join!(x, y, delim, last, length(colsidx), idx[i], lo, hi), view(_columns(ds),colsidx), init = init0)
+        end
+    else
+        idx = Ref{Int}(0)
+        mapreduce(identity, (x,y) -> _op_for_join!(x, y, delim, last, length(colsidx), idx, 1, length(x)), view(_columns(ds),colsidx), init = init0)
+    end
+    init0
+end
+
+
 function _fill_col!(inmat, column, rows, j)
     for i in 1:length(rows)
         inmat[j, i] = column[rows[i]]
