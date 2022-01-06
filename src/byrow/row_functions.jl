@@ -1115,11 +1115,11 @@ row_hash(ds::AbstractDataset, cols = :; threads = true) = row_hash(ds, identity,
 function _convert_uint8_to_string!(res, init0, curr_pos, ds, threads)
     if threads
         Threads.@threads for i in 1:nrow(ds)
-            res[i] = String(view(init0, 1:curr_pos[i]-1, i))
+            res[i] = String(view(init0, 1:curr_pos[i]-2, i))
         end
     else
         for i in 1:nrow(ds)
-            res[i] = String(view(init0, 1:curr_pos[i]-1, i))
+            res[i] = String(view(init0, 1:curr_pos[i]-2, i))
         end
     end
 end
@@ -1146,14 +1146,15 @@ function row_join(ds::AbstractDataset, cols = :; threads = true, delim::Abstract
     curr_pos = ones(Int, nrow(ds))
 
     delimiter = Base.CodeUnits(delim)
-    row_join!(init0, curr_pos, ds, repeat([identity], length(colsidx)), colsidx; delim = delimiter, quotechar = nothing, threads = threads)
+    row_join!(init0, curr_pos, ds, repeat([identity], length(colsidx)-1), view(colsidx, 1:length(colsidx)-1); delim = delimiter, quotechar = nothing, threads = threads)
     if length(last)>0
-        last_uint = Base.CodeUnits(last)
-        last_len = length(last_uint)
-        _add_last_for_join!(init0, curr_pos, ds, last_uint, last_len, threads)
-    else
-        curr_pos .-= 1
+        delimiter = Base.CodeUnits(last)
     end
+    if length(colsidx) > 1
+        _add_last_for_join!(init0, curr_pos, ds, delimiter, length(delimiter), threads)
+    end
+    row_join!(init0, curr_pos, ds, [identity], colsidx[length(colsidx)]; delim = delimiter, quotechar = nothing, threads = threads)
+
     res = Vector{Union{String, Missing}}(undef, nrow(ds))
     _convert_uint8_to_string!(res, init0, curr_pos, ds, threads)
     res

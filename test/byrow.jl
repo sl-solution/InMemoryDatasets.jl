@@ -319,19 +319,22 @@
     ds = Dataset(x1 = ["A", "B,"], x2 =["TEA", "TOOOOL"])
     @test byrow(ds, join, r"x") == ["ATEA", "B,TOOOOL"]
     @test byrow(ds, join, r"x", delim = ",") == ["A,TEA", "B,,TOOOOL"]
-    @test byrow(ds, join, r"x", last = ".") == ["ATEA.", "B,TOOOOL."]
-    @test byrow(ds, join, r"x", last = "end", delim = "/-/") == ["A/-/TEAend", "B,/-/TOOOOLend"]
+    @test byrow(ds, join, r"x", last = ".") == ["A.TEA", "B,.TOOOOL"]
+    @test byrow(ds, join, r"x", last = "end", delim = "/-/") == ["AendTEA", "B,endTOOOOL"]
 
     @test byrow(view(ds, [1,2], :), join, r"x") == ["ATEA", "B,TOOOOL"]
     @test byrow(view(ds, [1,2], :), join, r"x", delim = ",") == ["A,TEA", "B,,TOOOOL"]
-    @test byrow(view(ds, [1,2], :), join, r"x", last = ".") == ["ATEA.", "B,TOOOOL."]
-    @test byrow(view(ds, [1,2], :), join, r"x", last = "end", delim = "/-/") == ["A/-/TEAend", "B,/-/TOOOOLend"]
+    @test byrow(view(ds, [1,2], :), join, r"x", last = ".") == ["A.TEA", "B,.TOOOOL"]
+    @test byrow(view(ds, [1,2], :), join, r"x", last = "end", delim = "/-/") == ["AendTEA", "B,endTOOOOL"]
 
     repeat!(ds, 1000)
     @test byrow(ds, join, r"x", threads = true) == repeat(["ATEA", "B,TOOOOL"], 1000)
     @test byrow(ds, join, r"x", threads = true, delim = ",") == repeat(["A,TEA", "B,,TOOOOL"], 1000)
-    @test byrow(ds, join, r"x", threads = true, last = ".") == repeat(["ATEA.", "B,TOOOOL."], 1000)
-    @test byrow(ds, join, r"x", threads = true, last = "end", delim = "/-/") == repeat(["A/-/TEAend", "B,/-/TOOOOLend"], 1000)
+    @test byrow(ds, join, r"x", threads = true, last = ".") == repeat(["A.TEA", "B,.TOOOOL"], 1000)
+    @test byrow(ds, join, r"x", threads = true, last = "end", delim = "/-/") == repeat(["AendTEA", "B,endTOOOOL"], 1000)
+
+    ds = Dataset(x = [1,10], x2 = ["A", "BC"], x3 = [2.0,4.54])
+    @test byrow(ds, join, :, delim = "--", last = "-") == ["1--A-2.0", "10--BC-4.54"]
 end
 
 @testset "cum*/! - sort/!" begin
