@@ -57,7 +57,7 @@ Generally, `byrow` is efficient for any `fun` which returns a single value for e
 * `isequal` : Return `true` when all values are equal. Optionally, a vector of values can be passed via the `with` keyword to compare equality with it.
 * `isless` : Return `true` when all values are less than passed vector(or column specified by its name) as `with`. Passing `rev = true` change `less` to `greater`.
 * `issorted` : Check if the values are sorted
-* `join`: Convert values in each row to string and join them into a single string, inserting the given delimiter (if any) between adjacent values. If `last` is given, it will be used instead of `delim` between the last two strings.
+* `join`: Convert values in each row to string and join them into a single string, inserting the given delimiter (if any) between adjacent values. If `last` is given, it will be used after the last string.
 * `maximum` : Return the maximum value
 * `mean` : Compute the mean value
 * `minimum` : Return the minimum value
