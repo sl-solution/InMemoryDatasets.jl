@@ -315,6 +315,23 @@
     @test byrow(sds2, in, 1:2, item = :x3) == [1,1,1,0,1]
     @test byrow(sds2, in, 1:2, item = sds2[!, 3])== [1,1,1,0,1]
     @test byrow(sds2, in, 1:2, item = sds2[:, 3])== [1,1,1,0,1]
+
+    ds = Dataset(x1 = ["A", "B,"], x2 =["TEA", "TOOOOL"])
+    @test byrow(ds, join, r"x") == ["ATEA", "B,TOOOOL"]
+    @test byrow(ds, join, r"x", delim = ",") == ["A,TEA", "B,,TOOOOL"]
+    @test byrow(ds, join, r"x", last = ".") == ["ATEA.", "B,TOOOOL."]
+    @test byrow(ds, join, r"x", last = "end", delim = "/-/") == ["A/-/TEAend", "B,/-/TOOOOLend"]
+
+    @test byrow(view(ds, [1,2], :), join, r"x") == ["ATEA", "B,TOOOOL"]
+    @test byrow(view(ds, [1,2], :), join, r"x", delim = ",") == ["A,TEA", "B,,TOOOOL"]
+    @test byrow(view(ds, [1,2], :), join, r"x", last = ".") == ["ATEA.", "B,TOOOOL."]
+    @test byrow(view(ds, [1,2], :), join, r"x", last = "end", delim = "/-/") == ["A/-/TEAend", "B,/-/TOOOOLend"]
+
+    repeat!(ds, 1000)
+    @test byrow(ds, join, r"x", threads = true) == repeat(["ATEA", "B,TOOOOL"], 1000)
+    @test byrow(ds, join, r"x", threads = true, delim = ",") == repeat(["A,TEA", "B,,TOOOOL"], 1000)
+    @test byrow(ds, join, r"x", threads = true, last = ".") == repeat(["ATEA.", "B,TOOOOL."], 1000)
+    @test byrow(ds, join, r"x", threads = true, last = "end", delim = "/-/") == repeat(["A/-/TEAend", "B,/-/TOOOOLend"], 1000)
 end
 
 @testset "cum*/! - sort/!" begin
