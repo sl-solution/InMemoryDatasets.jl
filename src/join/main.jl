@@ -297,7 +297,7 @@ function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
         onright = multiple_getindex(index(dsr), on)
         onright_range = nothing
 
-    elseif (typeof(on) <: AbstractVector{<:Pair{Symbol, Symbol}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = multiple_getindex(index(dsl), map(x->x.first, on))
         onright = multiple_getindex(index(dsr), map(x->x.second, on))
         onright_range = nothing
