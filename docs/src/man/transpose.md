@@ -302,6 +302,8 @@ julia> ds = Dataset(A_2018=1:4, A_2019=5:8, B_2017=9:12,
 julia> f(x) =  replace(x, r"[A_B]"=>"")
 f (generic function with 1 method)
 
+julia> # later we provide a simpler solution for this example
+
 julia> dsA = transpose(groupby(ds, :ID), r"A", renamerowid = f, variable_name = "Year", renamecolid = x->"A");
 
 julia> dsB = transpose(groupby(ds, :ID), r"B", renamerowid = f, variable_name = "Year", renamecolid = x->"B");
@@ -404,6 +406,44 @@ julia> transpose(groupby(ds, 1), (:count, :weight),
    1 │         0          3           4         0.2          0.3
    2 │         1          3           4         0.2          0.3
    3 │         2          3           4         0.2          0.2
+
+julia> ds = Dataset(A_2018=1:4, A_2019=5:8, B_2017=9:12,
+                               B_2018=9:12, B_2019 = [missing,13,14,15],
+                                ID = [1,2,3,4])
+4×6 Dataset
+ Row │ A_2018    A_2019    B_2017    B_2018    B_2019    ID       
+     │ identity  identity  identity  identity  identity  identity
+     │ Int64?    Int64?    Int64?    Int64?    Int64?    Int64?   
+─────┼────────────────────────────────────────────────────────────
+   1 │        1         5         9         9   missing         1
+   2 │        2         6        10        10        13         2
+   3 │        3         7        11        11        14         3
+   4 │        4         8        12        12        15         4
+
+julia> f(x) =  replace(x, r"[A_B]"=>"")
+f (generic function with 1 method)
+
+julia> transpose(gatherby(ds, :ID), ([4,5,3], [1,2]),
+                  variable_name = [:year, nothing],
+                  renamerowid = f,
+                  renamecolid = (x,y)->y[1][1:1])
+12×4 Dataset
+ Row │ ID        year      B         A        
+     │ identity  identity  identity  identity
+     │ Int64?    String?   Int64?    Int64?   
+─────┼────────────────────────────────────────
+   1 │        1  2018             9         1
+   2 │        1  2019       missing         5
+   3 │        1  2017             9   missing
+   4 │        2  2018            10         2
+   5 │        2  2019            13         6
+   6 │        2  2017            10   missing
+   7 │        3  2018            11         3
+   8 │        3  2019            14         7
+   9 │        3  2017            11   missing
+  10 │        4  2018            12         4
+  11 │        4  2019            15         8
+  12 │        4  2017            12   missing
 
 julia> ds = Dataset(rand(1:10, 2, 6), :auto)
 2×6 Dataset
