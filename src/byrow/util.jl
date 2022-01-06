@@ -124,7 +124,7 @@ end
 function write_vals!(a, pos, x::Union{Float16, Float32, Float64})
     needed_space = Base.Ryu.neededdigits(typeof(x))
     available_space = length(a)-pos+1
-    needed_space > available_space && throw(ArgumentError("not enough space in buffer to write value into it"))
+    # needed_space > available_space && throw(ArgumentError("not enough space in buffer to write value into it"))
     _writeshortest(a, pos, x)
 end
 
