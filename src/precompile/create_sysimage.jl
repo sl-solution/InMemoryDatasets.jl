@@ -9,8 +9,8 @@ function create_sysimage(sysout::AbstractString)
     close(tmpIMD_out[2])
     f = open(tmpIMD[1])
     fout = open(tmpIMD_out[1], "w")
-
-    write(fout, "using REPL, Pkg, InMemoryDatasets, InMemoryDatasets.PooledArrays, InMemoryDatasets.DataAPI, InMemoryDatasets.PrettyTables, InMemoryDatasets.Tables, PackageCompiler, TOML, Logging
+    # TODO should make this part less hard coding
+    write(fout, "using REPL, Pkg, InMemoryDatasets, InMemoryDatasets.PooledArrays, InMemoryDatasets.DataAPI, InMemoryDatasets.PrettyTables, InMemoryDatasets.Tables, PackageCompiler, TOML, Logging, SuiteSparse
     ")
     for line in eachline(f)
         # not sure why this happens
