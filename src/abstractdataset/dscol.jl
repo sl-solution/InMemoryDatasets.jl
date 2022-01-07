@@ -4,6 +4,7 @@ __!(col1::SubDatasetColumn) =  view(col1.val, col1.selected_index)
 const SubOrDSCol = Union{SubDatasetColumn, DatasetColumn}
 
 # we treat DatasetColumn as a one-column data set. and we need to manage every thing ourselves
+# we don't encourage people to use ds[!, 1] syntax, manipulating a column of a data set should happen in modify/!
 # isequal also use for == , since we don't want missing be annoying
 Base.parent(col1::DatasetColumn) = col1.ds
 
@@ -96,6 +97,38 @@ Base.cumsum(col::SubOrDSCol; missings = :ignore) = cumsum(__!(col), missings = m
 Base.cumprod(col::SubOrDSCol; missings = :ignore) = cumprod(__!(col), missings = missings)
 cummin(col::SubOrDSCol; missings = :ignore) = cummin(__!(col), missings = missings)
 cummax(col::SubOrDSCol; missings = :ignore) = cummax(__!(col), missings = missings)
+
+lag(col::SubOrDSCol; default = missing) = lag(__!(col), default = default)
+lag(col::SubOrDSCol, k; default = missing) = lag(__!(col), k, default = default)
+lead(col::SubOrDSCol; default = missing) = lead(__!(col), default = default)
+lead(col::SubOrDSCol, k; default = missing) = lead(__!(col), k, default = default)
+
+function lag!(col::SubOrDSCol; default = missing)
+    lag!(__!(col), default = default)
+    _modified(_attributes(parent(col.ds)))
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
+    col
+end
+function lag!(col::SubOrDSCol, k; default = missing)
+    lag!(__!(col), k, default = default)
+    _modified(_attributes(parent(col.ds)))
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
+    col
+end
+function lead!(col::SubOrDSCol; default = missing)
+    lead!(__!(col), default = default)
+    _modified(_attributes(parent(col.ds)))
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
+    col
+end
+function lead!(col::SubOrDSCol, k; default = missing)
+    lead!(__!(col), k, default = default)
+    _modified(_attributes(parent(col.ds)))
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
+    col
+end
+
+
 
 Base.Sort.defalg(col::SubOrDSCol) = Base.Sort.defalg(__!(col))
 function Base.sort!(col::SubOrDSCol; alg::Base.Sort.Algorithm=Base.Sort.defalg(col), lt=isless, by=identity, rev::Bool=false, order::Base.Order.Ordering=Base.Order.Forward)
