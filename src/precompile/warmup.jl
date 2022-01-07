@@ -44,6 +44,20 @@ function warmup()
     innerjoin(ds, ds3, on = :x1, makeunique = true)
     transpose(ds, 1:ncol(ds))
     transpose(groupby(ds,1:8), [2,3])
+    # views
+    ds = Dataset("A"=> ["A", "A" ,"A", "A", "B", "B","G"],
+        "B"=> ["C", "D", "E", "B", "F", "G","N"]
+        )
+    select!(ds, 2,1)
+    rename!(ds, [:child, :parent])
+
+    function ff(ds, i)
+        newds = leftjoin(ds, unique(dropmissing(ds,ncol(ds), view=true)[!, reverse(ncol(ds):-1:ncol(ds)-1)], [1,2] , view=true), on = [i+1=>1], makeunique = true)
+        rename!(x->replace(x,"1"=>"grand"), newds)
+        newds
+    end
+
+    ff(ff(ff(ds, 1),2), 3)
 
     # some from test
     store = Dataset([[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")],
