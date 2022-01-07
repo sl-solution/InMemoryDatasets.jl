@@ -33,6 +33,80 @@ _stat_notmissing(x::Any)::Int = 1
 _stat_notmissing(::Missing)::Int = 0
 
 """
+    lag(x, k; default = missing)
+    lag!(x, k; default = missing)
+
+Create a lag-k of the provided vector `x`. The output will be a vector the
+same size as `x` (the input array).
+
+`lag!` replace the input vector.
+
+"""
+(lag, lag!)
+
+function lag(x::AbstractVector, k; default = missing)
+    res = Vector{Union{promote_type(typeof(default), eltype(x)), Missing}}(undef, length(x))
+    for i in 1:k
+        @inbounds res[i] = default
+    end
+    for i in (k+1):length(x)
+        @inbounds res[i] = x[i-k]
+    end
+    res
+end
+
+lag(x::AbstractVector; default = missing) = lag(x,1; default = default)
+
+function lag!(x::AbstractVector, k; default = missing)
+    @assert promote_type(typeof(default), eltype(x)) <: eltype(x) "`default` must be the same type as the element of the passed vector"
+    for i in length(x):-1:(k+1)
+        @inbounds x[i] = x[i-k]
+    end
+    for i in 1:k
+        @inbounds x[i] = default
+    end
+    x
+end
+lag!(x::AbstractVector; default = missing) = lag!(x,1; default = default)
+
+
+"""
+    lead(x, k; default = missing)
+    lead!(x, k; default = missing)
+
+Create a lead-k of the provided vector `x`. The output will be a vector the
+same size as `x` (the input array).
+
+`lead!` replace the input vector.
+
+"""
+(lead, lead!)
+
+function lead(x::AbstractVector, k; default = missing)
+    res = Vector{Union{promote_type(typeof(default), eltype(x)), Missing}}(undef, length(x))
+    for i in 1:length(x)-k
+        @inbounds res[i] = x[i+k]
+    end
+    for i in (length(x)-k+1):length(x)
+        @inbounds res[i] = default
+    end
+    res
+end
+lead(x::AbstractVector; default = missing) = lead(x, 1; default = default)
+
+function lead!(x::AbstractVector, k; default = missing)
+    @assert promote_type(typeof(default), eltype(x)) <: eltype(x) "`default` must be the same type as the element of the passed vector"
+    for i in 1:length(x)-k
+        @inbounds x[i] = x[i+k]
+    end
+    for i in (length(x)-k+1):length(x)
+        @inbounds x[i] = default
+    end
+    x
+end
+lead!(x::AbstractVector; default = missing) = lead!(x, 1; default = default)
+
+"""
 rescale(x,minx,maxx,minval,maxval) rescales x to run from minval and maxval, given x originaly runs from minx to maxx.
 """
 function rescale(x,minx,maxx,minval,maxval)

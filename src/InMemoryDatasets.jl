@@ -84,6 +84,10 @@ export
       byrow,
       nunique,
       # from stat
+      lag,
+      lag!,
+      lead,
+      lead!,
       stdze,
       rescale,
       topk,
@@ -182,5 +186,6 @@ include("stat/ds_stat.jl")
 # precompile
 # include("precompile/precompile.jl")
 include("precompile/warmup.jl")
+include("precompile/create_sysimage.jl")
 # _precompile_()
 end
