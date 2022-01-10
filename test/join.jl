@@ -1227,18 +1227,18 @@ end
 
     dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = 1:5)
     dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = PooledArray([22,missing,33,44]))
-    ds_left = leftjoin(dsl, dsr, on = :x)
+    ds_left = leftjoin(dsl, dsr, on = :x, stable = true)
     @test ds_left == leftjoin(dsl, dsr, on = :x, method = :hash)
     ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
                  Union{Missing, Int64}[1, 2, 3, 4, 5],
                  Union{Missing, Int64}[44, missing, missing, 33, 44]],[:x, :y, :z])
     @test ds_left == ds_left_t
-    ds_left = leftjoin(dsr, dsl, on = :x)
+    ds_left = leftjoin(dsr, dsl, on = :x, stable = true)
     @test ds_left == leftjoin(dsr, dsl, on = :x, method = :hash)
     ds_left_t = Dataset([categorical(["a", "f", "e", "c", "c"]),
                  Union{Missing, Int64}[22, missing, 33, 44, 44],
                  Union{Missing, Int64}[missing, missing, 4, 1, 5]],[:x, :z, :y])
-    ds_inner = innerjoin(dsl, dsr, on = :x)
+    ds_inner = innerjoin(dsl, dsr, on = :x, stable = true)
     @test ds_inner == innerjoin(dsl, dsr, on = :x, method = :hash)
 
     ds_inner_t = Dataset([categorical(["c", "e", "c"]),
@@ -1246,7 +1246,7 @@ end
                  Union{Missing, Int64}[44, 33, 44]], [:x, :y, :z])
     @test ds_inner == ds_inner_t
     for i in 1:20 # when we fix the issue with Threads we can make sure it is ok
-        ds_outer = outerjoin(dsl, dsr, on = :x)
+        ds_outer = outerjoin(dsl, dsr, on = :x, stable = true)
         @test ds_outer == outerjoin(dsl, dsr, on = :x, method = :hash)
         ds_outer_t = Dataset([categorical(["c", "d", missing, "e", "c", "a", "f"]),
                  Union{Missing, Int64}[1, 2, 3, 4, 5, missing, missing],
@@ -1256,13 +1256,13 @@ end
     dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = 1:5)
     dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = PooledArray([2,missing,3,4]))
     for i in 1:20
-        ds_left = leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_left = leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true, stable = true)
         @test ds_left == leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true, method = :hash)
         ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5],
                      categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
         @test ds_left == ds_left_t
-        ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true, stable = true)
         @test ds_outer == outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true, method = :hash)
         ds_outer_t = Dataset([ categorical(["c", "d", missing, "e", "c", missing]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
@@ -1270,13 +1270,13 @@ end
         @test ds_outer == ds_outer_t
     end
     for i in 1:20
-        ds_left = leftjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true)
+        ds_left = leftjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true, stable = true)
         @test ds_left == leftjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true, method = :hash)
         ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5],
                      categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
         @test ds_left == ds_left_t
-        ds_outer = outerjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true)
+        ds_outer = outerjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true, stable = true)
         @test ds_outer == outerjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true, method = :hash)
         ds_outer_t = Dataset([ categorical(["c", "d", missing, "e", "c", missing]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
@@ -1286,13 +1286,13 @@ end
     dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = PooledArray(1:5))
     dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = PooledArray([2,missing,3,4]))
     for i in 1:20
-        ds_left = leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_left = leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true, stable = true)
         @test ds_left == leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true, method = :hash)
         ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5],
                     categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
         @test ds_left == ds_left_t
-        ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true, stable = true)
         @test ds_outer == outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true, method = :hash)
         ds_outer_t = Dataset([ categorical(["c", "d", missing, "e", "c", missing]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
@@ -1300,13 +1300,13 @@ end
         @test ds_outer == ds_outer_t
     end
     for i in 1:20
-        ds_left = leftjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true)
+        ds_left = leftjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true, stable = true)
         @test ds_left == leftjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true, method = :hash)
         ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5],
                     categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
         @test ds_left == ds_left_t
-        ds_outer = outerjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true)
+        ds_outer = outerjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true, stable = true)
         @test ds_outer == outerjoin(dsl, view(dsr, :, :), on = [:y=>:z], makeunique=true, method = :hash)
         ds_outer_t = Dataset([ categorical(["c", "d", missing, "e", "c", missing]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
@@ -1316,13 +1316,13 @@ end
     dsl = Dataset(x = categorical(["c","d",missing, "e","c"]), y = PooledArray(1:5))
     dsr = Dataset(x = categorical(["a", "f", "e", "c"]), z = [2,missing,3,4])
     for i in 1:20
-        ds_left = leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_left = leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true, stable = true)
         @test ds_left == leftjoin(dsl, dsr, on = [:y=>:z], makeunique=true, method = :hash)
         ds_left_t = Dataset([categorical(["c", "d", missing, "e", "c"]),
                      [1, 2, 3, 4, 5],
                      categorical([missing, "a", "e", "c", missing])],[:x, :y, :x_1])
         @test ds_left == ds_left_t
-        ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true)
+        ds_outer = outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true, stable = true)
         @test ds_outer == outerjoin(dsl, dsr, on = [:y=>:z], makeunique=true, method = :hash)
         ds_outer_t = Dataset([categorical(["c", "d", missing, "e", "c", missing]),
                      Union{Missing, Int64}[1, 2, 3, 4, 5, missing],
