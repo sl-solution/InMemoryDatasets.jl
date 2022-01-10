@@ -141,6 +141,14 @@ using InMemoryDatasets, PooledArrays, Random, Test, CategoricalArrays
     setformat!(dsl, 1:2=>fmtfun3)
     @test sortperm(dsl, :)==sortperm(dsr, :)
     @test sortperm(dsl, :, rev=true)==sortperm(dsr, :, rev=true)
+
+    ds = Dataset(rand(-100:1000000, 10^7, 3), :auto)
+    sort!(ds, :)
+    @test issorted(ds, :)
+    sort!(ds, :, rev = true)
+    @test issorted(ds, :, rev = true)
+    sort!(ds, :, rev = [true, false, true])
+    @test issorted(ds, :, rev = [true, false, true])
 end
 
 @testset "_find_starts_of_groups" begin
