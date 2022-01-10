@@ -308,7 +308,7 @@ end
 
 
 # border = :nearest | :missing | :none
-function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, direction = :backward, inplace = false, tol = nothing,  allow_exact_match = true, op = nothing) where T
+function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, direction = :backward, inplace = false, tol = nothing,  allow_exact_match = true, op = nothing, method = :sort) where T
     isempty(dsl) && return copy(dsl)
     if !allow_exact_match
         #aem is the function to check allow_exact_match
@@ -332,14 +332,24 @@ function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, m
     if DataAPI.refpool(_columns(dsr)[oncols_right[end]]) !== nothing
         nsfpaj = false
     end
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1; nsfpaj = nsfpaj)
+    if length(oncols_left) > 1 && method == :hash
+        ranges, a, idx, minval, reps, sz, right_cols_2= _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], onright[1:end-1], mapformats, true, Val(T))
+        filter!(!=(0), reps)
+        pushfirst!(reps, 1)
+        cumsum!(reps, reps)
+        pop!(reps)
+        grng = GIVENRANGE(idx, reps, Int[], length(reps))
+        starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, oncols_right[end], stable, alg, mapformats, nsfpaj, grng)
+    else
+        ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1; nsfpaj = nsfpaj)
 
-    for j in 1:(length(oncols_left) - 1)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
+        for j in 1:(length(oncols_left) - 1)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
+        end
     end
 
-    # if border = :none , we should :nearest direction
+    # if border = :none , we should use :nearest direction
     _change_refpool_find_range_for_close!(ranges, dsl, dsr, idx, oncols_left, oncols_right, border == :none ? :nearest : direction, mapformats[1], mapformats[2], length(oncols_left); nsfpaj = nsfpaj)
     total_length = nrow(dsl)
 

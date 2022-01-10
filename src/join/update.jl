@@ -12,23 +12,27 @@ function _update_left_with_right!(x, y, ranges, allowmissing, mode)
     end
 end
 
-function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, usehash = true) where T
+function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, usehash = true, method = :sort) where T
     isempty(dsl) && return dsl
-    oncols_left = onleft
-    oncols_right = onright
-    right_cols = setdiff(1:length(index(dsr)), oncols_right)
+    if method == :hash
+        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, true, Val(T))
+    elseif method == :sort
+        oncols_left = onleft
+        oncols_right = onright
+        right_cols = setdiff(1:length(index(dsr)), oncols_right)
 
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    if usehash && length(oncols_left) == 1 && nrow(dsr)>1
-        success, result = _update!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); mapformats = mapformats, allowmissing = allowmissing, mode = mode)
-        if success
-            return result
+        ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+        if usehash && length(oncols_left) == 1 && nrow(dsr)>1
+            success, result = _update!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); mapformats = mapformats, allowmissing = allowmissing, mode = mode)
+            if success
+                return result
+            end
         end
-    end
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
 
-    for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+        for j in 1:length(oncols_left)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+        end
     end
 
     if mode == :all

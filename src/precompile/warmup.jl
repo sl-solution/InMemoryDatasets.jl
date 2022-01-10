@@ -38,10 +38,14 @@ function warmup()
     ds2 = ds[1:2, [1,3,7]]
     innerjoin(ds, ds2, on = [:x1, :x3, :x7])
     leftjoin(ds, ds2, on = [:x1, :x3, :x7])
+    innerjoin(ds, ds2, on = [:x1, :x3, :x7], method = :hash)
+    leftjoin(ds, ds2, on = [:x1, :x3, :x7], method = :hash)
     leftjoin(ds, ds2, on = [:x1, :x3, :x7], accelerate = true)
     ds3 = unique(ds, 1)[:, [1,3,5,7]]
     leftjoin(ds, ds3, on = :x1, makeunique = true)
     innerjoin(ds, ds3, on = :x1, makeunique = true)
+    leftjoin(ds, ds3, on = :x1, makeunique = true, method = :hash)
+    innerjoin(ds, ds3, on = :x1, makeunique = true, method = :hash)
     transpose(ds, 1:ncol(ds))
     transpose(groupby(ds,1:8), [2,3])
     # views
@@ -58,6 +62,21 @@ function warmup()
     end
 
     ff(ff(ff(ds, 1),2), 3)
+
+    ds = Dataset("A"=> ["A", "A" ,"A", "A", "B", "B","G"],
+        "B"=> ["C", "D", "E", "B", "F", "G","N"]
+        )
+    select!(ds, 2,1)
+    rename!(ds, [:child, :parent])
+
+    function ff_hash(ds, i)
+        newds = leftjoin(ds, unique(dropmissing(ds,ncol(ds), view=true)[!, reverse(ncol(ds):-1:ncol(ds)-1)], [1,2] , view=true), on = [i+1=>1], makeunique = true, method = :hash)
+        rename!(x->replace(x,"1"=>"grand"), newds)
+        newds
+    end
+
+    ff_hash(ff_hash(ff_hash(ds, 1),2), 3)
+    @assert ff(ff(ff(ds, 1),2), 3) == ff_hash(ff_hash(ff_hash(ds, 1),2), 3)
 
     # some from test
     store = Dataset([[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")],
@@ -81,6 +100,23 @@ function warmup()
     inn_r1_a =  innerjoin(view(store, :, :), roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true)
     inn_r1 =  innerjoin(view(store, :, :), roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
     inn_r1_a =  innerjoin(view(store, :, :), roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true)
+
+
+    inn_r1 =  innerjoin(store, roster, on = [:date => (:start_date, nothing)], makeunique = true, stable = true, method = :hash)
+    inn_r1_v =  innerjoin(store, view(roster, :, :), on = [:date => (:start_date, nothing)], makeunique = true, stable = true, method = :hash)
+    inn_r1_a =  innerjoin(store, roster, on = [:date => (:start_date, nothing)], makeunique = true, stable = true, accelerate = true, method = :hash)
+    inn_r1_v_a =  innerjoin(store, view(roster, :, :), on = [:date => (:start_date, nothing)], makeunique = true, stable = true, accelerate = true, method = :hash)
+
+    inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, method = :hash)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true, method = :hash)
+    inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, method = :hash)
+    inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true, method = :hash)
+
+    inn_r1 =  innerjoin(view(store, :, :), roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, method = :hash)
+    inn_r1_a =  innerjoin(view(store, :, :), roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true, method = :hash)
+    inn_r1 =  innerjoin(view(store, :, :), roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, method = :hash)
+    inn_r1_a =  innerjoin(view(store, :, :), roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true, method = :hash)
+
 
     ds = Dataset(foo = ["one", "one", "one", "two", "two","two"],
                       bar = ['A', 'B', 'C', 'A', 'B', 'C'],

@@ -107,13 +107,35 @@ function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, 
     idx, last_valid_range == length(idx)
 end
 
+function _sort_for_join_after_hash(dsr, oncols_right, stable, alg, mapformats, nsfpaj, grng)
+    if dsr isa SubDataset
+        starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng)
+    else
+        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng)
+    end
+end
 
+# find count of each groups id
+function _find_counts_for_join(groups, ngroups)
+   res = zeros(Int, ngroups)
+   for i in 1:length(groups)
+       res[groups[i]] += 1
+   end
+   res
+end
 
-function _fill_val_join!(x, r, val)
-    for i in r
+function _find_range_for_join!(ranges, ldata, gslots, reps, where, minval, sz)
+    Threads.@threads for i in 1:length(ldata)
+        ranges[i] = _query_dictionary_for_join_int(identity, ldata[i], gslots, reps, where, minval, sz)
+    end
+end
+
+Base.@propagate_inbounds function _fill_val_join!(x, r, val)
+    @simd for i in r
         x[i] = val
     end
 end
+
 function _fill_val_join!(x, r2, val, inbits, r)
     cnt = 1
     lo = r2.start
@@ -251,7 +273,6 @@ function _fill_oncols_left_table_anti!(_res, x, ranges, en, total)
     end
 end
 
-
 function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val)
     Threads.@threads for i in 1:length(ranges)
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
@@ -374,28 +395,31 @@ end
 
 
 
-function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
+function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort) where T
     isempty(dsl) && return copy(dsl)
-    oncols_left = onleft
-    oncols_right = onright
-    right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
-        throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
-    end
+    if method == :hash
+        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T))
+    elseif method == :sort
+        oncols_left = onleft
+        oncols_right = onright
+        right_cols = setdiff(1:length(index(dsr)), oncols_right)
+        if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
+            throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
+        end
 
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    if usehash && length(oncols_left) == 1 && nrow(dsr)>1
-        success, result = _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
-        if success
-            return result
+        ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+        if length(oncols_left) == 1 && nrow(dsr)>1
+            success, result = _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
+            if success
+                return result
+            end
+        end
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+
+        for j in 1:length(oncols_left)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
         end
     end
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
-
-    for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
-    end
-
     new_ends = map(x -> max(1, length(x)), ranges)
     cumsum!(new_ends, new_ends)
     total_length = new_ends[end]
@@ -441,26 +465,29 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
 
 end
 
-function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
+function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort) where T
     isempty(dsl) && return dsl
-    oncols_left = onleft
-    oncols_right = onright
-    right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
-        throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
-    end
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    if usehash && length(oncols_left) == 1 && nrow(dsr)>1
-        success, result = _join_left!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
-        if success
-            return result
+    if method == :hash
+        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T))
+    elseif method == :sort
+        oncols_left = onleft
+        oncols_right = onright
+        right_cols = setdiff(1:length(index(dsr)), oncols_right)
+        if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
+            throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
+        end
+        ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+        if length(oncols_left) == 1 && nrow(dsr)>1
+            success, result = _join_left!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
+            if success
+                return result
+            end
+        end
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+        for j in 1:length(oncols_left)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
         end
     end
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
-    for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
-    end
-
     if !all(x->length(x) <= 1, ranges)
         throw(ArgumentError("`leftjoin!` can only be used when each observation in left data set matches at most one observation from right data set"))
     end
@@ -474,10 +501,10 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     end
 
     for j in 1:length(right_cols)
-        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
+        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
-            # fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, missing)
+            fill_val = DataAPI.invrefpool(_res)[missing]
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val)
         else
             _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing)
         end
@@ -490,7 +517,7 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     dsl
 end
 
-function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], usehash = false) where T
+function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], method = :sort) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
@@ -527,14 +554,6 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
 
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    if usehash && length(oncols_left) == 1 && type == :both && nrow(dsr)>1
-        success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
-        if success
-            return result
-        end
-    end
-
     nsfpaj = true
     # if the columns for inequality like join are PA we cannot use the fast path
     if type != :both
@@ -542,14 +561,37 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
             nsfpaj = false
         end
     end
+    # if (onright_range === nothing || length(onleft) > 1) is false, then we have inequality kind join with no exact match join
+    if method == :hash && (onright_range === nothing || length(onleft) > 1)
+        if onright_range !== nothing
+            ranges, a, idx, minval, reps, sz, right_cols_2 = _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], oncols_right[1:end-1], mapformats, true, Val(T))
+            filter!(!=(0), reps)
+            pushfirst!(reps, 1)
+            cumsum!(reps, reps)
+            pop!(reps)
+            grng = GIVENRANGE(idx, reps, Int[], length(reps))
+            starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, right_range_cols[1], stable, alg, mapformats, nsfpaj, grng)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj)
+        else
+            ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T))
+        end
+    else
+        ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+        if length(oncols_left) == 1 && type == :both && nrow(dsr)>1
+            success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
+            if success
+                return result
+            end
+        end
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1); nsfpaj = nsfpaj)
 
-
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1); nsfpaj = nsfpaj)
-
-    for j in 1:length(oncols_left)-1
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
+        for j in 1:length(oncols_left)-1
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
+        end
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj)
     end
-    _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj)
+
+
 
     new_ends = map(length, ranges)
     cumsum!(new_ends, new_ends)
@@ -637,6 +679,7 @@ function _in(dsl::AbstractDataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     map(x -> length(x) == 0 ? false : true, ranges)
 end
 
+
 function _find_right_not_in_left(ranges, n, idx)
     res = trues(n)
     for i in 1:length(ranges)
@@ -654,24 +697,28 @@ function _fill_oncols_left_table_left_outer!(res, x, notinleft, en, total)
 end
 
 
-function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, usehash = false) where T
+function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
-    right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
-        throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
-    end
-    ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    if usehash && length(oncols_left) == 1 && nrow(dsr)>1
-        success, result = _join_outer_dict(dsl, dsr, ranges, oncols_left, oncols_right, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
-        if success
-            return result
+    if method == :hash
+        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T))
+    elseif method == :sort
+        right_cols = setdiff(1:length(index(dsr)), oncols_right)
+        if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
+            throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
         end
-    end
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
-    for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+        ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
+        if length(oncols_left) == 1 && nrow(dsr)>1
+            success, result = _join_outer_dict(dsl, dsr, ranges, oncols_left, oncols_right, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
+            if success
+                return result
+            end
+        end
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+        for j in 1:length(oncols_left)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+        end
     end
     new_ends = map(x -> max(1, length(x)), ranges)
     notinleft = _find_right_not_in_left(ranges, nrow(dsr), idx)

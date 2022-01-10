@@ -848,3 +848,112 @@ function _equal_names(r1, r2)
     end
     return true
 end
+
+# a structure for vcat to vector without allocation
+struct Cat2Vec{F1, F2, CT, T, S, A, B} <: AbstractVector{Union{T, S}}
+	vec1::A
+	vec2::B
+	f1::F1
+	f2::F2
+	len1::Int
+	len2::Int
+	function Cat2Vec(x , y, f1::F1, f2::F2) where {F1, F2}
+		if length(x) > length(y)
+			if DataAPI.invrefpool(x) !== nothing
+				if f1 != identity
+					v = map(f1, x)
+				else
+					v = x
+				end
+				dict = DataAPI.invrefpool(v)
+				# It is workaround for Categorical data
+				if hasproperty(dict, :invpool)
+					vtype = valtype(dict.invpool)
+				else
+					vtype = valtype(dict)
+				end
+				res = Vector{Union{Missing, vtype}}(undef, length(y))
+				_rev_map_invrefpool!(res, dict, y, f2)
+				new{typeof(identity), typeof(identity), Union{Missing, vtype}, Union{vtype, Missing}, Union{vtype, Missing}, typeof(res), typeof(res)}(DataAPI.refarray(v), res, identity, identity, length(x), length(y))
+			elseif DataAPI.invrefpool(y) !== nothing
+				if f2 != identity
+					v = map(f2, y)
+				else
+					v = y
+				end
+				dict = DataAPI.invrefpool(v)
+				if hasproperty(dict, :invpool)
+					vtype = valtype(dict.invpool)
+				else
+					vtype = valtype(dict)
+				end
+				res =  Vector{Union{Missing, vtype}}(undef, length(x))
+				_rev_map_invrefpool!(res, dict, x, f1)
+				new{typeof(identity), typeof(identity), Union{Missing, vtype}, Union{vtype, Missing}, Union{vtype, Missing}, typeof(res), typeof(res)}(res, DataAPI.refarray(v), identity, identity, length(x), length(y))
+			else
+				new{F1, F2, promote_type(Core.Compiler.return_type(f1, (eltype(x), )), Core.Compiler.return_type(f2, (eltype(y), ))), eltype(x), eltype(y), typeof(x), typeof(y)}(x, y, f1, f2, length(x), length(y))
+			end
+		else
+			if DataAPI.invrefpool(y) !== nothing
+				if f2 != identity
+					v = map(f2, y)
+				else
+					v = y
+				end
+				dict = DataAPI.invrefpool(v)
+				if hasproperty(dict, :invpool)
+					vtype = valtype(dict.invpool)
+				else
+					vtype = valtype(dict)
+				end
+				res =  Vector{Union{Missing, vtype}}(undef, length(x))
+				_rev_map_invrefpool!(res, dict, x, f1)
+				new{typeof(identity), typeof(identity), Union{Missing, vtype}, Union{vtype, Missing}, Union{vtype, Missing}, typeof(res), typeof(res)}(res, DataAPI.refarray(v), identity, identity, length(x), length(y))
+			elseif DataAPI.invrefpool(x) !== nothing
+				if f1 != identity
+					v = map(f1, x)
+				else
+					v = x
+				end
+				dict = DataAPI.invrefpool(v)
+				if hasproperty(dict, :invpool)
+					vtype = valtype(dict.invpool)
+				else
+					vtype = valtype(dict)
+				end
+				res = Vector{Union{Missing, vtype}}(undef, length(y))
+				_rev_map_invrefpool!(res, dict, y, f2)
+				new{typeof(identity), typeof(identity), Union{Missing ,vtype}, Union{vtype, Missing}, Union{vtype, Missing}, typeof(res), typeof(res)}(DataAPI.refarray(v), res, identity, identity, length(x), length(y))
+			else
+				new{F1, F2, promote_type(Core.Compiler.return_type(f1, (eltype(x), )), Core.Compiler.return_type(f2, (eltype(y), ))), eltype(x), eltype(y), typeof(x), typeof(y)}(x, y, f1, f2, length(x), length(y))
+			end
+		end
+	end
+	#
+	# Cat2Vec(x,y,f1::F1,f2::F2) where {F1, F2}= new{F1, F2, promote_type(Core.Compiler.return_type(f1, (eltype(x), )), Core.Compiler.return_type(f2, (eltype(y), ))), eltype(x), eltype(y), typeof(x), typeof(y)}(x, y, f1, f2, length(x), length(y))
+end
+
+function _rev_map_invrefpool!(res, dict, y, f)
+	Threads.@threads for i in 1:length(res)
+		res[i] = get(dict, DataAPI.unwrap(f(y[i])), missing)
+
+	end
+end
+
+function __getindex(v::Cat2Vec{F1, F2, CT, T,S, A, B}, i::Int, f1, f2 )::CT where {F1, F2, CT, T, S, A, B}
+    if i <= v.len1
+		f1(v.vec1[i]::T)
+	else
+		f2(v.vec2[i-v.len1]::S)
+	end
+end
+
+
+function Base.getindex(v::Cat2Vec{F1, F2, CT, T, S, A, B}, i::Int)::CT where {F1, F2, CT, T, S, A, B}
+	__getindex(v, i, v.f1, v.f2)
+end
+
+Base.IndexStyle(::Type{<:Cat2Vec}) = Base.IndexLinear()
+Base.size(v::Cat2Vec) = (length(v),)
+Base.length(v::Cat2Vec) = v.len1 + v.len2
+Base.eltype(v::Cat2Vec{F1, F2, CT, T, S, A, B}) where {F1, F2, CT, T, S, A, B} = CT
