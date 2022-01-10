@@ -285,8 +285,8 @@ function _ds_sort_int_missatright_nopermx_threaded!(x, original_P, copy_P, lo, h
                     where[1][label] += 1
                 end
             else
-                if Int(x[i]) % nt == thid
-                    label = Int(x[i]) + offs + 1
+                label = Int(x[i]) + offs + 1
+                if label % nt == thid
                     original_P[where[1][label] + lo - 1] = copy_P[i]
                     where[1][label] += 1
                 end
@@ -327,8 +327,8 @@ function _ds_sort_int_missatright_nopermx_threaded!(x, original_P, rangelen, min
                     where[1][label] += 1
                 end
             else
-                if Int(x[i]) % nt == thid
-                    label = Int(x[i]) + offs + 1
+                label = Int(x[i]) + offs + 1
+                if label % nt == thid
                     original_P[where[1][label]] = i
                     where[1][label] += 1
                 end
@@ -370,8 +370,8 @@ function _ds_sort_int_missatleft_nopermx_threaded!(x, original_P, copy_P, lo, hi
                     where[1][label] += 1
                 end
             else
-                if Int(x[i]) % nt == thid
-                    label = Int(x[i]) + offs + 2
+                label = Int(x[i]) + offs + 2
+                if label % nt == thid
                     original_P[where[1][label] + lo - 1] = copy_P[i]
                     where[1][label] += 1
                 end
@@ -413,8 +413,8 @@ function _ds_sort_int_missatleft_nopermx_threaded!(x, original_P, rangelen, minv
                     where[1][label] += 1
                 end
             else
-                if Int(x[i]) % nt == thid
-                    label = Int(x[i]) + offs + 2
+                label = Int(x[i]) + offs + 2
+                if label % nt == thid
                     original_P[where[1][label]] = i
                     where[1][label] += 1
                 end
@@ -453,8 +453,8 @@ function _ds_sort_int_missatright_nopermx_threaded_lm!(x, original_P, copy_P, lo
                     where[label] += 1
                 end
             else
-                if Int(x[i]) % nt == thid
-                    label = Int(x[i]) + offs + 1
+                label = Int(x[i]) + offs + 1
+                if label % nt == thid
                     original_P[where[label] + lo - 1] = copy_P[i]
                     where[label] += 1
                 end
@@ -490,8 +490,8 @@ function _ds_sort_int_missatright_nopermx_threaded_lm!(x, original_P, rangelen, 
                     where[label] += 1
                 end
             else
-                if Int(x[i]) % nt == thid
-                    label = Int(x[i]) + offs + 1
+                label = Int(x[i]) + offs + 1
+                if label % nt == thid
                     original_P[where[label]] = i
                     where[label] += 1
                 end
@@ -528,8 +528,8 @@ function _ds_sort_int_missatleft_nopermx_threaded_lm!(x, original_P, copy_P, lo,
                     where[label] += 1
                 end
             else
-                if Int(x[i]) % nt == thid
-                    label = Int(x[i]) + offs + 2
+                label = Int(x[i]) + offs + 2
+                if label % nt == thid
                     original_P[where[label] + lo - 1] = copy_P[i]
                     where[label] += 1
                 end
@@ -566,8 +566,8 @@ function _ds_sort_int_missatleft_nopermx_threaded_lm!(x, original_P, rangelen, m
                     where[label] += 1
                 end
             else
-                if Int(x[i]) % nt == thid
-                    label = Int(x[i]) + offs + 2
+                label = Int(x[i]) + offs + 2
+                if label % nt == thid
                     original_P[where[label]] = i
                     where[label] += 1
                 end
