@@ -170,7 +170,7 @@ codeunit(s::Characters, i::Integer) = s.data[i]
 
 isvalid(s::Characters, i::Int) = checkbounds(Bool, s, i)
 
-Characters(s::Symbol) = Character(string(s))
+Characters(s::Symbol) = Characters(string(s))
 
 Characters(::Missing) = missing
 Characters{N}(::Missing) where N = missing
