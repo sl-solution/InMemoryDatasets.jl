@@ -18,7 +18,7 @@ The main functions for combining two data sets are `leftjoin`, `innerjoin`, `out
 
 See [the Wikipedia page on SQL joins](https://en.wikipedia.org/wiki/Join_(SQL)) for more information.
 
-In general (for some special cases InMemoryDatasets may use "hash-join" techniques), to match observations, InMemoryDatasets sorts the right data set and uses a binary search algorithm for finding the matches of each observation in the left data set in the right data set based on the passed key column(s), thus, it has better performance when the left data set is larger than the right data set. The matching is done based on the formatted values of the key column(s), however, using the `mapformats` keyword argument, one may set it to `false` for one or both data sets.
+By default, to match observations, InMemoryDatasets sorts the right data set and uses a binary search algorithm for finding the matches of each observation in the left data set in the right data set based on the passed key column(s), thus, it has better performance when the left data set is larger than the right data set. However, passing `method = :hash` changes the default. The matching is done based on the formatted values of the key column(s), however, using the `mapformats` keyword argument, one may set it to `false` for one or both data sets.
 
 For `leftjoin` and `innerjoin` the order of observations of the output data set is the same as their order in the left data set. However, the order of observations from the right table depends on the stability of the sort algorithm. User can set the `stable` keyword argument to `true` to guarantee a stable sort. For `outerjoin` the order of observations from the left data set in the output data set is also the same as their order in the original data set, however, for those observations which are from the right table, there is no specific order.
 
@@ -141,6 +141,13 @@ julia> @btime innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>:y2], accelerate = true);
   155.306 ms (2160 allocations: 45.92 MiB)
 ```
 
+And of course for this example we can simply use the hash techniques for matching observations:
+
+```jldoctest
+julia> @btime innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>:y2], method = :hash);
+ 86.323 ms (1095 allocations: 96.95 MiB)
+```
+
 As it can be observed, using `accelerate = true` significantly reduces the joining time. The reason for this reduction is because currently sorting `String` type columns in InMemoryDatasets is relatively expensive, and using `accelerate = true` helps to reduce this by splitting the observations into multiple parts.
 
 ## `contains`
@@ -156,6 +163,8 @@ The `closejoin` function joins two data sets based on exact match on the key var
 The `closejoin!` function does a close join in-place.
 
 A tolerance for finding close matches can be passed via the `tol` keyword argument, and for the situations where the exact match is not allowed, user can pass `allow_exact_match = false`.
+
+`closejoin/!` support `method = :hash` however, for the last key column it uses the sorting method to find the closest match.
 
 ### Examples
 
@@ -320,6 +329,8 @@ For this kind of inner join, the key columns for both data sets which are define
 
 To change inequalities to strict inequality the `strict_inequality` keyword argument must be set to `true` for one or both sides, e.g. `strict_inequality = true`(both side), `strict_inequality = [false, true]`(only one side).
 
+`innerjoin` supports `method = :hash` for all key columns which are not used for inequality like join.
+
 ### Examples
 
 ```jldoctest
@@ -411,6 +422,8 @@ julia> innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :
 `update!` updates a data set values by using values from a transaction data set. The function uses the given keys (`on = ...`) to select rows for updating. By default, the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true` changes this behaviour. If there are multiple rows in the main data set which match the key(s), using `mode = :all` causes all of them to be updated, `mode = :missing` causes only the ones which are missing in the main data set to be updated, and `mode = fun` updates the values which calling `fun` on them returns `true`. If there are multiple rows in the transaction data set which match the key, only the last one (given `stable = true` is passed) will be used to update the main data set.
 
 The `update!` functions replace the main data set with the updated version, however, if a copy of the updated data set is required, the `update` function can be used instead.
+
+Like other join functions, one may pass `method = :hash` for using hash techniques to match observations.
 
 ### Examples
 
