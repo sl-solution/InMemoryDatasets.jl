@@ -138,6 +138,7 @@ include("byrow/util.jl")
 include("byrow/row_functions.jl")
 include("byrow/hp_row_functions.jl")
 include("byrow/byrow.jl")
+include("byrow/doc.jl")
 
 # other functions
 include("dataset/other.jl")
