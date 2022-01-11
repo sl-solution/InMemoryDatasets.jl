@@ -141,14 +141,14 @@ julia> @btime innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>:y2], accelerate = true);
   155.306 ms (2160 allocations: 45.92 MiB)
 ```
 
+As it can be observed, using `accelerate = true` significantly reduces the joining time. The reason for this reduction is because currently sorting `String` type columns in InMemoryDatasets is relatively expensive, and using `accelerate = true` helps to reduce this by splitting the observations into multiple parts.
+
 And of course for this example we can simply use the hash techniques for matching observations:
 
 ```jldoctest
 julia> @btime innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>:y2], method = :hash);
  86.323 ms (1095 allocations: 96.95 MiB)
 ```
-
-As it can be observed, using `accelerate = true` significantly reduces the joining time. The reason for this reduction is because currently sorting `String` type columns in InMemoryDatasets is relatively expensive, and using `accelerate = true` helps to reduce this by splitting the observations into multiple parts.
 
 ## `contains`
 
