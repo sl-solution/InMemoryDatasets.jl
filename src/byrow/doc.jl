@@ -10,6 +10,10 @@ function Docs.getdoc(x::typeof(byrow), y)
         return _get_doc_byrow("all")
     elseif y == Tuple{typeof(any)}
         return _get_doc_byrow("any")
+    elseif y == Tuple{typeof(count)}
+        return _get_doc_byrow("count")
+    elseif y == Tuple{typeof(prod)}
+        return _get_doc_byrow("prod")
     end
 end
 
@@ -132,9 +136,9 @@ julia> byrow(ds, mean, :)
  3.5
 ```
 @@@@all@@@@
-    byrow(ds, all, cols; [by = isequal(true), threads, mapformats = false])
+    byrow(ds, all, cols = :; [by = isequal(true), threads, mapformats = false])
 
-Test whether all elements in each row are `true`, when `by` is passed, determine whether predicate `by` returns `true` for all elements in the row.
+Test whether all elements in each row in selected columns are `true`, when `by` is passed, determine whether predicate `by` returns `true` for all elements in the row.
 
 By default, `byrow` uses the actual values for test the elements, however, passing `mapformats = true`
 change this to the formatted values.
@@ -165,9 +169,9 @@ julia> byrow(ds, all, :, by = [==(2), >(1)])
  0
 ```
 @@@@any@@@@
-    byrow(ds, any, cols; [by = isequal(true), threads, mapformats = false])
+    byrow(ds, any, cols = :; [by = isequal(true), threads, mapformats = false])
 
-Test whether any elements in each row are `true`, when `by` is passed, determine whether predicate `by` returns `true` for any elements in the row.
+Test whether any elements in each row in selected columns is `true`, when `by` is passed, determine whether predicate `by` returns `true` for any elements in the row.
 
 By default, `byrow` uses the actual values for test the elements, however, passing `mapformats = true`
 change this to the formatted values.
@@ -197,4 +201,60 @@ julia> byrow(ds, any, :, by = [==(2), >(1)])
  1
  1
 ```
+@@@@count@@@@
+    byrow(ds, count, cols = :; [by = isequal(true), threads])
+
+Count the number of elements in each row for selected columns which the function `by` returns `true`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+## Example
+
+```jldoctest
+julia> julia> ds = Dataset(x = [1,2,3], y = [2, 6, 5])
+3×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         2
+   2 │        2         6
+   3 │        3         5
+
+julia> byrow(ds, count, :, by = isodd)
+3-element Vector{Int32}:
+ 1
+ 0
+ 2
+```
+@@@@prod@@@@
+    byrow(ds, prod, cols = names(ds, Number); [by = identity, threads])
+
+Return the product of the results of calling function `by` on each element of each row of `ds`. If `cols` is not specified, `byrow`
+computes product for all numeric columns in `ds`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
+
+## Example
+
+```jldoctest
+julia>  ds = Dataset(x = [1,2,3], y = [2.0, 1.5, 4.0])
+3×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1       2.0
+   2 │        2       1.5
+   3 │        3       4.0
+
+julia> byrow(ds, prod, :)
+3-element Vector{Union{Missing, Float64}}:
+  2.0
+  3.0
+ 12.0
+```
+
 """

@@ -13,7 +13,7 @@ byrow(ds::AbstractDataset, ::typeof(sum), col::ColumnIndex; by = identity, threa
 byrow(ds::AbstractDataset, ::typeof(prod), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_prod(ds, by, cols; threads = threads)
 byrow(ds::AbstractDataset, ::typeof(prod), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, prod, [col]; by = by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(count), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = isequal(true), threads = nrow(ds) > __NCORES*10) = row_count(ds, by, cols; threads =threads)
+byrow(ds::AbstractDataset, ::typeof(count), cols::MultiColumnIndex = :; by = isequal(true), threads = nrow(ds) > __NCORES*10) = row_count(ds, by, cols; threads =threads)
 byrow(ds::AbstractDataset, ::typeof(count), col::ColumnIndex; by = isequal(true), threads = nrow(ds) > __NCORES*10) = byrow(ds, count, [col], by = by, threads = threads)
 
 # byrow(ds::AbstractDataset, ::typeof(anymissing), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_anymissing(ds, cols)
