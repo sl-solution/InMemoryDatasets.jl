@@ -309,6 +309,28 @@ end
     @test all(byrow(compare(combine_out7, combine_out7_v, on = names(combine_out7)), all, :))
     @test all(byrow(compare(combine_out8, combine_out8_v, on = names(combine_out8)), all, :))
     @test all(byrow(compare(combine_out9, combine_out9_v, on = names(combine_out9)), all, :))
+
+    ds = Dataset(rand(Int, 100, 1), :auto)
+    @test sort(combine(gatherby(ds, 1), 1=>length), :) == combine(groupby(ds, 1), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false), 1=>length), :) == combine(groupby(ds, 1, stable = false), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false), 1=>(x->length(x))=>:length_x1), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
+
+    ds = Dataset(rand(Int128, 100, 1), :auto)
+    @test sort(combine(gatherby(ds, 1), 1=>length), :) == combine(groupby(ds, 1), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false), 1=>length), :) == combine(groupby(ds, 1, stable = false), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false), 1=>(x->length(x))=>:length_x1), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
+
+    ds = Dataset(rand(UInt64, 100, 1), :auto)
+    @test sort(combine(gatherby(ds, 1), 1=>length), :) == combine(groupby(ds, 1), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false), 1=>length), :) == combine(groupby(ds, 1, stable = false), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false), 1=>(x->length(x))=>:length_x1), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
+
+    ds = Dataset(rand(Int8, 100, 1), :auto)
+    @test sort(combine(gatherby(ds, 1), 1=>length), :) == combine(groupby(ds, 1), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false), 1=>length), :) == combine(groupby(ds, 1, stable = false), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false), 1=>(x->length(x))=>:length_x1), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
+
+
 end
 
 # TODO windows on CI stuck here ??

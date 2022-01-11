@@ -24,8 +24,7 @@ julia> for col in [:IATA, :Tail_Number, :Origin, :Dest, :CancellationCode]
            flights[!, col] = PooledArray(flights[!, col])
        end # convert Strings to PooledArray for efficiency
 
-julia> setinfo!(flights, "Reporting Carrier On-Time Performance for all flights in 2020 from CA. Downloaded from www.transtats.bts.gov")
-"Reporting Carrier On-Time Performance for all flights in 2020 from CA. Downloaded from www.transtats.bts.gov"
+julia> setinfo!(flights, "Reporting Carrier On-Time Performance for all flights in 2020 from CA. Downloaded from www.transtats.bts.gov");
 ```
 
 ## Filtering the data
@@ -248,7 +247,7 @@ julia> combine(groupby(flights, :Dest), :ArrDelay => mean)
                100 rows omitted
 ```
 
-we can summarise several columns at the same time, e.g. for each carrier, calculate the minimum and maximum arrival and departure delays:(Note that in the following code, `r"Delay" => [minimum, maximum]` is normalised as `names(flights, r"Delay") .=> Ref([minimum, maximum])`) 
+we can summarise several columns at the same time, e.g. for each carrier, calculate the minimum and maximum arrival and departure delays:(Note that in the following code, `r"Delay" => [minimum, maximum]` is normalised as `names(flights, r"Delay") .=> Ref([minimum, maximum])`)
 
 
 ```julia
@@ -432,8 +431,6 @@ We could use Julia partial sorting too.
 For each month, calculate the number of flights and the change from the previous month
 
 ```julia
-julia> using ShiftedArrays
-
 julia> @chain flights begin
           setformat!(1 => month)
           groupby(1)

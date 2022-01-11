@@ -421,7 +421,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
 				rangelen = Int(rnglen)
 			end
 			o2 = false
-			if BigInt(prev_max_group)*rangelen < 2*length(v)
+			if o1 && BigInt(prev_max_group)*rangelen < 2*length(v)
 				o2 = true
 			end
             if o1 && o2 && maxval < typemax(Int)

@@ -1,7 +1,7 @@
 # TODO the docstring needs some updates, also some of the keyword arguments are missing int he docstring, e.g. accelerate, usehash
 
 """
-    leftjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true)
+    leftjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort)
 
 Perform a left join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` containing all rows from the left table `dsl`.
 
@@ -21,6 +21,7 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -139,7 +140,7 @@ function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
 
 end
 """
-    leftjoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
+    leftjoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort)
 
 Variant of `leftjoin` that performs `leftjoin` in place for special case that the number of matching rows from the right data set is at most one.
 ```
@@ -172,7 +173,7 @@ function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique 
 end
 
 """
-    innerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true)
+    innerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort)
 
 Perform a inner join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing all rows where matching values exist `on` the keys for both `dsl` and `dsr`.
@@ -192,6 +193,7 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 - `droprangecols`: determine whether the range columns should be dropped from the final output in case of inequality-like innerjoin. Default is set to `true`
 - `strict_inequality`: determine if the inequlities in inequlity-like innerjoins are strict. Default is set to `false`.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
@@ -319,7 +321,7 @@ function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
 end
 
 """
-    outerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true)
+    outerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort)
 
 Perform an outer join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing all rows where keys appear in either `dsl` or `dsr`.
@@ -327,7 +329,7 @@ containing all rows where keys appear in either `dsl` or `dsr`.
 The output contains two part.
 For the first part, the order of rows will be the same as the left table `dsl` if keys appear in `dsl`;
 for the second part, some other rows that have values in `dsr` while do not have matching values `on` keys in `dsl`
-will be added after the first part. No rule governs the order of observation for the second part.
+will be added after the first part. No rule governs the order of observation for the second part when `method = :sort`.
 
 # Arguments
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
@@ -340,6 +342,7 @@ will be added after the first part. No rule governs the order of observation for
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -455,10 +458,12 @@ function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
 end
 
 """
-    contains(main, transaction; on, mapformats, alg, stable)
+    contains(main, transaction; on, mapformats = true, alg = HeapSort, stable = false, accelerate = false, method = :sort)
 
 returns a boolean vector where is true when the key for the
 corresponding row in the `main` data set is found in the transaction data set.
+
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 
 # Examples
 
@@ -530,34 +535,8 @@ function Base.contains(main::AbstractDataset, transaction::AbstractDataset; on =
 
 end
 
-# function contains2(main::AbstractDataset, transaction::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false)
-#     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
-#     if !(on isa AbstractVector)
-#         on = [on]
-#     else
-#         on = on
-#     end
-#     if !(mapformats isa AbstractVector)
-#         mapformats = repeat([mapformats], 2)
-#     else
-#         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
-#     end
-#     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
-#         onleft = multiple_getindex(index(main), on)
-#         onright = multiple_getindex(index(transaction), on)
-#     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
-#         onleft = multiple_getindex(index(main), map(x->x.first, on))
-#         onright = multiple_getindex(index(transaction), map(x->x.second, on))
-#     else
-#         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
-#     end
-#     _in(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate)
-#
-# end
-
-
 """
-    antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false)
+    antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :sort)
 
 Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
@@ -577,6 +556,7 @@ rows that have key values appear in `dsr` will be removed.
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -668,7 +648,7 @@ function DataAPI.antijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     end
 end
 """
-    semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false)
+    semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :sort)
 
 Perform a semi join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
@@ -688,6 +668,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -781,7 +762,7 @@ function DataAPI.semijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     end
 end
 """
-    antijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
+    antijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort)
 
 Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
@@ -801,6 +782,7 @@ rows that have key values appear in `dsr` will be removed.
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -903,7 +885,7 @@ function antijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats:
     deleteat!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method))
 end
 """
-    semijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false)
+    semijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort)
 
 Perform a semi join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
@@ -923,6 +905,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -1033,7 +1016,7 @@ end
 
 
 """
-    closejoin(dsl, dsr; on=nothing, direction=:backward, makeunique=false, border=:missing, mapformats=true, alg=HeapSort, stable=true)
+    closejoin(...)
 
 Variant of `closejoin!` that returns an updated copy of `dsl` leaving `dsl` itself unmodified.
 ```
@@ -1073,7 +1056,7 @@ function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, dir
 end
 
 """
-    closejoin!(dsl, dsr; on=nothing, direction=:backward, makeunique=false, border=:missing, mapformats=true, alg=HeapSort, stable=true, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing)
+    closejoin!(dsl, dsr; on=nothing, direction=:backward, makeunique=false, border=:missing, mapformats=true, alg=HeapSort, stable=true, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing, method = :sort)
 
 Perform a close join for two `Datasets` `dsl` & `dsr` and change the left table into a `Dataset`
 based on exact matches on the key variable or the closest matches when the exact match doesn't exist.
@@ -1089,6 +1072,7 @@ in the close match phase, only one of them will be selected, and the selected on
 - `direction`: direction of search in sorted `dsr` based on keys; by default, `:backward` is used
   and search direction are from the last row to the first row until the first value less than the key is found;
   setting to `:forward` can search for matching values top down until the first value larger than the key is found. Setting it to `:nearest` search in both direction and select the nearest one.
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `border`: `:missing` is used by default for the border value,
@@ -1100,7 +1084,7 @@ in the close match phase, only one of them will be selected, and the selected on
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `tol`: Select close match only if the distance is less than it.
 - `allow_exact_match`: If `true`, allows matching with the same key.
-- `op`: When `direction = :nearest` user can supply an operator where `closejoin!` call on two nearest points from the right data set close to the currrent observation in the left data set. The order of the argument to `op` is the same as the sorted order of point. It is important that `op` be able to handle misssing values. If there are multiple columns in the right table to be joint to the left table, the `op` operation applies to all of them.
+- `op`: When `direction = :nearest` user can supply an operator where `closejoin!` call on two nearest points from the right data set close to the currrent observation in the left data set. The order of the argument to `op` is the same as the sorted order of point. It is important that `op` be able to handle misssing values. If there are multiple columns in the right table to be joined to the left table, the `op` operation applies to all of them.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `true`, means that the sorting results have to be stable;
@@ -1374,7 +1358,7 @@ function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction 
 end
 
 """
-    update!(dsmain, dsupdate; on=nothing, allowmissing=false, mode=:all, mapformats=true, alg=HeapSort, stable=true)
+    update!(dsmain, dsupdate; on=nothing, allowmissing=false, mode=:all, mapformats=true, alg=HeapSort, stable=true, accelerate = false, method = :sort)
 
 Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows,
 and change the left `Dataset` after updating.
@@ -1396,6 +1380,7 @@ the order of selected observation from the right table.
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `true`, means that the sorting results have to be stable;
@@ -1476,7 +1461,7 @@ function update!(dsmain::Dataset, dsupdate::AbstractDataset; on = nothing, allow
     dsmain
 end
 """
-    update(dsmain, dsupdate; on=nothing, allowmissing=false, mode=:all, mapformats=true, alg=HeapSort, stable=true)
+    update(...)
 
 Variant of `update!` that returns an updated copy of `dsmain` leaving `dsmain` itself unmodified.
 """
