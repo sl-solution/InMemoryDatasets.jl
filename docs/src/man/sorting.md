@@ -8,7 +8,9 @@ Sorting is one of the key tasks for Datasets. Actually, when we group a data set
 
 ## `sort!/sort`
 
-The `sort!` function accepts a Dataset and a set of columns and sorts the given Dataset based on provided columns. By default the `sort!` function does the sorting based on the formatted values, however, using `mapformats = false` forces the sorting be done based on the actual values. `sort!` doesn't create a new dataset, it only replaces the original one with the sorted one. If the original data set needed to be untouched the `sort` function must be used. By default, both `sort!` and `sort` functions do a stable sort using a hybrid `Heap` sort algorithm. If the stability of the sort is not needed, using the keyword option `stable = false` can improve the performance. User can also change the default sorting algorithm to hybrid `QuickSort` by using the `alg = QuickSort` option. By default the ascending sorting is used for the sorting task, and using `rev = true` changes it to descending ordering, and for multiple columns a vector of  `true`, `false` can be supplied for this option, i.e. each column can be sorted in ascending or descending order independently. Note that:
+The `sort!` function accepts a Dataset and a set of columns and sorts the given Dataset based on provided columns. By default the `sort!` function does the sorting based on the formatted values, however, using `mapformats = false` forces the sorting be done based on the actual values. `sort!` doesn't create a new dataset, it only replaces the original one with the sorted one. If the original data set needed to be untouched the `sort` function must be used. By default, both `sort!` and `sort` functions do a stable sort using a hybrid `Heap` sort algorithm. If the stability of the sort is not needed, using the keyword option `stable = false` can improve the performance. User can also change the default sorting algorithm to hybrid `QuickSort` by using the `alg = QuickSort` option. For most problems `QuickSort` algorithm is faster than the default algorithm, however, its worst case scenario is slower than the default algorithm.
+
+By default the ascending sorting is used for the sorting task, and using `rev = true` changes it to descending ordering, and for multiple columns a vector of  `true`, `false` can be supplied for this option, i.e. each column can be sorted in ascending or descending order independently. Note that:
 
 * Datasets uses `isless` for checking the order of values.
 
@@ -251,6 +253,16 @@ julia> ds[p, :]
    3 │        2         1
    4 │        3         4
    5 │        4        52
+```
+
+In the following example we show the performance difference between the default algorithm and `QuickSort` algorithm for sorting Integers.
+
+```jldoctest
+julia> ds = Dataset(x = rand(Int, 10^8));
+julia> @time sortperm(ds,1, stable = false);
+ 21.663503 seconds (604 allocations: 2.887 GiB, 0.11% gc time)
+julia> @time sortperm(ds,1, stable = false, alg = QuickSort);
+ 4.818334 seconds (591 allocations: 2.887 GiB, 7.05% gc time)
 ```
 
 ## `unsort!`

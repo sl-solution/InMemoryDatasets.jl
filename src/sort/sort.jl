@@ -77,7 +77,11 @@ function Base.sort(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev
     _reset_grouping_info!(newds)
     append!(index(newds).sortedcols, collect(colsidx))
     append!(index(newds).rev, revs)
-    append!(index(newds).perm, collect(perm))
+    if !(perm isa Vector)
+        append!(index(newds).perm, collect(perm))
+    else
+        append!(index(newds).perm, perm)
+    end
     append!(index(newds).starts, starts)
     index(newds).ngroups[] = ngroups
     index(newds).fmt[] = mapformats

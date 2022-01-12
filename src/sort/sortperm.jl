@@ -134,9 +134,13 @@ function _apply_by_f_barrier(x::AbstractVector{T}, by, rev) where T
     needrev = rev
     missat = :right
     CT = Core.Compiler.return_type(_date_value∘by, (nonmissingtype(T), ))
+    if CT == Bool
+        CT = Int8
+    end
     CT = Union{Missing, CT}
     _temp = Vector{CT}(undef, length(x))
-    if rev && nonmissingtype(CT) <: Signed && isless(typemin(nonmissingtype(CT)), hp_minimum(_date_value∘by, x))
+    # we should make sure changing sign doesn't overflow
+    if rev && nonmissingtype(CT) <: Union{Bool, Int8, Int16, Int32, Int64} && isless(typemin(nonmissingtype(CT)), hp_minimum(_date_value∘by, x))
         _by = x-> -_date_value(by(x))
         needrev = false
         missat = :left
