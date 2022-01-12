@@ -136,8 +136,7 @@ function _apply_by_f_barrier(x::AbstractVector{T}, by, rev) where T
     CT = Core.Compiler.return_type(_date_value∘by, (nonmissingtype(T), ))
     CT = Union{Missing, CT}
     _temp = Vector{CT}(undef, length(x))
-    # FIXME this is trouble if counting sort is not going to be used
-    if rev && nonmissingtype(CT) <: Signed
+    if rev && nonmissingtype(CT) <: Signed && isless(typemin(nonmissingtype(CT)), hp_minimum(_date_value∘by, x))
         _by = x-> -_date_value(by(x))
         needrev = false
         missat = :left

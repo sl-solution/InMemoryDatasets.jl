@@ -149,6 +149,10 @@ using InMemoryDatasets, PooledArrays, Random, Test, CategoricalArrays
     @test issorted(ds, :, rev = true)
     sort!(ds, :, rev = [true, false, true])
     @test issorted(ds, :, rev = [true, false, true])
+
+    ds = Dataset(x = Int8[-128, 1,2,1,127, -127])
+    @test sort(ds, 1) == ds[[1,6,2,4,3,5], :]
+    @test sort(ds, 1, rev = true) == ds[[5,3,4,2,6,1], :]
 end
 
 @testset "_find_starts_of_groups" begin
