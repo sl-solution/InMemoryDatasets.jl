@@ -971,7 +971,7 @@ julia> nonunique(ds, 2)
  1
 ```
 """
-function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, leave = :first)
+function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, leave = :first, threads = true)
     # :xor, :nor, :and, :or are undocumented
     !(leave in (:first, :last, :none, :random, :xor, :nand, :nor, :and, :or)) && throw(ArgumentError("`leave` must be either `:first`, `:last`, `:none`, or `random`"))
     if ncol(ds) == 0
@@ -979,7 +979,7 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
                             "columns is not allowed"))
     end
 
-    groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats, stable = false)
+    groups, gslots, ngroups = _gather_groups(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), mapformats = mapformats, stable = false, threads = threads)
     if leave === :random
         return _nonunique_random_leave(groups, ngroups, nrow(ds))
     end
@@ -1014,7 +1014,7 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
     end
 
 end
-nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false, leave = :first) = nonunique(ds, [col]; mapformats = mapformats, leave = leave)
+nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false, leave = :first, threads = true) = nonunique(ds, [col]; mapformats = mapformats, leave = leave, threads = threads)
 
 function _nonunique_barrier!(res, groups, seen_groups; first = true)
     if first

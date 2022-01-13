@@ -1,11 +1,11 @@
-function Base.sortperm(ds::Dataset, cols; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+function Base.sortperm(ds::Dataset, cols; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
     isempty(ds) && return []
     _check_consistency(ds)
     colsidx = index(ds)[cols]
-    _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)[2]
+    _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, threads = threads)[2]
 end
 
-function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
     isempty(ds) && return ds
     _check_consistency(ds)
     colsidx = index(ds)[cols]
@@ -25,7 +25,7 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), re
     if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 2
         skipcol = length(index(ds).sortedcols)
     end
-    starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = false)
+    starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = false, threads = threads)
     if _use_ds_perm || skipcol>0 #index(ds).perm and index(ds).starts already been updated
         empty!(index(ds).sortedcols)
         empty!(index(ds).rev)
@@ -48,15 +48,15 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), re
     end
 
     _modified(_attributes(ds))
-    _permute_ds_after_sort!(ds, perm)
+    _permute_ds_after_sort!(ds, perm; threads = threads)
     ds
 end
 
 
-Base.sort!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true) = sort!(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable)
+Base.sort!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true, threads = true) = sort!(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable, threads = threads)
 
 
-function Base.sort(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+function Base.sort(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
     isempty(ds) && return copy(ds)
     _check_consistency(ds)
     colsidx = index(ds)[cols]
@@ -72,7 +72,7 @@ function Base.sort(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev
     if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 2
         skipcol = length(index(ds).sortedcols)
     end
-    starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = true)
+    starts, perm, ngroups = _sortperm(ds, cols, revs; a = alg, mapformats = mapformats, stable = stable, skipcol = skipcol, skipcol_mkcopy = true, threads = threads)
     newds = ds[perm, :]
     _reset_grouping_info!(newds)
     append!(index(newds).sortedcols, collect(colsidx))
@@ -89,9 +89,9 @@ function Base.sort(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev
 end
 
 
-Base.sort(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable)
+Base.sort(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true, threads = true) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable, threads = threads)
 
-function Base.sort(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, view = false)
+function Base.sort(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, view = false, threads = true)
     _check_consistency(ds)
     colsidx = index(ds)[cols]
     if rev isa AbstractVector
@@ -100,7 +100,7 @@ function Base.sort(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), 
     else
         revs = repeat([rev], length(colsidx))
     end
-    starts, idx, last_valid_range =  _sortperm_v(ds, cols, revs, stable = stable, a = alg, mapformats = mapformats)
+    starts, idx, last_valid_range =  _sortperm_v(ds, cols, revs, stable = stable, a = alg, mapformats = mapformats, threads = true)
     if view
         Base.view(ds, idx, :)
     else
@@ -115,17 +115,17 @@ function Base.sort(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), 
     end
 end
 
-Base.sort(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable)
+Base.sort(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true, threads = true) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable, threads = threads)
 
-function Base.sortperm(ds::SubDataset, cols; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+function Base.sortperm(ds::SubDataset, cols; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
     isempty(ds) && return []
     _check_consistency(ds)
     colsidx = index(ds)[cols]
-    _sortperm_v(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)[2]
+    _sortperm_v(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, threads = threads)[2]
 end
 
 
-function unsort!(ds::Dataset)
+function unsort!(ds::Dataset; threads = true)
     isempty(ds) && return ds
     if isempty(index(ds).perm) #if perm is empty everything else should be empty, here we just make sure
         empty!(index(ds).sortedcols)
@@ -135,20 +135,20 @@ function unsort!(ds::Dataset)
         index(ds).grouped[] = false
         return ds
     else
-        _permute_ds_after_sort!(ds, invperm(index(ds).perm))
+        _permute_ds_after_sort!(ds, invperm(index(ds).perm); threads = threads)
         # TODO we may don't need to reset grouping info
         _reset_grouping_info!(ds)
         ds
     end
 end
 
-function Base.issorted(ds::AbstractDataset, cols::MultiColumnIndex; rev = false, mapformats = true)
-    _issorted(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), rev = rev, mapformats = mapformats)[1]
+function Base.issorted(ds::AbstractDataset, cols::MultiColumnIndex; rev = false, mapformats = true, threads = true)
+    _issorted(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), rev = rev, mapformats = mapformats, threads = threads)[1]
 end
-Base.issorted(ds::AbstractDataset, col::ColumnIndex; rev = false, mapformats = true) = issorted(ds, [col], rev = rev, mapformats = mapformats)
+Base.issorted(ds::AbstractDataset, col::ColumnIndex; rev = false, mapformats = true, threads = true) = issorted(ds, [col], rev = rev, mapformats = mapformats, threads = threads)
 
-function issorted!(ds::Dataset, cols::MultiColumnIndex; rev = false, mapformats = true)
-    res, starts, lastvalid, colsidx, revs, mapformats = _issorted(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), rev = rev, mapformats = mapformats)
+function issorted!(ds::Dataset, cols::MultiColumnIndex; rev = false, mapformats = true, threads = true)
+    res, starts, lastvalid, colsidx, revs, mapformats = _issorted(ds, cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64), rev = rev, mapformats = mapformats, threads = threads)
     if res
         _reset_grouping_info!(ds)
         append!(index(ds).sortedcols, collect(colsidx))
@@ -161,9 +161,9 @@ function issorted!(ds::Dataset, cols::MultiColumnIndex; rev = false, mapformats 
     res
 end
 
-issorted!(ds::Dataset, col::ColumnIndex; rev = false, mapformats = true) = issorted!(ds, [col], rev = rev, mapformats = mapformats)
+issorted!(ds::Dataset, col::ColumnIndex; rev = false, mapformats = true, threads = true) = issorted!(ds, [col], rev = rev, mapformats = mapformats, threads = threads)
 
-function _issorted(ds, cols::MultiColumnIndex, ::Val{T}; rev = false, mapformats = true) where T
+function _issorted(ds, cols::MultiColumnIndex, ::Val{T}; rev = false, mapformats = true, threads = true) where T
     colsidx = index(ds)[cols]
     if rev isa AbstractVector
         @assert length(rev) == length(colsidx) "length of rev and the number of selected columns must match"
@@ -191,9 +191,9 @@ function _issorted(ds, cols::MultiColumnIndex, ::Val{T}; rev = false, mapformats
     for j in 1:length(colsidx)
         v = _columns(ds)[colsidx[j]]
         _ord =  Base.Order.ord(isless, by[j], revs[j])
-        part_res = _issorted_check_for_each_range(v, starts, lastvalid, _ord, nrow(ds))
+        part_res = _issorted_check_for_each_range(v, starts, lastvalid, _ord, nrow(ds); threads = threads)
         !part_res && return false, starts, lastvalid, colsidx, revs, mapformats
-        _find_starts_of_groups!(_columns(ds)[colsidx[j]], 1:nrow(ds), by[j], inbits)
+        _find_starts_of_groups!(_columns(ds)[colsidx[j]], 1:nrow(ds), by[j], inbits; threads = threads)
         lastvalid = _fill_starts_from_inbits!(starts, inbits)
         lastvalid == nrow(ds) && return true, starts, lastvalid, colsidx, revs, mapformats
         # lastvalid = _fill_starts_v2!(starts, inbits, _columns(ds)[colsidx[j]], lastvalid, Base.Order.ord(isless, by[j], revs[j]), Val(T))
@@ -201,9 +201,9 @@ function _issorted(ds, cols::MultiColumnIndex, ::Val{T}; rev = false, mapformats
     res, starts, lastvalid, colsidx, revs, mapformats
 end
 
-function _issorted_check_for_each_range(v, starts, lastvalid, _ord, nrows)
-    part_res = ones(Bool, Threads.nthreads())
-    Threads.@threads for rng in 1:lastvalid
+function _issorted_check_for_each_range(v, starts, lastvalid, _ord, nrows; threads = true)
+    part_res = ones(Bool, threads ? Threads.nthreads() : 1)
+    @_threadsfor threads for rng in 1:lastvalid
         lo = starts[rng]
         rng == lastvalid ? hi = nrows : hi = starts[rng+1] - 1
         part_res[Threads.threadid()] = _issorted_barrier(v, _ord, lo, hi)

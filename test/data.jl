@@ -21,9 +21,28 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
     @test findall(nonunique(ds, Not([false, true, false]))) == collect(7:12)
     @test findall(nonunique(ds, [1, 3])) == collect(7:12)
     @test findall(nonunique(ds, 1)) == collect(3:12)
+
+    @test findall(nonunique(ds, threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, leave = :last, threads = false)) == collect(1:6)
+    @test findall(nonunique(ds, :, threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, Colon(), threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, :a, threads = false)) == collect(3:12)
+    @test findall(nonunique(ds, "a", threads = false)) == collect(3:12)
+    @test findall(nonunique(ds, [:a, :c], threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, ["a", "c"], threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, r"[ac]", threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, Not(2), threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, Not([2]), threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, Not(:b), threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, Not([:b]), threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, Not([false, true, false]), threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, [1, 3], threads = false)) == collect(7:12)
+    @test findall(nonunique(ds, 1, threads = false)) == collect(3:12)
+
     fmt(x)=1
     setformat!(ds, :a=>fmt)
     @test findall(nonunique(ds, :a, mapformats = true)) == 2:12
+    @test findall(nonunique(ds, :a, mapformats = true, threads = false)) == 2:12
 
 
     @test unique(ds) == ds1
@@ -45,17 +64,46 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
     @test unique(ds, "a") == ds1[1:2, :]
     @test unique(ds, :a, mapformats = true) == ds[1:1, :]
 
+    @test unique(ds, threads = false) == ds1
+    @test unique(ds, keep = :last, threads = false) == ds1
+    @test unique(ds, :, threads = false) == ds1
+    @test unique(ds, Colon(), threads = false) == ds1
+    @test unique(ds, 2:3, threads = false) == ds1
+    @test unique(ds, 3, threads = false) == ds1[1:3, :]
+    @test unique(ds, [1, 3], threads = false) == ds1
+    @test unique(ds, [:a, :c], threads = false) == ds1
+    @test unique(ds, ["a", "c"], threads = false) == ds1
+    @test unique(ds, r"[ac]", threads = false) == ds1
+    @test unique(ds, Not(2), threads = false) == ds1
+    @test unique(ds, Not([2]), threads = false) == ds1
+    @test unique(ds, Not(:b), threads = false) == ds1
+    @test unique(ds, Not([:b]), threads = false) == ds1
+    @test unique(ds, Not([false, true, false]), threads = false) == ds1
+    @test unique(ds, :a, threads = false) == ds1[1:2, :]
+    @test unique(ds, "a", threads = false) == ds1[1:2, :]
+    @test unique(ds, :a, mapformats = true, threads = false) == ds[1:1, :]
+
     @test_throws ArgumentError unique(Dataset())
     @test_throws ArgumentError nonunique(Dataset())
 
+    @test_throws ArgumentError unique(Dataset(), threads = false)
+    @test_throws ArgumentError nonunique(Dataset(), threads = false)
+
     @test unique(copy(ds1), "a") == unique(copy(ds1), :a) == unique(copy(ds1), 1) ==
           ds1[1:2, :]
-
+  @test unique(copy(ds1), "a", threads = false) == unique(copy(ds1), :a, threads = false) == unique(copy(ds1), 1, threads = false) ==
+        ds1[1:2, :]
     unique!(ds, [1, 3])
     @test ds == ds1
     for cols in (r"[ac]", Not(:b), Not(2), Not([:b]), Not([2]), Not([false, true, false]))
         ds = vcat(ds1, ds1)
         unique!(ds, cols)
+        @test ds == ds1
+    end
+
+    for cols in (r"[ac]", Not(:b), Not(2), Not([:b]), Not([2]), Not([false, true, false]))
+        ds = vcat(ds1, ds1)
+        unique!(ds, cols, threads = false)
         @test ds == ds1
     end
 
@@ -65,6 +113,13 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
     ds3 = unique(ds, keep = :none)
     ds4 = unique(ds, 1, keep = :last)
     ds5 = unique(ds, 1, keep = :none)
+
+    @test ds1 == unique(ds, threads = false)
+    @test ds2 == unique(ds, keep = :last, threads = false)
+    @test ds3 == unique(ds, keep = :none, threads = false)
+    @test ds4 == unique(ds, 1, keep = :last, threads = false)
+    @test ds5 == unique(ds, 1, keep = :none, threads = false)
+
     ds1_t = Dataset([Union{Missing, Int64}[3, 3, 1, 2, 2, 3, 1, 3], Union{Missing, Int64}[1, 1, 1, 1, 2, 2, 2, 3], Union{Missing, Int64}[1, 3, 1, 1, 2, 2, 2, 1]], :auto)
     ds2_t = Dataset([Union{Missing, Int64}[3, 2, 2, 3, 3, 1, 1, 3], Union{Missing, Int64}[1, 1, 2, 1, 2, 2, 1, 3], Union{Missing, Int64}[1, 1, 2, 3, 2, 2, 1, 1]], :auto)
     ds3_t = Dataset([Union{Missing, Int64}[3, 2, 2, 3, 1, 3], Union{Missing, Int64}[1, 1, 2, 2, 2, 3], Union{Missing, Int64}[1, 1, 2, 2, 2, 1]], :auto)
@@ -75,6 +130,14 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
     ds8 = unique!(copy(ds), keep = :none)
     ds9 = unique!(copy(ds), 1, keep = :last)
     ds10 = unique!(copy(ds), 1, keep = :none)
+
+    @test ds6 == unique!(copy(ds), threads = false)
+    @test ds7 == unique!(copy(ds), keep = :last, threads = false)
+    @test ds8 == unique!(copy(ds), keep = :none, threads = false)
+    @test ds9 == unique!(copy(ds), 1, keep = :last, threads = false)
+    @test ds10 == unique!(copy(ds), 1, keep = :none, threads = false)
+
+
     @test ds1 == ds1_t
     @test ds2 == ds2_t
     @test ds3 == ds3_t
@@ -86,17 +149,23 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
     @test ds9 == ds4_t
     @test ds10 == ds5_t
     @test unique(ds, 1, keep = :only) == ds
+    @test unique(ds, 1, keep = :only, threads = false) == ds
     mft(x) = x == 1 ? missing : x==2 ? 10 : 4
     setformat!(ds, 1:3=>mft)
     ds1 = unique(ds, 2:3, mapformats = true)
+    @test ds1 == unique(ds, 2:3, mapformats = true, threads = false)
     ds1_t = ds[[1,2,5,10], :]
     ds2 = unique(ds, 1, mapformats = true)
+    @test ds2 == unique(ds, 1, mapformats = true, threads = false)
     ds2_t = ds[[1,3,4], :]
     ds3 = unique(ds, 1, mapformats = true, keep = :last)
+    @test ds3 == unique(ds, 1, mapformats = true, keep = :last, threads = false)
     ds3_t = ds[[5,9,10], :]
     ds4 = unique(ds,1,mapformats = true, keep = :none)
+    @test ds4 == unique(ds,1,mapformats = true, keep = :none, threads = false)
     ds4_t = ds[[], :]
     ds5 = unique(ds,1:2, mapformats = true, keep = :none)
+    @test ds5 == unique(ds,1:2, mapformats = true, keep = :none, threads = false)
     ds5_t = ds[[4,5,7,8,10], :]
     @test ds1 == ds1_t
     @test ds2 == ds2_t
@@ -106,6 +175,11 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
     @test unique(ds, 1:2, keep = :only, mapformats = true) == ds[[1,2,3,6,9], :]
     @test unique(ds, 1, keep = :only, mapformats = true) == ds
     @test unique(ds, 1:3, keep = :only, mapformats = true) == ds[[2,3,6,9], :]
+
+    @test unique(ds, 1:2, keep = :only, mapformats = true, threads = false) == ds[[1,2,3,6,9], :]
+    @test unique(ds, 1, keep = :only, mapformats = true, threads = false) == ds
+    @test unique(ds, 1:3, keep = :only, mapformats = true, threads = false) == ds[[2,3,6,9], :]
+
     @test byrow(compare(ds1, ds1_t, mapformats =true), all)|>all
     @test byrow(compare(ds2, ds2_t, mapformats =true), all)|>all
     @test byrow(compare(ds3, ds3_t, mapformats =true), all)|>all
@@ -114,8 +188,10 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
 
     for cols in [1, 1:2, 1:3], keepval in (:first, :last, :none, :only), mfmt in [true, false]
         @test unique(ds, cols, keep = keepval, mapformats = mfmt) == unique(view(ds, :, :), cols, keep = keepval, mapformats = mfmt)
+        @test unique(ds, cols, keep = keepval, mapformats = mfmt) == unique(view(ds, :, :), cols, keep = keepval, mapformats = mfmt, threads = false)
         ds2 = ds[nrow(ds):-1:1, ncol(ds):-1:1]
         @test unique(ds2, cols, keep = keepval, mapformats = mfmt) == unique(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), cols, keep = keepval, mapformats = mfmt)
+        @test unique(ds2, cols, keep = keepval, mapformats = mfmt) == unique(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), cols, keep = keepval, mapformats = mfmt, threads = false)
     end
     ds1 = Dataset(a = Union{String, Missing}["a", "b", "a", "b", "a", "b"],
                    b = Vector{Union{Int, Missing}}(1:6),

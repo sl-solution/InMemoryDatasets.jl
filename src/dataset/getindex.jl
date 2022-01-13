@@ -147,9 +147,9 @@ function Base.getindex(ds::Dataset, ::typeof(!), col_ind::SymbolOrString)
 end
 
 # ds[MultiRowIndex, MultiColumnIndex] => Dataset
-function _threaded_permute(x, perm)
+function _threaded_permute(x, perm; threads = true)
     x_cpy = similar(x, length(perm))
-    Threads.@threads for i in 1:length(x_cpy)
+    @_threadsfor threads for i in 1:length(x_cpy)
         x_cpy[i] = x[perm[i]]
     end
     x_cpy

@@ -731,73 +731,73 @@ function _unique_none_case(ds::Dataset, cols; mapformats = false)
 end
 
 # Modify Dataset
-function Base.unique!(ds::Dataset; mapformats = false, keep = :first)
+function Base.unique!(ds::Dataset; mapformats = false, keep = :first, threads = true)
     !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
-        rowidx = nonunique(ds, mapformats = mapformats, leave = :or)
+        rowidx = nonunique(ds, mapformats = mapformats, leave = :or, threads = threads)
     elseif keep == :only
-        rowidx = nonunique(ds, mapformats = mapformats, leave = :none)
+        rowidx = nonunique(ds, mapformats = mapformats, leave = :none, threads = threads)
     elseif keep == :random
-        rowidx = nonunique(ds, mapformats = mapformats, leave = :random)
+        rowidx = nonunique(ds, mapformats = mapformats, leave = :random, threads = threads)
     else
-        rowidx = nonunique(ds, mapformats = mapformats, leave = keep)
+        rowidx = nonunique(ds, mapformats = mapformats, leave = keep, threads = threads)
     end
     deleteat!(ds, rowidx)
 end
 # this is for fixing ambiguity
-function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first)
+function Base.unique!(ds::Dataset, cols::AbstractVector; mapformats = false, keep = :first, threads = true)
     !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
-        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or, threads = threads)
     elseif keep == :only
-        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none, threads = threads)
     elseif keep == :random
-        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :random)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :random, threads = threads)
     else
-        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = keep)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = keep, threads = threads)
     end
     deleteat!(ds, rowidx)
 end
-function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first)
+function Base.unique!(ds::Dataset, cols; mapformats = false, keep = :first, threads = true)
     !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
-        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :or, threads = threads)
     elseif keep == :only
-        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :none, threads = threads)
     elseif keep == :random
-        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :random)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = :random, threads = threads)
     else
-        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = keep)
+        rowidx = nonunique(ds, cols, mapformats = mapformats, leave = keep, threads = threads)
     end
     deleteat!(ds, rowidx)
 end
 
 
 # Unique rows of an Dataset.
-@inline function Base.unique(ds::AbstractDataset; view::Bool=false, mapformats = false, keep = :first)
+@inline function Base.unique(ds::AbstractDataset; view::Bool=false, mapformats = false, keep = :first, threads = true)
     !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
-        rowidxs = nonunique(ds, mapformats = mapformats, leave = :none)
+        rowidxs = nonunique(ds, mapformats = mapformats, leave = :none, threads = threads)
     elseif keep == :only
-        rowidxs = nonunique(ds, mapformats = mapformats, leave = :or)
+        rowidxs = nonunique(ds, mapformats = mapformats, leave = :or, threads = threads)
     elseif keep == :random
-        rowidxs = .!nonunique(ds, mapformats = mapformats, leave = :random)
+        rowidxs = .!nonunique(ds, mapformats = mapformats, leave = :random, threads = threads)
     else
-        rowidxs = (!).(nonunique(ds, mapformats = mapformats, leave = keep))
+        rowidxs = (!).(nonunique(ds, mapformats = mapformats, leave = keep, threads = threads))
     end
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
 
-@inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false, mapformats = false, keep = :first)
+@inline function Base.unique(ds::AbstractDataset, cols; view::Bool=false, mapformats = false, keep = :first, threads = true)
     !(keep in (:first, :last, :none, :only, :random)) && throw(ArgumentError( "The `keep` keyword argument must be one of :first, :last, :only, :none, or :random"))
     if keep == :none
-        rowidxs = nonunique(ds, cols, mapformats = mapformats, leave = :none)
+        rowidxs = nonunique(ds, cols, mapformats = mapformats, leave = :none, threads = threads)
     elseif keep == :only
-        rowidxs = nonunique(ds, cols, mapformats = mapformats, leave = :or)
+        rowidxs = nonunique(ds, cols, mapformats = mapformats, leave = :or, threads = threads)
     elseif keep == :random
-        rowidxs = .!nonunique(ds, cols, mapformats = mapformats, leave = :random)
+        rowidxs = .!nonunique(ds, cols, mapformats = mapformats, leave = :random, threads = threads)
     else
-        rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, leave = keep))
+        rowidxs = (!).(nonunique(ds, cols, mapformats = mapformats, leave = keep, threads = threads))
     end
     return view ? Base.view(ds, rowidxs, :) : ds[rowidxs, :]
 end
@@ -1111,7 +1111,7 @@ julia> describe(ds, sum, cols=:x)
 """
 function DataAPI.describe(ds::Dataset,
                  stats::Base.Callable...;
-                 cols=:)
+                 cols=:, threads = true)
         colsidx = index(ds)[cols]
 
         n_stats = Vector{Base.Callable}(undef, length(stats))
@@ -1121,7 +1121,7 @@ function DataAPI.describe(ds::Dataset,
         res = [Dataset() for _ in 1:length(colsidx)]
         newds = Dataset()
 
-        Threads.@threads for j in 1:length(colsidx)
+        @_threadsfor threads for j in 1:length(colsidx)
             res[j] = combine_ds(ds, colsidx[j] .=> n_stats .=> Symbol.([stats...]))
         end
 
@@ -1217,7 +1217,7 @@ function mapcols(ds::AbstractDataset, f::Vector{T}, cols = :) where T <: Union{F
     return Dataset(vs, names(ds, colsidx), copycols=false)
 end
 
-function _permute_ds_after_sort!(ds, perm; check = true, cols = :)
+function _permute_ds_after_sort!(ds, perm; check = true, cols = :, threads = true)
     if check
         @assert nrow(ds) == length(perm) "the length of perm and the nrow of the data set must match"
 
@@ -1236,9 +1236,9 @@ function _permute_ds_after_sort!(ds, perm; check = true, cols = :)
             #     _columns(ds)[colsidx[j] = _columns(ds)[colsidx[j][perm]
             # end
             # since we don't support copycols for external usage it is safe to only permute refs
-            _columns(ds)[colsidx[j]].refs = _threaded_permute(_columns(ds)[colsidx[j]].refs, perm)
+            _columns(ds)[colsidx[j]].refs = _threaded_permute(_columns(ds)[colsidx[j]].refs, perm; threads = threads)
         else
-            _columns(ds)[colsidx[j]] = _threaded_permute(_columns(ds)[colsidx[j]], perm)
+            _columns(ds)[colsidx[j]] = _threaded_permute(_columns(ds)[colsidx[j]], perm; threads = threads)
         end
     end
     _modified(_attributes(ds))

@@ -1,5 +1,5 @@
-function _find_ranges_for_closeback!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}) where T1 where T2
-    Threads.@threads for i in 1:length(x)
+function _find_ranges_for_closeback!(ranges, x, y, _fl::F1, _fr::F2, ::Val{T1}, ::Val{T2}; threads = true) where {T1, T2, F1, F2}
+    @_threadsfor threads for i in 1:length(x)
         curr_start = ranges[i].start
         if length(ranges[i]) == 0
             ranges[i] = 0:0
@@ -12,8 +12,8 @@ function _find_ranges_for_closeback!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2
     end
 end
 
-function _find_ranges_for_closefor!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}) where T1 where T2
-    Threads.@threads for i in 1:length(x)
+function _find_ranges_for_closefor!(ranges, x, y, _fl::F1, _fr::F2, ::Val{T1}, ::Val{T2}; threads = true) where {T1, T2, F1, F2}
+    @_threadsfor threads for i in 1:length(x)
         cur_stop = ranges[i].stop
         if length(ranges[i]) == 0
             ranges[i] = 0:0
@@ -26,8 +26,8 @@ function _find_ranges_for_closefor!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}
     end
 end
 
-function _find_ranges_for_closenearest!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}) where T1 where T2
-    Threads.@threads for i in 1:length(x)
+function _find_ranges_for_closenearest!(ranges, x, y, _fl::F1, _fr::F2, ::Val{T1}, ::Val{T2}; threads = true) where {T1, T2, F1, F2}
+    @_threadsfor threads for i in 1:length(x)
         cur_stop = ranges[i].stop
         curr_start = ranges[i].start
         if length(ranges[i]) == 0
@@ -51,7 +51,7 @@ end
 _IST_(x,y)=true
 
 function _close_notol_nn!(_res, ranges, x, rnn, lnn, bordervalue; threads = true)
-    Threads.@threads for i in 1:length(ranges)
+    @_threadsfor threads for i in 1:length(ranges)
         if ranges[i] == 0:0
             _res[i] = missing
         else
@@ -74,8 +74,8 @@ function _close_notol_nn!(_res, ranges, x, rnn, lnn, bordervalue; threads = true
     end
 end
 # instead of finding the nearest, set res = op(x[left], x[right]), in border it sets res = op(missing, x[border])
-function _close_notol_nn!(_res, ranges, x, rnn, lnn, bordervalue, op; threads = true)
-    Threads.@threads for i in 1:length(ranges)
+function _close_notol_nn!(_res, ranges, x, rnn, lnn, bordervalue, op::F; threads = true) where F
+    @_threadsfor threads for i in 1:length(ranges)
         if ranges[i] == 0:0
             _res[i] = missing
         else
@@ -89,7 +89,7 @@ function _close_notol_nn!(_res, ranges, x, rnn, lnn, bordervalue, op; threads = 
 end
 
 function _close_notol_noborder!(_res, ranges, x, direction; threads = true)
-    Threads.@threads for i in 1:length(ranges)
+    @_threadsfor threads for i in 1:length(ranges)
         if ranges[i] == 0:0
             _res[i] = missing
         else
@@ -107,7 +107,7 @@ function _close_notol_noborder!(_res, ranges, x, direction; threads = true)
     end
 end
 function _close_notol_border!(_res, ranges, x, bordervalue; threads = true)
-    Threads.@threads for i in 1:length(ranges)
+    @_threadsfor threads for i in 1:length(ranges)
         if ranges[i] == 0:0
             _res[i] = missing
         else
@@ -119,8 +119,8 @@ function _close_notol_border!(_res, ranges, x, bordervalue; threads = true)
     end
 end
 
-function _close_tol_nn!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; threads = true)
-    Threads.@threads for i in 1:length(ranges)
+function _close_tol_nn!(_res, ranges, x, rnn, lnn, tol, aem::F, bordervalue; threads = true) where F
+    @_threadsfor threads for i in 1:length(ranges)
         if ranges[i] == 0:0
             _res[i] = missing
         else
@@ -156,8 +156,8 @@ function _close_tol_nn!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; thread
 end
 
 # instead of finding the nearest, set res = op(x[left], x[right]), in border it sets res = op(missing, x[border]), op(missing, missing) must be defined
-function _close_tol_nn!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue, op; threads = true)
-    Threads.@threads for i in 1:length(ranges)
+function _close_tol_nn!(_res, ranges, x, rnn, lnn, tol, aem::F1, bordervalue, op::F2; threads = true) where {F1, F2}
+    @_threadsfor threads for i in 1:length(ranges)
         if ranges[i] == 0:0
             _res[i] = missing
         else
@@ -189,8 +189,8 @@ function _close_tol_nn!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue, op; th
 end
 
 
-function _close_tol_noborder!(_res, ranges, x, rnn, lnn, tol, aem, direction; threads = true)
-    Threads.@threads for i in 1:length(ranges)
+function _close_tol_noborder!(_res, ranges, x, rnn, lnn, tol, aem::F, direction; threads = true) where F
+    @_threadsfor threads for i in 1:length(ranges)
         if ranges[i] == 0:0
             _res[i] = missing
         else
@@ -216,8 +216,8 @@ function _close_tol_noborder!(_res, ranges, x, rnn, lnn, tol, aem, direction; th
         end
     end
 end
-function _close_tol_border!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; threads = true)
-    Threads.@threads for i in 1:length(ranges)
+function _close_tol_border!(_res, ranges, x, rnn, lnn, tol, aem::F, bordervalue; threads = true) where F
+    @_threadsfor threads for i in 1:length(ranges)
         if ranges[i] == 0:0
             _res[i] = missing
         else
@@ -234,7 +234,7 @@ function _close_tol_border!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; th
     end
 end
 
-function  _fill_right_cols_table_close!(_res, x, ranges, total, borderval, fill_val, direction; op = nothing, nn = false, rnn = nothing, lnn = nothing, tol = nothing, aem = _IST_ )
+function  _fill_right_cols_table_close!(_res, x, ranges, total, borderval, fill_val, direction; op = nothing, nn = false, rnn = nothing, lnn = nothing, tol = nothing, aem = _IST_, threads = true)
     if borderval == :nearest
         bordervalue = true
     elseif borderval == :none
@@ -245,36 +245,36 @@ function  _fill_right_cols_table_close!(_res, x, ranges, total, borderval, fill_
     if tol === nothing
         if nn
             if op === nothing
-                _close_notol_nn!(_res, ranges, x, rnn, lnn, bordervalue; threads = true)
+                _close_notol_nn!(_res, ranges, x, rnn, lnn, bordervalue; threads = threads)
             else
-                _close_notol_nn!(_res, ranges, x, rnn, lnn, bordervalue, op; threads = true)
+                _close_notol_nn!(_res, ranges, x, rnn, lnn, bordervalue, op; threads = threads)
             end
         else
             if ismissing(bordervalue)
-                _close_notol_noborder!(_res, ranges, x, direction; threads = true)
+                _close_notol_noborder!(_res, ranges, x, direction; threads = threads)
             else
-                _close_notol_border!(_res, ranges, x, bordervalue; threads = true)
+                _close_notol_border!(_res, ranges, x, bordervalue; threads = threads)
             end
         end
     else
         if nn
             if op === nothing
-                _close_tol_nn_noborder!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; threads = true)
+                _close_tol_nn_noborder!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; threads = threads)
             else
-                _close_tol_nn_noborder!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue, op; threads = true)
+                _close_tol_nn_noborder!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue, op; threads = threads)
             end
         else
             if ismissing(bordervalue)
-                _close_tol_noborder!(_res, ranges, x, rnn, lnn, tol, aem, direction; threads = true)
+                _close_tol_noborder!(_res, ranges, x, rnn, lnn, tol, aem, direction; threads = threads)
             else
-                _close_tol_border!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; threads = true)
+                _close_tol_border!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; threads = threads)
             end
         end
     end
 
 end
 
-function _change_refpool_find_range_for_close!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, direction, lmf, rmf, j; nsfpaj = true)
+function _change_refpool_find_range_for_close!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, direction, lmf, rmf, j; nsfpaj = true, threads = true)
     var_l = _columns(dsl)[oncols_left[j]]
     var_r = _columns(dsr)[oncols_right[j]]
     l_idx = oncols_left[j]
@@ -297,18 +297,18 @@ function _change_refpool_find_range_for_close!(ranges, dsl, dsr, r_perms, oncols
     else
         T2 = Core.Compiler.return_type(_fr, (eltype(var_r), ))
         if direction == :backward
-            _find_ranges_for_closeback!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2))
+            _find_ranges_for_closeback!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2); threads = threads)
         elseif direction == :forward
-            _find_ranges_for_closefor!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2))
+            _find_ranges_for_closefor!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2); threads = threads)
         elseif direction == :nearest
-            _find_ranges_for_closenearest!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2))
+            _find_ranges_for_closenearest!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2); threads = threads)
         end
     end
 end
 
 
 # border = :nearest | :missing | :none
-function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, direction = :backward, inplace = false, tol = nothing,  allow_exact_match = true, op = nothing, method = :sort) where T
+function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, direction = :backward, inplace = false, tol = nothing,  allow_exact_match = true, op = nothing, method = :sort, threads = true) where T
     isempty(dsl) && return copy(dsl)
     if !allow_exact_match
         #aem is the function to check allow_exact_match
@@ -333,24 +333,24 @@ function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, m
         nsfpaj = false
     end
     if length(oncols_left) > 1 && method == :hash
-        ranges, a, idx, minval, reps, sz, right_cols_2= _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], onright[1:end-1], mapformats, true, Val(T))
+        ranges, a, idx, minval, reps, sz, right_cols_2= _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], onright[1:end-1], mapformats, true, Val(T), threads = threads)
         filter!(!=(0), reps)
         pushfirst!(reps, 1)
         cumsum!(reps, reps)
         pop!(reps)
         grng = GIVENRANGE(idx, reps, Int[], length(reps))
-        starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, oncols_right[end], stable, alg, mapformats, nsfpaj, grng)
+        starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, oncols_right[end], stable, alg, mapformats, nsfpaj, grng, threads = threads)
     else
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1; nsfpaj = nsfpaj)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && length(oncols_right) > 1; nsfpaj = nsfpaj, threads = threads)
 
         for j in 1:(length(oncols_left) - 1)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj, threads = threads)
         end
     end
 
     # if border = :none , we should use :nearest direction
-    _change_refpool_find_range_for_close!(ranges, dsl, dsr, idx, oncols_left, oncols_right, border == :none ? :nearest : direction, mapformats[1], mapformats[2], length(oncols_left); nsfpaj = nsfpaj)
+    _change_refpool_find_range_for_close!(ranges, dsl, dsr, idx, oncols_left, oncols_right, border == :none ? :nearest : direction, mapformats[1], mapformats[2], length(oncols_left); nsfpaj = nsfpaj, threads = threads)
     total_length = nrow(dsl)
 
     if inplace
@@ -371,9 +371,9 @@ function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, m
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_close!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, total_length, border, fill_val, direction; nn = direction == :nearest, rnn = view(_columns(dsr)[oncols_right[end]], idx), lnn = _columns(dsl)[oncols_left[end]], tol = tol, aem = aem, op = op)
+            _fill_right_cols_table_close!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, total_length, border, fill_val, direction; nn = direction == :nearest, rnn = view(_columns(dsr)[oncols_right[end]], idx), lnn = _columns(dsl)[oncols_left[end]], tol = tol, aem = aem, op = op, threads = threads)
         else
-            _fill_right_cols_table_close!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, total_length, border, missing, direction; nn = direction == :nearest, rnn = view(_columns(dsr)[oncols_right[end]], idx), lnn = _columns(dsl)[oncols_left[end]], tol = tol, aem = aem, op = op)
+            _fill_right_cols_table_close!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, total_length, border, missing, direction; nn = direction == :nearest, rnn = view(_columns(dsr)[oncols_right[end]], idx), lnn = _columns(dsl)[oncols_left[end]], tol = tol, aem = aem, op = op, threads = threads)
         end
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]

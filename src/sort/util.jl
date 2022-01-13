@@ -62,7 +62,7 @@ function _find_blocks_sorted!(ranges, x, lo, hi, cnt, o::Ordering, ::Val{T}) whe
 end
 
 # inbits is zeros(Bool, length(x))
-function _fill_starts_v2!(ranges, inbits, x, last_valid_range, o::Ordering, ::Val{T}) where T
+function _fill_starts_v2!(ranges, inbits, x, last_valid_range, o::Ordering, ::Val{T}; threads = true) where T
     # first split x to chunks
     # if last_valid_range == 1
     #     @error "not yet implemented"
@@ -70,10 +70,10 @@ function _fill_starts_v2!(ranges, inbits, x, last_valid_range, o::Ordering, ::Va
     #
     # inbit = Vector{}
     fill!(inbits, false)
-    Threads.@threads for j in 1:last_valid_range
+    @_threadsfor threads for j in 1:last_valid_range
         inbits[ranges[j]] = true
     end
-    Threads.@threads for j in 1:last_valid_range
+    @_threadsfor threads for j in 1:last_valid_range
         lo::T = 0
         hi::T = 0
         lo = ranges[j]

@@ -286,6 +286,13 @@ end
     combine_out5 = combine(gatherby(dropmissing(ds, 1, view=true), 1), :x1=>maximum, :x1=>minimum, 2:3=>byrow(-))
     combine_out6 = combine(gatherby(ds, 1), :x1=>IMD.n)
 
+    @test combine_out1 == combine(groupby(ds, 1), :x1=>sum=>:x1_sum, :x1=>(x->sum(x))=>:x1_sum2, threads = false)
+    @test combine_out2 == combine(gatherby(ds, 1), :x1=>sum=>:x1_sum, :x1=>(x->sum(x))=>:x1_sum2, threads = false)
+    @test combine_out3 == combine(gatherby(dropmissing(ds, 1, view=true), 1), :x1=>sum=>:x1_sum, :x1=>(x->sum(x))=>:x1_sum2, threads = false)
+    @test combine_out4 == combine(gatherby(ds, 1), :x1=>maximum, :x1=>minimum, 2:3=>byrow(-), threads = false)
+    @test combine_out5 == combine(gatherby(dropmissing(ds, 1, view=true), 1), :x1=>maximum, :x1=>minimum, 2:3=>byrow(-), threads = false)
+    @test combine_out6 == combine(gatherby(ds, 1), :x1=>IMD.n, threads = false)
+
 
     @test combine_out1[!, 2] == combine_out1[!, 3]
     @test combine_out2[!, 2] == combine_out2[!, 3]
@@ -301,6 +308,13 @@ end
     combine_out8_v = combine(gatherby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), :x3), :x2=>IMD.n)
     combine_out8_v = combine_out8_v[nrow(combine_out8_v):-1:1, :]
     combine_out9_v = combine(groupby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), :x3), :x3=>maximum, :x3=>minimum)
+
+    @test combine_out7 == combine(groupby(ds, :x3), :x1=>mean, threads = false)
+    @test combine_out8 == combine(gatherby(ds, :x3), :x2=>IMD.n, threads = false)
+    @test combine_out9 == combine(groupby(ds, :x3), :x3=>maximum, :x3=>minimum, threads = false)
+    @test combine_out7_v == combine(groupby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), :x3), :x1=>mean, threads = false)
+    @test combine_out9_v == combine(groupby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), :x3), :x3=>maximum, :x3=>minimum, threads = false)
+
     @test combine_out7[!, 1] == [1 * u"m", 2 * u"m"]
     @test combine_out8[!, 2] == [10, 10]
     @test combine_out9[!, 2] == combine_out9[!, 1]
@@ -315,20 +329,36 @@ end
     @test sort(combine(gatherby(ds, 1, stable = false), 1=>length), :) == combine(groupby(ds, 1, stable = false), 1=>length)
     @test sort(combine(gatherby(ds, 1, stable = false), 1=>(x->length(x))=>:length_x1), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
 
+    @test sort(combine(gatherby(ds, 1, threads = false), 1=>length, threads = false), :) == combine(groupby(ds, 1), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false, threads = false), 1=>length, threads = false), :) == combine(groupby(ds, 1, stable = false), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false, threads = false), 1=>(x->length(x))=>:length_x1, threads = false), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
+
     ds = Dataset(rand(Int128, 100, 1), :auto)
     @test sort(combine(gatherby(ds, 1), 1=>length), :) == combine(groupby(ds, 1), 1=>length)
     @test sort(combine(gatherby(ds, 1, stable = false), 1=>length), :) == combine(groupby(ds, 1, stable = false), 1=>length)
     @test sort(combine(gatherby(ds, 1, stable = false), 1=>(x->length(x))=>:length_x1), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
+
+    @test sort(combine(gatherby(ds, 1, threads = false), 1=>length, threads = false), :) == combine(groupby(ds, 1), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false, threads = false), 1=>length, threads = false), :) == combine(groupby(ds, 1, stable = false), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false, threads = false), 1=>(x->length(x))=>:length_x1, threads = false), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
 
     ds = Dataset(rand(UInt64, 100, 1), :auto)
     @test sort(combine(gatherby(ds, 1), 1=>length), :) == combine(groupby(ds, 1), 1=>length)
     @test sort(combine(gatherby(ds, 1, stable = false), 1=>length), :) == combine(groupby(ds, 1, stable = false), 1=>length)
     @test sort(combine(gatherby(ds, 1, stable = false), 1=>(x->length(x))=>:length_x1), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
 
+    @test sort(combine(gatherby(ds, 1, threads = false), 1=>length, threads = false), :) == combine(groupby(ds, 1), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false, threads = false), 1=>length, threads = false), :) == combine(groupby(ds, 1, stable = false), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false, threads = false), 1=>(x->length(x))=>:length_x1, threads = false), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
+
     ds = Dataset(rand(Int8, 100, 1), :auto)
     @test sort(combine(gatherby(ds, 1), 1=>length), :) == combine(groupby(ds, 1), 1=>length)
     @test sort(combine(gatherby(ds, 1, stable = false), 1=>length), :) == combine(groupby(ds, 1, stable = false), 1=>length)
     @test sort(combine(gatherby(ds, 1, stable = false), 1=>(x->length(x))=>:length_x1), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
+
+    @test sort(combine(gatherby(ds, 1, threads = false), 1=>length, threads = false), :) == combine(groupby(ds, 1), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false, threads = false), 1=>length, threads = false), :) == combine(groupby(ds, 1, stable = false), 1=>length)
+    @test sort(combine(gatherby(ds, 1, stable = false, threads = false), 1=>(x->length(x))=>:length_x1, threads = false), :) == combine(groupby(ds, 1, stable = false, alg = QuickSort), 1=>length)
 
 
 end
@@ -341,9 +371,13 @@ if !Base.Sys.iswindows()
                        x2=rand(1:3, 20) + im*rand(1:3, 20),
                        x3=repeat(1:2, 10) .* u"m")
         c1_IMD = combine(gatherby(ds, [:a, :x3]), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
+        @test c1_IMD == combine(gatherby(ds, [:a, :x3], threads = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3, threads = false)
         c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
+
         @test all(byrow(compare(c1_IMD, Dataset(c1_DF), on = names(c1_IMD)), all, :))
         c1_IMD = combine(groupby(ds, [:a, :x3]), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
+        @test c1_IMD == combine(groupby(ds, [:a, :x3], threads = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3, threads = false)
+
         c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = true), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
         @test all(byrow(compare(c1_IMD, Dataset(c1_DF), on = names(c1_IMD)), all, :))
 
@@ -353,14 +387,20 @@ if !Base.Sys.iswindows()
             map!(ds, x->rand()<r ? missing : x, :)
             c1 = combine(groupby(ds, [:x1,:x3]), :x10=>sort, :x4=>sum)
             c2 = combine(groupby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), [:x1, :x3]), :x10=>sort, :x4=>sum)
+
+            @test c1 == combine(groupby(ds, [:x1,:x3], threads = false), :x10=>sort, :x4=>sum, threads = false)
+            @test c2 == combine(groupby(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), [:x1, :x3], threads = false), :x10=>sort, :x4=>sum, threads = false)
             @test c1 == c2
             c1 = combine(gatherby(ds, [:x1,:x3]), :x10=>sort, :x4=>sum)
             c2 = combine(gatherby(view(ds, nrow(ds):-1:1, [10, 1, 3, 4]), [:x1, :x3]), :x10=>sort, :x4=>sum)
+            @test c1 == combine(gatherby(ds, [:x1,:x3], threads = false), :x10=>sort, :x4=>sum, threads = false)
+            @test c2 == combine(gatherby(view(ds, nrow(ds):-1:1, [10, 1, 3, 4]), [:x1, :x3], threads = false), :x10=>sort, :x4=>sum, threads = false)
             @test sort(c1, :) == sort(c2, :)
         end
         ds = Dataset(rand(1000, 2), :auto)
         insertcols!(ds, 1, :g=>rand(1:10, nrow(ds)))
         c1_IMD = combine(groupby(ds, 1), (2, 3)=>cor=>:cor, 3=>sum=>:sum, 2 => mean => :mean)
+        @test c1_IMD == combine(groupby(ds, 1, threads = false), (2, 3)=>cor=>:cor, 3=>sum=>:sum, 2 => mean => :mean, threads = false)
         df = DF.DataFrame(ds)
         c1_DF = DF.combine(DF.groupby(df, 1, sort = true), 2:3=>cor=>:cor, 3=>sum=>:sum, 2=>mean=>:mean)
         @test all(byrow(compare(c1_IMD, Dataset(c1_DF), eq = isapprox), all, :))
@@ -387,6 +427,11 @@ end
     c1 = combine(groupby(ds, :x2), :y=>maximum)
     c2 = combine(groupby(ds, :x2, mapformats = false), :y=>maximum)
     c3 = combine(gatherby(ds, :x2), (:x1,:y)=>(x,y)->(maximum(x), minimum(y)))
+
+    @test c1 == combine(groupby(ds, :x2, threads = false), :y=>maximum, threads = false)
+    @test c2 == combine(groupby(ds, :x2, mapformats = false, threads = false), :y=>maximum, threads = false)
+    @test c3 == combine(gatherby(ds, :x2, threads = false), (:x1,:y)=>(x,y)->(maximum(x), minimum(y)), threads = false)
+
     @test all(byrow(compare(c1, Dataset(x2=[0, missing], maximum_y=[600.0, 200]), mapformats=true), all))
     @test all(byrow(compare(c2, Dataset(x2=[0, 0, missing], maximum_y=[100, 600.0, 200]), mapformats=true), all))
     @test all(byrow(compare(c3, Dataset(x2=[0,missing], function_x1_y=[(2, 100.0), (2, 200.0)]), mapformats=true), all))

@@ -55,9 +55,9 @@ function searchsorted_join(_f, v::AbstractVector, x, ilo::T, ihi::T, o::Ordering
     return (lo + 1) : (hi - 1)
 end
 
-function _fill_range_for_accelerated_join!(ranges, starts, loc, x, f, sz, chunk)
+function _fill_range_for_accelerated_join!(ranges, starts, loc, x, f, sz, chunk; threads = true)
     loc_cumsum = cumsum(loc)
-    Threads.@threads for i in 1:length(x)
+    @_threadsfor threads for i in 1:length(x)
         _index_ = hash(f(x[i])) % chunk + 1
         if loc[_index_]
             actual_start = loc_cumsum[_index_]
@@ -70,7 +70,7 @@ function _fill_range_for_accelerated_join!(ranges, starts, loc, x, f, sz, chunk)
     end
 end
 # TODO how the hashing behave for Categorical Arrays?
-function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, chunk = 2^10; nsfpaj = true)
+function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, chunk = 2^10; nsfpaj = true, threads = true)
     if isempty(dsr)
         idx = []
         fill!(ranges, 1:nrow(dsr))
@@ -82,24 +82,24 @@ function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, 
             else
                 _fr = identity
             end
-            grng = _divide_for_fast_join(_columns(dsr)[oncols_right[1]], _fr, chunk)
+            grng = _divide_for_fast_join(_columns(dsr)[oncols_right[1]], _fr, chunk; threads = threads)
             if mapformats[1]
                 _fl = getformat(dsl, oncols_left[1])
             else
                 _fl = identity
             end
-            _fill_range_for_accelerated_join!(ranges, grng.starts, grng.starts_loc, _columns(dsl)[oncols_left[1]], _fl, nrow(dsr), chunk)
+            _fill_range_for_accelerated_join!(ranges, grng.starts, grng.starts_loc, _columns(dsl)[oncols_left[1]], _fl, nrow(dsr), chunk; threads = threads)
             if dsr isa SubDataset
-                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng)
+                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng, threads = threads)
 
             else
-                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng)
+                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng, threads = threads)
             end
         else
             if dsr isa SubDataset
-                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj)
+                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, threads = threads)
             else
-                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj)
+                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, threads = threads)
             end
             fill!(ranges, 1:nrow(dsr))
         end
@@ -107,11 +107,11 @@ function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, 
     idx, last_valid_range == length(idx)
 end
 
-function _sort_for_join_after_hash(dsr, oncols_right, stable, alg, mapformats, nsfpaj, grng)
+function _sort_for_join_after_hash(dsr, oncols_right, stable, alg, mapformats, nsfpaj, grng; threads = true)
     if dsr isa SubDataset
-        starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng)
+        starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng, threads = threads)
     else
-        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng)
+        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng, threads = threads)
     end
 end
 
@@ -124,8 +124,8 @@ function _find_counts_for_join(groups, ngroups)
    res
 end
 
-function _find_range_for_join!(ranges, ldata, gslots, reps, where, minval, sz)
-    Threads.@threads for i in 1:length(ldata)
+function _find_range_for_join!(ranges, ldata, gslots, reps, where, minval, sz; threads = true)
+    @_threadsfor threads for i in 1:length(ldata)
         ranges[i] = _query_dictionary_for_join_int(identity, ldata[i], gslots, reps, where, minval, sz)
     end
 end
@@ -146,15 +146,15 @@ function _fill_val_join!(x, r2, val, inbits, r)
         end
     end
 end
-
-function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}; type = :both) where T1 where T2
+# F1 and F2 are here for type stability when threads = false
+function _find_ranges_for_join!(ranges, x, y, _fl::F1, _fr::F2, ::Val{T1}, ::Val{T2}; type = :both, threads = true) where {T1, T2, F1, F2}
     if type == :both
-        Threads.@threads for i in 1:length(x)
+        @_threadsfor threads for i in 1:length(x)
             ranges[i] = searchsorted_join(_fr, y, DataAPI.unwrap(_fl(x[i]))::T1, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
         end
     # TODO having another elseif branch is better for performance.
     elseif type == :left || type == :rightstrict
-        Threads.@threads for i in 1:length(x)
+        @_threadsfor threads for i in 1:length(x)
              _flx = _fl(DataAPI.unwrap(x[i]))::T1
             hi = searchsortedlast_join(_fr, y, _flx, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
             lo = ranges[i].start
@@ -165,7 +165,7 @@ function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}; ty
             end
         end
     elseif type == :right || type == :leftstrict
-        Threads.@threads for i in 1:length(x)
+        @_threadsfor threads for i in 1:length(x)
             _flx = _fl(DataAPI.unwrap(x[i]))::T1
             lo = searchsortedfirst_join(_fr, y, _flx, ranges[i].start, ranges[i].stop, Base.Order.Forward, Val(T2))
             hi = ranges[i].stop
@@ -178,9 +178,9 @@ function _find_ranges_for_join!(ranges, x, y, _fl, _fr, ::Val{T1}, ::Val{T2}; ty
     end
 end
 
-function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, ::Val{T2}; type = :both) where T1 where T2
+function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl::F1, _fr::F2, ::Val{T1}, ::Val{T2}; type = :both, threads = true) where {T1, T2, F1, F2}
     if type == :both
-        Threads.@threads for i in 1:length(x)
+        @_threadsfor threads for i in 1:length(x)
             revmap_paval_ref = get(invpool, DataAPI.unwrap(_fl(x[i]))::T1, missing)
             if ismissing(revmap_paval_ref)
                 ranges[i] = 1:0
@@ -190,7 +190,7 @@ function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, :
             end
         end
     elseif type == :left || type == :rightstrict
-        Threads.@threads for i in 1:length(x)
+        @_threadsfor threads for i in 1:length(x)
             revmap_paval_ref = get(invpool, _fl(DataAPI.unwrap(x[i]))::T1, missing)
             if ismissing(revmap_paval_ref)
                 ranges[i] = 1:0
@@ -206,7 +206,7 @@ function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, :
             end
         end
     elseif type == :right || type == :leftstrict
-        Threads.@threads for i in 1:length(x)
+        @_threadsfor threads for i in 1:length(x)
             revmap_paval_ref = get(invpool, _fl(DataAPI.unwrap(x[i]))::T1, missing)
             if ismissing(revmap_paval_ref)
                 ranges[i] = 1:0
@@ -226,27 +226,27 @@ function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl, _fr, ::Val{T1}, :
 end
 
 
-function _fill_oncols_left_table_left!(_res, x, ranges, en, total, fill_val)
-    Threads.@threads for i in 1:length(x)
+function _fill_oncols_left_table_left!(_res, x, ranges, en, total, fill_val; threads = true)
+    @_threadsfor threads for i in 1:length(x)
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
         _fill_val_join!(_res, lo:hi, x[i])
     end
-    Threads.@threads for i in en[length(x)]+1:total
+    @_threadsfor threads for i in en[length(x)]+1:total
         _res[i] = fill_val
     end
 end
 
-function _fill_oncols_left_table_inner!(_res, x, ranges, en, total; inbits = nothing, en2 = nothing)
+function _fill_oncols_left_table_inner!(_res, x, ranges, en, total; inbits = nothing, en2 = nothing, threads = true)
     if inbits === nothing
-        Threads.@threads for i in 1:length(x)
+        @_threadsfor threads for i in 1:length(x)
             length(ranges[i]) == 0 && continue
             i == 1 ? lo = 1 : lo = en[i - 1] + 1
             hi = en[i]
             _fill_val_join!(_res, lo:hi, x[i])
         end
     else
-        Threads.@threads for i in 1:length(x)
+        @_threadsfor threads for i in 1:length(x)
             length(ranges[i]) == 0 && continue
             if i == 1
                 lo = 1
@@ -264,8 +264,8 @@ function _fill_oncols_left_table_inner!(_res, x, ranges, en, total; inbits = not
     end
 end
 
-function _fill_oncols_left_table_anti!(_res, x, ranges, en, total)
-    Threads.@threads for i in 1:length(x)
+function _fill_oncols_left_table_anti!(_res, x, ranges, en, total; threads = true)
+    @_threadsfor threads for i in 1:length(x)
         length(ranges[i]) != 0 && continue
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
@@ -273,8 +273,8 @@ function _fill_oncols_left_table_anti!(_res, x, ranges, en, total)
     end
 end
 
-function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val)
-    Threads.@threads for i in 1:length(ranges)
+function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val; threads = true)
+    @_threadsfor threads for i in 1:length(ranges)
         i == 1 ? lo = 1 : lo = en[i - 1] + 1
         hi = en[i]
         length(ranges[i]) == 0 ? _fill_val_join!(_res, lo:hi, fill_val) : copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
@@ -294,16 +294,16 @@ function _fill_right_col_range!(_res, r2, x, ranges, inbits, r)
     end
 end
 
-function _fill_right_cols_table_inner!(_res, x, ranges, en, total; inbits = nothing, en2 = nothing)
+function _fill_right_cols_table_inner!(_res, x, ranges, en, total; inbits = nothing, en2 = nothing, threads = true)
     if inbits === nothing
-        Threads.@threads for i in 1:length(ranges)
+        @_threadsfor threads for i in 1:length(ranges)
             length(ranges[i]) == 0 && continue
             i == 1 ? lo = 1 : lo = en[i - 1] + 1
             hi = en[i]
             copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
         end
     else
-        Threads.@threads for i in 1:length(ranges)
+        @_threadsfor threads for i in 1:length(ranges)
             length(ranges[i]) == 0 && continue
             if i == 1
                 lo = 1
@@ -327,9 +327,9 @@ ISLE(::Missing, y) = false
 ISLE(::Missing, ::Missing) = false
 
 
-function _mark_lt_part!(inbits, x_l, x_r, _fl, _fr, ranges, r_perms, en, ::Val{T}; strict = false) where T
+function _mark_lt_part!(inbits, x_l, x_r, _fl::F1, _fr::F2, ranges, r_perms, en, ::Val{T}; strict = false, threads = true) where {T, F1, F2}
     revised_ends = zeros(T, length(en))
-    Threads.@threads for i in 1:length(ranges)
+    @_threadsfor threads for i in 1:length(ranges)
         if length(ranges[i]) == 0
             if i !== 1
                 revised_ends[i] = 0
@@ -357,7 +357,7 @@ function _mark_lt_part!(inbits, x_l, x_r, _fl, _fr, ranges, r_perms, en, ::Val{T
     cumsum!(revised_ends, revised_ends)
 end
 
-function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, lmf, rmf, j; type = :both, nsfpaj = true)
+function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, lmf, rmf, j; type = :both, nsfpaj = true, threads = true)
     var_l = _columns(dsl)[oncols_left[j]]
     var_r = _columns(dsr)[oncols_right[j]]
     l_idx = oncols_left[j]
@@ -386,19 +386,19 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_
         # now _fr must be identity
         _fr = identity
         # we should use invpool of right column
-        _find_ranges_for_join_pa!(ranges, var_l, DataAPI.invrefpool(var_r_cpy), view(DataAPI.refarray(var_r_cpy), r_perms), _fl, _fr, Val(T1), Val(T2); type = type)
+        _find_ranges_for_join_pa!(ranges, var_l, DataAPI.invrefpool(var_r_cpy), view(DataAPI.refarray(var_r_cpy), r_perms), _fl, _fr, Val(T1), Val(T2); type = type, threads = threads)
     else
         T2 = Core.Compiler.return_type(_fr, (eltype(var_r), ))
-        _find_ranges_for_join!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2); type = type)
+        _find_ranges_for_join!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2); type = type, threads = threads)
     end
 end
 
 
 
-function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort) where T
+function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true) where T
     isempty(dsl) && return copy(dsl)
     if method == :hash
-        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T))
+        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
     elseif method == :sort
         oncols_left = onleft
         oncols_right = onright
@@ -409,15 +409,15 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
 
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && nrow(dsr)>1
-            success, result = _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
+            success, result = _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads)
             if success
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate; threads = threads)
 
         for j in 1:length(oncols_left)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; threads = threads)
         end
     end
     new_ends = map(x -> max(1, length(x)), ranges)
@@ -433,9 +433,9 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
         _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
             # fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, missing)
+            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, missing;  threads = threads)
         else
-            _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing)
+            _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing; threads = threads)
         end
         push!(res, _res)
 
@@ -451,9 +451,9 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val)
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val; threads = threads)
         else
-            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing)
+            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing; threads = threads)
         end
         push!(_columns(newds), _res)
 
@@ -465,10 +465,10 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
 
 end
 
-function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort) where T
+function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true) where T
     isempty(dsl) && return dsl
     if method == :hash
-        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T))
+        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
     elseif method == :sort
         oncols_left = onleft
         oncols_right = onright
@@ -478,14 +478,14 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
         end
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && nrow(dsr)>1
-            success, result = _join_left!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
+            success, result = _join_left!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads)
             if success
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, threads = threads)
         for j in 1:length(oncols_left)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, threads = threads)
         end
     end
     if !all(x->length(x) <= 1, ranges)
@@ -504,9 +504,9 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val)
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val, threads = threads)
         else
-            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing)
+            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing, threads = threads)
         end
         push!(_columns(dsl), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
@@ -517,7 +517,7 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     dsl
 end
 
-function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], method = :sort) where T
+function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], method = :sort, threads = true) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
@@ -564,31 +564,31 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
     # if (onright_range === nothing || length(onleft) > 1) is false, then we have inequality kind join with no exact match join
     if method == :hash && (onright_range === nothing || length(onleft) > 1)
         if onright_range !== nothing
-            ranges, a, idx, minval, reps, sz, right_cols_2 = _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], oncols_right[1:end-1], mapformats, true, Val(T))
+            ranges, a, idx, minval, reps, sz, right_cols_2 = _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], oncols_right[1:end-1], mapformats, true, Val(T); threads = threads)
             filter!(!=(0), reps)
             pushfirst!(reps, 1)
             cumsum!(reps, reps)
             pop!(reps)
             grng = GIVENRANGE(idx, reps, Int[], length(reps))
-            starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, right_range_cols[1], stable, alg, mapformats, nsfpaj, grng)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj)
+            starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, right_range_cols[1], stable, alg, mapformats, nsfpaj, grng; threads = threads)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj, threads = threads)
         else
-            ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T))
+            ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
         end
     else
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && type == :both && nrow(dsr)>1
-            success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
+            success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads)
             if success
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1); nsfpaj = nsfpaj)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1); nsfpaj = nsfpaj, threads = threads)
 
         for j in 1:length(oncols_left)-1
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj, threads = threads)
         end
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj, threads = threads)
     end
 
 
@@ -610,7 +610,7 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
         if mapformats[2]
             _fr = getformat(dsr, right_range_cols[2])
         end
-        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], _fl, _fr, ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64); strict = strict_inequality[2])
+        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], _fl, _fr, ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64); strict = strict_inequality[2], threads = threads)
     end
     if length(right_range_cols) == 2
         total_length = sum(inbits)
@@ -623,9 +623,9 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
     for j in 1:length(index(dsl))
         _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
-            _fill_oncols_left_table_inner!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
+            _fill_oncols_left_table_inner!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
         else
-            _fill_oncols_left_table_inner!(_res, _columns(dsl)[j], ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
+            _fill_oncols_left_table_inner!(_res, _columns(dsl)[j], ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
         end
         push!(res, _res)
     end
@@ -638,9 +638,9 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
-            _fill_right_cols_table_inner!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
+            _fill_right_cols_table_inner!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
         else
-            _fill_right_cols_table_inner!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends)
+            _fill_right_cols_table_inner!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
         end
         push!(_columns(newds), _res)
 
@@ -652,7 +652,7 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
 
 end
 
-function _in(dsl::AbstractDataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false) where T
+function _in(dsl::AbstractDataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, threads = true) where T
     isempty(dsl) && return Bool[]
     oncols_left = onleft
     oncols_right = onright
@@ -669,12 +669,12 @@ function _in(dsl::AbstractDataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
         else
             _fr = identity
         end
-        return _in_use_Set(_columns(dsl)[oncols_left[1]], _columns(dsr)[oncols_right[1]], _fl, _fr)
+        return _in_use_Set(_columns(dsl)[oncols_left[1]], _columns(dsr)[oncols_right[1]], _fl, _fr, threads = threads)
     end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, threads = threads)
     for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, threads = threads)
     end
     map(x -> length(x) == 0 ? false : true, ranges)
 end
@@ -697,12 +697,12 @@ function _fill_oncols_left_table_left_outer!(res, x, notinleft, en, total)
 end
 
 
-function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort) where T
+function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
     if method == :hash
-        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T))
+        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
     elseif method == :sort
         right_cols = setdiff(1:length(index(dsr)), oncols_right)
         if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
@@ -710,14 +710,14 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
         end
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && nrow(dsr)>1
-            success, result = _join_outer_dict(dsl, dsr, ranges, oncols_left, oncols_right, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check)
+            success, result = _join_outer_dict(dsl, dsr, ranges, oncols_left, oncols_right, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads)
             if success
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, threads = threads)
         for j in 1:length(oncols_left)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, threads = threads)
         end
     end
     new_ends = map(x -> max(1, length(x)), ranges)
@@ -732,9 +732,9 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
         _res = allocatecol(_columns(dsl)[j], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, fill_val)
+            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, fill_val, threads = threads)
         else
-            _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing)
+            _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing, threads = threads)
         end
         push!(res, _res)
     end
@@ -751,10 +751,10 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val)
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val, threads = threads)
             _fill_oncols_left_table_left_outer!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), notinleft, new_ends, total_length)
         else
-            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing)
+            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing, threads = threads)
             _fill_oncols_left_table_left_outer!(_res, view(_columns(dsr)[right_cols[j]], idx), notinleft, new_ends, total_length)
         end
         push!(_columns(newds), _res)

@@ -1,5 +1,5 @@
-function _update_left_with_right!(x, y, ranges, allowmissing, mode)
-    Threads.@threads for i in 1:length(x)
+function _update_left_with_right!(x, y, ranges, allowmissing, mode::F; threads = true) where F
+    @_threadsfor threads for i in 1:length(x)
         if length(ranges[i]) > 0
             if mode(x[i])
                 if !allowmissing && !ismissing(y[ranges[i].stop])
@@ -12,10 +12,10 @@ function _update_left_with_right!(x, y, ranges, allowmissing, mode)
     end
 end
 
-function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, usehash = true, method = :sort) where T
+function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, check = true, allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, usehash = true, method = :sort, threads = true) where T
     isempty(dsl) && return dsl
     if method == :hash
-        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, true, Val(T))
+        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, true, Val(T); threads = threads)
     elseif method == :sort
         oncols_left = onleft
         oncols_right = onright
@@ -23,15 +23,15 @@ function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright,
 
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if usehash && length(oncols_left) == 1 && nrow(dsr)>1
-            success, result = _update!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); mapformats = mapformats, allowmissing = allowmissing, mode = mode)
+            success, result = _update!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); mapformats = mapformats, allowmissing = allowmissing, mode = mode, threads = threads)
             if success
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, threads = threads)
 
         for j in 1:length(oncols_left)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, threads = threads)
         end
     end
 
@@ -48,7 +48,7 @@ function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright,
             TL = nonmissingtype(eltype(_columns(dsl)[left_cols_idx]))
             TR = nonmissingtype(eltype(_columns(dsr)[right_cols[j]]))
             if promote_type(TR, TL) <: TL
-                _update_left_with_right!(_columns(dsl)[left_cols_idx], view(_columns(dsr)[right_cols[j]], idx), ranges, allowmissing, f_mode)
+                _update_left_with_right!(_columns(dsl)[left_cols_idx], view(_columns(dsr)[right_cols[j]], idx), ranges, allowmissing, f_mode, threads = threads)
             end
         end
     end

@@ -1,6 +1,18 @@
 const INTEGERS = Union{Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Bool}
 const FLOATS = Union{Float16, Float32, Float64}
 
+#macro for using Threaded for if needed
+macro _threadsfor(threads, exp)
+	esc(:(
+		if $threads
+			Threads.@threads $exp
+		else
+			$exp
+		end
+	))
+end
+
+
 # modified return_type to suit for our purpose
 function return_type(f::Function, x)
 	eltype(x) == Missing && return Missing
@@ -159,10 +171,10 @@ function _sortitout!(res, starts, x)
 	return starts_normalised[2:end]
 end
 
-function _divide_for_fast_join_barrier!(res, starts, x, f, ::Val{T}) where T
+function _divide_for_fast_join_barrier!(res, starts, x, f, ::Val{T}; threads = true) where T
     nc = length(starts) - 1
     _hashed = Vector{T}(undef, length(x))
-    Threads.@threads for i in 1:length(x)
+    @_threadsfor threads for i in 1:length(x)
         _hashed[i] = hash(f(x[i])) % nc + 1
     end
     starts_normalised = _sortitout!(res, starts, _hashed)
@@ -185,11 +197,11 @@ function _remove_unwantedstarts!(starts, sz)
 end
 
 
-function _divide_for_fast_join(x, f, chunk) # chunk = 2^10 then data are divided to 1024 pieces
+function _divide_for_fast_join(x, f, chunk; threads = true) # chunk = 2^10 then data are divided to 1024 pieces
     T = length(x) < typemax(Int32) ? Int32 : Int64
     res = Vector{T}(undef, length(x))
     starts = Vector{T}(undef, chunk + 1)
-    starts_loc = _divide_for_fast_join_barrier!(res, starts, x, f, chunk < typemax(UInt8) ? Val(UInt8) : chunk < typemax(UInt16) ? Val(UInt16) : Val(UInt32))
+    starts_loc = _divide_for_fast_join_barrier!(res, starts, x, f, chunk < typemax(UInt8) ? Val(UInt8) : chunk < typemax(UInt16) ? Val(UInt16) : Val(UInt32); threads = threads)
 	starts = _remove_unwantedstarts!(starts, length(x))
 	GIVENRANGE(res, starts, starts_loc, length(starts))
 end
@@ -229,11 +241,11 @@ _date_value(x::Period) = Dates.value(x)::Int
 _date_value(x) = x
 
 
-function _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, ::Val{T}) where T
+function _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, ::Val{T}; threads = true) where T
 	_which_to_process = _find_groups_with_more_than_one_observation(prev_groups, prev_max_group)[1]
 	offsets = findall(_which_to_process)
 	_sum_of_which_to_process = sum(_which_to_process)
-	Threads.@threads for i in 1:length(v)
+	@_threadsfor threads for i in 1:length(v)
 		@inbounds if _which_to_process[prev_groups[i]]
 			rhashes[i] = hash(f(v[i]), hash(prev_groups[i]))
 		end
@@ -243,7 +255,7 @@ function _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v
     # sz = 2 ^ ceil(Int, log2(n)+1)
     sz = length(gslots)
     # fill!(gslots, 0)
-    Threads.@threads for i in 1:sz
+    @_threadsfor threads for i in 1:sz
         @inbounds gslots[i] = 0
     end
     szm1 = sz - 1
@@ -275,7 +287,7 @@ function _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v
     	end
 	end
 
-	Threads.@threads for i in 1:length(rhashes)
+	@_threadsfor threads for i in 1:length(rhashes)
 		@inbounds if !_which_to_process[prev_groups[i]]
 			pos = searchsortedlast(offsets, prev_groups[i])
 			prev_groups[i] -= pos
@@ -283,7 +295,11 @@ function _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v
 			@inbounds _which_to_process[prev_groups[i]] ? prev_groups[i] = groups[i] : nothing
 		end
     end
-	ngroups = hp_maximum(prev_groups)
+	if threads
+		ngroups = hp_maximum(prev_groups)
+	else
+		ngroups = stat_maximum(prev_groups)
+	end
 
     if ngroups == n
         flag = false
@@ -294,11 +310,11 @@ function _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v
     return flag, ngroups
 end
 
-function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, stable, ::Val{T}) where T
+function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, stable, ::Val{T}; threads = true) where T
 	if !stable
-		return _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, Val(T))
+		return _create_dictionary_unstable!(prev_groups, groups, gslots, rhashes, f, v, prev_max_group, Val(T); threads = threads)
 	end
-    Threads.@threads for i in 1:length(v)
+    @_threadsfor threads for i in 1:length(v)
         @inbounds rhashes[i] = hash(f(v[i]), hash(prev_groups[i])) #hash(prev_groups[i]) is used to prevent reduce probe, the question is: is it working?
     end
     n = length(v)
@@ -334,7 +350,7 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
         end
         groups[i] = gix
     end
-    Threads.@threads for i in 1:length(rhashes)
+    @_threadsfor threads for i in 1:length(rhashes)
         @inbounds prev_groups[i] = groups[i]
     end
     if ngroups == n
@@ -376,7 +392,7 @@ function _create_dictionary_int_fast!(prev_groups, f, v, prev_max_group, minval,
 end
 
 
-function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) where T
+function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true, threads = true) where T
     colidx = index(ds)[cols]
     _max_level = nrow(ds)
     prev_max_group = UInt(1)
@@ -407,13 +423,21 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
             v = _columns(ds)[colidx[j]]
         end
         if nonmissingtype(Core.Compiler.return_type(_f, (nonmissingtype(eltype(v)),))) <: Union{Missing, INTEGERS}
-            _minval = hp_minimum(_f, v)
+			if threads
+				_minval = hp_minimum(_f, v)
+			else
+				_minval = stat_minimum(_f, v)
+			end
             if ismissing(_minval)
                 continue
             else
                 minval::Integer = _minval
             end
-            maxval::Integer = hp_maximum(_f, v)
+			if threads
+				maxval::Integer = hp_maximum(_f, v)
+			else
+				maxval = stat_maximum(_f, v)
+			end
 			rnglen = BigInt(maxval) - BigInt(minval) + 1
 			o1 = false
 			if rnglen < typemax(Int)
@@ -434,7 +458,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                     resize!(groups, nrow(ds))
                 end
 				prev_max_group > nrow(ds)/100 ? stablegather = stable : stablegather = false
-                flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T))
+                flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T); threads = threads)
 
             end
         else
@@ -445,7 +469,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true) w
                 resize!(groups, nrow(ds))
             end
 			prev_max_group > nrow(ds)/100 ? stablegather = stable : stablegather = false
-            flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T))
+            flag, prev_max_group = _create_dictionary!(prev_groups, groups, gslots, rhashes, _f, v, prev_max_group, stablegather, Val(T); threads = threads)
         end
         !flag && break
     end
@@ -508,7 +532,7 @@ function _gather_groups_old_version(ds, cols, ::Val{T}; mapformats = false) wher
 end
 
 # ds assumes is grouped based on cols and groups are gathered togther
-function _find_starts_of_groups(ds, cols::MultiColumnIndex, ::Val{T}; mapformats = true) where T
+function _find_starts_of_groups(ds, cols::MultiColumnIndex, ::Val{T}; mapformats = true, threads = true) where T
     colsidx = index(ds)[cols]
     ranges = Vector{T}(undef, nrow(ds))
     inbits = zeros(Bool, nrow(ds))
@@ -520,7 +544,7 @@ function _find_starts_of_groups(ds, cols::MultiColumnIndex, ::Val{T}; mapformats
         else
             _f = identity
         end
-        _find_starts_of_groups!(_columns(ds)[colsidx[j]], _get_perms(ds), _f , inbits)
+        _find_starts_of_groups!(_columns(ds)[colsidx[j]], _get_perms(ds; threads = threads), _f , inbits; threads = threads)
 	all(inbits) && break
     end
     @inbounds for i in 1:length(inbits)
@@ -532,10 +556,10 @@ function _find_starts_of_groups(ds, cols::MultiColumnIndex, ::Val{T}; mapformats
     return collect(colsidx), ranges, (last_valid_index - 1)
 end
 
-_find_starts_of_groups(ds, col::ColumnIndex, ::Val{T}; mapformats = true) where T = _find_starts_of_groups(ds, [col], Val(T), mapformats = mapformats)
+_find_starts_of_groups(ds, col::ColumnIndex, ::Val{T}; mapformats = true, threads = true) where T = _find_starts_of_groups(ds, [col], Val(T), mapformats = mapformats, threads = threads)
 
-function _find_starts_of_groups!(x, perm, f, inbits)
-    Threads.@threads for i in 2:length(inbits)
+function _find_starts_of_groups!(x, perm, f, inbits; threads = true)
+    @_threadsfor threads for i in 2:length(inbits)
         @inbounds if !inbits[i]
 		inbits[i] = !isequal(f(x[perm[i]]), f(x[perm[i-1]]))
 	end
