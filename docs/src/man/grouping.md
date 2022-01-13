@@ -4,6 +4,8 @@
 
 InMemoryDatasets uses two approaches to group observations: sorting, and hashing. In sorting approach, it sorts the data set based on given columns and finds the starts and ends of each group based on the sorted values. In hashing approach, it uses a hybrid algorithm to group observations. Each of these approaches has some advantages over the other one and for any particular problem one of them might be more suitable than the other one.
 
+> By default, the functions for grouping observations exploits all core available to Julia for group observations, however, passing `threads = false` change this.
+
 ## `groupby!` and `groupby`
 
 The main functions for grouping observations based on sorting approach are `groupby!` and `groupby`. The `groupby!` function replaces the original data set with the sorted one and attaches a meta information about the grouping orders to the replaced data set, on the other hand, the `groupby` function performs the sorting phase, however, it creates a view of the main data set where the meta information is attached to it. The output of `groupby` is basically a view of the sorted data set.

@@ -114,9 +114,7 @@ julia> byrow(ds, fill!, :, with = byrow(ds, coalesce, :), rolling = true)
   10 │        1         1         3         1         1         3
 ```
 
-* [A use-case from practice](https://www.juliabloggers.com/news-features-in-dataframes-jl-1-3-part-1/) : We have a data frame that has 10,000 rows and columns, but this time we have 50% of missing values
-randomly scattered in it. What we want to do is to fill missing values in each
-row with row means of non-missing values.
+* [A use-case from practice](https://www.juliabloggers.com/news-features-in-dataframes-jl-1-3-part-1/) : We have a data frame that has 10,000 rows and columns, but this time we have 50% of missing values randomly scattered in it. What we want to do is to fill missing values in each row with row means of non-missing values.
 
 ```julia
 julia> ds = Dataset(rand([1.0, missing], 10_000, 10_000), :auto) .* (1:10_000);

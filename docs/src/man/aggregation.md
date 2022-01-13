@@ -12,6 +12,8 @@ The order of the output data set depends on the passed data set, i.e. for `group
 
 By default, `combine` outputs the grouping columns in the final result, however, passing `dropgroupcols = true` removes them from the final output.
 
+> By default `combine` send each group of data to different threads for processing (multithreaded processing), however, passing `threads = false` changes this.
+
 ### Examples
 
 ```jldoctest
@@ -99,7 +101,7 @@ julia> combine(gatherby(ds, :g), :x=>[maximum, minimum], 2:3=>byrow(-)=>:range, 
    2 │         6          2         4
 ```
 
-`combine` treats each columns in `cols` individually, thus, a function can be applied to each column by `cols => fun` form. `combine` normalises `cols => funs` to `col1 => funs`, `col2 => funs`, ..., where `col1` refers to the first column in the column selector `cols`, `col2` refers to the second one, .... When `col => funs` is passed to the function where `col` refers to a single column, `combine` normalises it as `col => fun1`, `col => fun2`, ..., where `fun1`, `fun2`,... are the first, second, ... functions in passed `funs`. 
+`combine` treats each columns in `cols` individually, thus, a function can be applied to each column by `cols => fun` form. `combine` normalises `cols => funs` to `col1 => funs`, `col2 => funs`, ..., where `col1` refers to the first column in the column selector `cols`, `col2` refers to the second one, .... When `col => funs` is passed to the function where `col` refers to a single column, `combine` normalises it as `col => fun1`, `col => fun2`, ..., where `fun1`, `fun2`,... are the first, second, ... functions in passed `funs`.
 
 Any reduction on multiple columns should be go through a `byrow` approach.
 

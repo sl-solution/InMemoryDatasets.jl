@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In this section we give details of the functions that can be used to combined data sets in InMemoryDatasets. These functions are multi-threaded and thus are very performant for general use. By default, InMemoryDatasets uses the formatted values for joining observations, however, this can be controlled by the `mapformats` keyword argument.
+In this section we give details of the functions that can be used to combined data sets in InMemoryDatasets. These functions are multi-threaded (unless `threads = false` i s passed to the functions) and thus are very performant for general use. By default, InMemoryDatasets uses the formatted values for joining observations, however, this can be controlled by the `mapformats` keyword argument.
 
 ## Database like joins
 

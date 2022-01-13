@@ -6,6 +6,8 @@ The `modify!` function can be used to transform and modify columns of a data set
 
 > Note that `modify!/modify` remove the format of columns as soon as their values are updated by a given transformation.
 
+> By default, these functions use multithreaded computation when a grouped data set is passed as their arguments, however, passing `threads =  false` changes this.
+
 ## Specifying the transformation
 
 The first argument of these two functions is the name of the data set which is going to be modified and the next arguments can be the transform specifications, i.e.

@@ -8,7 +8,7 @@ The `format` of a column doesn't change the actual values of the column, thus, t
 
 The processing of `format` is lazy, i.e. Datasets doesn't process `format` unless an operation needs to access the formatted values. This also means that modifying the `format` of a column is instance. However, be aware that modifying a column's `format` changes the `modified` meta information (i.e. the last time that the data set has been modified) of the data set.
 
-> Note that processing of formats are usually done in parallel, thus, it is not safe to use a function which is not parallel safe.
+> Note that processing of formats are usually done in parallel, thus, it is not safe to use a function which is not parallel safe, unless `threads = false` is passed to the function which uses the formatted values.
 
 In this section, we discuss the overall aspects of `format` and we postpone the practical use case of `format` to later sections when we introduce operations which access the formatted values.
 

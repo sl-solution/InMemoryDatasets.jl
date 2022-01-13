@@ -4,7 +4,7 @@
 
 Sorting is one of the key tasks for Datasets. Actually, when we group a data set by given set of columns, InMemoryDatasets does sorting behind the scene and groups the observations based on their sorted values. The joining algorithms also uses the sorting functions for finding the matched observations. One may sort a data set based on a set of columns by either their formatted values, or their actual values. In this section we go through the main functions for sorting Datasets.
 
-> Note that InMemoryDatasets uses parallel algorithms for sorting observations.
+> Note that, by default, InMemoryDatasets uses parallel algorithms for sorting observations. User may stop parallel sorting by passing `threads = false`.
 
 ## `sort!/sort`
 
