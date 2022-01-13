@@ -14,6 +14,12 @@ function Docs.getdoc(x::typeof(byrow), y)
         return _get_doc_byrow("count")
     elseif y == Tuple{typeof(prod)}
         return _get_doc_byrow("prod")
+    elseif y == Tuple{typeof(isequal)}
+        return _get_doc_byrow("isequal")
+    elseif y == Tuple{typeof(isless)}
+        return _get_doc_byrow("isless")
+    elseif y == Tuple{typeof(in)}
+        return _get_doc_byrow("in")
     end
 end
 
@@ -256,5 +262,172 @@ julia> byrow(ds, prod, :)
   3.0
  12.0
 ```
+@@@@isequal@@@@
+    byrow(ds, isequal, cols; [with = nothing, threads])
 
+Returns a boolean vector which is `true` if all values in the corresponding row are equal (using `isequal`).
+ Optionally, a vector of values can be passed view the `with` keyword argument to compare values in selected
+ columns with the passed vector.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(isless)`](@ref) and [`byrow(in)`](@ref)
+
+## Examples
+
+```jldoctest
+julia> ds = Dataset(x1 = [1,2,3,1,2,3], x2 = [1,2,1,2,1,2])
+6×2 Dataset
+ Row │ x1        x2
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         1
+   4 │        1         2
+   5 │        2         1
+   6 │        3         2
+
+julia> byrow(ds, isequal, [1,2])
+6-element Vector{Bool}:
+ 1
+ 1
+ 0
+ 0
+ 0
+ 0
+
+julia> byrow(ds, isequal, [1,2], with = [2,2,2,3,3,3])
+6-element Vector{Bool}:
+ 0
+ 1
+ 0
+ 0
+ 0
+ 0
+```
+@@@@isless@@@@
+    byrow(ds, isless, cols, [with, threads, rev = false, lt = isless])
+
+Return a boolean vector which is true if all values in corresponding row for selected `cols` are less than value given by the `with` keyword argument. A vector, or a column name can be passed via `with`.
+
+Passing `rev = true` returns true if all values are greater than passed values via `with`.
+
+By default, the comparison is done via `isless` function, however, user may change it by passing a function via the `lt` keyword argument. The function passed to `lt` must accept two arguments where it takes its first argument from `cols` and its second argument from `with`. However, if `rev = true` the function passed as `lt` will take its first argument from `wiht` and its second argument from `cols`. The function passed as `lt` must return `true` or `false`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(isequal)`](@ref) and [`byrow(in)`](@ref)
+
+## Examples
+
+```jldoctest
+julia> ds = Dataset(x1 = [1,2,3,1,2,3], x2 = [1,2,1,2,1,2], x3 = 6:-1:1)
+6×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         1         6
+   2 │        2         2         5
+   3 │        3         1         4
+   4 │        1         2         3
+   5 │        2         1         2
+   6 │        3         2         1
+
+julia> byrow(ds, isless, [1,2], with = :x3)
+6-element Vector{Bool}:
+ 1
+ 1
+ 1
+ 1
+ 0
+ 0
+
+julia> byrow(ds, isless, 1:2, with = :x3, lt = (x,y) -> isless(x^2, y))
+6-element Vector{Bool}:
+ 1
+ 1
+ 0
+ 0
+ 0
+ 0
+
+julia> ds = Dataset(x1 = [1,2,3,1,2,3], x2 = [1,2,1,2,1,2],
+                    x3 = [(1,2), (2,3), (1,2), (4,5), (1,2), (1,2)])
+6×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Tuple…?
+─────┼──────────────────────────────
+   1 │        1         1  (1, 2)
+   2 │        2         2  (2, 3)
+   3 │        3         1  (1, 2)
+   4 │        1         2  (4, 5)
+   5 │        2         1  (1, 2)
+   6 │        3         2  (1, 2)
+
+julia> byrow(ds, isless, 1:2, with = :x3, lt = in)
+6-element Vector{Bool}:
+ 1
+ 1
+ 0
+ 0
+ 1
+ 0
+```
+@@@@in@@@@
+    byrow(ds, in, cols; [item, threads, eq = isequal])
+
+Return a boolean vector which its elements are true if in a row the value of `item` is equal to any values from `cols`. The equality is checked via the function passed as `eq`. User can pass a vector of values or a column name to `item`.
+
+The function passed as `eq` must accept two arguments where it takes its first argument from `item` and its second argument from `cols`. The function passed as `eq` must return `true` or `false`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(isequal)`](@ref) and [`byrow(isless)`](@ref)
+
+## Examples
+
+```jldoctest
+julia> ds = Dataset(x1 = [1,2,3,1,2,3], x2 = [1,2,1,2,1,2], x3 = 6:-1:1)
+6×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         1         6
+   2 │        2         2         5
+   3 │        3         1         4
+   4 │        1         2         3
+   5 │        2         1         2
+   6 │        3         2         1
+
+julia> byrow(ds, in, r"x", item = [1,2,3,4,5,6])
+6-element Vector{Bool}:
+ 1
+ 1
+ 1
+ 0
+ 0
+ 0
+
+julia> byrow(ds, in, [2,3], item = :x1, eq = isless)
+6-element Vector{Bool}:
+ 1
+ 1
+ 1
+ 1
+ 0
+ 0
+julia> byrow(ds, in, r"x", item = [5,4,5,4,5,4], eq = (x,y) -> x+y == 11)
+6-element Vector{Bool}:
+ 1
+ 0
+ 0
+ 0
+ 0
+ 0
+```
 """
