@@ -1,11 +1,11 @@
-function groupby!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
-	sort!(ds, cols, alg = alg, rev = rev,  mapformats = mapformats, stable = stable)
+function groupby!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
+	sort!(ds, cols, alg = alg, rev = rev,  mapformats = mapformats, stable = stable, threads = threads)
 	index(ds).grouped[] = true
 	_modified(_attributes(ds))
 	ds
 end
 
-groupby!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby!(ds, [col]; alg = alg, rev = rev, mapformats = mapformats, stable = stable)
+groupby!(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true) = groupby!(ds, [col]; alg = alg, rev = rev, mapformats = mapformats, stable = stable, threads = threads)
 
 mutable struct GroupBy
 	parent
@@ -27,38 +27,38 @@ _columns(ds::GroupBy) = _columns(ds.parent)
 index(ds::GroupBy) = index(ds.parent)
 Base.parent(ds::GroupBy) = ds.parent
 
-function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
 	_check_consistency(ds)
 	colsidx = index(ds)[cols]
-	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)
+	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, threads = threads)
 	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats)
 end
 
-groupby(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)
+groupby(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable, threads = threads)
 
-function groupby!(ds::GroupBy, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+function groupby!(ds::GroupBy, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
 	colsidx = index(ds)[cols]
 	grng = GIVENRANGE(_get_perms(ds),_group_starts(ds), nothing, _ngroups(ds))
-	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, givenrange = grng, skipcol = -1)
+	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, givenrange = grng, skipcol = -1, threads = threads)
 	ds.groupcols = colsidx
 	ds.rev = rev
 	ds.lastvalid = a[3]
 	ds.mapformats = mapformats
 	ds
 end
-groupby!(ds::GroupBy, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby!(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)
+groupby!(ds::GroupBy, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true) = groupby!(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable, threads =threads)
 
-function groupby(ds::GroupBy, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+function groupby(ds::GroupBy, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
 	colsidx = index(ds)[cols]
 	grng = GIVENRANGE(copy(_get_perms(ds)),copy(_group_starts(ds)), nothing, _ngroups(ds))
-	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, givenrange = grng, skipcol = -1)
+	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, givenrange = grng, skipcol = -1, threads = threads)
 	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats)
 end
-groupby(ds::GroupBy, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)
+groupby(ds::GroupBy, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable, threads = threads)
 
 
 
-function _threaded_permute_for_groupby(x, perm)
+function _threaded_permute_for_groupby(x, perm; threads = true)
 	if DataAPI.refpool(x) !== nothing
 		pa = x
 		if pa isa PooledArray
@@ -69,13 +69,17 @@ function _threaded_permute_for_groupby(x, perm)
 			res = pa[perm]
 		end
 	else
-		res = _threaded_permute(x, perm)
+		if threads
+			res = _threaded_permute(x, perm)
+		else
+			res = x[perm]
+		end
 	end
 	res
 end
 
-modify(origninal_gds::Union{GroupBy, GatherBy}, @nospecialize(args...)) = modify!(copy(origninal_gds), args...)
-function modify!(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
+modify(origninal_gds::Union{GroupBy, GatherBy}, @nospecialize(args...); threads::Bool = true) = modify!(copy(origninal_gds), args..., threads = threads)
+function modify!(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); threads::Bool = true)
 	if parent(gds) isa SubDataset
 		idx_cpy = copy(index(parent(gds)))
 	else
@@ -96,13 +100,13 @@ function modify!(gds::Union{GroupBy, GatherBy}, @nospecialize(args...))
 	var_index = idx_cpy[unique(all_new_var)]
 	# TODO what we should do when a groupcol is modified??
 	# any(index(parent(gds)).sortedcols .∈ Ref(var_index)) && throw(ArgumentError("the grouping variables cannot be modified, first use `ungroup!(ds)` to ungroup the data set"))
-	_modify_grouped(gds, norm_var)
+	_modify_grouped(gds, norm_var, threads)
 end
 
 
-function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssecond, mslast)
-	perm = _get_perms(gds)
-	starts = _group_starts(gds)
+function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssecond, mslast, threads)
+	perm = _get_perms(gds; threads = threads)
+	starts = _group_starts(gds; threads = threads)
 	ngroups = gds.lastvalid
 	iperm = invperm(perm)
 	if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
@@ -114,9 +118,9 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 		_res = Tables.allocatecolumn(T, nrow(parent(gds)))
 
 		if msfirst isa Tuple
-			_modify_grouped_fill_one_col_tuple!(_res, ntuple(i->_threaded_permute_for_groupby(_columns(parent(gds))[msfirst[i]], perm), length(msfirst)), mssecond, starts, ngroups, nrow(parent(gds)))
+			_modify_grouped_fill_one_col_tuple!(_res, ntuple(i->_threaded_permute_for_groupby(_columns(parent(gds))[msfirst[i]], perm), length(msfirst)), mssecond, starts, ngroups, nrow(parent(gds)), threads)
 		else
-			_modify_grouped_fill_one_col!(_res, _threaded_permute_for_groupby(_columns(parent(gds))[msfirst], perm), mssecond, starts, ngroups, nrow(parent(gds)))
+			_modify_grouped_fill_one_col!(_res, _threaded_permute_for_groupby(_columns(parent(gds))[msfirst], perm), mssecond, starts, ngroups, nrow(parent(gds)), threads)
 		end
 		# temporary work around for Subdataset, it is EXPERIMENTAL
 		if parent(gds) isa SubDataset
@@ -130,7 +134,7 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 				throw(ArgumentError("modifing a parent's column which doesn't appear in SubDataset is not allowed"))
 			end
 		else
-			parent(gds)[!, mslast] = _threaded_permute_for_groupby(_res, iperm)
+			parent(gds)[!, mslast] = _threaded_permute_for_groupby(_res, iperm; threads = threads)
 		end
 	elseif (mssecond isa Expr)  && mssecond.head == :BYROW
 		if parent(gds) isa SubDataset
@@ -157,7 +161,7 @@ end
 
 
 
-function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgroupcols = false)
+function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgroupcols = false, threads = true)
 	idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
 	if !dropgroupcols
         for i in gds.groupcols
@@ -173,7 +177,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 	!(_is_byrow_valid(Index(newlookup, new_nm, Dict{Int, Function}()), ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` otherwise"))
 
 	if _fast_gatherby_reduction(gds, ms)
-		return _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm; dropgroupcols = dropgroupcols)
+		return _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm; dropgroupcols = dropgroupcols, threads = threads)
 	end
 	# _check_mutliple_rows_for_each_group return the first transformation which causes multiple
 	# rows or 0 if all transformations return scalar for each group
@@ -183,7 +187,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 	_is_groupingcols_modifed(gds, ms) && throw(ArgumentError("`combine` cannot modify the grouping or sorting columns, use a different name for the computed column"))
 
 	groupcols = gds.groupcols
-	a = (_get_perms(gds), _group_starts(gds), gds.lastvalid)
+	a = (_get_perms(gds; threads = threads), _group_starts(gds; threads = threads), gds.lastvalid)
 	starts = a[2]
 	ngroups = gds.lastvalid
 
@@ -204,9 +208,9 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 		new_lengths = Vector{Int}(undef, ngroups)
 		# _columns(ds)[ms[_first_vector_res].first]
 		if ms[_first_vector_res].first isa Tuple
-			_compute_the_mutli_row_trans_tuple!(special_res, new_lengths, ntuple(i->_threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first[i]]], a[1]), length(ms[_first_vector_res].first)), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+			_compute_the_mutli_row_trans_tuple!(special_res, new_lengths, ntuple(i->_threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first[i]]], a[1], threads = threads), length(ms[_first_vector_res].first)), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)
 		else
-			_compute_the_mutli_row_trans!(special_res, new_lengths, _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first]], a[1]), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+			_compute_the_mutli_row_trans!(special_res, new_lengths, _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first]], a[1], threads = threads), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)
 		end
 		# special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
 		cumsum!(new_lengths, new_lengths)
@@ -224,9 +228,9 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 			addmissing = false
 			_tmpres = allocatecol(gds.parent[!, groupcols[j]].val, total_lengths, addmissing = addmissing)
 			if DataAPI.refpool(_tmpres) !== nothing
-				_push_groups_to_res_pa!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+				_push_groups_to_res_pa!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups, threads)
 			else
-				_push_groups_to_res!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups)
+				_push_groups_to_res!(_columns(newds), _tmpres, view(_columns(gds.parent)[groupcols[j]], a[1]), starts, new_lengths, total_lengths, j, groupcols, ngroups, threads)
 			end
 			push!(index(newds), new_nm[var_cnt])
 			setformat!(newds, new_nm[var_cnt] => getformat(parent(gds), groupcols[j]))
@@ -240,13 +244,13 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 		# this can be done by sorting the first argument of col=>fun=>dst between each byrow
 		if i == 1
 			if !(ms[i].first isa Tuple)
-				curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1])
+				curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1], threads = threads)
 			end
 		else
 			if !(ms[i].first isa Tuple)
 				if old_x !== ms[i].first
 					if !(ms[i].second.first isa Expr) && haskey(index(gds.parent), ms[i].first)
-						curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1])
+						curr_x = _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1], threads = threads)
 						old_x = ms[i].first
 					else
 						curr_x = view(_columns(gds.parent)[1], a[1])
@@ -258,15 +262,15 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 
 		if i == _first_vector_res
 			if ms[i].first isa Tuple
-				_combine_f_barrier_special_tuple(special_res, ntuple(j-> view(_columns(gds.parent)[index(gds.parent)[ms[i].first[j]]], a[1]), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+				_combine_f_barrier_special_tuple(special_res, ntuple(j-> view(_columns(gds.parent)[index(gds.parent)[ms[i].first[j]]], a[1]), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
 			else
-				_combine_f_barrier_special(special_res, view(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+				_combine_f_barrier_special(special_res, view(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
 			end
 		else
 			if ms[i].first isa Tuple
-				_combine_f_barrier_tuple(ntuple(j-> _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first[j]]], a[1]), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+				_combine_f_barrier_tuple(ntuple(j-> _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first[j]]], a[1], threads = threads), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
 			else
-				_combine_f_barrier(!(ms[i].second.first isa Expr) && haskey(index(gds.parent), ms[i].first) ? curr_x : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+				_combine_f_barrier(!(ms[i].second.first isa Expr) && haskey(index(gds.parent), ms[i].first) ? curr_x : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
 			end
 		end
 		if !haskey(index(newds), ms[i].second.second)
@@ -358,16 +362,16 @@ function _groupcols(ds::GatherBy)
 	ds.groupcols
 end
 
-function _group_starts(ds::GroupBy)
+function _group_starts(ds::GroupBy; threads = true)
 	ds.starts
 end
-function _group_starts(ds::Dataset)
+function _group_starts(ds::Dataset; threads = true)
 	index(ds).starts
 end
 
-function _group_starts(ds::GatherBy)
+function _group_starts(ds::GatherBy; threads = true)
 	if ds.starts === nothing
-		a = compute_indices(ds.groups, ds.lastvalid, nrow(ds.parent) < typemax(Int32) ? Val(Int32) : Val(Int64))
+		a = compute_indices(ds.groups, ds.lastvalid, nrow(ds.parent) < typemax(Int32) ? Val(Int32) : Val(Int64), threads = threads)
 		ds.starts = a[2]
 		ds.perm = a[1]
 		ds.starts
@@ -377,16 +381,16 @@ function _group_starts(ds::GatherBy)
 end
 
 
-function _get_perms(ds::Dataset)
+function _get_perms(ds::Dataset; threads = true)
 	1:nrow(ds)
 end
-_get_perms(ds::SubDataset) = 1:nrow(ds)
-function _get_perms(ds::GroupBy)
+_get_perms(ds::SubDataset; threads = true) = 1:nrow(ds)
+function _get_perms(ds::GroupBy; threads = true)
 	ds.perm
 end
-function _get_perms(ds::GatherBy)
+function _get_perms(ds::GatherBy; threads = true)
 	if ds.perm === nothing
-		a = compute_indices(ds.groups, ds.lastvalid, nrow(ds.parent) < typemax(Int32) ? Val(Int32) : Val(Int64))
+		a = compute_indices(ds.groups, ds.lastvalid, nrow(ds.parent) < typemax(Int32) ? Val(Int32) : Val(Int64); threads = threads)
 		ds.starts = a[2]
 		ds.perm = a[1]
 		ds.perm
@@ -425,10 +429,10 @@ _sortedcols(::SubDataset) = []
 _get_fmt(::SubDataset) = false
 _get_rev(::SubDataset) = []
 
-function groupby(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true)
+function groupby(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
 	_check_consistency(ds)
 	colsidx = index(ds)[cols]
-	a = _sortperm_v(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable)
+	a = _sortperm_v(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, threads = threads)
 	GroupBy(ds, colsidx, rev, a[2], a[1], a[3], mapformats)
 end
-groupby(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable)
+groupby(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable, threads = threads)

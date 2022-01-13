@@ -281,10 +281,10 @@ function normalize_modify_multiple!(outidx::Index, idx, @nospecialize(args...))
     res
 end
 
-modify(origninal_ds::AbstractDataset, @nospecialize(args...)) = modify!(copy(origninal_ds), args...)
+modify(origninal_ds::AbstractDataset, @nospecialize(args...); threads::Bool = true) = modify!(copy(origninal_ds), args...; threads = threads)
 
-modify!(ds::Dataset) = parent(ds)
-function modify!(ds::AbstractDataset, @nospecialize(args...))
+modify!(ds::Dataset; threads::Bool = true) = parent(ds)
+function modify!(ds::AbstractDataset, @nospecialize(args...); threads::Bool = true)
     if ds isa SubDataset
 		idx_cpy = copy(index(parent(ds)))
 	else
@@ -305,7 +305,7 @@ function modify!(ds::AbstractDataset, @nospecialize(args...))
         end
         var_index = idx_cpy[unique(all_new_var)]
         any(index(ds).sortedcols .∈ Ref(var_index)) && throw(ArgumentError("the grouping variables cannot be modified, first use `ungroup!(ds)` to ungroup the data set"))
-        _modify_grouped(ds, norm_var)
+        _modify_grouped(ds, norm_var, threads)
     else
         _modify(ds, normalize_modify_multiple!(idx_cpy, index(ds), args...))
     end
@@ -463,8 +463,8 @@ end
 
 # FIXME notyet complete
 # fill _res for grouped data: col => f => :newcol
-function _modify_grouped_fill_one_col!(_res, x, _f, starts, ngroups, nrows)
-    Threads.@threads for g in 1:ngroups
+function _modify_grouped_fill_one_col!(_res, x, _f, starts, ngroups, nrows, threads)
+    @_threadsfor threads for g in 1:ngroups
         lo = starts[g]
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         _tmp_res = _f(view(x, lo:hi))
@@ -478,8 +478,8 @@ function _modify_grouped_fill_one_col!(_res, x, _f, starts, ngroups, nrows)
     _res
 end
 
-function _modify_grouped_fill_one_col_tuple!(_res, x, _f, starts, ngroups, nrows)
-    Threads.@threads for g in 1:ngroups
+function _modify_grouped_fill_one_col_tuple!(_res, x, _f, starts, ngroups, nrows, threads)
+    @_threadsfor threads for g in 1:ngroups
         lo = starts[g]
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         _tmp_res = do_call(_f, x, lo:hi)
@@ -494,17 +494,18 @@ function _modify_grouped_fill_one_col_tuple!(_res, x, _f, starts, ngroups, nrows
 end
 
 
-function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast)
+function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast, threads)
     if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
         T = _check_the_output_type(ds, msfirst=>mssecond=>mslast)
         _res = Tables.allocatecolumn(T, nrow(ds))
         if msfirst isa Tuple
-            _modify_grouped_fill_one_col_tuple!(_res, ntuple(i->_columns(ds)[msfirst[i]], length(msfirst)), mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
+            _modify_grouped_fill_one_col_tuple!(_res, ntuple(i->_columns(ds)[msfirst[i]], length(msfirst)), mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds), threads)
         else
-            _modify_grouped_fill_one_col!(_res, _columns(ds)[msfirst], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds))
+            _modify_grouped_fill_one_col!(_res, _columns(ds)[msfirst], mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds), threads)
         end
         ds[!, mslast] = _res
     elseif (mssecond isa Expr)  && mssecond.head == :BYROW
+        #TODO we should think about how to pass threads here
         ds[!, mslast] = byrow(ds, mssecond.args[1], msfirst; mssecond.args[2]...)
     elseif (mssecond isa Base.Callable) && (mslast isa MultiCol) && (mssecond isa typeof(splitter))
         _modify_multiple_out!(ds, _columns(ds)[msfirst], mslast.x)
@@ -514,10 +515,10 @@ function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast)
     end
 end
 
-function _modify_grouped(ds, ms)
+function _modify_grouped(ds, ms, threads)
     needs_reset_grouping = false
     for i in 1:length(ms)
-        _modify_grouped_f_barrier(ds, ms[i].first, ms[i].second.first, ms[i].second.second)
+        _modify_grouped_f_barrier(ds, ms[i].first, ms[i].second.first, ms[i].second.second, threads)
     end
     return parent(ds)
 end

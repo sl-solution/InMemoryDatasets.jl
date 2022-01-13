@@ -88,7 +88,7 @@ function normalize_combine!(outidx::Index, idx,
                                 <:Expr}))
     if sel.second.head == :BYROW
         colsidx = outidx[sel.first]
-    
+
         dsc_sym = Symbol(funname(sel.second.args[1]), "_", _names(outidx)[outidx[sel.first]])
         _check_ind_and_add!(outidx, dsc_sym )
         return _names(outidx)[outidx[colsidx]] => sel.second => dsc_sym
@@ -101,7 +101,7 @@ function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                 <:Pair{<:Vector{Expr},
                                     <:Union{Symbol, AbstractString}}}))
-    if sel.second.first[1].head == :BYROW   
+    if sel.second.first[1].head == :BYROW
         colsidx = outidx[sel.first]
         _check_ind_and_add!(outidx, Symbol(sel.second.second))
         return _names(outidx)[outidx[colsidx]] => sel.second.first[1] => Symbol(sel.second.second)
@@ -288,16 +288,16 @@ function _is_groupingcols_modifed(ds, ms)
 end
 
 
-function _compute_the_mutli_row_trans!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts, ngroups)
-    Threads.@threads for g in 1:ngroups
+function _compute_the_mutli_row_trans!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts, ngroups, threads)
+    @_threadsfor threads for g in 1:ngroups
         lo = starts[g]
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         special_res[g] = _f(view(x, lo:hi))
         new_lengths[g] = length(special_res[g])
     end
 end
-function _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts, ngroups)
-    Threads.@threads for g in 1:ngroups
+function _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, x, nrows, _f, _first_vector_res, starts, ngroups, threads)
+    @_threadsfor threads for g in 1:ngroups
         lo = starts[g]
         g == ngroups ? hi = nrows : hi = starts[g + 1] - 1
         special_res[g] = do_call(_f, x, lo:hi)
@@ -330,9 +330,9 @@ function _create_index_for_newds(ds, ms, groupcols)
     return (lookup, nm)
 end
 
-function _push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
+function _push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups, threads)
     y = DataAPI.refarray(x)
-    Threads.@threads for i in 1:ngroups
+    @_threadsfor threads for i in 1:ngroups
         counter::UnitRange{Int} = 1:1
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
         fill!(view(_tmpres.refs, (new_lengths[i] - length(counter) + 1):(new_lengths[i])),  y[starts[i]])
@@ -340,8 +340,8 @@ function _push_groups_to_res_pa!(res, _tmpres, x, starts, new_lengths, total_len
     push!(res, _tmpres)
 end
 
-function _push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups)
-    Threads.@threads for i in 1:ngroups
+function _push_groups_to_res!(res, _tmpres, x, starts, new_lengths, total_lengths, j, groupcols, ngroups, threads)
+    @_threadsfor threads for i in 1:ngroups
         counter::UnitRange{Int} = 1:1
         i == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[i - 1] + 1):new_lengths[i])
         fill!(view(_tmpres, (new_lengths[i] - length(counter) + 1):(new_lengths[i])),  x[starts[i]])
@@ -368,9 +368,9 @@ function _check_the_output_type(x, mssecond)
     return T
 end
 
-function _update_one_col_combine!(res, _res, x, _f, ngroups, new_lengths, total_lengths, col)
+function _update_one_col_combine!(res, _res, x, _f, ngroups, new_lengths, total_lengths, col, threads)
     # make sure lo and hi are not defined any where outside the following loop
-    Threads.@threads for g in 1:ngroups
+    @_threadsfor threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = new_lengths[g] - length(counter) + 1
@@ -387,9 +387,9 @@ function _update_one_col_combine!(res, _res, x, _f, ngroups, new_lengths, total_
     return _res
 end
 
-function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows)
+function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, threads)
     # make sure lo and hi are not defined any where outside the following loop
-    Threads.@threads for g in 1:ngroups
+    @_threadsfor threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = starts[g]
@@ -407,9 +407,9 @@ function _add_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths
     push!(res, _res)
     return _res
 end
-function _add_one_col_combine_tuple!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows)
+function _add_one_col_combine_tuple!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, threads)
     # make sure lo and hi are not defined any where outside the following loop
-    Threads.@threads for g in 1:ngroups
+    @_threadsfor threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = starts[g]
@@ -427,9 +427,9 @@ function _add_one_col_combine_tuple!(res, _res, in_x, _f, starts, ngroups, new_l
     push!(res, _res)
     return _res
 end
-function _update_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, col)
+function _update_one_col_combine!(res, _res, in_x, _f, starts, ngroups, new_lengths, total_lengths, nrows, col, threads)
     # make sure lo and hi are not defined any where outside the following loop
-    Threads.@threads for g in 1:ngroups
+    @_threadsfor threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         lo = starts[g]
@@ -455,8 +455,8 @@ function _special_res_fill_barrier!(_res, vals, nl_g, l_cnt)
 end
 
 # special_res cannot be based on previous columns of the combined data set
-function _fill_res_with_special_res!(res, _res, special_res, ngroups, new_lengths, total_lengths)
-     Threads.@threads for g in 1:ngroups
+function _fill_res_with_special_res!(res, _res, special_res, ngroups, new_lengths, total_lengths, threads)
+     @_threadsfor threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         # this is not optimized for pooled arrays
@@ -470,8 +470,8 @@ function _fill_res_with_special_res!(res, _res, special_res, ngroups, new_length
     push!(res, _res)
 end
 # special_res cannot be based on previous columns of the combined data set
-function _update_res_with_special_res!(res, _res, special_res, ngroups, new_lengths, total_lengths, col)
-     Threads.@threads for g in 1:ngroups
+function _update_res_with_special_res!(res, _res, special_res, ngroups, new_lengths, total_lengths, col, threads)
+     @_threadsfor threads for g in 1:ngroups
         counter::UnitRange{Int} = 1:1
         g == 1 ? (counter = 1:new_lengths[1]) : (counter = (new_lengths[g - 1] + 1):new_lengths[g])
         # this is not optimized for pooled arrays
@@ -484,28 +484,28 @@ function _update_res_with_special_res!(res, _res, special_res, ngroups, new_leng
     return _res
 end
 
-function _combine_f_barrier_special(special_res, fromds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
+function _combine_f_barrier_special(special_res, fromds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths, threads)
         T = _check_the_output_type(fromds, mssecond)
         _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-        _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
+        _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, threads)
 end
-function _combine_f_barrier_special_tuple(special_res, fromds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths)
+function _combine_f_barrier_special_tuple(special_res, fromds, newds, msfirst, mssecond, mslast, newds_lookup, _first_vector_res, ngroups, new_lengths, total_lengths, threads)
         T = _check_the_output_type(fromds, mssecond)
         _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-        _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths)
+        _fill_res_with_special_res!(_columns(newds), _res, special_res, ngroups, new_lengths, total_lengths, threads)
 end
 
-function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
 
     if !(mssecond isa Expr)
         if !haskey(newds_lookup, mslast)
             T = _check_the_output_type(fromds, mssecond)
             _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-            _add_one_col_combine!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds))
+            _add_one_col_combine!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds), threads)
         else
             T = _check_the_output_type(fromds, mssecond)
             _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-            _update_one_col_combine!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds), newds_lookup[mslast])
+            _update_one_col_combine!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds), newds_lookup[mslast], threads)
             # _update_one_col_combine!(_columns(newds), _res, fromds, mssecond, ngroups, new_lengths, total_lengths, newds_lookup[mslast])
         end
 
@@ -515,14 +515,14 @@ function _combine_f_barrier(fromds, newds, msfirst, mssecond, mslast, newds_look
         throw(ArgumentError("`combine` doesn't support $(msfirst=>mssecond=>mslast) combination"))
     end
 end
-function _combine_f_barrier_tuple(fromds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+function _combine_f_barrier_tuple(fromds, newds, msfirst, mssecond, mslast, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
     T = _check_the_output_type(fromds, mssecond)
     _res = Tables.allocatecolumn(Union{Missing, T}, total_lengths)
-    _add_one_col_combine_tuple!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds[1]))
+    _add_one_col_combine_tuple!(_columns(newds), _res, fromds, mssecond, starts, ngroups, new_lengths, total_lengths, length(fromds[1]), threads)
 
 end
 
-function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false)
+function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false, threads = true)
     !isgrouped(ds) &&  return combine_ds(ds, args...)#throw(ArgumentError("`combine` is only for grouped data sets, use `modify` instead"))
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
     if !dropgroupcols
@@ -565,9 +565,9 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false)
         new_lengths = Vector{Int}(undef, ngroups)
         # _columns(ds)[ms[_first_vector_res].first]
         if  ms[_first_vector_res].first isa Tuple
-            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, ntuple(i->_columns(ds)[index(ds)[ms[_first_vector_res].first[i]]], length(ms[_first_vector_res].first)), nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, ntuple(i->_columns(ds)[index(ds)[ms[_first_vector_res].first[i]]], length(ms[_first_vector_res].first)), nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)
         else
-            _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+            _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)
         end
         # special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
         cumsum!(new_lengths, new_lengths)
@@ -585,9 +585,9 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false)
         for j in 1:length(groupcols)
             _tmpres = allocatecol(ds[!, groupcols[j]].val, total_lengths)
             if DataAPI.refpool(_tmpres) !== nothing
-                _push_groups_to_res_pa!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
+                _push_groups_to_res_pa!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups, threads)
             else
-                _push_groups_to_res!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups)
+                _push_groups_to_res!(_columns(newds), _tmpres, _columns(ds)[groupcols[j]], starts, new_lengths, total_lengths, j, groupcols, ngroups, threads)
             end
             push!(index(newds), new_nm[var_cnt])
             setformat!(newds, new_nm[var_cnt] => get(index(ds).format, groupcols[j], identity))
@@ -598,15 +598,15 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false)
     for i in 1:length(ms)
         if i == _first_vector_res
             if ms[i].first isa Tuple
-                _combine_f_barrier_special_tuple(special_res, ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_special_tuple(special_res, ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
             else
-                _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
             end
         else
             if ms[i].first isa Tuple
-                _combine_f_barrier_tuple(ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_tuple(ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
             else
-                _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+                _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
             end
         end
         if !haskey(index(newds), ms[i].second.second)
@@ -629,7 +629,7 @@ end
 
 
 
-function combine_ds(ds::Dataset, @nospecialize(args...))
+function combine_ds(ds::Dataset, @nospecialize(args...); threads = true)
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
     ms = normalize_combine_multiple!(idx_cpy, index(ds), args...)
     newlookup, new_nm = _create_index_for_newds(ds, ms, index(ds).sortedcols)
@@ -657,9 +657,9 @@ function combine_ds(ds::Dataset, @nospecialize(args...))
         new_lengths = Vector{Int}(undef, ngroups)
         # _columns(ds)[ms[_first_vector_res].first]
         if  ms[_first_vector_res].first isa Tuple
-            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, ntuple(i->_columns(ds)[index(ds)[ms[_first_vector_res].first[i]]], length(ms[_first_vector_res].first)), nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+            _compute_the_mutli_row_trans_tuple!(special_res, new_lengths, ntuple(i->_columns(ds)[index(ds)[ms[_first_vector_res].first[i]]], length(ms[_first_vector_res].first)), nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)
         else
-            _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups)
+            _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)
         end
         # special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
         cumsum!(new_lengths, new_lengths)
@@ -676,15 +676,15 @@ function combine_ds(ds::Dataset, @nospecialize(args...))
     for i in 1:length(ms)
         if i == _first_vector_res
             if ms[i].first isa Tuple
-                _combine_f_barrier_special_tuple(special_res, ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_special_tuple(special_res, ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
             else
-                _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
             end
         else
             if ms[i].first isa Tuple
-                _combine_f_barrier_tuple(ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+                _combine_f_barrier_tuple(ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
             else
-                _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths)
+                _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
             end
         end
         if !haskey(index(newds), ms[i].second.second)
