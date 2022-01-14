@@ -596,6 +596,8 @@ returned `Dataset` will affect `ds`.
 
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
+See [`flatten!`](@ref)
+
 # Examples
 
 ```jldoctest
@@ -665,6 +667,12 @@ ERROR: ArgumentError: Lengths of iterables stored in columns :b and :c are not t
 """
 flatten(ds, cols)
 
+"""
+    flatten!(ds, cols)
+
+Variant of `flatten` that does flatten `ds` in-place.
+"""
+flatten!
 
 _ELTYPE(x) = eltype(x)
 _ELTYPE(::Missing) = Missing
