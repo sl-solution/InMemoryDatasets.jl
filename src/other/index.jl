@@ -101,7 +101,7 @@ Base.:(==)(x::AbstractIndex, y::AbstractIndex) = isequal(x, y)
 function rename!(x::Index, nms::AbstractVector{Symbol}; makeunique::Bool=false)
     if !makeunique
         if length(unique(nms)) != length(nms)
-            dup = unique(nms[nonunique(Dataset(nms=nms))])
+            dup = unique(nms[duplicates(Dataset(nms=nms))])
             dupstr = join(string.(':', dup), ", ", " and ")
             msg = "Duplicate variable names: $dupstr. Pass makeunique=true " *
                   "to make them unique using a suffix automatically."

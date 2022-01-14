@@ -152,10 +152,10 @@ function warmup()
                     b = Vector{Union{Int, Missing}}(1:6),
                     c = Union{Int, Missing}[1:3;1:3])
     ds = vcat(ds1, ds1)
-    findall(nonunique(ds)) == collect(7:12)
+    findall(duplicates(ds)) == collect(7:12)
     fmt(x)=1
     setformat!(ds, :a=>fmt)
-    findall(nonunique(ds, :a, mapformats = true)) == 2:12
+    findall(duplicates(ds, :a, mapformats = true)) == 2:12
     unique(ds) == ds1
     unique(ds, 2:3) == ds1
 

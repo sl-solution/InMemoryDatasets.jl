@@ -50,7 +50,7 @@ export
       ncol,
       rename!,
       rename,
-      nonunique,
+      duplicates,
       getformat,
       setformat!,
       removeformat!,

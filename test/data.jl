@@ -1,48 +1,48 @@
 using Test, InMemoryDatasets, Random, CategoricalArrays
 
-@testset "nonunique, nonunique, unique! with extra argument" begin
+@testset "duplicates, unique, unique! with extra argument" begin
     ds1 = Dataset(a = Union{String, Missing}["a", "b", "a", "b", "a", "b"],
                     b = Vector{Union{Int, Missing}}(1:6),
                     c = Union{Int, Missing}[1:3;1:3])
     ds = vcat(ds1, ds1)
-    @test findall(nonunique(ds)) == collect(7:12)
-    @test findall(nonunique(ds, leave = :last)) == collect(1:6)
-    @test findall(nonunique(ds, :)) == collect(7:12)
-    @test findall(nonunique(ds, Colon())) == collect(7:12)
-    @test findall(nonunique(ds, :a)) == collect(3:12)
-    @test findall(nonunique(ds, "a")) == collect(3:12)
-    @test findall(nonunique(ds, [:a, :c])) == collect(7:12)
-    @test findall(nonunique(ds, ["a", "c"])) == collect(7:12)
-    @test findall(nonunique(ds, r"[ac]")) == collect(7:12)
-    @test findall(nonunique(ds, Not(2))) == collect(7:12)
-    @test findall(nonunique(ds, Not([2]))) == collect(7:12)
-    @test findall(nonunique(ds, Not(:b))) == collect(7:12)
-    @test findall(nonunique(ds, Not([:b]))) == collect(7:12)
-    @test findall(nonunique(ds, Not([false, true, false]))) == collect(7:12)
-    @test findall(nonunique(ds, [1, 3])) == collect(7:12)
-    @test findall(nonunique(ds, 1)) == collect(3:12)
+    @test findall(duplicates(ds)) == collect(7:12)
+    @test findall(duplicates(ds, leave = :last)) == collect(1:6)
+    @test findall(duplicates(ds, :)) == collect(7:12)
+    @test findall(duplicates(ds, Colon())) == collect(7:12)
+    @test findall(duplicates(ds, :a)) == collect(3:12)
+    @test findall(duplicates(ds, "a")) == collect(3:12)
+    @test findall(duplicates(ds, [:a, :c])) == collect(7:12)
+    @test findall(duplicates(ds, ["a", "c"])) == collect(7:12)
+    @test findall(duplicates(ds, r"[ac]")) == collect(7:12)
+    @test findall(duplicates(ds, Not(2))) == collect(7:12)
+    @test findall(duplicates(ds, Not([2]))) == collect(7:12)
+    @test findall(duplicates(ds, Not(:b))) == collect(7:12)
+    @test findall(duplicates(ds, Not([:b]))) == collect(7:12)
+    @test findall(duplicates(ds, Not([false, true, false]))) == collect(7:12)
+    @test findall(duplicates(ds, [1, 3])) == collect(7:12)
+    @test findall(duplicates(ds, 1)) == collect(3:12)
 
-    @test findall(nonunique(ds, threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, leave = :last, threads = false)) == collect(1:6)
-    @test findall(nonunique(ds, :, threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, Colon(), threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, :a, threads = false)) == collect(3:12)
-    @test findall(nonunique(ds, "a", threads = false)) == collect(3:12)
-    @test findall(nonunique(ds, [:a, :c], threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, ["a", "c"], threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, r"[ac]", threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, Not(2), threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, Not([2]), threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, Not(:b), threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, Not([:b]), threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, Not([false, true, false]), threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, [1, 3], threads = false)) == collect(7:12)
-    @test findall(nonunique(ds, 1, threads = false)) == collect(3:12)
+    @test findall(duplicates(ds, threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, leave = :last, threads = false)) == collect(1:6)
+    @test findall(duplicates(ds, :, threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, Colon(), threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, :a, threads = false)) == collect(3:12)
+    @test findall(duplicates(ds, "a", threads = false)) == collect(3:12)
+    @test findall(duplicates(ds, [:a, :c], threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, ["a", "c"], threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, r"[ac]", threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, Not(2), threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, Not([2]), threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, Not(:b), threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, Not([:b]), threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, Not([false, true, false]), threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, [1, 3], threads = false)) == collect(7:12)
+    @test findall(duplicates(ds, 1, threads = false)) == collect(3:12)
 
     fmt(x)=1
     setformat!(ds, :a=>fmt)
-    @test findall(nonunique(ds, :a, mapformats = true)) == 2:12
-    @test findall(nonunique(ds, :a, mapformats = true, threads = false)) == 2:12
+    @test findall(duplicates(ds, :a, mapformats = true)) == 2:12
+    @test findall(duplicates(ds, :a, mapformats = true, threads = false)) == 2:12
 
 
     @test unique(ds) == ds1
@@ -84,10 +84,10 @@ using Test, InMemoryDatasets, Random, CategoricalArrays
     @test unique(ds, :a, mapformats = true, threads = false) == ds[1:1, :]
 
     @test_throws ArgumentError unique(Dataset())
-    @test_throws ArgumentError nonunique(Dataset())
+    @test_throws ArgumentError duplicates(Dataset())
 
     @test_throws ArgumentError unique(Dataset(), threads = false)
-    @test_throws ArgumentError nonunique(Dataset(), threads = false)
+    @test_throws ArgumentError duplicates(Dataset(), threads = false)
 
     @test unique(copy(ds1), "a") == unique(copy(ds1), :a) == unique(copy(ds1), 1) ==
           ds1[1:2, :]

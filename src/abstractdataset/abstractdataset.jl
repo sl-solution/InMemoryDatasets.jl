@@ -26,7 +26,7 @@ The following are normally implemented for AbstractDatasets:
 * [`completecases`](@ref) : boolean vector of complete cases (rows with no missings)
 * [`dropmissing`](@ref) : remove rows with missing values
 * [`dropmissing!`](@ref) : remove rows with missing values in-place
-* [`nonunique`](@ref) : indexes of duplicate rows
+* [`duplicates`](@ref) : indexes of duplicate rows
 * [`unique`](@ref) : remove duplicate rows
 * [`unique!`](@ref) : remove duplicate rows in-place
 
@@ -901,18 +901,21 @@ Base.Array(ds::AbstractDataset) = Matrix(ds)
 Base.Array{T}(ds::AbstractDataset) where {T} = Matrix{T}(ds)
 
 """
-    nonunique(ds::AbstractDataset; [mapformats = false, leave = :first])
-    nonunique(ds::AbstractDataset, cols; [mapformats = false, leave = :first])
+    duplicates(ds::AbstractDataset; [mapformats = false, leave = :first, threads])
+    duplicates(ds::AbstractDataset, cols; [mapformats = false, leave = :first, threads])
 
-Return a `Vector{Bool}` in which `true` entries indicate duplicate rows.
-A row is a duplicate if there exists a prior row with all columns containing
+Return a `BitVector` in which `true` entries indicate duplicate rows.
+A row is a duplicate if there exists a prior row (default behavior, see the `leave` keyword argument for other options) with all columns containing
 equal values (according to `isequal`).
 
 If `mapformats = true` the values are checked based on their formatted values.
-`leave = :first` means that everey occurance after the first one be marked as non-unique value,
-`leave = :last` means that every occurance before the last one be marked as non-unique value,
-`leave = :none` means that no duplicated rows are marked as non-unique value,
-`leave = :random` means that a random occurance of duplicated values be marked as non-unique value.
+
+The `leave` keyword argument determines which occurance of duplicated rows should be indicated as non-duplicate rows.
+
+* `leave = :first` means that everey occurance after the first one be marked as duplicate rows,
+* `leave = :last` means that every occurance before the last one be marked as duplicate rows,
+* `leave = :none` means that every occurance of duplicates rows be marked as duplicate rows,
+* `leave = :random` means that a random occurance of duplicate rows be marked as duplicate rows.
 
 See also [`unique`](@ref) and [`unique!`](@ref).
 
@@ -948,7 +951,7 @@ julia> ds = vcat(ds, ds)
    7 │        3         1
    8 │        4         2
 
-julia> nonunique(ds)
+julia> duplicates(ds)
 8-element Vector{Bool}:
  0
  0
@@ -959,7 +962,7 @@ julia> nonunique(ds)
  1
  1
 
-julia> nonunique(ds, 2)
+julia> duplicates(ds, 2)
 8-element Vector{Bool}:
  0
  0
@@ -971,7 +974,9 @@ julia> nonunique(ds, 2)
  1
 ```
 """
-function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, leave = :first, threads = true)
+duplicates
+
+function duplicates(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, leave = :first, threads = true)
     # :xor, :nor, :and, :or are undocumented
     !(leave in (:first, :last, :none, :random, :xor, :nand, :nor, :and, :or)) && throw(ArgumentError("`leave` must be either `:first`, `:last`, `:none`, or `random`"))
     if ncol(ds) == 0
@@ -1014,7 +1019,10 @@ function nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats =
     end
 
 end
-nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false, leave = :first, threads = true) = nonunique(ds, [col]; mapformats = mapformats, leave = leave, threads = threads)
+duplicates(ds::AbstractDataset, col::ColumnIndex; mapformats = false, leave = :first, threads = true) = duplicates(ds, [col]; mapformats = mapformats, leave = leave, threads = threads)
+
+nonunique(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, leave = :first, threads = true) = duplicates(ds, cols, mapformats = mapformats, leave = leave, threads = threads)
+nonunique(ds::AbstractDataset, col::ColumnIndex; mapformats = false, leave = :first, threads = true) = duplicates(ds, [col], mapformats = mapformats, leave = leave, threads = threads)
 
 function _nonunique_barrier!(res, groups, seen_groups; first = true)
     if first
