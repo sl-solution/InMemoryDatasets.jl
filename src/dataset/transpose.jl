@@ -95,50 +95,50 @@ julia> ds = Dataset(x1 = [1,2,3,4], x2 = [1,4,9,16])
 
 julia> transpose(ds, [:x1,:x2])
 2×5 Dataset
-Row │ _variables_   _c1       _c2       _c3       _c4
-    │ identity      identity  identity  identity  identity
-    │ Characters…?  Int64?    Int64?    Int64?    Int64?
-────┼──────────────────────────────────────────────────────
-  1 │ x1                   1         2         3         4
-  2 │ x2                   1         4         9        16
+ Row │ _variables_  _c1       _c2       _c3       _c4
+     │ identity     identity  identity  identity  identity
+     │ String?      Int64?    Int64?    Int64?    Int64?
+─────┼─────────────────────────────────────────────────────
+   1 │ x1                  1         2         3         4
+   2 │ x2                  1         4         9        16
 
 julia> pop = Dataset(country = ["c1","c1","c2","c2","c3","c3"],
-                       sex = repeat(["male", "female"],3),
-                       pop_2000 = [100, 120, 150, 155, 170, 190],
-                       pop_2010 = [110, 120, 155, 160, 178, 200],
-                       pop_2020 = [115, 130, 161, 165, 180, 203])
+                             sex = repeat(["male", "female"],3),
+                             pop_2000 = [100, 120, 150, 155, 170, 190],
+                             pop_2010 = [110, 120, 155, 160, 178, 200],
+                             pop_2020 = [115, 130, 161, 165, 180, 203])
 6×5 Dataset
-Row │ country     sex         pop_2000  pop_2010  pop_2020
-    │ identity    identity    identity  identity  identity
-    │ Characte…?  Characte…?  Int64?    Int64?    Int64?
-────┼──────────────────────────────────────────────────────
-  1 │ c1          male             100       110       115
-  2 │ c1          female           120       120       130
-  3 │ c2          male             150       155       161
-  4 │ c2          female           155       160       165
-  5 │ c3          male             170       178       180
-  6 │ c3          female           190       200       203
+ Row │ country   sex       pop_2000  pop_2010  pop_2020
+     │ identity  identity  identity  identity  identity
+     │ String?   String?   Int64?    Int64?    Int64?
+─────┼──────────────────────────────────────────────────
+   1 │ c1        male           100       110       115
+   2 │ c1        female         120       120       130
+   3 │ c2        male           150       155       161
+   4 │ c2        female         155       160       165
+   5 │ c3        male           170       178       180
+   6 │ c3        female         190       200       203
 
 julia> groupby!(pop, :country);
-julia> transpose(pop, r"pop_",
-                id = :sex, variable_name = "year",
-                renamerowid = x -> replace(x, "pop_" => ""),
-                renamecolid = x -> x * "_pop")
-9×4 Dataset
- Row │ country     year        male_pop  female_pop
-     │ identity    identity    identity  identity
-     │ Characte…?  Characte…?  Int64?    Int64?
-─────┼──────────────────────────────────────────────
-   1 │ c1          2000             100         120
-   2 │ c1          2010             110         120
-   3 │ c1          2020             115         130
-   4 │ c2          2000             150         155
-   5 │ c2          2010             155         160
-   6 │ c2          2020             161         165
-   7 │ c3          2000             170         190
-   8 │ c3          2010             178         200
-   9 │ c3          2020             180         203
 
+julia> transpose(pop, r"pop_",
+                       id = :sex, variable_name = "year",
+                       renamerowid = x -> replace(x, "pop_" => ""),
+                       renamecolid = x -> x * "_pop")
+9×4 Dataset
+ Row │ country   year      male_pop  female_pop
+     │ identity  identity  identity  identity
+     │ String?   String?   Int64?    Int64?
+─────┼──────────────────────────────────────────
+   1 │ c1        2000           100         120
+   2 │ c1        2010           110         120
+   3 │ c1        2020           115         130
+   4 │ c2        2000           150         155
+   5 │ c2        2010           155         160
+   6 │ c2        2020           161         165
+   7 │ c3        2000           170         190
+   8 │ c3        2010           178         200
+   9 │ c3        2020           180         203
 ```
 """
 Base.transpose(::Dataset, cols; [id , renamecolid , renamerowid , variable_name, default, threads, mapformats])
