@@ -326,13 +326,15 @@ end
 
 
 """
-    map(ds::AbstractDataset, f::Function, cols)
-    map(ds::AbstractDataset, f::Vector{Function}, cols)
+    map(ds::AbstractDataset, f::Function, cols; [threads = true])
+    map(ds::AbstractDataset, f::Vector{Function}, cols; [threads = true])
 
 Return a copy of `ds` where cols of the new `Dataset` is the result of calling `f` on each observation. The order of columns for the new data set is the same as `ds`.
 Note that `map` guarantees not to reuse the columns from `ds` in the returned
 `Dataset`. If `f` returns its argument then it gets copied before being stored.
 The number of functions and the number of cols must match when multiple functions is used.
+
+See [`map!`](@ref)
 
 # Examples
 ```jldoctest
@@ -359,41 +361,6 @@ julia> map(ds, x -> x^2, :)
    4 │       16       196
 ```
 """
-# function Base.map(ds::Dataset, f::Function, cols::MultiColumnIndex)
-#     # Create Dataset
-#     ncol(ds) == 0 && return ds # skip if no columns
-#     colsidx = index(ds)[cols]
-#     transfer_grouping_info = !any(colsidx .∈ Ref(index(ds).sortedcols))
-#     sorted_colsidx = sort(colsidx)
-#     vs = AbstractVector[]
-#     for j in 1:ncol(ds)
-#         if insorted(j, sorted_colsidx)
-#             _f = f
-#         else
-#             _f = identity
-#         end
-#         v = _columns(ds)[j]
-#         T = Core.Compiler.return_type(_f, (eltype(v), ))
-#         fv = Vector{T}(undef, length(v))
-#         _hp_map_a_function!(fv, _f, v)
-#         push!(vs, fv === v ? copy(fv) : fv)
-#     end
-#     if transfer_grouping_info
-#         newds_index = copy(index(ds))
-#     else
-#         newds_index = copy(index(ds))
-#         _reset_grouping_info!(newds_index)
-#     end
-#     # formats don't need to be transferred
-#     newds = Dataset(vs, newds_index, copycols=false)
-#     removeformat!(newds, cols)
-#     setinfo!(newds, _attributes(ds).meta.info[])
-#     return newds
-#
-# end
-# Base.map(ds::Dataset, f::Union{Function}, col::ColumnIndex) = map(ds, f, [col])
-# Base.map(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `cols` argument cannot be left blank"))
-
 function Base.map(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = true)
     colsidx = index(ds)[cols]
     fs = repeat([f], length(colsidx))
@@ -451,11 +418,14 @@ end
 
 
 """
-    map!(ds::Dataset, f::Function, cols)
+    map!(ds::Dataset, f::Function, cols; [threads = true])
+    map!(ds::Dataset, f::Vector{Function}, cols; [threads = true])
 
 Update each row of each `col` in `ds[!, cols]` in-place when `map!` return a result, and skip when it is not possible.
 
 If `f` cannot be applied in place, use `map` for creating a copy of `ds`.
+
+See [`map`](@ref)
 
 # Examples
 
@@ -483,58 +453,7 @@ julia> ds
    2 │        4       144
    3 │        9       169
    4 │       16       196
-```
-"""
-# function Base.map!(ds::Dataset, f::Function, cols::MultiColumnIndex)
-#     # Create Dataset
-#     ncol(ds) == 0 && return ds # skip if no columns
-#     colsidx = index(ds)[cols]
-#     _reset_group = false
-#     # TODO needs function barrier
-#     number_of_warnnings = 0
-#     for j in 1:length(colsidx)
-#         CT = eltype(_columns(ds)[colsidx[j]])
-#         # Core.Compiler.return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of Core.Compiler.return_type is Union{Missing, Float64, Int64}
-#         # we remove missing and then check the result,
-#         # TODO is there any problem with this?
-#         T = Core.Compiler.return_type(f, (nonmissingtype(CT),))
-#         if CT >: Missing
-#             T = Union{Missing, T}
-#         end
-#         if promote_type(T, CT) <: CT
-#             _hp_map!_a_function!(_columns(ds)[colsidx[j]], f)
-#             # map!(f, _columns(ds)[colsidx[j]],  _columns(ds)[colsidx[j]])
-#             # removeformat!(ds, colsidx[j])
-#             _modified(_attributes(ds))
-#             if !_reset_group && colsidx[j] ∈ index(ds).sortedcols
-#                 _reset_grouping_info!(ds)
-#                 _reset_group = true
-#             end
-#         else
-#             if number_of_warnnings < 5
-#                 @warn "cannot map `f` on ds[!, :$(_names(ds)[colsidx[j]])] in-place, the selected column is $(CT) and the result of calculation is $(T)"
-#                 number_of_warnnings += 1
-#             elseif number_of_warnnings == 5
-#                 @warn "more than 5 columns can not be replaced ...."
-#                 number_of_warnnings += 1
-#             end
-#             continue
-#         end
-#     end
-#     return ds
-# end
-#
-# Base.map!(ds::Dataset, f::Union{Function}) = throw(ArgumentError("the `col` argument cannot be left blank"))
 
-"""
-    map!(ds::Dataset, f::Vector{Function}, cols)
-
-Update each row of the jth `col` in `ds[!, cols]` in-place by calling `f[j]` on it. If in-place mapping cannot be done, the mapping is skipped.
-
-Use `map` if the in-place operation is not possible.
-
-# Examples
-```jldoctest
 julia> ds = Dataset(x=1:4, y=11:14)
 4×2 Dataset
  Row │ x         y
@@ -894,64 +813,59 @@ julia> unique!(ds)  # modifies ds
 
 
 """
-    dropmissing!(ds::Dataset, cols=:; disallowmissing::Bool=true)
+    dropmissing!(ds::Dataset, cols=:; mapformats = false, threads)
 
 Remove rows with missing values from data set `ds` and return it.
 
 If `cols` is provided, only missing values in the corresponding columns are considered.
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
-If `disallowmissing` is `true` (the default) then the `cols` columns will
-get converted using [`disallowmissing!`](@ref).
-
 See also: [`dropmissing`](@ref) and [`completecases`](@ref).
 
 ```jldoctest
 julia> ds = Dataset(i = 1:5,
-                      x = [missing, 4, missing, 2, 1],
-                      y = [missing, missing, "c", "d", "e"])
+                             x = [missing, 4, missing, 2, 1],
+                             y = [missing, missing, "c", "d", "e"])
 5×3 Dataset
- Row │ i      x        y
-     │ Int64  Int64?   String?
-─────┼─────────────────────────
-   1 │     1  missing  missing
-   2 │     2        4  missing
-   3 │     3  missing  c
-   4 │     4        2  d
-   5 │     5        1  e
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    String?
+─────┼──────────────────────────────
+   1 │        1   missing  missing
+   2 │        2         4  missing
+   3 │        3   missing  c
+   4 │        4         2  d
+   5 │        5         1  e
 
 julia> dropmissing!(copy(ds))
 2×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  String
-─────┼──────────────────────
-   1 │     4      2  d
-   2 │     5      1  e
-
-julia> dropmissing!(copy(ds), disallowmissing=false)
-2×3 Dataset
- Row │ i      x       y
-     │ Int64  Int64?  String?
-─────┼────────────────────────
-   1 │     4       2  d
-   2 │     5       1  e
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    String?
+─────┼──────────────────────────────
+   1 │        4         2  d
+   2 │        5         1  e
 
 julia> dropmissing!(copy(ds), :x)
 3×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  String?
-─────┼───────────────────────
-   1 │     2      4  missing
-   2 │     4      2  d
-   3 │     5      1  e
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    String?
+─────┼──────────────────────────────
+   1 │        2         4  missing
+   2 │        4         2  d
+   3 │        5         1  e
 
 julia> dropmissing!(ds, [:x, :y])
 2×3 Dataset
- Row │ i      x      y
-     │ Int64  Int64  String
-─────┼──────────────────────
-   1 │     4      2  d
-   2 │     5      1  e
+ Row │ i         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    String?
+─────┼──────────────────────────────
+   1 │        4         2  d
+   2 │        5         1  e
+
+julia>
 ```
 """
 function dropmissing!(ds::Dataset,
@@ -1065,8 +979,8 @@ end
 
 
 """
-    describe(ds::AbstractDataset; cols=:)
-    describe(ds::AbstractDataset, fun...; cols=:)
+    describe(ds::AbstractDataset; cols=:, threads = true)
+    describe(ds::AbstractDataset, fun...; cols=:, threads = true)
 
 Return descriptive statistics for a data set as a new `Dataset`
 where each row represents a variable and each column a summary statistic.
@@ -1144,7 +1058,9 @@ n(x) = count(!ismissing, x)
 """
     filter(ds, cols; [type = all,...])
 
-A convenient shortcut for ds[byrow(ds, type, cols; ...), :].
+A convenient shortcut for ds[byrow(ds, type, cols; ...), :]. `type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+
+See [`byrow`](@ref)
 """
 function Base.filter(ds::AbstractDataset, cols::Union{ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...)
     if view
@@ -1156,17 +1072,22 @@ end
 """
     filter!(ds, cols; [type = all, ...])
 
-A convenient shortcut for deleteat![ds, .!byrow(ds, type, cols; ...)).
+A convenient shortcut for deleteat![ds, .!byrow(ds, type, cols; ...)). `type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+
+See [`byrow`](@ref)
 """
 Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, kwargs...) = deleteat!(ds, .!byrow(ds, type, cols; kwargs...))
 
 
 """
     mapcols(ds, f, cols)
+    mapcols(ds, f::Vector, cols)
 
 Return a `Dataset` where each column in `cols` of `ds` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
 (all values other than `AbstractVector` are considered to be a scalar).
+
+To apply different functions on different columns pass a vector of functions.
 
 Note that `mapcols` guarantees not to reuse the columns from `ds` in the returned
 `Dataset`. If `f` returns its argument then it gets copied before being stored.
