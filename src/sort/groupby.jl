@@ -69,11 +69,7 @@ function _threaded_permute_for_groupby(x, perm; threads = true)
 			res = pa[perm]
 		end
 	else
-		if threads
-			res = _threaded_permute(x, perm)
-		else
-			res = x[perm]
-		end
+		res = _threaded_permute(x, perm; threads = threads)
 	end
 	res
 end

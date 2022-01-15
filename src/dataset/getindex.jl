@@ -148,7 +148,8 @@ end
 
 # ds[MultiRowIndex, MultiColumnIndex] => Dataset
 function _threaded_permute(x, perm; threads = true)
-    x_cpy = similar(x, length(perm))
+    x_cpy = similar(x, 1)
+    resize!(x_cpy, length(perm))
     @_threadsfor threads for i in 1:length(x_cpy)
         x_cpy[i] = x[perm[i]]
     end
