@@ -314,7 +314,7 @@ Return a boolean vector which is true if all values in corresponding row for sel
 
 Passing `rev = true` returns true if all values are greater than passed values via `with`.
 
-By default, the comparison is done via `isless` function, however, user may change it by passing a function via the `lt` keyword argument. The function passed to `lt` must accept two arguments where it takes its first argument from `cols` and its second argument from `with`. However, if `rev = true` the function passed as `lt` will take its first argument from `wiht` and its second argument from `cols`. The function passed as `lt` must return `true` or `false`.
+By default, the comparison is done via `isless` function, however, user may change it by passing a function via the `lt` keyword argument. The function passed to `lt` must accept two arguments where it takes its first argument from `cols` and its second argument from `with`. However, if `rev = true` the function passed as `lt` will take its first argument from `with` and its second argument from `cols`. The function passed as `lt` must return `true` or `false`.
 
 Passing `threads = false` disables multitrheaded computations.
 
