@@ -222,12 +222,12 @@ function _preprocess_column(col::Any, len::Integer, copycols::Bool)
         end
     elseif col isa Union{AbstractArray{<:Any, 0}, Ref}
         x = col[]
-        return fill!(Tables.allocatecolumn(Union{Missing, typeof(x)}, len), x)
+        return fill!(allocatecol(Union{Missing, typeof(x)}, len), x)
     elseif col isa AbstractArray
         throw(ArgumentError("adding AbstractArray other than AbstractVector " *
                             "as a column of a data set is not allowed"))
     else
-        return fill!(Tables.allocatecolumn(Union{Missing, typeof(col)}, len), col)
+        return fill!(allocatecol(Union{Missing, typeof(col)}, len), col)
     end
 end
 

@@ -320,14 +320,14 @@ function _is_scalar(_res, sz)
     try
         size(_res)
         if size(_res) == () || size(_res,1) != sz
-            # fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)),
+            # fill!(allocatecol(typeof(_res), nrow(ds)),
             #                           _res)
             # _res = repeat([_res], nrow(ds))
             resize_col = true
         end
     catch e
         if (e isa MethodError)
-            # fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)),
+            # fill!(allocatecol(typeof(_res), nrow(ds)),
                                       # _res)
             # _res = repeat([_res], nrow(ds))
             resize_col = true
@@ -342,23 +342,23 @@ function _resize_result!(ds, _res, newcol)
     if resize_col
         if ds isa SubDataset
             if haskey(index(ds), newcol)
-                ds[:, newcol] = fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)), _res)
+                ds[:, newcol] = fill!(allocatecol(typeof(_res), nrow(ds)), _res)
             elseif !haskey(index(parent(ds)), newcol)
-                parent(ds)[!, newcol] = missings(typeof(_res), nrow(parent(ds)))
+                parent(ds)[!, newcol] = _missings(typeof(_res), nrow(parent(ds)))
                 _update_subindex!(index(ds), index(parent(ds)), newcol)
-                ds[:, newcol] = fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)), _res)
+                ds[:, newcol] = fill!(allocatecol(typeof(_res), nrow(ds)), _res)
             else
                 throw(ArgumentError("modifing a parent's column which doesn't appear in SubDataset is not allowed"))
             end
         else
-            ds[!, newcol] = fill!(Tables.allocatecolumn(typeof(_res), nrow(ds)), _res)
+            ds[!, newcol] = fill!(allocatecol(typeof(_res), nrow(ds)), _res)
         end
     else
         if ds isa SubDataset
             if haskey(index(ds), newcol)
                 ds[:, newcol] = _res
             elseif !haskey(index(parent(ds)), newcol)
-                parent(ds)[!, newcol] = missings(eltype(_res), nrow(parent(ds)))
+                parent(ds)[!, newcol] = _missings(eltype(_res), nrow(parent(ds)))
                 _update_subindex!(index(ds), index(parent(ds)), newcol)
                 ds[:, newcol] = _res
             else
@@ -388,7 +388,7 @@ function _modify_multiple_out!(ds, x, dst)
         try
             _resize_result!(ds, Tables.getcolumn(tb, j), dst[j])
         catch
-            _resize_result!(ds, missings(nrow(ds)), dst[j])
+            _resize_result!(ds, _missings(nrow(ds)), dst[j])
         end
     end
 end
@@ -407,7 +407,7 @@ function _modify_f_barrier(ds, msfirst, mssecond, mslast)
                 if haskey(index(ds), mslast)
                     ds[:, mslast] = _res
                 elseif !haskey(index(parent(ds)), mslast)
-                    parent(ds)[!, mslast] = missings(eltype(_res), nrow(parent(ds)))
+                    parent(ds)[!, mslast] = _missings(eltype(_res), nrow(parent(ds)))
                     _update_subindex!(index(ds), index(parent(ds)), mslast)
                     ds[:, mslast] = _res
                 else
@@ -497,7 +497,7 @@ end
 function _modify_grouped_f_barrier(ds, msfirst, mssecond, mslast, threads)
     if (mssecond isa Base.Callable) && !(mslast isa MultiCol)
         T = _check_the_output_type(ds, msfirst=>mssecond=>mslast)
-        _res = Tables.allocatecolumn(T, nrow(ds))
+        _res = allocatecol(T, nrow(ds))
         if msfirst isa Tuple
             _modify_grouped_fill_one_col_tuple!(_res, ntuple(i->_columns(ds)[msfirst[i]], length(msfirst)), mssecond, index(ds).starts, index(ds).ngroups[], nrow(ds), threads)
         else

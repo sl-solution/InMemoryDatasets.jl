@@ -35,7 +35,7 @@ function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missi
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
-    init0 = missings(T, nrow(ds))
+    init0 = _missings(T, nrow(ds))
 
     if threads
         cz = div(length(init0), __NCORES)
@@ -65,7 +65,7 @@ function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missi
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
-    init0 = missings(T, nrow(ds))
+    init0 = _missings(T, nrow(ds))
 
     if threads
         cz = div(length(init0), __NCORES)
@@ -444,7 +444,7 @@ function row_select(ds::AbstractDataset, cols, colselector::Union{AbstractVector
     elseif eltype(colselector) <: Union{Missing, Integer}
         nnames = 1:length(colsidx)
     end
-    init0 = missings(CT, nrow(ds))
+    init0 = _missings(CT, nrow(ds))
 
     if threads
         cz = div(length(init0), __NCORES)
@@ -530,7 +530,7 @@ function row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Numbe
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
 
-    init0 = fill!(Vector{Union{Missing, CT}}(undef, size(ds,1)), missing)
+    init0 = _missings(CT, size(ds,1))
 
     if threads
         cz = div(length(init0), __NCORES)
@@ -569,7 +569,7 @@ function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mi
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
-    init0 = missings(T, nrow(ds))
+    init0 = _missings(T, nrow(ds))
 
     if threads
         cz = div(length(init0), __NCORES)
@@ -589,7 +589,7 @@ function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mi
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, (CT,))
-    init0 = missings(T, nrow(ds))
+    init0 = _missings(T, nrow(ds))
 
     if threads
         cz = div(length(init0), __NCORES)
@@ -747,7 +747,7 @@ function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    init0 = Missings.missings(T, nrow(ds))
+    init0 = _missings(T, nrow(ds))
 
     if threads
         cz = div(length(init0), __NCORES)
@@ -808,7 +808,7 @@ function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}); mis
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    init0 = Missings.missings(T, nrow(ds))
+    init0 = _missings(T, nrow(ds))
 
 
     if threads
@@ -871,7 +871,7 @@ function row_cummin!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    init0 = Missings.missings(T, nrow(ds))
+    init0 = _missings(T, nrow(ds))
 
 
     if threads
@@ -935,7 +935,7 @@ function row_cummax!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
             _columns(ds)[i] = convert(Vector{T}, _columns(ds)[i])
         end
     end
-    init0 = Missings.missings(T, nrow(ds))
+    init0 = _missings(T, nrow(ds))
 
 
     if threads

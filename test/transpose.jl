@@ -415,10 +415,10 @@ end
 
     uds = transpose(groupby!(ds, :id, stable = true), [:value], id = :variable)
     @test isa(uds[!, 1].val, CategoricalArray{Union{Missing, Int64},1,UInt32})
-    @test isa(uds[!, :a].val, Vector{Union{Missing, CategoricalValue{Int64, UInt32}}})
-    @test isa(uds[!, :b].val, Vector{Union{Missing, CategoricalValue{Int64, UInt32}}})
-    @test isa(uds[!, :c].val, Vector{Union{Missing, CategoricalValue{Int64, UInt32}}})
-    @test isa(uds[!, :d].val, Vector{Union{Missing, CategoricalValue{Int64, UInt32}}})
+    @test isa(uds[!, :a].val, CategoricalArray{Union{Missing, Int64},1, UInt32})
+    @test isa(uds[!, :b].val, CategoricalArray{Union{Missing, Int64},1, UInt32})
+    @test isa(uds[!, :c].val, CategoricalArray{Union{Missing, Int64},1, UInt32})
+    @test isa(uds[!, :d].val, CategoricalArray{Union{Missing, Int64},1, UInt32})
 
 
     ds1 = Dataset(a=["x", "y"], b=rand(2), c=[1, 2], d=rand(Bool, 2))

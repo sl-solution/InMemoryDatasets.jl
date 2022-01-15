@@ -115,7 +115,7 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 		else
 			T = _check_the_output_type(parent(gds), msfirst=>mssecond=>mslast)
 		end
-		_res = Tables.allocatecolumn(T, nrow(parent(gds)))
+		_res = allocatecol(T, nrow(parent(gds)))
 
 		if msfirst isa Tuple
 			_modify_grouped_fill_one_col_tuple!(_res, ntuple(i->_threaded_permute_for_groupby(_columns(parent(gds))[msfirst[i]], perm), length(msfirst)), mssecond, starts, ngroups, nrow(parent(gds)), threads)
@@ -127,7 +127,7 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 			if haskey(index(parent(gds)), mslast)
 				parent(gds)[:, mslast] = _threaded_permute_for_groupby(_res, iperm)
 			elseif !haskey(index(parent(parent(gds))), mslast)
-				parent(parent(gds))[!, mslast] = missings(T, nrow(parent(parent(gds))))
+				parent(parent(gds))[!, mslast] = _missings(T, nrow(parent(parent(gds))))
 				_update_subindex!(index(parent(gds)), index(parent(parent(gds))), mslast)
 				parent(gds)[:, mslast] = _threaded_permute_for_groupby(_res, iperm)
 			else
@@ -142,7 +142,7 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 			if haskey(index(parent(gds)), mslast)
 				parent(gds)[:, mslast] = _res
 			elseif !haskey(index(parent(parent(gds))), mslast)
-				parent(parent(gds))[!, mslast] = missings(eltype(_res), nrow(parent(parent(gds))))
+				parent(parent(gds))[!, mslast] = _missings(eltype(_res), nrow(parent(parent(gds))))
 				_update_subindex!(index(parent(gds)), index(parent(parent(gds))), mslast)
 				parent(gds)[:, mslast] = _res
 			else
@@ -204,8 +204,8 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 			CT = return_type(ms[_first_vector_res].second.first,
 			gds.parent[!, ms[_first_vector_res].first].val)
 		end
-		special_res = Vector{CT}(undef, ngroups)
-		new_lengths = Vector{Int}(undef, ngroups)
+		special_res = _our_vect_alloc(CT, ngroups)
+		new_lengths = _our_vect_alloc(Int, ngroups)
 		# _columns(ds)[ms[_first_vector_res].first]
 		if ms[_first_vector_res].first isa Tuple
 			_compute_the_mutli_row_trans_tuple!(special_res, new_lengths, ntuple(i->_threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first[i]]], a[1], threads = threads), length(ms[_first_vector_res].first)), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)

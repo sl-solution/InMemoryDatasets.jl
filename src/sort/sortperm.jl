@@ -138,7 +138,8 @@ function _apply_by_f_barrier(x::AbstractVector{T}, by, rev, threads) where T
         CT = Int8
     end
     CT = Union{Missing, CT}
-    _temp = Vector{CT}(undef, length(x))
+    # _temp = Vector{CT}(undef, length(x))
+    _temp = _our_vect_alloc(CT, length(x))
     # we should make sure changing sign doesn't overflow
     if rev && nonmissingtype(CT) <: Union{Bool, Int8, Int16, Int32, Int64} && isless(typemin(nonmissingtype(CT)), threads ? hp_minimum(_date_value∘by, x) : stat_minimum(_date_value∘by, x))
         _by = x-> -_date_value(by(x))

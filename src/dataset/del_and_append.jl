@@ -323,7 +323,7 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
     if ncols == 0 && row isa NamedTuple
         for (n, v) in pairs(row)
             format_of_cur_col = getformat(ds, n)
-            setproperty!(ds, n, fill!(Tables.allocatecolumn(typeof(v), 1), v))
+            setproperty!(ds, n, fill!(allocatecol(typeof(v), 1), v))
             setformat!(ds, n => format_of_cur_col)
         end
         _reset_grouping_info!(ds)
@@ -392,7 +392,7 @@ function Base.push!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
             if nrows == 0
                 newcol = [val]
             else
-                newcol = Tables.allocatecolumn(Union{Missing, S}, targetrows)
+                newcol = allocatecol(Union{Missing, S}, targetrows)
                 fill!(newcol, missing)
                 newcol[end] = val
             end
@@ -602,7 +602,7 @@ function Base.push!(ds::Dataset, row::Any; promote::Bool=false)
             if S <: T || !promote || promote_type(S, T) <: T
                 push!(col, val)
             else
-                newcol = Tables.allocatecolumn(promote_type(S, T), targetrows)
+                newcol = allocatecol(promote_type(S, T), targetrows)
                 copyto!(newcol, 1, col, 1, nrows)
                 newcol[end] = val
                 firstindex(newcol) != 1 && _onebased_check_error()

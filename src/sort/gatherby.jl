@@ -154,7 +154,7 @@ function gatherby_mapreduce(gds::GatherBy, f, op, col::ColumnIndex, nt, init, ::
 	    T <: Base.SmallSigned ? CT = Int : nothing
 		T <: Base.SmallUnsigned ? CT = UInt : nothing
 	end
-	res = Tables.allocatecolumn(Union{CT, Missing}, gds.lastvalid)
+	res = allocatecol(Union{CT, Missing}, gds.lastvalid)
     fill!(res, init)
 	if threads && Threads.nthreads() > 1 && gds.lastvalid > 100_000
 		_fill_mapreduce_col_threaded!(res, f, op, _columns(gds.parent)[index(gds.parent)[col]], gds.groups, nt)
@@ -200,7 +200,7 @@ function _gatherby_mean(gds, col; nt = Threads.nthreads(), threads = true)
 	end
 
 	T = Core.Compiler.return_type(/, (nonmissingtype(eltype(sval)), nonmissingtype(eltype(nval))))
-	res = Vector{Union{Missing, T}}(undef, length(nval))
+	res = _our_vect_alloc(Union{Missing, T}, length(nval))
 	_fill_gatherby_mean_barrier!(res, sval, nval)
 	res
 end
@@ -256,7 +256,7 @@ function _gatherby_var(gds, col; dof = true, cal_std = false, threads = true)
 		nval = t4
 	end
 	T = Core.Compiler.return_type(/, (nonmissingtype(eltype(meanval)), nonmissingtype(eltype(nval))))
-	res = Vector{Union{Missing, T}}(undef, length(nval))
+	res = _our_vect_alloc(Union{Missing, T}, length(nval))
 	_fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std, dof)
 	res
 end

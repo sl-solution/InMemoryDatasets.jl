@@ -403,7 +403,7 @@ function _fill_outputmat_withoutid(T, in_cols, ds, starts, perms, new_col_names,
 
     @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data frame is huge and there is not enough resource to allocate it."
     CT = promote_type(T, typeof(default_fill))
-    outputmat = [fill!(Vector{CT}(undef, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
+    outputmat = [fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
     update_outputmat!(outputmat, in_cols, starts, perms, row_names_length, threads)
 
     outputmat
@@ -413,7 +413,7 @@ function _fill_outputmat_withid(T, in_cols, ds, starts, perms, ids, new_col_name
 
     @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data frame is huge and there is not enough resource to allocate it."
     CT = promote_type(T, typeof(default_fill))
-    outputmat = [fill!(Vector{CT}(undef, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
+    outputmat = [fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
 
     _is_cell_filled = zeros(Bool, row_names_length*_ngroups(ds), length(new_col_names))
 
@@ -469,7 +469,7 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
                 new_var_label = Symbol(var_name[j])
                 insertcols!(outds, length(gcolsidx)+j, new_var_label => _repeat_row_names, unsupported_copy_cols = false, makeunique = true)
             end
-            res = Vector{Union{Missing, T}}(undef, nrow(ds) * max_num_col)
+            res = _our_vect_alloc(Union{Missing, T}, nrow(ds) * max_num_col)
             _fill_col_val!(res, ECol, length(sel_cols), max_num_col, nrow(ds), _get_perms(ds), threads)
             local new_col_id
             try

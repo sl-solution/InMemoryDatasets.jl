@@ -428,7 +428,7 @@ function Base.map(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnI
 
         if threads
             T = Core.Compiler.return_type(_f, (eltype(v), ))
-            fv = Vector{T}(undef, length(v))
+            fv = _our_vect_alloc(T, length(v))
             _hp_map_a_function!(fv, _f, v)
         else
             fv = map(_f, v)
@@ -672,7 +672,7 @@ function mask(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnIndex
     for j in 1:length(colsidx)
         v = _columns(ds)[colsidx[j]]
         _col_f = getformat(ds, colsidx[j])
-        fv = Vector{Union{Missing, Bool}}(undef, nrow(ds))
+        fv = _our_vect_alloc(Union{Missing, Bool}, nrow(ds))
         if mapformats
           _fill_mask!(fv, v, _col_f, f[j], threads, missings)
         else

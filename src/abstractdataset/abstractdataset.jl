@@ -1341,7 +1341,7 @@ function Base.reduce(::typeof(vcat),
                                 "does not match the number of data sets ($len)"))
         end
 
-        source_vec = Tables.allocatecolumn(eltype(vals), nrow(res))
+        source_vec = allocatecol(eltype(vals), nrow(res))
         @assert firstindex(source_vec) == 1 && lastindex(source_vec) == nrow(res)
         start = 1
         for (v, ds) in zip(vals, dss)
@@ -1431,7 +1431,7 @@ function _vcat(dss::AbstractVector{AbstractDataset};
 
         lens = map(length, newcols)
         T = mapreduce(eltype, promote_type, newcols)
-        all_cols[i] = Tables.allocatecolumn(T, sum(lens))
+        all_cols[i] = allocatecol(T, sum(lens))
         offset = 1
         for j in 1:length(newcols)
             copyto!(all_cols[i], offset, newcols[j])

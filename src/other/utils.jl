@@ -1,6 +1,20 @@
 const INTEGERS = Union{Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Bool}
 const FLOATS = Union{Float16, Float32, Float64}
 
+# work around slow allocation of type union in julia
+function _our_vect_alloc(T, len)
+	if len > 0
+		res = DataAPI.defaultarray(T, 1)(undef, 1)
+		resize!(res, len)
+	else
+		DataAPI.defaultarray(T, 1)(undef, len)
+	end
+end
+
+_missings(::Type{T}, len) where {T} = fill!(_our_vect_alloc(Union{T, Missing}, len), missing)
+
+
+
 #macro for using Threaded for if needed
 macro _threadsfor(threads, exp)
 	esc(:(
@@ -70,13 +84,13 @@ function allocatecol(x::AbstractVector, len; addmissing = true)
             _res[1] = missing
         end
     else
-        _res = Tables.allocatecolumn(Union{Missing, eltype(x)}, len)
+        _res = _our_vect_alloc(Union{Missing, eltype(x)}, len)
     end
     return _res
 end
 
 function allocatecol(T, len)
-    Tables.allocatecolumn(Union{Missing, T}, len)
+    _our_vect_alloc(Union{Missing, T}, len)
 end
 
 function _generate_inverted_dict_pool(x)
