@@ -335,7 +335,7 @@ function _create_dictionary!(prev_groups, groups, gslots, rhashes, f, v, prev_ma
     # sz = 2 ^ ceil(Int, log2(n)+1)
     sz = length(gslots)
     # fill!(gslots, 0)
-    Threads.@threads for i in 1:sz
+    @_threadsfor threads for i in 1:sz
         @inbounds gslots[i] = 0
     end
     szm1 = sz - 1
