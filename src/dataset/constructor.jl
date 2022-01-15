@@ -3,30 +3,24 @@
 
 An AbstractDataset that stores a set of named columns
 
-The columns are normally AbstractVectors stored in memory,
-particularly a Vector or CategoricalVector.
+The columns are normally AbstractVectors stored in memory.
 
 # Constructors
 ```julia
-Dataset(pairs::Pair...; makeunique::Bool=false, copycols::Bool=true)
-Dataset(pairs::AbstractVector{<:Pair}; makeunique::Bool=false, copycols::Bool=true)
-Dataset(ds::AbstractDict; copycols::Bool=true)
-Dataset(kwargs..., copycols::Bool=true)
+Dataset(pairs::Pair...; makeunique::Bool=false)
+Dataset(pairs::AbstractVector{<:Pair}; makeunique::Bool=false)
+Dataset(ds::AbstractDict)
+Dataset(kwargs...)
 
 Dataset(columns::AbstractVecOrMat, names::Union{AbstractVector, Symbol};
-          makeunique::Bool=false, copycols::Bool=true)
+          makeunique::Bool=false)
 
-Dataset(table; copycols::Bool=true)
+Dataset(table)
 Dataset(::DatasetRow)
-Dataset(::GroupedDataset; keepkeys::Bool=true)
 ```
 
 # Keyword arguments
 
-- `copycols` : whether vectors passed as columns should be copied; by default set
-  to `true` and the vectors are copied; if set to `false` then the constructor
-  will still copy the passed columns if it is not possible to construct a
-  `Dataset` without materializing new columns.
 - `makeunique` : if `false` (the default), an error will be raised
 
 (note that not all constructors support these keyword arguments)
@@ -57,17 +51,11 @@ is assumed to be of type that implements the
 [Tables.jl](https://github.com/JuliaData/Tables.jl) interface using which the
 returned `Dataset` is materialized.
 
-Finally it is allowed to construct a `Dataset` from a `DatasetRow` or a
-`GroupedDataset`. In the latter case the `keepkeys` keyword argument specifies
-whether the resulting `Dataset` should contain the grouping columns of the
-passed `GroupedDataset` and the order of rows in the result follows the order
-of groups in the `GroupedDataset` passed.
+Finally it is allowed to construct a `Dataset` from a `DatasetRow`.
 
 # Notes
 
-The `Dataset` constructor by default copies all columns vectors passed to it.
-Pass the `copycols=false` keyword argument (where supported) to reuse vectors without
-copying them.
+The `allowmissing` function is called on all columns passed to constructor before being added to the output data set.
 
 By default an error will be raised if duplicates in column names are found. Pass
 `makeunique=true` keyword argument (where supported) to accept duplicate names,
@@ -75,7 +63,7 @@ in which case they will be suffixed with `_i` (`i` starting at 1 for the first
 duplicate).
 
 If an `AbstractRange` is passed to a `Dataset` constructor as a column it is
-always collected to a `Vector` (even if `copycols=false`). As a general rule
+always collected to a `Vector`. As a general rule
 `AbstractRange` values are always materialized to a `Vector` by all functions in
 InMemoryDatasets.jl before being stored in a `Dataset`.
 
@@ -83,78 +71,81 @@ InMemoryDatasets.jl before being stored in a `Dataset`.
 to store a vector using non-standard indexing raises an error.
 
 The `Dataset` type is designed to allow column types to vary and to be
-dynamically changed also after it is constructed. Therefore `Dataset`s are not
-type stable. For performance-critical code that requires type-stability either
-use the functionality provided by `select`/`transform`/`combine` functions, use
-`Tables.columntable` and `Tables.namedtupleiterator` functions, use barrier
-functions, or provide type assertions to the variables that hold columns
-extracted from a `Dataset`.
+dynamically changed also after it is constructed.
 
 # Examples
 ```jldoctest
 julia> Dataset((a=[1, 2], b=[3, 4])) # Tables.jl table constructor
 2×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      3
-   2 │     2      4
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         3
+   2 │        2         4
 
 julia> Dataset([(a=1, b=0), (a=2, b=0)]) # Tables.jl table constructor
 2×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      0
-   2 │     2      0
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        2         0
 
 julia> Dataset("a" => 1:2, "b" => 0) # Pair constructor
 2×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      0
-   2 │     2      0
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        2         0
 
 julia> Dataset([:a => 1:2, :b => 0]) # vector of Pairs constructor
 2×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      0
-   2 │     2      0
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        2         0
 
 julia> Dataset(Dict(:a => 1:2, :b => 0)) # dictionary constructor
 2×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      0
-   2 │     2      0
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        2         0
 
 julia> Dataset(a=1:2, b=0) # keyword argument constructor
 2×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      0
-   2 │     2      0
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        2         0
 
 julia> Dataset([[1, 2], [0, 0]], [:a, :b]) # vector of vectors constructor
 2×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      0
-   2 │     2      0
+ Row │ a         b
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        2         0
 
 julia> Dataset([1 0; 2 0], :auto) # matrix constructor
 2×2 Dataset
- Row │ x1     x2
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      0
-   2 │     2      0
+ Row │ x1        x2
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        2         0
 ```
 """
 struct Dataset <: AbstractDataset
