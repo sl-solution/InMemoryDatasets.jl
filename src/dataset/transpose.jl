@@ -399,11 +399,20 @@ function update_outputmat!(outputmat, x, starts, perms, ids, n_row_names, _is_ce
     end
 end
 
+function _preallocate_outputmat!(res, n1, n2, fillval, threads, ::Val{CT}) where CT
+    @_threadsfor threads for j in 1:n2
+        res[j] = fill!(_our_vect_alloc(CT, n1), fillval)
+    end
+    res
+end
+
 function _fill_outputmat_withoutid(T, in_cols, ds, starts, perms, new_col_names, row_names_length, threads; default_fill = missing)
 
     @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data frame is huge and there is not enough resource to allocate it."
     CT = promote_type(T, typeof(default_fill))
-    outputmat = [fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
+    # outputmat = [__fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
+    outputmat = Vector{Vector{CT}}(undef, length(new_col_names))
+    _preallocate_outputmat!(outputmat, row_names_length*_ngroups(ds), length(new_col_names), default_fill, threads, Val(CT) )
     update_outputmat!(outputmat, in_cols, starts, perms, row_names_length, threads)
 
     outputmat
@@ -413,7 +422,9 @@ function _fill_outputmat_withid(T, in_cols, ds, starts, perms, ids, new_col_name
 
     @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data frame is huge and there is not enough resource to allocate it."
     CT = promote_type(T, typeof(default_fill))
-    outputmat = [fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
+    # outputmat = [fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
+    outputmat = Vector{Vector{CT}}(undef, length(new_col_names))
+    _preallocate_outputmat!(outputmat, row_names_length*_ngroups(ds), length(new_col_names), default_fill, threads, Val(CT) )
 
     _is_cell_filled = zeros(Bool, row_names_length*_ngroups(ds), length(new_col_names))
 
@@ -544,7 +555,7 @@ function ds_transpose(ds::Union{Dataset, GroupBy, GatherBy}, cols::Union{Tuple, 
         end
         outds2 = Dataset(outputmat, new_col_names, copycols = false)
 
-        for j in 1:ncol(outds2)
+         for j in 1:ncol(outds2)
             push!(_columns(outds), _columns(outds2)[j])
         end
         merge!(index(outds), index(outds2), makeunique = true)
