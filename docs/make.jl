@@ -8,8 +8,8 @@ using InMemoryDatasets
 
 makedocs(
     # options
-    # modules = [InMemoryDatasets],
-    doctest = false,
+    modules = [InMemoryDatasets],
+    doctest = true,
     clean = false,
     sitename = "InMemoryDatasets",
     # format = Documenter.HTML(
@@ -35,9 +35,9 @@ makedocs(
         ],
         "Gallery" => "man/gallery.md",
         "Performance tips" => "man/performance.md"
-        # "API" => Any[
-        #     "Functions" => "lib/functions.md"
-        # ]
+        "API" => Any[
+            "Functions" => "lib/functions.md"
+        ]
     ],
     strict = true
 )

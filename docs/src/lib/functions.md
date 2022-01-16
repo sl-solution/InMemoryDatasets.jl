@@ -1,4 +1,4 @@
-<!-- ```@meta
+```@meta
 CurrentModule = InMemoryDatasets
 ```
 
@@ -11,6 +11,8 @@ Pages = ["functions.md"]
 ## Constructing data set
 ```@docs
 copy
+repeat
+repeat!
 similar
 ```
 
@@ -23,6 +25,7 @@ setformat!
 ## Summary information
 ```@docs
 content
+getinfo
 ncol
 ndims
 nrow
@@ -38,7 +41,7 @@ rename
 rename!
 ```
 
-## Mutating and transforming data sets
+## Modifying data sets
 ```@docs
 append!
 combine
@@ -47,6 +50,7 @@ hcat
 insertcols!
 map
 map!
+mapcols
 modify
 modify!
 push!
@@ -60,15 +64,19 @@ update!
 
 ## Transposing and reshaping data sets
 ```@docs
+flatten
+flatten!
 transpose
 ```
 
-## Sorting
+<!-- ## Sorting
 ```@docs
+issorted
+issorted!
 sort
 sort!
 sortperm
-```
+``` -->
 
 ## Joining
 ```@docs
@@ -82,23 +90,38 @@ leftjoin!
 outerjoin
 semijoin
 semijoin!
+update
+update!
 ```
 
-## Grouping
+<!-- ## Grouping
 ```@docs
 groupby
 groupby!
 ungroup!
-```
+``` -->
 
 ## Filtering rows
 ```@docs
 byrow
+byrow(all)
+byrow(any)
+byrow(count)
+byrow(in)
+byrow(isequal)
+byrow(isless)
+byrow(mean)
+byrow(prod)
+byrow(sum)
+compare
 contains
 deleteat!
+duplicates
 empty
 empty!
 first
+filter
+filter!
 last
 mask
 unique
@@ -118,17 +141,10 @@ map!
 ## Statistics
 ```@docs
 lag
+lag!
 lead
-maximum
-mean
-median
-minimum
+lead!
 rescale
 stdze
-sum
 topk
-var
-std
-wmean
-wsum
-``` -->
+```
