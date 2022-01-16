@@ -411,7 +411,7 @@ function _fill_outputmat_withoutid(T, in_cols, ds, starts, perms, new_col_names,
     @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data frame is huge and there is not enough resource to allocate it."
     CT = promote_type(T, typeof(default_fill))
     # outputmat = [__fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
-    outputmat = Vector{Vector{CT}}(undef, length(new_col_names))
+    outputmat = Vector{typeof(_our_vect_alloc(CT, 0))}(undef, length(new_col_names))
     _preallocate_outputmat!(outputmat, row_names_length*_ngroups(ds), length(new_col_names), default_fill, threads, Val(CT) )
     update_outputmat!(outputmat, in_cols, starts, perms, row_names_length, threads)
 
@@ -423,7 +423,7 @@ function _fill_outputmat_withid(T, in_cols, ds, starts, perms, ids, new_col_name
     @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data frame is huge and there is not enough resource to allocate it."
     CT = promote_type(T, typeof(default_fill))
     # outputmat = [fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
-    outputmat = Vector{Vector{CT}}(undef, length(new_col_names))
+    outputmat = Vector{typeof(_our_vect_alloc(CT, 0))}(undef, length(new_col_names))
     _preallocate_outputmat!(outputmat, row_names_length*_ngroups(ds), length(new_col_names), default_fill, threads, Val(CT) )
 
     _is_cell_filled = zeros(Bool, row_names_length*_ngroups(ds), length(new_col_names))
