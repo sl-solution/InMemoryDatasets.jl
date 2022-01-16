@@ -9,7 +9,7 @@ DocMeta.setdocmeta!(InMemoryDatasets, :DocTestSetup, :(using InMemoryDatasets); 
 makedocs(
     # options
     modules = [InMemoryDatasets],
-    doctest = true,
+    doctest = false, # this needs more work
     clean = false,
     sitename = "InMemoryDatasets",
     # format = Documenter.HTML(
