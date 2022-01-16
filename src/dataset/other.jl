@@ -1058,9 +1058,73 @@ n(x) = count(!ismissing, x)
 """
     filter(ds, cols; [type = all,...])
 
-A convenient shortcut for ds[byrow(ds, type, cols; ...), :]. `type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+A convenient shortcut for `ds[byrow(ds, type, cols; ...), :]`.
 
-See [`byrow`](@ref)
+`type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+
+See [`byrow`](@ref), [`filter!`](@ref)
+
+# Examples
+
+```jldoctest
+julia> ds = Dataset(x = [1,2,3,4,5], y = [1.5,2.3,-1,0,2.0], z = Bool[1,0,1,0,1])
+5×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Bool?
+─────┼──────────────────────────────
+   1 │        1       1.5      true
+   2 │        2       2.3     false
+   3 │        3      -1.0      true
+   4 │        4       0.0     false
+   5 │        5       2.0      true
+
+julia> filter(ds, :z)
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Bool?
+─────┼──────────────────────────────
+   1 │        1       1.5      true
+   2 │        3      -1.0      true
+   3 │        5       2.0      true
+
+julia> filter(ds, 1:2, by = [iseven, >(2.0)])
+1×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Bool?
+─────┼──────────────────────────────
+   1 │        2       2.3     false
+
+julia> filter(ds, 1:2, type = any, by = [iseven, >(2.0)])
+2×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Bool?
+─────┼──────────────────────────────
+   1 │        2       2.3     false
+   2 │        4       0.0     false
+
+julia> filter(ds, 1:3, type = issorted, rev = true)
+2×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Bool?
+─────┼──────────────────────────────
+   1 │        4       0.0     false
+   2 │        5       2.0      true
+
+julia> filter(ds, 2:3, type = isless, with = :x)
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Bool?
+─────┼──────────────────────────────
+   1 │        3      -1.0      true
+   2 │        4       0.0     false
+   3 │        5       2.0      true
+```
 """
 function Base.filter(ds::AbstractDataset, cols::Union{ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...)
     if view
@@ -1072,9 +1136,15 @@ end
 """
     filter!(ds, cols; [type = all, ...])
 
-A convenient shortcut for deleteat![ds, .!byrow(ds, type, cols; ...)). `type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+Variant of `filter` which replaces the passed data set with the filtered one.
 
-See [`byrow`](@ref)
+It is a convenient shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...)]`.
+
+`type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+
+Refer to [`filter`](@ref) for exmaples.
+
+See [`byrow`](@ref), [`filter`](@ref)
 """
 Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, kwargs...) = deleteat!(ds, .!byrow(ds, type, cols; kwargs...))
 
