@@ -1,7 +1,7 @@
 using Documenter
 using InMemoryDatasets
 
-# DocMeta.setdocmeta!(InMemoryDatasets, :DocTestSetup, :(using InMemoryDatasets); recursive=true)
+DocMeta.setdocmeta!(InMemoryDatasets, :DocTestSetup, :(using InMemoryDatasets); recursive=true)
 
 # Build documentation.
 # ====================
