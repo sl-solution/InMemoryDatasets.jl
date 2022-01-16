@@ -458,12 +458,12 @@ function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
 end
 
 """
-    contains(main, transaction; on, mapformats = true, alg = HeapSort, stable = false, accelerate = false, method = :sort)
+    contains(main, transaction; on, mapformats = true, alg = HeapSort, stable = false, accelerate = false, method = :hash)
 
 returns a boolean vector where is true when the key for the
 corresponding row in the `main` data set is found in the transaction data set.
 
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
 
 # Examples
 
@@ -505,7 +505,7 @@ julia> contains(main, tds, on = :g1 => :group)
  1
 ```
 """
-function Base.contains(main::AbstractDataset, transaction::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :sort, threads::Bool = true)
+function Base.contains(main::AbstractDataset, transaction::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :hash, threads::Bool = true)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -536,7 +536,7 @@ function Base.contains(main::AbstractDataset, transaction::AbstractDataset; on =
 end
 
 """
-    antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :sort)
+    antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash)
 
 Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
@@ -556,7 +556,7 @@ rows that have key values appear in `dsr` will be removed.
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -639,7 +639,7 @@ julia> antijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    1 │ 2012        true
 ```
 """
-function DataAPI.antijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false, method = :sort, threads = true)
+function DataAPI.antijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false, method = :hash, threads = true)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     if view
         Base.view(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads), :)
@@ -648,7 +648,7 @@ function DataAPI.antijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     end
 end
 """
-    semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :sort)
+    semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash)
 
 Perform a semi join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
@@ -668,7 +668,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -753,7 +753,7 @@ julia> semijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    3 │ 2020        true
 ```
 """
-function DataAPI.semijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false, method = :sort, threads = true)
+function DataAPI.semijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false, method = :hash, threads = true)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     if view
         Base.view(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads), :)
@@ -762,7 +762,7 @@ function DataAPI.semijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     end
 end
 """
-    antijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort)
+    antijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash)
 
 Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
@@ -782,7 +782,7 @@ rows that have key values appear in `dsr` will be removed.
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -880,12 +880,12 @@ julia> dsl
    1 │ 2012        true
 ```
 """
-function antijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :sort, threads = true)
+function antijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :hash, threads = true)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     deleteat!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads))
 end
 """
-    semijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort)
+    semijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash)
 
 Perform a semi join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
@@ -905,7 +905,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
+- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `false`, means that the sorting results have not to be stable;
@@ -1010,7 +1010,7 @@ julia> dsl
    3 │ 2020        true
 ```
 """
-function semijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :sort, threads = true)
+function semijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :hash, threads = true)
     deleteat!(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads))
 end
 
