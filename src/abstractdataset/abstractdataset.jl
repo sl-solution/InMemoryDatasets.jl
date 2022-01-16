@@ -276,13 +276,22 @@ end
 """
     setinfo!(ds::AbstractDataset, s::String)
 
-sets `s` as the value for the `info` meta data of `ds`.
+Set `s` as the value for the `info` meta data of `ds`.
+
+See [`getinfo`](@ref)
 """
 function setinfo!(ds::AbstractDataset, s::String)
     _attributes(ds).meta.info[] = s
     _modified(_attributes(ds))
     s
 end
+"""
+    getinfo(ds::AbstractDataset)
+
+Get information set by `setinfo!`.
+
+See [`setinfo!`](@ref)
+"""
 function getinfo(ds::AbstractDataset)
     _attributes(ds).meta.info[]
 end
@@ -399,7 +408,6 @@ julia> rename!(uppercase, ds)
    1 │        1         2         3
 ```
 """
-
 function rename!(ds::AbstractDataset, vals::AbstractVector{Symbol};
                  makeunique::Bool=false)
     # Modify Dataset
@@ -543,7 +551,6 @@ julia> rename(uppercase, ds)
    1 │        1         2         3
 ```
 """
-
 rename(ds::AbstractDataset, vals::AbstractVector{Symbol};
        makeunique::Bool=false) = rename!(copy(ds), vals, makeunique=makeunique)
 rename(ds::AbstractDataset, vals::AbstractVector{<:AbstractString};
@@ -1440,77 +1447,6 @@ function _vcat(dss::AbstractVector{AbstractDataset};
     end
     return Dataset(all_cols, header, copycols=false)
 end
-
-"""
-    repeat(ds::AbstractDataset; inner::Integer = 1, outer::Integer = 1)
-
-Construct a data set by repeating rows in `ds`. `inner` specifies how many
-times each row is repeated, and `outer` specifies how many times the full set
-of rows is repeated.
-
-# Example
-```jldoctest
-julia> ds = Dataset(a = 1:2, b = 3:4)
-2×2 Dataset
- Row │ a         b
-     │ identity  identity
-     │ Int64?    Int64?
-─────┼────────────────────
-   1 │        1         3
-   2 │        2         4
-
-julia> repeat(ds, inner = 2, outer = 3)
-12×2 Dataset
- Row │ a         b
-     │ identity  identity
-     │ Int64?    Int64?
-─────┼────────────────────
-   1 │        1         3
-   2 │        1         3
-   3 │        2         4
-   4 │        2         4
-   5 │        1         3
-   6 │        1         3
-   7 │        2         4
-   8 │        2         4
-   9 │        1         3
-  10 │        1         3
-  11 │        2         4
-  12 │        2         4
-```
-"""
-
-"""
-    repeat(ds::AbstractDataset, count::Integer)
-
-Construct a data set by repeating each row in `ds` the number of times
-specified by `count`.
-
-# Example
-```jldoctest
-julia> ds = Dataset(a = 1:2, b = 3:4)
-2×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      3
-   2 │     2      4
-
-julia> repeat(ds, 2)
-4×2 Dataset
- Row │ a      b
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      3
-   2 │     2      4
-   3 │     1      3
-   4 │     2      4
-```
-"""
-# function Base.repeat(ds::AbstractDataset, count::Integer)
-#     count < 0 && throw(ArgumentError("count must be non-negative"))
-#     return mapcols(x -> repeat(x, Int(count)), ds)
-# end
 
 ##############################################################################
 ##

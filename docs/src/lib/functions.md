@@ -11,7 +11,6 @@ Pages = ["functions.md"]
 ## Constructing data set
 ```@docs
 copy
-repeat
 repeat!
 similar
 ```
@@ -44,20 +43,15 @@ rename!
 ## Modifying data sets
 ```@docs
 append!
-combine
 flatten
-hcat
+flatten!
 insertcols!
 map
 map!
 mapcols
-modify
-modify!
 push!
 repeat
 repeat!
-select
-select!
 update
 update!
 ```
@@ -68,15 +62,6 @@ flatten
 flatten!
 transpose
 ```
-
-<!-- ## Sorting
-```@docs
-issorted
-issorted!
-sort
-sort!
-sortperm
-``` -->
 
 ## Joining
 ```@docs
@@ -94,31 +79,12 @@ update
 update!
 ```
 
-<!-- ## Grouping
-```@docs
-groupby
-groupby!
-ungroup!
-``` -->
-
 ## Filtering rows
 ```@docs
-byrow
-byrow(all)
-byrow(any)
-byrow(count)
-byrow(in)
-byrow(isequal)
-byrow(isless)
-byrow(mean)
-byrow(prod)
-byrow(sum)
 compare
 contains
 deleteat!
 duplicates
-empty
-empty!
 first
 filter
 filter!
@@ -130,7 +96,6 @@ unique!
 
 ## Working with missing values
 ```@docs
-byrow
 completecases
 dropmissing
 dropmissing!
