@@ -48,6 +48,7 @@ function warmup()
     innerjoin(ds, ds3, on = :x1, makeunique = true, method = :hash)
     transpose(ds, 1:ncol(ds))
     transpose(groupby(ds,1:8), [2,3])
+    show(IOBuffer(), MIME("text/html"), ds);
     # views
     ds = Dataset("A"=> ["A", "A" ,"A", "A", "B", "B","G"],
         "B"=> ["C", "D", "E", "B", "F", "G","N"]
