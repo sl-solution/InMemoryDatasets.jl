@@ -126,7 +126,7 @@ function stdze(x)
     (x .- meandata) ./ sqrt(vardata)
 end
 
-#FIXME there is f which can breaks this function (the same for stat_minimum)
+#FIXME there is f which can breaks this function (the same for stat_minimum)/ we need to use max/min op for manual simd / probably we should wirte the whole thing
 function stat_maximum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
     all(ismissing, view(x, lo:hi)) && return missing
     _dmiss(x) = ismissing(f(x)) ? f(typemin(nonmissingtype(T))) : f(x)
@@ -182,13 +182,14 @@ function stat_wsum(f, x::AbstractVector{T}, w::AbstractVector) where T
     mapreduce(_dmiss, _stat_add_sum, zip(x,w))
 end
 stat_wsum(x::AbstractVector{T}, w::AbstractVector) where T  = stat_wsum(identity, x, w)
+
 function stat_mean(f, x::AbstractArray{T,1})::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     length(x) == 1 && return f(first(x))
-    _op(y1,y2) = (_stat_add_sum(y1[1], y2[1]), _stat_add_sum(y1[2], y2[2]))
-    _dmiss(y) = (ismissing(f(y)) ? zero(T) : f(y), _stat_notmissing(f(y)))
-    sval, n = mapreduce(_dmiss, _op, x)
+    sval = stat_sum(y->f(y)*1.0, x)
+    n = mapreduce(!ismissing∘f, +, x)
     n == 0 ? missing : sval/n
 end
+stat_mean(x::AbstractArray{T,1}) where T = stat_mean(identity, x)
 
 stat_cumsum_ignore(x::AbstractVector) = accumulate(_stat_add_sum, x)
 stat_cumsum!_ignore(outx, inx::AbstractVector) = accumulate!(_stat_add_sum, outx, inx)
@@ -269,8 +270,6 @@ function stat_cummax!_skip(outx, inx::AbstractVector)
     outx
 end
 
-stat_mean(x::AbstractArray{T,1}) where T = stat_mean(identity, x)
-
 function stat_wmean(f, x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S
     all(ismissing, x) && return missing
     _dmiss(y) = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])
@@ -286,8 +285,11 @@ stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_w
 function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     all(ismissing, x) && return missing
     any(ISNAN, x) && return convert(eltype(x), NaN)
-    meanval = stat_mean(f, x)
-    n = mapreduce(!ismissing, +, x)
+    # meanval = stat_mean(f, x)
+    # n = mapreduce(!ismissing∘f, +, x)
+    sval = stat_sum(y->f(y)*1.0, x)
+    n = mapreduce(!ismissing∘f, +, x)
+    meanval = n == 0 ? missing : sval/n
 
     ss = 0.0
     for i in 1:length(x)
