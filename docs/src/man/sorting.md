@@ -345,7 +345,7 @@ false
 julia> issorted(ds, 2, rev = true)
 true
 
-julia> julia> fmt(x) = x == "one" ? 1 : x=="two" ? 2 : 3
+julia> fmt(x) = x == "one" ? 1 : x=="two" ? 2 : 3
 fmt (generic function with 1 method)
 
 julia> setformat!(ds, :x3=>fmt)

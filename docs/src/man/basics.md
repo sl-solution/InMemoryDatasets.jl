@@ -383,18 +383,22 @@ Beware that, when adding a new column to a data set, using the above syntax, if 
 
 ### Some useful functions
 
-The following functions are very handy when working with a data set. Note that functions which end with `!` modify the original data set.
+The following functions are very handy when working with a data set, for more information look at the package documentation. Note that functions which end with `!` modify the original data set.
 
 * `names(ds)` gives the column names as a vector of string.
 * `size(ds)` prints the data set dimension, i.e. number of rows and number of columns
 * `nrow(ds)` returns the number of rows
 * `ncol(ds)` returns the number of columns
+* `filter`/`filter!` filter data based on `byrow` operation
 * `first(ds, n)` shows the first `n` rows of a data set
 * `last(ds, n)` shows the last `n` rows of a data set
-* `rename!` can be used to rename column names
-* `select!` can be used to drop, select, or rearrange columns
+* `rename`/`rename!` can be used to rename column names
+* `select`/`select!` can be used to drop, select, or rearrange columns
 * `deleteat!` deletes rows from a data set
 * `append!(ds, tds)` appends `tds` at the end of `ds`
+* `repeat`/`repeat!` repeats rows of a dataset
+* `unique`/`unique!` filter unique rows
+* `duplicates` find duplicate rows
 
 ```jldoctest
 julia> test_data = Dataset(rand(1:10, 4, 3), :auto)

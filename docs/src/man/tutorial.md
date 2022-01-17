@@ -463,6 +463,7 @@ The [StatsPlots](https://github.com/JuliaPlots/StatsPlots.jl), [VegaLite](https:
 Here we use `VegaLite` to visualise the cancellation rate in busiest airports for each month:
 
 ```julia
+julia> using VegaLite
 julia> @chain flights begin
          groupby([:FlightDate, :Origin])
          combine(:Cancelled => mean => :rate)

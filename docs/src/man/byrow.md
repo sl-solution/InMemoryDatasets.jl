@@ -180,7 +180,7 @@ julia> byrow(ds, isless, r"int", with = :x1_float)
  0
  1
 
-julia> julia> byrow(ds, isless, r"int", with = :x1_float, rev = true) # greater
+julia> byrow(ds, isless, r"int", with = :x1_float, rev = true) # greater
 5-element Vector{Bool}:
  0
  0
@@ -193,7 +193,7 @@ julia> julia> byrow(ds, isless, r"int", with = :x1_float, rev = true) # greater
 In the following example, in each row we pick the values of selected columns passed by the `with` keyword argument.
 
 ```jldoctest
-julia> ds = Dataset(x1 = 1:4, x2 = [1,2,1,2], NAMES = [:x1, :x2, :x1, :x1])
+julia> ds2 = Dataset(x1 = 1:4, x2 = [1,2,1,2], NAMES = [:x1, :x2, :x1, :x1])
 4×3 Dataset
  Row │ x1        x2        NAMES    
      │ identity  identity  identity
@@ -204,21 +204,21 @@ julia> ds = Dataset(x1 = 1:4, x2 = [1,2,1,2], NAMES = [:x1, :x2, :x1, :x1])
    3 │        3         1  x1
    4 │        4         2  x1
 
-julia> byrow(ds, select, r"x", with = :NAMES)
+julia> byrow(ds2, select, r"x", with = :NAMES)
 4-element Vector{Union{Missing, Int64}}:
  1
  2
  3
  4
 
-julia> byrow(ds, select, r"x", with = ["x1", "x2", "x2", "x2"])
+julia> byrow(ds2, select, r"x", with = ["x1", "x2", "x2", "x2"])
 4-element Vector{Union{Missing, Int64}}:
  1
  2
  1
  2
 
-julia> byrow(ds, select, [:x2, :x1], with = [1,2,2,1])
+julia> byrow(ds2, select, [:x2, :x1], with = [1,2,2,1])
 4-element Vector{Union{Missing, Int64}}:
  1
  2

@@ -388,7 +388,7 @@ julia> using BenchmarkTools
 julia> ds = Dataset(rand(1:1000, 10^6, 10), :auto);
 
 julia> @btime ds[ds.x1 .== 100, :];
-  3.480 ms (472 allocations: 8.83 MiB)
+  1.579 ms (480 allocations: 251.73 KiB)
 
 julia> @btime filter(ds, :x1, by = ==(100));
   880.436 μs (526 allocations: 1.09 MiB)

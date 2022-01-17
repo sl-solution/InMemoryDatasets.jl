@@ -124,6 +124,8 @@ julia> byrow(ds, fill!, :, with = byrow(ds, mean, :));
 
 * [How to determine whether two sets of variables have a shared value](https://stackoverflow.com/questions/70452064/how-to-determine-whether-two-sets-of-variables-have-a-shared-value-in-r) : I have a data that contains two sets of variables, and I want to compare whether the two sets have the same value. Here we provide a scalable solution where the columns for the first set  have "1" in their names, and the columns for the second set have "2" in their names.
 
+> since in the original post there are some specifications for checking equality of values we define a customised equality function
+
 ```julia
 julia> a1 = Dataset(z1=[1,missing,3,4,5],x1=string.(3:7),z2=[2,missing,4,5,6],x2=[3,5,4,7,5])
 5×4 Dataset
@@ -137,7 +139,6 @@ julia> a1 = Dataset(z1=[1,missing,3,4,5],x1=string.(3:7),z2=[2,missing,4,5,6],x2
    4 │        4  6                5         7
    5 │        5  7                6         5
 
-julia> # since in the original post there are some specifications for checking equality of values we define a customised equality function
 julia> eq(x, y) = isequal(x, y)
 julia> eq(x::String, y) = isequal(parse(Int,x), y)
 julia> eq(x, y::String) = isequal(x,parse(Int, y))
