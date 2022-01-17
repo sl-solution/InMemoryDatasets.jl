@@ -107,7 +107,9 @@ end
 lead!(x::AbstractVector; default = missing) = lead!(x, 1; default = default)
 
 """
-rescale(x,minx,maxx,minval,maxval) rescales x to run from minval and maxval, given x originaly runs from minx to maxx.
+    rescale(x,minx,maxx,minval,maxval)
+
+Rescale x to run from minval and maxval, given x originaly runs from minx to maxx.
 """
 function rescale(x,minx,maxx,minval,maxval)
     -(-maxx*minval+minx*maxval)/(maxx-minx)+(-minval+maxval)*x/(maxx-minx)
@@ -117,7 +119,9 @@ rescale(x::Vector,minx,maxx,minval,maxval) = rescale.(x,minx,maxx,minval,maxval)
 rescale(x,minx,maxx) = rescale(x,minx,maxx,0.0,1.0)
 
 """
-stdze(x) standardizes an array. It return missing for missing data points.
+    stdze(x)
+
+Standardize an array. It returns missing for missing data points.
 """
 function stdze(x)
     all(ismissing,x) && return x
@@ -126,11 +130,15 @@ function stdze(x)
     (x .- meandata) ./ sqrt(vardata)
 end
 
-#FIXME there is f which can breaks this function (the same for stat_minimum)/ we need to use max/min op for manual simd / probably we should wirte the whole thing
-function stat_maximum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
+# this is manual simd version for max(min) function
+function stat_maximum(f::typeof(identity), x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
     all(ismissing, view(x, lo:hi)) && return missing
-    _dmiss(x) = ismissing(f(x)) ? f(typemin(nonmissingtype(T))) : f(x)
+    _dmiss(x) = ismissing(x) ? typemin(nonmissingtype(T)) : x
     Base.mapreduce_impl(_dmiss, max, x, lo, hi)
+end
+function stat_maximum(f::F, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where {F, T}
+    all(ismissing, view(x, lo:hi)) && return missing
+    Base.mapreduce_impl(f, _stat_max_fun, x, lo, hi)
 end
 stat_maximum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_maximum(identity, x; lo = lo, hi = hi)
 
@@ -148,10 +156,14 @@ function stat_findmax(f, x::AbstractArray{T,1}) where T
 end
 stat_findmax(x::AbstractArray{T,1}) where T = stat_findmax(identity, x)
 
-function stat_minimum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
+function stat_minimum(f::typeof(identity), x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
     all(ismissing, view(x, lo:hi)) && return missing
-    @inline _dmiss(x) = ismissing(f(x)) ? f(typemax(nonmissingtype(T))) : f(x)
+    @inline _dmiss(x) = ismissing(x) ? typemax(nonmissingtype(T)) : x
     Base.mapreduce_impl(_dmiss, min, x, lo, hi)
+end
+function stat_minimum(f::F, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where {F,T}
+    all(ismissing, view(x, lo:hi)) && return missing
+    Base.mapreduce_impl(f, _stat_min_fun, x, lo, hi)
 end
 stat_minimum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_minimum(identity, x; lo = lo, hi = hi)
 
@@ -284,7 +296,7 @@ stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_w
 
 function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
     all(ismissing, x) && return missing
-    any(ISNAN, x) && return convert(eltype(x), NaN)
+    # any(ISNAN, x) && return convert(eltype(x), NaN)
     # meanval = stat_mean(f, x)
     # n = mapreduce(!ismissing∘f, +, x)
     sval = stat_sum(y->f(y)*1.0, x)
@@ -432,7 +444,7 @@ end
 """
     topk(x, k; rev = false)
 
-return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `missing`
+Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `missing`
 """
 function topk(x::AbstractVector, k::Int; rev = false)
     if rev
