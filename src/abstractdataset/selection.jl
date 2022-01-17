@@ -24,6 +24,52 @@ end
 
 # sell and sell! will replace select and select!
 # Dataset shouldn't support copycols since it causes modifying a data set without telling other alias data sets
+"""
+    select(ds, args...)
+
+Select columns of `ds` based on `args...`. `args` can be any column selector: column index, column Name, `:`, `Between`, `Not`, Vector of column indices or column names, a regular expression.
+
+It makes a copy of `ds`. See [`select!`](@ref) if an in-place modification is desired.
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x = [1,2,3,4,5], y = [1.5,2.3,-1,0,2.0], z = Bool[1,0,1,0,1])
+5×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Bool?
+─────┼──────────────────────────────
+   1 │        1       1.5      true
+   2 │        2       2.3     false
+   3 │        3      -1.0      true
+   4 │        4       0.0     false
+   5 │        5       2.0      true
+
+julia> select(ds, 2, :)
+5×3 Dataset
+ Row │ y         x         z
+     │ identity  identity  identity
+     │ Float64?  Int64?    Bool?
+─────┼──────────────────────────────
+   1 │      1.5         1      true
+   2 │      2.3         2     false
+   3 │     -1.0         3      true
+   4 │      0.0         4     false
+   5 │      2.0         5      true
+
+julia> select(ds, Not(:y))
+5×2 Dataset
+ Row │ x         z
+     │ identity  identity
+     │ Int64?    Bool?
+─────┼────────────────────
+   1 │        1      true
+   2 │        2     false
+   3 │        3      true
+   4 │        4     false
+   5 │        5      true
+```
+"""
 function select(ds::Dataset, @nospecialize(args...))
     selected_cols_all = normalize_select(index(ds), args...)
     selected_cols = setdiff!(selected_cols_all[1], selected_cols_all[2])
@@ -61,7 +107,13 @@ function select(ds::Dataset, @nospecialize(args...))
     setinfo!(newds, _attributes(ds).meta.info[])
     return newds
 end
+"""
+    select!(ds, args...)
 
+Select columns of `ds` based on `args...`. `args` can be any column selector: column index, column Name, `:`, `Between`, `Not`, Vector of column indices or column names, a regular expression.
+
+It modifies the data set in-place. See [`select`](@ref) if a copy of selected columns is desired.
+"""
 function select!(ds, @nospecialize(args...))
     selected_cols_all = normalize_select(index(ds), args...)
     selected_cols = setdiff!(selected_cols_all[1], selected_cols_all[2])
