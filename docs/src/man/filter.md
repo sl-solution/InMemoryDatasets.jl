@@ -143,6 +143,32 @@ Row │ x1        x2        x3        _tmp1     _tmp2
 
 > Note that to drop the temporary columns we can use the `select!` function.
 
+In the following example we use different function for `type`. By passing `type = isequal` we filter observations which are equal for all columns in each row.
+
+```jldoctest
+julia> ds = Dataset(x1 = [1,2,3,1,2,3], x2 = [1,2,1,2,1,2])
+6×2 Dataset
+ Row │ x1        x2       
+     │ identity  identity
+     │ Int64?    Int64?   
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         1
+   4 │        1         2
+   5 │        2         1
+   6 │        3         2
+
+julia> filter(ds, :, type = isequal)
+2×2 Dataset
+ Row │ x1        x2       
+     │ identity  identity
+     │ Int64?    Int64?   
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+```
+
 ## `mask`
 
 `mask` is a function which calls a function (or a vector of functions) on all observations of a set of selected columns. The syntax for `mask` is very similar to `map` function:
