@@ -8,10 +8,11 @@ four main ways to filter observations based on some conditions, 1) using the `by
 ## `byrow`
 
 `byrow` has been discussed previously in details. However, in this section we are going to use it for
-filtering observations. To use `byrow(ds, fun, cols, ...)` for filtering observations, the `fun` argument should
-be set as `all` or `any`, and supply the conditions by using the `by` keyword option. The supplied `by` will be checked for each observation in all selected columns. The function returns a boolean vector where its `j`th elements will be equivalent to the result of `all(by, [col1[j], col2[j], ...])` or `any(by, [col1[j], col2[j], ...])` when `all` or `any` is set as the `fun` argument, respectively.
+filtering observations. To use `byrow(ds, fun, cols, ...)` for filtering observations, we set `fun` argument to `all` or `any`, and supply the conditions by using the `by` keyword option. The supplied `by` will be checked for each observation in all selected columns. The function returns a boolean vector where its `j`th elements will be equivalent to the result of `all(by, [col1[j], col2[j], ...])` or `any(by, [col1[j], col2[j], ...])` when `all` or `any` is set as the `fun` argument, respectively.
 
 The main feature of `byrow(ds, fun, cols, by = ...)` when `fun` is `all/any` is that the `by` keyword argument can be a vector of functions. Thus, when a multiple columns are supplied as `cols` each column can have its own `by`. To filter based on formatted value the `mapformats` keyword argument must be set to `true`.
+
+Naturally, other `fun`s supported by `byrow` which return a `Vector{Bool}` or `BitVector` can be used to filter observations, too.
 
 ### `filter` and `filter!`
 
@@ -19,7 +20,7 @@ The `filter` and `filter!` functions are two shortcuts which wrap the `byrow` an
 
 `filter(ds, cols; [view = false, type = all,...])` is the shortcut for `ds[byrow(ds, type, cols; ...), :]`, and `filter!(ds, cols; [type = all, ...])` is the shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...))`.
 
- > Note that any function supported by `byrow` can be passed as `type` in `filter/!` as long as the result of `byrow(ds, type, cols)` is a `Vector{Bool}` or `BitVector`.
+> Note, by default `type` is set as `all`.
 
 ### Examples
 
