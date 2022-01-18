@@ -726,7 +726,7 @@ end
     unique(ds::AbstractDataset, cols = : ; [mapformats = false, keep = :first, view::Bool=false, threads])
     unique!(ds::Dataset, cols = : ; [mapformats = false, keep = :first, threads])
 
-Filter a data set based on uniqueness of its rows, and the `keep` keyword argument determines which occurance of duplicated rows should be retained. `keep` can be one of the following value: `:first`, `:last`, `:none`, `:only`, or `:random`.
+Filter a data set based on uniqueness of its rows, and the `keep` keyword argument determines which occurance of duplicated rows should be retained. `keep` can be one of the following values: `:first`, `:last`, `:none`, `:only`, or `:random`.
 
 * `keep = :first` the first occurrence of the duplicated rows are kept
 * `keep = :last` the last occurrence are kept
