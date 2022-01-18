@@ -16,7 +16,7 @@ const MultiColumnIndex = Union{AbstractVector, Regex, Not, Between, All, Cols, C
 const MULTICOLUMNINDEX_TUPLE = (:AbstractVector, :Regex, :Not, :Between, :All, :Cols, :Colon)
 
 const COLUMNINDEX_STR = "`Symbol`, string or integer"
-const MULTICOLUMNINDEX_STR = "`:`, `Cols`, `All`, `Between`, `Not`, a regular expression, " *
+const MULTICOLUMNINDEX_STR = "`:`, `Between`, `Not`, a regular expression, " *
                              "or a vector of `Symbol`s, strings or integers"
 
 struct Index <: AbstractIndex   # an OrderedDict would be nice here...

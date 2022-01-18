@@ -747,8 +747,8 @@ Use `findall(completecases(ds))` to get the indices of the rows.
 
 ```jldoctest
 julia> ds = Dataset(i = 1:5,
-                x = [missing, 4, missing, 2, 1],
-                y = [missing, missing, "c", "d", "e"])
+                       x = [missing, 4, missing, 2, 1],
+                       y = [missing, missing, "c", "d", "e"])
 5×3 Dataset
  Row │ i         x         y
      │ identity  identity  identity
@@ -761,7 +761,7 @@ julia> ds = Dataset(i = 1:5,
    5 │        5         1  e
 
 julia> completecases(ds)
-5-element BitVector:
+5-element Vector{Bool}:
  0
  0
  0
@@ -769,7 +769,7 @@ julia> completecases(ds)
  1
 
 julia> completecases(ds, :x)
-5-element BitVector:
+5-element Vector{Bool}:
  0
  1
  0
@@ -777,7 +777,7 @@ julia> completecases(ds, :x)
  1
 
 julia> completecases(ds, [:x, :y])
-5-element BitVector:
+5-element Vector{Bool}:
  0
  0
  0

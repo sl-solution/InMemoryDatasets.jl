@@ -393,3 +393,16 @@ julia> @btime ds[ds.x1 .== 100, :];
 julia> @btime filter(ds, :x1, by = ==(100));
   880.436 μs (526 allocations: 1.09 MiB)
 ```
+
+## Related functions
+
+There are few other functions in InMemoryDatasets which can be used filter observations. These are
+
+* `completecases`
+* `dropmissing`
+* `dropmissing!`
+* `duplicates`
+* `unique`
+* `unique!`
+
+The `completecases`, `dropmissing`, `dropmissing!` functions use `byrow` to find or filter missing observations. The `duplicates`, `unique`, and `unique!` function can be used to filter duplicates rows in a data set.
