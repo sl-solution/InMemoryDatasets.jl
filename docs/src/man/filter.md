@@ -396,7 +396,7 @@ julia> @btime filter(ds, :x1, by = ==(100));
 
 ## Related functions
 
-There are few other functions in InMemoryDatasets which can be used filter observations. These are
+There are few other functions in InMemoryDatasets which can be used to filter observations. Those are
 
 * `completecases`
 * `dropmissing`
