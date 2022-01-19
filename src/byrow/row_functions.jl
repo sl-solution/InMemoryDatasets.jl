@@ -112,7 +112,7 @@ row_count(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threads
 _op_bool_add(x::Bool,y::Bool) = x | y ? true : false
 Base.@propagate_inbounds function op_for_any!(x, y, f, lo, hi)
     @simd for i in lo:hi
-        x[i] = _op_bool_add(x[i], f(y[i]))
+        !x[i] ? x[i] = f(y[i]) : nothing
     end
     x
 end
@@ -154,7 +154,7 @@ _op_bool_mult(x::Bool,y::Bool) = x & y ? true : false
 
 Base.@propagate_inbounds function op_for_all!(x, y, f, lo, hi)
     @simd for i in lo:hi
-        x[i] = _op_bool_mult(x[i], f(y[i]))
+        x[i] ? x[i] = f(y[i]) : nothing
     end
     x
 end
@@ -197,7 +197,7 @@ row_all(ds::AbstractDataset, cols = :; threads = true) = row_all(ds, isequal(tru
 
 Base.@propagate_inbounds function _op_for_isequal!(x, y, x1, lo, hi)
     @simd for i in lo:hi
-        x[i] &= isequal(y[i], x1[i])
+        x[i] ? x[i] = isequal(y[i], x1[i]) : nothing
     end
     x
 end
@@ -235,11 +235,11 @@ end
 Base.@propagate_inbounds function _op_for_isless!(x, y, vals, rev,lt, lo, hi)
     if !rev
         @simd for i in lo:hi
-            x[i] &= lt(y[i], vals[i])
+            x[i] ? x[i] = lt(y[i], vals[i]) : nothing
         end
     else
         @simd for i in lo:hi
-            x[i] &= lt(vals[i], y[i])
+            x[i] ? x[i] = lt(vals[i], y[i]) : nothing
         end
     end
     x
