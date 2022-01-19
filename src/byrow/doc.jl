@@ -20,6 +20,12 @@ function Docs.getdoc(x::typeof(byrow), y)
         return _get_doc_byrow("isless")
     elseif y == Tuple{typeof(in)}
         return _get_doc_byrow("in")
+    elseif y == Tuple{typeof(findfirst)}
+        return _get_doc_byrow("findfirst")
+    elseif y == Tuple{typeof(findlast)}
+        return _get_doc_byrow("findlast")
+    elseif y == Tuple{typeof(select)}
+        return _get_doc_byrow("select")
     end
 end
 
@@ -429,5 +435,191 @@ julia> byrow(ds, in, r"x", item = [5,4,5,4,5,4], eq = (x,y) -> x+y == 11)
  0
  0
  0
+```
+@@@@findfirst@@@@
+    byrow(ds, findfirst, cols; [by = identity, item = nothing, eq = isequal, threads])
+
+Return the column name of the first `true` value in `cols` or for which `by` returns `true`. If no such value is found, it returns `missing`. User can pass a vector of values or a column name to `item` to find the column name of the first time that the value of `item` is equal to the value of the column. User may use a customised function for checking the equlity of `item` and `columns` by passing it to the `eq` keyword argument. The function passed as `eq` must be a binary function where its first argument is from `item` and its second argument is from `col`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(findlast)`](@ref), [`byrow(select)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(g = [1, 1, 1, 2, 2],
+                               x1_int = [0, 0, 1, missing, 2],
+                               x2_int = [3, 2, 1, 3, -2],
+                               x1_float = [1.2, missing, -1.0, 2.3, 10],
+                               x2_float = [missing, missing, 3.0, missing, missing],
+                               x3_float = [missing, missing, -1.4, 3.0, -100.0])
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
+     │ identity  identity  identity  identity   identity   identity
+     │ Int64?    Int64?    Int64?    Float64?   Float64?   Float64?
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1         0         3        1.2  missing    missing
+   2 │        1         0         2  missing    missing    missing
+   3 │        1         1         1       -1.0        3.0       -1.4
+   4 │        2   missing         3        2.3  missing          3.0
+   5 │        2         2        -2       10.0  missing       -100.0
+
+julia> byrow(ds, findfirst, :, by = ismissing)
+5-element PooledArrays.PooledVector{Union{Missing, Symbol}, UInt32, Vector{UInt32}}:
+ :x2_float
+ :x1_float
+ missing
+ :x1_int
+ :x2_float
+
+julia> byrow(ds, findfirst, 1:3, item = [1,1,1,1,1])
+5-element PooledArrays.PooledVector{Union{Missing, Symbol}, UInt32, Vector{UInt32}}:
+ :g
+ :g
+ :g
+ missing
+ missing
+
+julia> ds = Dataset(x1 = [1,2,2], x2 = [5,6,7], x3 = [8,9,10])
+3×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         5         8
+   2 │        2         6         9
+   3 │        2         7        10
+
+julia> byrow(ds, select, :, with = byrow(ds, findfirst, :, by = isodd))
+3-element Vector{Union{Missing, Int64}}:
+ 1
+ 9
+ 7
+```
+@@@@findlast@@@@
+    byrow(ds, findlast, cols; [by = identity, item = nothing, eq = isequal, threads])
+
+Return the column name of the last `true` value in `cols` or for which `by` returns `true`. If no such value is found, it returns `missing`. User can pass a vector of values or a column name to `item` to find the column name of the last time that the value of `item` is equal to the value of the column. User may use a customised function for checking the equlity of `item` and `columns` by passing it to the `eq` keyword argument. The function passed as `eq` must be a binary function where its first argument is from `item` and its second argument is from `col`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(findfirst)`](@ref), [`byrow(select)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(g = [1, 1, 1, 2, 2],
+                               x1_int = [0, 0, 1, missing, 2],
+                               x2_int = [3, 2, 1, 3, -2],
+                               x1_float = [1.2, missing, -1.0, 2.3, 10],
+                               x2_float = [missing, missing, 3.0, missing, missing],
+                               x3_float = [missing, missing, -1.4, 3.0, -100.0])
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
+     │ identity  identity  identity  identity   identity   identity
+     │ Int64?    Int64?    Int64?    Float64?   Float64?   Float64?
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1         0         3        1.2  missing    missing
+   2 │        1         0         2  missing    missing    missing
+   3 │        1         1         1       -1.0        3.0       -1.4
+   4 │        2   missing         3        2.3  missing          3.0
+   5 │        2         2        -2       10.0  missing       -100.0
+
+julia> byrow(ds, findlast, :, by = ismissing)
+5-element PooledArrays.PooledVector{Union{Missing, Symbol}, UInt32, Vector{UInt32}}:
+ :x3_float
+ :x3_float
+ missing
+ :x2_float
+ :x2_float
+
+julia> byrow(ds, findlast, 1:3, item = [1,1,1,1,1])
+5-element PooledArrays.PooledVector{Union{Missing, Symbol}, UInt32, Vector{UInt32}}:
+ :g
+ :g
+ :x2_int
+ missing
+ missing
+
+julia> ds = Dataset(x1 = [1,2,2], x2 = [5,6,7], x3 = [8,9,10])
+3×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         5         8
+   2 │        2         6         9
+   3 │        2         7        10
+
+julia> byrow(ds, select, :, with = byrow(ds, findlast, :, by = isodd))
+3-element Vector{Union{Missing, Int64}}:
+ 5
+ 9
+ 7
+```
+@@@@select@@@@
+    byrow(ds, select, cols; [with, threads])
+
+Select value of `with` among `cols`. The `with` must be a vector of column names(`Symbol` or `String`) or column index (relative to column position in `cols`) or a column name which contains this information.
+
+For heterogeneous column types, `byrow` use `promote_type` for the output. If the column select doesn't exist among `cols`, `byrow` returns `missing`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(findfirst)`](@ref), [`byrow(findlast)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x1 = [1,2,3,4],
+            x2 = [1.5,6.5,3.4,2.4],
+            x3 = [true, false, true, false],
+            y1 = ["x2", "x1", missing, "x2"],
+            y2 = [:x2, :x1, missing, :x2],
+            y3 = [3,1,1,2])
+4×6 Dataset
+ Row │ x1        x2        x3        y1        y2        y3
+     │ identity  identity  identity  identity  identity  identity
+     │ Int64?    Float64?  Bool?     String?   Symbol?   Int64?
+─────┼────────────────────────────────────────────────────────────
+   1 │        1       1.5      true  x2        x2               3
+   2 │        2       6.5     false  x1        x1               1
+   3 │        3       3.4      true  missing   missing          1
+   4 │        4       2.4     false  x2        x2               2
+
+julia> byrow(ds, select, 1:2, with = :y1)
+4-element Vector{Union{Missing, Float64}}:
+ 1.5
+ 2.0
+  missing
+ 2.4
+
+julia> byrow(ds, select, [2,1,3], with = :y3)
+4-element Vector{Union{Missing, Float64}}:
+ 1.0
+ 6.5
+ 3.4
+ 4.0
+
+julia> byrow(ds, select, [2,1,3], with = [3,1,1,2])
+4-element Vector{Union{Missing, Float64}}:
+ 1.0
+ 6.5
+ 3.4
+ 4.0
+
+julia> ds = Dataset(x1 = [1,2,2], x2 = [5,6,7], x3 = [8,9,10])
+3×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         5         8
+   2 │        2         6         9
+   3 │        2         7        10
+
+julia> byrow(ds, select, :, with = byrow(ds, findfirst, :, by = isodd))
+3-element Vector{Union{Missing, Int64}}:
+ 1
+ 9
+ 7
 ```
 """
