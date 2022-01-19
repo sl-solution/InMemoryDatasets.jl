@@ -1014,13 +1014,13 @@ end
 
 Base.@propagate_inbounds function _op_for_issorted!(x, y, res, lt, lo, hi)
     @simd for i in lo:hi
-        res[i] &= !lt(y[i], x[i])
+        res[i] ? res[i] = !lt(y[i], x[i]) : nothing
     end
     y
 end
 Base.@propagate_inbounds function _op_for_issorted_rev!(x, y, res, lt, lo, hi)
     @simd for i in lo:hi
-        res[i] &= !lt(x[i], y[i])
+        res[i] ? res[i] = !lt(x[i], y[i]) : nothing
     end
     y
 end
