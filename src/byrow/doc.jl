@@ -271,7 +271,7 @@ Returns a boolean vector which is `true` if all values in the corresponding row 
 
 Passing `threads = false` disables multitrheaded computations.
 
-See [`byrow(isless)`](@ref) and [`byrow(in)`](@ref)
+See [`byrow(isless)`](@ref), [`byrow(in)`](@ref), [`byrow(issorted)`](@ref)
 
 ## Examples
 
@@ -318,7 +318,7 @@ By default, the comparison is done via `isless` function, however, user may chan
 
 Passing `threads = false` disables multitrheaded computations.
 
-See [`byrow(isequal)`](@ref) and [`byrow(in)`](@ref)
+See [`byrow(isequal)`](@ref), [`byrow(in)`](@ref), [`byrow(issorted)`](@ref)
 
 ## Examples
 
@@ -386,7 +386,7 @@ The function passed as `eq` must accept two arguments where it takes its first a
 
 Passing `threads = false` disables multitrheaded computations.
 
-See [`byrow(isequal)`](@ref) and [`byrow(isless)`](@ref)
+See [`byrow(isequal)`](@ref), [`byrow(isless)`](@ref), [`byrow(issorted)`](@ref)
 
 ## Examples
 
