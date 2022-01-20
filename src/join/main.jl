@@ -1358,7 +1358,7 @@ function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction 
 end
 
 """
-    update!(dsmain, dsupdate; on=nothing, allowmissing=false, mode=:all, mapformats=true, alg=HeapSort, stable=true, accelerate = false, method = :sort)
+    update!(dsmain, dsupdate; on=nothing, allowmissing=false, mode=:missings, mapformats=true, alg=HeapSort, stable=true, accelerate = false, method = :sort)
 
 Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows,
 and change the left `Dataset` after updating.
