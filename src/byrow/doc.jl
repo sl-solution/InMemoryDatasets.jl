@@ -939,7 +939,7 @@ julia> byrow(ds, argmin, 1:2, by = abs)
 @@@@issorted@@@@
     byrow(ds, issorted, cols; [rev = false, lt = isless, threads])
 
-Test whether the values in rows (in selected `cols`) are in sorted order. Passing `rev = true` test whether the values in rows are in descending order. By default, the order of values is check by the `isless` function, however, user may pass any function to `lt`. The passed function to `lt` must accept two arguments where `byrow` calls `!lt(y, x)` when `rev = false` and `!lt(x, y)` when `rev = true` on consecutive column values.
+Test whether the values in rows (in selected `cols`) are in sorted order. Passing `rev = true` test whether the values in rows are in descending order. By default, the order of values is check by the `isless` function, however, user may pass any function to `lt`. The passed function to `lt` must accept two arguments where `byrow` calls `!lt(x2, x1)` when `rev = false` and `!lt(x1, x2)` when `rev = true` on consecutive column values.
 
 Missing values are larger than any other values. User may pass a customised funtion to `lt` to skip missing values.
 
