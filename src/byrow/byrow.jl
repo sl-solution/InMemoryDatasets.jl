@@ -136,9 +136,9 @@ byrow(ds::AbstractDataset, ::typeof(sort!), cols::MultiColumnIndex = names(ds, U
 
 byrow(ds::AbstractDataset, ::typeof(issorted), cols::MultiColumnIndex; threads = nrow(ds) > __NCORES*10, rev = false, lt = isless) = row_issorted(ds, cols; rev = rev, lt = lt, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(stdze), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_stdze(ds, cols)
+byrow(ds::AbstractDataset, ::typeof(stdze), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); threads = true) = row_stdze(ds, cols, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(stdze!), cols::MultiColumnIndex = names(ds, Union{Missing, Number})) = row_stdze!(ds, cols)
+byrow(ds::AbstractDataset, ::typeof(stdze!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); threads = true) = row_stdze!(ds, cols, threads = threads)
 
 byrow(ds::AbstractDataset, ::typeof(hash), cols::MultiColumnIndex = :; by = identity, threads = nrow(ds) > __NCORES*10) = row_hash(ds, by, cols, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(hash), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, hash, [col]; by = by, threads = threads)

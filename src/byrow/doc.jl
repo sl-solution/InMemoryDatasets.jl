@@ -26,6 +26,60 @@ function Docs.getdoc(x::typeof(byrow), y)
         return _get_doc_byrow("findlast")
     elseif y == Tuple{typeof(select)}
         return _get_doc_byrow("select")
+    elseif y == Tuple{typeof(fill!)}
+        return _get_doc_byrow("fill!")
+    elseif y == Tuple{typeof(fill)}
+        return _get_doc_byrow("fill")
+    elseif y == Tuple{typeof(coalesce)}
+        return _get_doc_byrow("coalesce")
+    elseif y == Tuple{typeof(maximum)}
+        return _get_doc_byrow("maximum")
+    elseif y == Tuple{typeof(minimum)}
+        return _get_doc_byrow("minimum")
+    elseif y == Tuple{typeof(argmax)}
+        return _get_doc_byrow("argmax")
+    elseif y == Tuple{typeof(argmin)}
+        return _get_doc_byrow("argmin")
+    elseif y == Tuple{typeof(issorted)}
+        return _get_doc_byrow("issorted")
+    elseif y == Tuple{typeof(join)}
+        return _get_doc_byrow("join")
+    elseif y == Tuple{typeof(hash)}
+        return _get_doc_byrow("hash")
+    elseif y == Tuple{typeof(nunique)}
+        return _get_doc_byrow("nunique")
+    elseif y == Tuple{typeof(mapreduce)}
+        return _get_doc_byrow("mapreduce")
+    elseif y == Tuple{typeof(var)}
+        return _get_doc_byrow("var")
+    elseif y == Tuple{typeof(std)}
+        return _get_doc_byrow("std")
+    elseif y == Tuple{typeof(cumsum!)}
+        return _get_doc_byrow("cumsum!")
+    elseif y == Tuple{typeof(cumsum)}
+        return _get_doc_byrow("cumsum")
+    elseif y == Tuple{typeof(cumprod!)}
+        return _get_doc_byrow("cumprod!")
+    elseif y == Tuple{typeof(cumprod)}
+        return _get_doc_byrow("cumprod")
+    elseif y == Tuple{typeof(cummax!)}
+        return _get_doc_byrow("cummax!")
+    elseif y == Tuple{typeof(cummax)}
+        return _get_doc_byrow("cummax")
+    elseif y == Tuple{typeof(cummin!)}
+        return _get_doc_byrow("cummin!")
+    elseif y == Tuple{typeof(cummin)}
+        return _get_doc_byrow("cummin")
+    elseif y == Tuple{typeof(sort!)}
+        return _get_doc_byrow("sort!")
+    elseif y == Tuple{typeof(sort)}
+        return _get_doc_byrow("sort")
+    elseif y == Tuple{typeof(stdze!)}
+        return _get_doc_byrow("stdze!")
+    elseif y == Tuple{typeof(stdze)}
+        return _get_doc_byrow("stdze")
+    else
+        return _get_doc_byrow("generic")
     end
 end
 
@@ -44,7 +98,7 @@ byrow_docs_text = """
 Perform a row-wise operation specified by `fun` on selected columns `cols`. Generally,
 `fun` can be any function that returns a scalar value for each row.
 
-`byrow` is fine tuned for the following operations, to get extra help for each of them search help for `byrow(fun)`, e.g. `?byrow(sum)`;
+`byrow` is fine tuned for the following operations. To get extra help for each of them search help for `byrow(fun)`, e.g. `?byrow(sum)`;
 
 # Reduction operations
 
@@ -622,4 +676,561 @@ julia> byrow(ds, select, :, with = byrow(ds, findfirst, :, by = isodd))
  9
  7
 ```
+@@@@fill!@@@@
+    byrow(ds, fill!, cols; [with, by = ismissing, rolling = false, threads])
+
+Fill missing (default behaviour) values in `cols` with values from `with`. User can pass a vector of values or a column name to `with`. `byrow` fills the values in-place, so the type of `cols` and `with` must match. By default, `byrow` fills only missing values in `cols`, but, user can pass any function to `by` which `byrow` fills only the values that returns `true` when `by` is called on them.
+
+When `rolling = true`, `byrow` uses `with` to fill the missing values in the first column among `cols` and replace `with` with the updated values in the first column and uses these values to fill the missing values in the second column among `cols` and replace `with` with the updated values in the second column, and continues this process.
+
+Passing `threads = false` disables multitrheaded computations.
+
+`fill!` is a special `byrow` operations, because it changes the input data set rather than producing a vector.
+
+See [`byrow(fill)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x = [1,missing,3], y = [missing,2, 3])
+3×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1   missing
+   2 │  missing         2
+   3 │        3         3
+
+julia> byrow(ds, fill!, :, with = 1:3)
+3×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         3
+
+julia> ds = Dataset(x = [1,0,3], y = [0,2,3])
+3×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        0         2
+   3 │        3         3
+
+julia> byrow(ds, fill!, :, with = 1:3, by = isequal(0))
+3×2 Dataset
+ Row │ x         y
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         3
+
+julia> ds = Dataset(x = [2,0,3], y = [0,2,3], z = [5,0,0])
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        2         0         5
+   2 │        0         2         0
+   3 │        3         3         0
+
+julia> byrow(ds, fill!, :, with = [missing, missing, missing], by = isequal(0), rolling = true)
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        2         2         5
+   2 │  missing         2         2
+   3 │        3         3         3
+```
+@@@@fill@@@@
+    byrow(ds, fill, cols; [with, by = ismissing, rolling = false, threads])
+
+Variant of `byrow(fill!)` which passes a copy of `ds` and leaves `ds` unchanged.
+
+See [`byrow(fill!)`](@ref)
+@@@@coalesce@@@@
+    byrow(ds, coalesce, cols; [threads])
+
+Return the first value in each row of `cols` which is not equal to `missing`, if any. Otherwise return `missing`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(select)`](@ref), [`byrow(findfirst)`](@ref), [`byrow(findlast)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x = [1,missing, missing], y = [missing, missing, 3], z = [5, missing, missing])
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1   missing         5
+   2 │  missing   missing   missing
+   3 │  missing         3   missing
+
+julia> byrow(ds, coalesce, :)
+3-element Vector{Union{Missing, Int64}}:
+ 1
+  missing
+ 3
+
+julia> byrow(ds, coalesce, [:z, :y, :x])
+3-element Vector{Union{Missing, Int64}}:
+ 5
+  missing
+ 3
+```
+@@@@maximum@@@@
+    byrow(ds, maximum, cols; [by = identity, threads])
+
+Return the largest result of calling function `by` on each values in each row (of selected columns). If `cols` is not specified, `byrow`
+returns maximum for all numeric columns in `ds`.
+
+Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(minimum)`](@ref), [`byrow(argmax)`](@ref), [`byrow(argmin)`](@ref)
+
+# Examples
+
+```jldoctest
+julia> ds = Dataset(x=[1,2,3], y=[1.3,-2.4,5.5], z=[missing, 4,1])
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Int64?
+─────┼──────────────────────────────
+   1 │        1       1.3   missing
+   2 │        2      -2.4         4
+   3 │        3       5.5         1
+
+julia> byrow(ds, maximum)
+3-element Vector{Union{Missing, Float64}}:
+ 1.3
+ 4.0
+ 5.5
+
+julia> byrow(ds, maximum, [1,3])
+3-element Vector{Union{Missing, Int64}}:
+ 1
+ 4
+ 3
+```
+@@@@minimum@@@@
+    byrow(ds, minimum, cols; [by = identity, threads])
+
+Return the smallest result of calling function `by` on each values in each row (of selected columns). If `cols` is not specified, `byrow`
+returns minimum for all numeric columns in `ds`.
+
+Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(maximum)`](@ref), [`byrow(argmax)`](@ref), [`byrow(argmin)`](@ref)
+
+# Examples
+
+```jldoctest
+julia> ds = Dataset(x=[1,2,3], y=[1.3,-2.4,5.5], z=[missing, 4,1])
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Int64?
+─────┼──────────────────────────────
+   1 │        1       1.3   missing
+   2 │        2      -2.4         4
+   3 │        3       5.5         1
+
+julia> byrow(ds, minimum)
+3-element Vector{Union{Missing, Float64}}:
+  1.0
+ -2.4
+  1.0
+
+julia> byrow(ds, minimum, [1,3])
+3-element Vector{Union{Missing, Int64}}:
+ 1
+ 2
+ 1
+```
+@@@@argmax@@@@
+    byrow(ds, argmax, cols; [by = identity, threads])
+
+Return the column name of the maximum result of calling function `by` on each values in each row (of selected columns). If `cols` is not specified, `byrow`
+passes all numeric columns in `ds`.
+
+Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(maximum)`](@ref), [`byrow(minimum)`](@ref), [`byrow(argmin)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x=[1,2,missing], y=[1.3,-2.4,missing], z=[missing, 4,missing])
+3×3 Dataset
+ Row │ x         y          z
+     │ identity  identity   identity
+     │ Int64?    Float64?   Int64?
+─────┼───────────────────────────────
+   1 │        1        1.3   missing
+   2 │        2       -2.4         4
+   3 │  missing  missing     missing
+
+julia> byrow(ds, argmax)
+3-element PooledArrays.PooledVector{Union{Missing, Symbol}, UInt32, Vector{UInt32}}:
+ :y
+ :z
+ missing
+
+julia> byrow(ds, argmax, 1:2, by = abs)
+3-element PooledArrays.PooledVector{Union{Missing, Symbol}, UInt32, Vector{UInt32}}:
+ :y
+ :y
+ missing
+```
+@@@@argmin@@@@
+    byrow(ds, argmin, cols; [by = identity, threads])
+
+Return the column name of the minimum result of calling function `by` on each values in each row (of selected columns). If `cols` is not specified, `byrow`
+passes all numeric columns in `ds`.
+
+Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(maximum)`](@ref), [`byrow(minimum)`](@ref), [`byrow(argmax)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x=[1,2,missing], y=[1.3,-2.4,missing], z=[missing, 4,missing])
+3×3 Dataset
+ Row │ x         y          z
+     │ identity  identity   identity
+     │ Int64?    Float64?   Int64?
+─────┼───────────────────────────────
+   1 │        1        1.3   missing
+   2 │        2       -2.4         4
+   3 │  missing  missing     missing
+
+julia> byrow(ds, argmin)
+3-element PooledArrays.PooledVector{Union{Missing, Symbol}, UInt32, Vector{UInt32}}:
+ :x
+ :y
+ missing
+
+julia> byrow(ds, argmin, 1:2, by = abs)
+3-element PooledArrays.PooledVector{Union{Missing, Symbol}, UInt32, Vector{UInt32}}:
+ :x
+ :x
+ missing
+```
+@@@@issorted@@@@
+    byrow(ds, issorted, cols; [rev = false, lt = isless, threads])
+
+Test whether the values in rows (in selected `cols`) are in sorted order. Passing `rev = true` test whether the values in rows are in descending order. By default, the order of values is check by the `isless` function, however, user may pass any function to `lt`. The passed function to `lt` must accept two arguments where `byrow` calls `!lt(y, x)` when `rev = false` and `!lt(x, y)` when `rev = true` on consecutive column values.
+
+Missing values are larger than any other values. User may pass a customised funtion to `lt` to skip missing values.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(isequal)`](@ref), [`byrow(isless)`](@ref), [`byrow(in)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x=[1,2,missing], y=[1.3,-2.4,missing], z=[missing, 4,missing])
+3×3 Dataset
+ Row │ x         y          z
+     │ identity  identity   identity
+     │ Int64?    Float64?   Int64?
+─────┼───────────────────────────────
+   1 │        1        1.3   missing
+   2 │        2       -2.4         4
+   3 │  missing  missing     missing
+
+julia> byrow(ds, issorted, :)
+3-element Vector{Bool}:
+ 1
+ 0
+ 1
+
+julia> byrow(ds, issorted, :, lt = (x,y)->isless(abs(x), abs(y)))
+3-element Vector{Bool}:
+ 1
+ 1
+ 1
+
+julia> byrow(ds, issorted, :, lt = isequal) # byrow checks !lt(y, x)
+3-element Vector{Bool}:
+ 1
+ 1
+ 0
+
+julia> byrow(ds, issorted, :, lt = !isequal)
+3-element Vector{Bool}:
+ 0
+ 0
+ 1
+```
+@@@@join@@@@
+    byrow(ds, join, cols; [delim = "", last = "", threads])
+
+For each row and selected columns convert values to string and join them into a single string, inserting the given delimiter (if any) between adjacent strings. If `last` is given, it will be used instead of `delim` between the last two strings. Missing values are converted to empty string and `true` and `false` converted to `1` and `0`, respectively.
+
+Passing `threads = false` disables multitrheaded computations.
+@@@@hash@@@@
+    byrow(ds, hash, cols; [by = identity, threads])
+
+Compute an integer hash code of result of calling `by` on each values in each row of selected `cols`. When `cols` is not specified `byrow` compute hash code for all columns in `ds`.
+
+Passing `threads = false` disables multitrheaded computations.
+@@@@nunique@@@@
+    byrow(ds, nunique, cols; [by = identity, count_missing = true])
+
+Return the number of unique values of the result of calling `by` on each values in each row of selected `cols`. When `cols` is not specified, `byrow` returns the number of unique values for all numeric columns. `missing` are counted as distinct value, and passing `count_missing = false` drop missings from the final count.
+@@@@mapreduce@@@@
+    byrow(ds, mapreduce, cols; op = .+, f = identity, init, kwargs...)
+
+Map `f` on each values in each row of selected `cols` and reduce the result by using `op`. Keyword arguments `op` and `init` must be passed.
+@@@@var@@@@
+    byrow(ds, var, cols; [dof = true, by = identity, threads])
+
+Compute the variance of result of calling `by` on each value in each row of `ds` for selected `cols`. When `cols` is not specified `byrow` computes the variance for all numeric columns. By default, degree of freedom is used for denominator, and passing `dof = false` change it to number of values.
+
+Missing values are droped from calculations, and when all values in a row are `missing` it returns `missing`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x1 = [1.0,missing,missing], x2 = [5,6,missing])
+3×2 Dataset
+ Row │ x1         x2
+     │ identity   identity
+     │ Float64?   Int64?
+─────┼─────────────────────
+   1 │       1.0         5
+   2 │ missing           6
+   3 │ missing     missing
+
+julia> byrow(ds, var, :)
+3-element Vector{Union{Missing, Float64}}:
+ 8.0
+  missing
+  missing
+
+julia> byrow(ds, var, :, dof = false)
+3-element Vector{Union{Missing, Float64}}:
+ 4.0
+ 0.0
+  missing
+```
+@@@@std@@@@
+    byrow(ds, std, cols; [dof = true, by = identity, threads])
+
+Compute the standard deviation of result of calling `by` on each value in each row of `ds` for selected `cols`. When `cols` is not specified `byrow` computes the standard deviation for all numeric columns. By default, degree of freedom is used for denominator, and passing `dof = false` change it to number of values.
+
+Missing values are droped from calculations, and when all values in a row are `missing` it returns `missing`.
+
+Passing `threads = false` disables multitrheaded computations.
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x1 = [1.0,missing,missing], x2 = [5,6,missing])
+3×2 Dataset
+ Row │ x1         x2
+     │ identity   identity
+     │ Float64?   Int64?
+─────┼─────────────────────
+   1 │       1.0         5
+   2 │ missing           6
+   3 │ missing     missing
+
+julia> byrow(ds, std, :)
+3-element Vector{Union{Missing, Float64}}:
+ 2.8284271247461903
+  missing
+  missing
+
+julia> byrow(ds, std, :, dof = false)
+3-element Vector{Union{Missing, Float64}}:
+ 2.0
+ 0.0
+  missing
+```
+@@@@cumsum!@@@@
+    byrow(ds, cumsum!, cols; [missings = :ignore, threads])
+
+Replace each value in `cols` by the result of `cumsum` on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(cumsum)`](@ref), [`byrow(cumprod!)`](@ref), [`byrow(cummax!)`](@ref), [`byrow(cummin!)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x1 = [1.0,missing,2.0], x2 = [5,6,missing])
+3×2 Dataset
+ Row │ x1         x2
+     │ identity   identity
+     │ Float64?   Int64?
+─────┼─────────────────────
+   1 │       1.0         5
+   2 │ missing           6
+   3 │       2.0   missing
+
+julia> byrow(ds, cumsum!)
+3×2 Dataset
+ Row │ x1         x2
+     │ identity   identity
+     │ Float64?   Float64?
+─────┼─────────────────────
+   1 │       1.0       6.0
+   2 │ missing         6.0
+   3 │       2.0       2.0
+
+julia> ds = Dataset(x1 = [1.0,missing,2.0], x2 = [5,6,missing])
+3×2 Dataset
+ Row │ x1         x2
+     │ identity   identity
+     │ Float64?   Int64?
+─────┼─────────────────────
+   1 │       1.0         5
+   2 │ missing           6
+   3 │       2.0   missing
+
+julia> byrow(ds, cumsum!, missings = :skip)
+3×2 Dataset
+ Row │ x1         x2
+     │ identity   identity
+     │ Float64?   Float64?
+─────┼──────────────────────
+   1 │       1.0        6.0
+   2 │ missing          6.0
+   3 │       2.0  missing
+```
+@@@@cumsum@@@@
+    byrow(ds, cumsum, cols; [missings = :ignore, threads])
+
+Variant of `byrow(cumsum!)` which pass a copy of `ds` and leave `ds` untouched.
+@@@@cumprod!@@@@
+
+    byrow(ds, cumprod!, cols; [missings = :ignore, threads])
+
+Replace each value in `cols` by the result of `cumprod` on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(cumprod)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cummax!)`](@ref), [`byrow(cummin!)`](@ref)
+@@@@cumprod@@@@
+
+    byrow(ds, cumprod!, cols; [missings = :ignore, threads])
+
+Variant of `byrow(cumprod!)` which pass a copy of `ds` and leave `ds` untouched.
+@@@@cummax!@@@@
+    byrow(ds, cummax!, cols; [missings = :ignore, threads])
+
+Replace each value in `cols` by the result of cumulative maximum on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(cummax)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref), [`byrow(cummin!)`](@ref)
+@@@@cummax@@@@
+    byrow(ds, cummax, cols; [missings = :ignore, threads])
+
+Variant of `byrow(cummax!)` which pass a copy of `ds` and leave `ds` untouched.
+@@@@cummin!@@@@
+    byrow(ds, cummin!, cols; [missings = :ignore, threads])
+
+Replace each value in `cols` by the result of cumulative minimum on each row. When `cols` is not specified `byrow` replaces every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(cummin)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref), [`byrow(cummax!)`](@ref)
+@@@@cummin@@@@
+    byrow(ds, cummin, cols; [missings = :ignore, threads])
+
+Variant of `byrow(cummin!)` which pass a copy of `ds` and leave `ds` untouched.
+@@@@sort!@@@@
+    byrow(ds, sort!, cols; [threads, kwargs...])
+
+Update `ds` in place with sorted values in each row of selected `cols`. When `cols` is not specified `byrow` uses every numeric columns. User can pass any keyword argument support by Julia `sort` function. Columns in `cols` will be promoted to be able to contain the new sorted values.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(sort)`](@ref), [`sort!`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x1 = [1.0,missing,2.0], x2 = [5,6,missing])
+3×2 Dataset
+ Row │ x1         x2
+     │ identity   identity
+     │ Float64?   Int64?
+─────┼─────────────────────
+   1 │       1.0         5
+   2 │ missing           6
+   3 │       2.0   missing
+
+julia> byrow(ds, sort!, :)
+3×2 Dataset
+ Row │ x1        x2
+     │ identity  identity
+     │ Float64?  Float64?
+─────┼─────────────────────
+   1 │      1.0        5.0
+   2 │      6.0  missing
+   3 │      2.0  missing
+
+julia> ds = Dataset(x1 = [1.0,missing,2.0], x2 = [5,6,missing])
+3×2 Dataset
+ Row │ x1         x2
+     │ identity   identity
+     │ Float64?   Int64?
+─────┼─────────────────────
+   1 │       1.0         5
+   2 │ missing           6
+   3 │       2.0   missing
+
+julia> byrow(ds, sort!, :, rev = true)
+3×2 Dataset
+ Row │ x1         x2
+     │ identity   identity
+     │ Float64?   Float64?
+─────┼─────────────────────
+   1 │       5.0       1.0
+   2 │ missing         6.0
+   3 │ missing         2.0
+```
+@@@@sort@@@@
+    byrow(ds, sort, cols; [threads, kwargs...])
+
+Variant of `byrow(sort!)` which pass a copy of `ds` and leave `ds` untouched.
+@@@@stdze!@@@@
+    byrow(ds, stdze!, cols; [threads])
+
+Replace each value in each row of `ds` for selected `cols` by its standardised values.
+
+Passing `threads = false` disables multitrheaded computations.
+
+See [`byrow(stdze)`](@ref)
+@@@@stdze@@@@
+    byrow(ds, stdze, cols; [threads])
+
+Variant of `byrow(stdze!)` which pass a copy of `ds` and leave `ds` untouched.
+@@@@generic@@@@
+    byrow(ds, fun, cols; [threads])
+
+Return the result of calling `fun` on each row of `ds` selected by `cols`. The `fun` function must accept one argument which contains the values of each row as a vector of values and return a scalar.
 """

@@ -89,6 +89,7 @@ export
       lead,
       lead!,
       stdze,
+      stdze!,
       rescale,
       topk,
       cummax,

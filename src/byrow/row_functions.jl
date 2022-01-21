@@ -971,24 +971,26 @@ function row_cummax(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}
 end
 
 
-function row_stdze!(ds::Dataset , cols = names(ds, Union{Missing, Number}))
-    meandata = row_mean(ds, cols)
-    stddata = row_std(ds, cols)
-    _stdze_fun(x) = ifelse.(isequal.(stddata, 0), missing, (x .- meandata) ./ stddata)
+function row_stdze!(ds::Dataset , cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = index(ds)[cols]
+
+    meandata = row_mean(ds, colsidx; threads = threads)
+    stddata = row_std(ds, colsidx; threads = threads)
+    _stdze_fun(x) = ifelse.(isequal.(stddata, 0), missing, (x .- meandata) ./ stddata)
 
     for i in 1:length(colsidx)
         _columns(ds)[colsidx[i]] = _stdze_fun(_columns(ds)[colsidx[i]])
     end
-    removeformat!(ds, cols)
+    removeformat!(ds, colsidx)
     any(index(ds).sortedcols .∈ Ref(colsidx)) && _reset_grouping_info!(ds)
     _modified(_attributes(ds))
+    ds
 end
 
 
-function row_stdze(ds::AbstractDataset , cols = names(ds, Union{Missing, Number}))
+function row_stdze(ds::AbstractDataset , cols = names(ds, Union{Missing, Number}); threads = true)
     dscopy = copy(ds)
-    row_stdze!(dscopy, cols)
+    row_stdze!(dscopy, cols; threads = threads)
     dscopy
 end
 

@@ -3,7 +3,7 @@ function hp_row_sort!(ds::Dataset, cols = names(ds, Union{Missing, Number}); kwa
     T = mapreduce(eltype, promote_type, eachcol(ds)[colsidx])
     m = Matrix{T}(ds[!, colsidx])
     Threads.@threads for i in 1:size(m, 1)
-        @views sort!(m[i, :], kwargs...)
+        @views sort!(m[i, :]; kwargs...)
     end
     # TODO no parallel is needed here to minimise memory
     for i in 1:length(colsidx)
