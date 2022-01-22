@@ -115,7 +115,7 @@ function Base.sort(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), 
     end
 end
 
-Base.sort(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true, threads = true) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable, threads = threads)
+Base.sort(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev::Bool = false, mapformats::Bool = true, stable =true, threads = true, view = false) = sort(ds, [col], rev = rev, alg = alg, mapformats = mapformats, stable = stable, threads = threads, view = view)
 
 function Base.sortperm(ds::SubDataset, cols; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
     isempty(ds) && return []
