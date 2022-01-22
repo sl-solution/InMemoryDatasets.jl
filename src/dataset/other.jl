@@ -758,55 +758,69 @@ See also [`duplicates`](@ref).
 ```jldoctest
 julia> ds = Dataset(i = 1:4, x = [1, 2, 1, 2])
 4×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
+ Row │ i         x
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         1
+   4 │        4         2
 
 julia> ds = vcat(ds, ds)
 8×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
-   5 │     1      1
-   6 │     2      2
-   7 │     3      1
-   8 │     4      2
+ Row │ i         x
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         1
+   4 │        4         2
+   5 │        1         1
+   6 │        2         2
+   7 │        3         1
+   8 │        4         2
 
 julia> unique(ds)   # doesn't modify ds
 4×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
+ Row │ i         x
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         1
+   4 │        4         2
 
 julia> unique(ds, 2)
 2×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
+ Row │ i         x
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+
+julia> unique(ds, 2, keep = :last)
+2×2 Dataset
+ Row │ i         x
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        3         1
+   2 │        4         2
 
 julia> unique!(ds)  # modifies ds
 4×2 Dataset
- Row │ i      x
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1      1
-   2 │     2      2
-   3 │     3      1
-   4 │     4      2
+ Row │ i         x
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         1
+   4 │        4         2
 ```
 """
 (unique, unique!)
