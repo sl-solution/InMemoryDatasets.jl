@@ -148,7 +148,7 @@ function _modify_grouped_f_barrier(gds::Union{GroupBy, GatherBy}, msfirst, mssec
 			parent(gds)[!, mslast] = byrow(parent(gds), mssecond.args[1], msfirst; mssecond.args[2]...)
 		end
 	elseif (mssecond isa Base.Callable) && (mslast isa MultiCol) && (mssecond isa typeof(splitter))
-		_modify_multiple_out!(parent(ds), _columns(parent(gds))[msfirst], mslast.x)
+		_modify_multiple_out!(parent(gds), _columns(parent(gds))[msfirst], mslast.x)
 	else
 		# if something ends here, we should implement new functionality for it
 		@error "not yet know how to handle the situation $(msfirst => mssecond => mslast)"
