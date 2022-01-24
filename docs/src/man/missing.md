@@ -2,7 +2,7 @@
 
 ## Comparing data sets
 
-`==` of two data sets or two columns fall back to `isequal`.
+`==` of two data sets or two columns falls back to `isequal`.
 
 ## Every column supports `missing`
 
@@ -109,11 +109,11 @@ The `sum`, `minimum`, and `maximum` functions also support the `threads` keyword
 
 The following functions are also exported by InMemoryDatasets:
 
-* `topk` : Return top(bottom) k values of a vector. It ignores `missing` values, unless all values are `missing` which it returns `[missing]`.
 * `lag` : Create a lag-k of the provided vector
 * `lag!` : Replace its input with a lag-k values
 * `lead` : Create a lead-k of the provided vector
 * `lead!` : Replace its input with a lead-k values
+* `topk` : Return top(bottom) k values of a vector. It ignores `missing` values, unless all values are `missing` which it returns `[missing]`.
 
 and the following functions are not exported but are available via `dot` notation:
 

@@ -302,7 +302,7 @@ julia> ds = Dataset(A_2018=1:4, A_2019=5:8, B_2017=9:12,
 julia> f(x) =  replace(x, r"[A_B]"=>"")
 f (generic function with 1 method)
 
-julia> # later we provide a simpler solution for this example
+julia> ; # later we provide a simpler solution for this example
 
 julia> dsA = transpose(groupby(ds, :ID), r"A", renamerowid = f, variable_name = "Year", renamecolid = x->"A");
 
@@ -493,7 +493,7 @@ julia> ds = Dataset(A = ["foo", "foo", "foo", "foo", "foo",
    8 │ bar       two       small            6         9
    9 │ bar       two       large            7         9
 
-julia> # This first example aggregates values by taking the sum.
+julia> ; # This first example aggregates values by taking the sum.
 julia> _tmp = combine(groupby(ds, 1:3), 4=>sum);
 
 julia> transpose(gatherby(_tmp, 1:2, isgathered = true), :sum_D, id = :C, variable_name = nothing)
@@ -518,7 +518,7 @@ julia> transpose(gatherby(_tmp, 1:2, isgathered = true), :sum_D, id = :C, variab
    3 │ foo       one              4         1
    4 │ foo       two              0         6
 
-julia> # The next example aggregates by taking the mean across multiple columns. Here we don't need transposing
+julia> ; # The next example aggregates by taking the mean across multiple columns. Here we don't need transposing
 julia> combine(groupby(ds, [:A, :C]), [:D, :E] => mean)
 4×4 Dataset
  Row │ A         C         mean_D    mean_E   

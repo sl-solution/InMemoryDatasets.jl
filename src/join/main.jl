@@ -1077,7 +1077,7 @@ in the close match phase, only one of them will be selected, and the selected on
   setting it to `true` if there are duplicated column names to make them unique.
 - `border`: `:missing` is used by default for the border value,
   `:nearest` can be used to set border values to the nearest value rather than a `missing`,
-  by setting `border = :none` any observation out of left data set range will be set as missing.
+  by setting `border = :none` any observation out of the right data set range will be set as missing.
 - `mapformats`: is set to `true` by default, which means formatted values are used to match observations for both `dsl` and `dsr`;
   you can use the function `getformat` to see the format;
   by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
@@ -1418,7 +1418,7 @@ julia> dsupdate = Dataset(group = ["G1", "G2"], id = [2, 1],
    1 │ G1               2        2.5   missing
    2 │ G2               1  missing           3
 
-julia> update!(dsmain, dsupdate, on = [:group, :id], mode = :missing) # Only missing rows are updated.
+julia> update!(dsmain, dsupdate, on = [:group, :id], mode = :missings) # Only missing rows are updated.
 7×4 Dataset
  Row │ group     id        x1        x2
      │ identity  identity  identity  identity

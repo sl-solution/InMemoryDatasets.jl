@@ -232,10 +232,7 @@ julia> setformat!(ds, 1 => sqrt)
 Error showing value of type Dataset:
 ERROR: DomainError with -1.0:
 sqrt will only return a complex result if called with a complex argument. Try sqrt(Complex(x)).
-Stacktrace:
-  .
-  .
-  .
+[...]
 ```
 
 This issue can be solve manually by defining a user defined `format`:
@@ -264,10 +261,7 @@ ROUND (generic function with 1 method)
 julia> setformat!(ds, 2 => ROUND)
 Error showing value of type Dataset:
 ERROR: MissingException: cannot convert a missing value to type Int64: use Union{Int64, Missing} instead
-Stacktrace:
-	.
-	.
-	.
+[...]
 ```
 
 To solve this issue, we can redefine `ROUND` as
@@ -301,10 +295,7 @@ julia> ds
 julia> setformat!(ds, 3=>custom_format)
 Error showing value of type Dataset:
 ERROR: BoundsError
-Stacktrace:
-    .
-    .
-    .
+[...]
 ```
 
 To fix the issue we should redefine `custom_format` or simply remove the column's `format`:

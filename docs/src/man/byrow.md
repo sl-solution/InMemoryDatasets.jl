@@ -42,7 +42,7 @@ In the above benchmark, `byrow` should be even more performant when the data set
 
 ## Optimised operations
 
-Generally, `byrow` is efficient for any `fun` which returns a single value for each row, however, it is fine tuned for the following functions:
+Generally, `byrow` is efficient for any `fun` which returns a single value for each row, however, it is fine tuned for the following functions: (for details of each of the following function refer to its docstring by typing `?byrow(fun)` in a Julia session, e.g. `?byrow(sum)`)
 
 * `all` : Test whether all elements of a boolean collection are `true`
 * `any` : Test whether any elements of a boolean collection are `true`
@@ -341,6 +341,6 @@ julia> byrow(ds, cumsum, 1:3)
    5 │        2         4         2       10.0  missing       -100.0
 ```
 
-Note that for these operations, by default, `cumsum` treats `missing` as zero, and `cumprod` treats `missing` as one, i.e. they ignore `missing` values, however, passing `missings = :skip` causes these functions to skip the missing values (leave them as `missing`). For other cumulative functions the same keyword argument rules the behaviour.
+Note that for these operations, by default, `cumsum/!`, `cumprod/!`, `cumax/!`, and `cummin/!` ignore `missing` values, however, passing `missings = :skip` causes these functions to skip the missing values (leave them as `missing`).
 
 The special operations don't change the columns names or their orders.
