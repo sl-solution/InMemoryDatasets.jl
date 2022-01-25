@@ -311,31 +311,25 @@ function modify!(ds::AbstractDataset, @nospecialize(args...); threads::Bool = tr
     end
 end
 
-# we must take care of all possible types, because, catching is very expensive
+# we must take care of all possible types, because, fallback is slow
 _is_scalar(::T, sz) where T <: Number = true
 _is_scalar(::Missing, sz) = true
 _is_scalar(::T, sz) where T <: Tuple = true
 _is_scalar(::TimeType, sz) = true
 _is_scalar(::T, sz) where T <: AbstractString = true
 _is_scalar(x::T, sz) where T <: AbstractVector = length(x) != sz
-function _is_scalar(_res, sz)
+
+# TODO can we memorise this and avoid calling it repeatedly in a sesssion
+_is_scalar_barrier(::Val{T}) where T = hasmethod(size, (T,))
+
+function _is_scalar(_res::T, sz) where T
      resize_col = false
-    try
-        size(_res)
+    if _is_scalar_barrier(Val(T))
         if size(_res) == () || size(_res,1) != sz
-            # fill!(allocatecol(typeof(_res), nrow(ds)),
-            #                           _res)
-            # _res = repeat([_res], nrow(ds))
             resize_col = true
         end
-    catch e
-        if (e isa MethodError)
-            # fill!(allocatecol(typeof(_res), nrow(ds)),
-                                      # _res)
-            # _res = repeat([_res], nrow(ds))
-            resize_col = true
-       end
-
+    else
+        resize_col = true
     end
     return resize_col
 end
