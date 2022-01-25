@@ -312,27 +312,28 @@ function modify!(ds::AbstractDataset, @nospecialize(args...); threads::Bool = tr
 end
 
 # we must take care of all possible types, because, fallback is slow
-_is_scalar(::T, sz) where T <: Number = true
-_is_scalar(::Missing, sz) = true
-_is_scalar(::T, sz) where T <: Tuple = true
-_is_scalar(::TimeType, sz) = true
-_is_scalar(::T, sz) where T <: AbstractString = true
+# _is_scalar(::T, sz) where T <: Number = true
+# _is_scalar(::Missing, sz) = true
+# _is_scalar(::T, sz) where T <: Tuple = true
+# _is_scalar(::TimeType, sz) = true
+# _is_scalar(::T, sz) where T <: AbstractString = true
+_is_scalar(x, sz) = true
 _is_scalar(x::T, sz) where T <: AbstractVector = length(x) != sz
 
-# TODO can we memorise this and avoid calling it repeatedly in a sesssion
-_is_scalar_barrier(::Val{T}) where T = hasmethod(size, (T,))
-
-function _is_scalar(_res::T, sz) where T
-     resize_col = false
-    if _is_scalar_barrier(Val(T))
-        if size(_res) == () || size(_res,1) != sz
-            resize_col = true
-        end
-    else
-        resize_col = true
-    end
-    return resize_col
-end
+# # TODO can we memorise this and avoid calling it repeatedly in a sesssion
+# _is_scalar_barrier(::Val{T}) where T = hasmethod(size, (T,))
+#
+# function _is_scalar(_res::T, sz) where T
+#      resize_col = false
+#     if _is_scalar_barrier(Val(T))
+#         if size(_res) == () || size(_res,1) != sz
+#             resize_col = true
+#         end
+#     else
+#         resize_col = true
+#     end
+#     return resize_col
+# end
 
 function _resize_result!(ds, _res, newcol)
     resize_col = _is_scalar(_res, nrow(ds))
