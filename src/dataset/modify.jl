@@ -311,10 +311,13 @@ function modify!(ds::AbstractDataset, @nospecialize(args...); threads::Bool = tr
     end
 end
 
-# size() is better option for checking if the result is scalar,
-# it works for numbers and it won't work for strings and symbols
+# we must take care of all possible types, because, catching is very expensive
+_is_scalar(::T, sz) where T <: Number = true
 _is_scalar(::Missing, sz) = true
-_is_scalar(::Tuple, sz) = true
+_is_scalar(::T, sz) where T <: Tuple = true
+_is_scalar(::TimeType, sz) = true
+_is_scalar(::T, sz) where T <: AbstractString = true
+_is_scalar(x::T, sz) where T <: AbstractVector = length(x) != sz
 function _is_scalar(_res, sz)
      resize_col = false
     try
