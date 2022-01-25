@@ -1849,7 +1849,7 @@ end
     @test deleteat!(leftjoin(dsr, dsl, on =:x, method = :hash), 1) == dsr
 end
 
-@testset "range inner join" begin
+@testset "range join" begin
     store = Dataset([[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")],
         ["A", "A", "B", "A", "B", "A", "B", "B", "A", "B"]], [:date, :store])
     roster = Dataset([Union{Missing, String}["A", "A", "B", "A", "B", "A", "B", "B"],
@@ -2262,7 +2262,24 @@ end
     @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, method = :hash) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
     @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, method = :hash) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
 
-
+    dsl = Dataset(x1 = [1,2,1,3], y = [-1.2,-3,2.1,-3.5])
+    dsr = Dataset(x1 = [1,2,3], lower = [0, -3,1], upper = [1,0,2])
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,3)]) == [0,1,0,0]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,3)], method = :hash) == [0,1,0,0]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,3)], strict_inequality = true) == [0,0,0,0]
+    dsl = Dataset(x1 = [1,2,1,3], y = [-1.2,-3,2.1,-3.5])
+    dsr = Dataset(x1 = [1,2,3], lower = [0, -3,1], upper = [3,0,2])
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,3)]) == [0,1,1,0]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,3)], method = :hash) == [0,1,1,0]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,3)], strict_inequality = true) == [0,0,1,0]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(nothing,3)]) == [1,1,1,1]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(nothing,3)], method = :hash) == [1,1,1,1]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(nothing,3)], method = :hash, strict_inequality = true) == [1,1,1,1]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,nothing)], method = :hash, strict_inequality = false) == [0,1,1,0]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,nothing)], method = :hash, strict_inequality = true) == [0,0,1,0]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(nothing,3)], method = :sort, strict_inequality = true) == [1,1,1,1]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,nothing)], method = :sort, strict_inequality = false) == [0,1,1,0]
+    @test contains(dsl, dsr, on = [1=>1, 2=>(2,nothing)], method = :sort, strict_inequality = true) == [0,0,1,0]
 end
 
 @testset "update!, update" begin

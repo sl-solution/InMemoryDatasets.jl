@@ -1,7 +1,7 @@
 # TODO the docstring needs some updates, also some of the keyword arguments are missing int he docstring, e.g. accelerate, usehash
 
 """
-    leftjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort)
+    leftjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, threads = true)
 
 Perform a left join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` containing all rows from the left table `dsl`.
 
@@ -140,7 +140,7 @@ function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
 
 end
 """
-    leftjoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort)
+    leftjoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort, threads = true)
 
 Variant of `leftjoin` that performs `leftjoin` in place for special case that the number of matching rows from the right data set is at most one.
 ```
@@ -173,7 +173,7 @@ function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique 
 end
 
 """
-    innerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort)
+    innerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, strict_inequality = false, droprangecols = true, threads = true)
 
 Perform a inner join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing all rows where matching values exist `on` the keys for both `dsl` and `dsr`.
@@ -186,7 +186,7 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
 
 # Key Arguments
-- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like innerjoin is needed, the last key for the right data set should be passed as `Tuple`.
+- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like innerjoin is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
@@ -278,6 +278,37 @@ julia> innerjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for data
    1 │ 2020        true  A
    2 │ 2021       false  B
    3 │ 2020        true  A
+
+julia> dsl = Dataset(id = [1,1,2,2], x = [100.0, 210.0, 55.5, 150.0])
+4×2 Dataset
+ Row │ id        x
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1     100.0
+   2 │        1     210.0
+   3 │        2      55.5
+   4 │        2     150.0
+
+julia> dsr = Dataset(id = [1,2,3], lower = [110,110,200], value = [1200,2030,1300])
+3×3 Dataset
+ Row │ id        lower     value
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1       110      1200
+   2 │        2       110      2030
+   3 │        3       200      1300
+
+julia> innerjoin(dsl, dsr, on = [1=>1, 2=>(:lower, nothing)])
+2×3 Dataset
+ Row │ id        x         value
+     │ identity  identity  identity
+     │ Int64?    Float64?  Int64?
+─────┼──────────────────────────────
+   1 │        1     210.0      1200
+   2 │        2     150.0      2030
+
 ```
 """
 function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols::Bool = true, strict_inequality = false, method = :sort, threads::Bool = true)
@@ -321,7 +352,7 @@ function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
 end
 
 """
-    outerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort)
+    outerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, threads = true)
 
 Perform an outer join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing all rows where keys appear in either `dsl` or `dsr`.
@@ -458,11 +489,12 @@ function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
 end
 
 """
-    contains(main, transaction; on, mapformats = true, alg = HeapSort, stable = false, accelerate = false, method = :hash)
+    contains(main, transaction; on, mapformats = true, alg = HeapSort, stable = false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 returns a boolean vector where is true when the key for the
 corresponding row in the `main` data set is found in the transaction data set.
 
+- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `contains` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
 
 # Examples
@@ -503,9 +535,37 @@ julia> contains(main, tds, on = :g1 => :group)
  0
  1
  1
+
+julia> dsl = Dataset(x1 = [1,2,1,3], y = [-1.2,-3,2.1,-3.5])
+4×2 Dataset
+ Row │ x1        y
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1      -1.2
+   2 │        2      -3.0
+   3 │        1       2.1
+   4 │        3      -3.5
+
+julia> dsr = Dataset(x1 = [1,2,3], lower = [0, -3,1], upper = [3,0,2])
+3×3 Dataset
+ Row │ x1        lower     upper
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         0         3
+   2 │        2        -3         0
+   3 │        3         1         2
+
+julia> contains(dsl, dsr, on = [1=>1, 2=>(2,3)], method = :hash, strict_inequality = true)
+4-element Vector{Bool}:
+ 0
+ 0
+ 1
+ 0
 ```
 """
-function Base.contains(main::AbstractDataset, transaction::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :hash, threads::Bool = true)
+function Base.contains(main::AbstractDataset, transaction::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :hash, threads::Bool = true,  strict_inequality = false)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -518,12 +578,24 @@ function Base.contains(main::AbstractDataset, transaction::AbstractDataset; on =
     else
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
     end
+    if !(strict_inequality isa AbstractVector)
+        strict_inequality = repeat([strict_inequality], 2)
+    else
+        length(strict_inequality) !== 2 && throw(ArgumentError("`strict_inequality` must be a Bool or a vector of Bool with size two"))
+    end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = multiple_getindex(index(main), on)
         onright = multiple_getindex(index(transaction), on)
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = multiple_getindex(index(main), map(x->x.first, on))
         onright = multiple_getindex(index(transaction), map(x->x.second, on))
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:Any}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:Any}})
+        onleft = multiple_getindex(index(main), map(x->x.first, on))
+        onright = multiple_getindex(index(transaction), map(x->x.second, on[1:end-1]))
+        onright_range = on[end].second
+        !(onright_range isa Tuple) && throw(ArgumentError("For contains the last element of `on` keyword argument for the right table must be a Tuple of column names"))
+        ranges = _join_inner(main, transaction, nrow(transaction) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, makeunique = true, mapformats = mapformats, stable = stable, alg = alg, check = false, accelerate = accelerate, droprangecols = true, strict_inequality = strict_inequality, method = method, threads = threads, onlyreturnrange = true)
+        return map(x -> length(x) == 0 ? false : true, ranges)
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
@@ -536,7 +608,7 @@ function Base.contains(main::AbstractDataset, transaction::AbstractDataset; on =
 end
 
 """
-    antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash)
+    antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
@@ -549,7 +621,7 @@ rows that have key values appear in `dsr` will be removed.
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
 
 # Key Arguments
-- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
+- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `antijoin` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
@@ -639,16 +711,16 @@ julia> antijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    1 │ 2012        true
 ```
 """
-function DataAPI.antijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false, method = :hash, threads = true)
+function DataAPI.antijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false, method = :hash, threads = true, strict_inequality = false)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     if view
-        Base.view(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads), :)
+        Base.view(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, strict_inequality = strict_inequality), :)
     else
-        dsl[.!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads), :]
+        dsl[.!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, strict_inequality = strict_inequality), :]
     end
 end
 """
-    semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash)
+    semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 Perform a semi join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
@@ -661,7 +733,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
 
 # Key Arguments
-- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
+- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `semijoin` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
@@ -753,16 +825,16 @@ julia> semijoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    3 │ 2020        true
 ```
 """
-function DataAPI.semijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false, method = :hash, threads = true)
+function DataAPI.semijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, view = false, method = :hash, threads = true, strict_inequality = false)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     if view
-        Base.view(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads), :)
+        Base.view(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, strict_inequality = strict_inequality), :)
     else
-        dsl[contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads), :]
+        dsl[contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, strict_inequality = strict_inequality), :]
     end
 end
 """
-    antijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash)
+    antijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
@@ -775,7 +847,7 @@ rows that have key values appear in `dsr` will be removed.
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
 
 # Key Arguments
-- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
+- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `antijoin!` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
@@ -880,12 +952,12 @@ julia> dsl
    1 │ 2012        true
 ```
 """
-function antijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :hash, threads = true)
+function antijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :hash, threads = true, strict_inequality = false)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
-    deleteat!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads))
+    deleteat!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, strict_inequality = strict_inequality))
 end
 """
-    semijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash)
+    semijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 Perform a semi join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
@@ -898,7 +970,7 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
 - `dsl` & `dsr`: two `Dataset`: the left table and the right table to be joined.
 
 # Key Arguments
-- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
+- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `semijoin!` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
 - `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
@@ -1010,8 +1082,8 @@ julia> dsl
    3 │ 2020        true
 ```
 """
-function semijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :hash, threads = true)
-    deleteat!(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads))
+function semijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method = :hash, threads = true, strict_inequality = false)
+    deleteat!(dsl, .!contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, strict_inequality = strict_inequality))
 end
 
 
@@ -1056,7 +1128,7 @@ function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, dir
 end
 
 """
-    closejoin!(dsl, dsr; on=nothing, direction=:backward, makeunique=false, border=:missing, mapformats=true, alg=HeapSort, stable=true, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing, method = :sort)
+    closejoin!(dsl, dsr; on=nothing, direction=:backward, makeunique=false, border=:missing, mapformats=true, alg=HeapSort, stable=true, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing, method = :sort, threads = true)
 
 Perform a close join for two `Datasets` `dsl` & `dsr` and change the left table into a `Dataset`
 based on exact matches on the key variable or the closest matches when the exact match doesn't exist.
@@ -1358,7 +1430,7 @@ function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction 
 end
 
 """
-    update!(dsmain, dsupdate; on=nothing, allowmissing=false, mode=:missings, mapformats=true, alg=HeapSort, stable=true, accelerate = false, method = :sort)
+    update!(dsmain, dsupdate; on=nothing, allowmissing=false, mode=:missings, mapformats=true, alg=HeapSort, stable=true, accelerate = false, method = :sort, threads = true)
 
 Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows,
 and change the left `Dataset` after updating.
