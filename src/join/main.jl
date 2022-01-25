@@ -1,7 +1,7 @@
 # TODO the docstring needs some updates, also some of the keyword arguments are missing int he docstring, e.g. accelerate, usehash
 
 """
-    leftjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, threads = true)
+    leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, threads = true)
 
 Perform a left join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset` containing all rows from the left table `dsl`.
 
@@ -140,7 +140,7 @@ function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
 
 end
 """
-    leftjoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort, threads = true)
+    leftjoin!(dsl::Dataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort, threads = true)
 
 Variant of `leftjoin` that performs `leftjoin` in place for special case that the number of matching rows from the right data set is at most one.
 ```
@@ -173,7 +173,7 @@ function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique 
 end
 
 """
-    innerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, strict_inequality = false, droprangecols = true, threads = true)
+    innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, strict_inequality = false, droprangecols = true, threads = true)
 
 Perform a inner join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing all rows where matching values exist `on` the keys for both `dsl` and `dsr`.
@@ -352,7 +352,7 @@ function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
 end
 
 """
-    outerjoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, threads = true)
+    outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, threads = true)
 
 Perform an outer join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing all rows where keys appear in either `dsl` or `dsr`.
@@ -489,7 +489,7 @@ function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
 end
 
 """
-    contains(main, transaction; on, mapformats = true, alg = HeapSort, stable = false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
+    contains(main::AbstractDataset, transaction::AbstractDataset; on, mapformats = true, alg = HeapSort, stable = false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 returns a boolean vector where is true when the key for the
 corresponding row in the `main` data set is found in the transaction data set.
@@ -608,7 +608,7 @@ function Base.contains(main::AbstractDataset, transaction::AbstractDataset; on =
 end
 
 """
-    antijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
+    antijoin(dsl::AbstractDataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
@@ -720,7 +720,7 @@ function DataAPI.antijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     end
 end
 """
-    semijoin(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
+    semijoin(dsl::AbstractDataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, view = false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 Perform a semi join of two `Datasets`: `dsl` and `dsr`, and return a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
@@ -834,7 +834,7 @@ function DataAPI.semijoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     end
 end
 """
-    antijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
+    antijoin!(dsl::Dataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 Opposite to `semijoin`, perform an anti join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` but not in `dsr`.
@@ -957,7 +957,7 @@ function antijoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, mapformats:
     deleteat!(dsl, contains(dsl, dsr, on = on, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, strict_inequality = strict_inequality))
 end
 """
-    semijoin!(dsl, dsr; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
+    semijoin!(dsl::Dataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :hash, strict_inequality = false, threads = true)
 
 Perform a semi join of two `Datasets`: `dsl` and `dsr`, and change the left table `dsl` into a `Dataset`
 containing rows where keys appear in `dsl` and `dsr`.
@@ -1128,7 +1128,7 @@ function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, dir
 end
 
 """
-    closejoin!(dsl, dsr; on=nothing, direction=:backward, makeunique=false, border=:missing, mapformats=true, alg=HeapSort, stable=true, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing, method = :sort, threads = true)
+    closejoin!(dsl::Dataset, dsr::AbstractDataset; on=nothing, direction=:backward, makeunique=false, border=:missing, mapformats=true, alg=HeapSort, stable=true, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing, method = :sort, threads = true)
 
 Perform a close join for two `Datasets` `dsl` & `dsr` and change the left table into a `Dataset`
 based on exact matches on the key variable or the closest matches when the exact match doesn't exist.
@@ -1430,7 +1430,7 @@ function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction 
 end
 
 """
-    update!(dsmain, dsupdate; on=nothing, allowmissing=false, mode=:missings, mapformats=true, alg=HeapSort, stable=true, accelerate = false, method = :sort, threads = true)
+    update!(dsmain::Dataset, dsupdate::AbstractDataset; on=nothing, allowmissing=false, mode=:missings, mapformats=true, alg=HeapSort, stable=true, accelerate = false, method = :sort, threads = true)
 
 Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows,
 and change the left `Dataset` after updating.
