@@ -317,19 +317,19 @@ julia> closejoin(trades, quotes, on = [:ticker, :time], border = :nearest)
 ```
 
 
-## Inequality-kind inner join
+## Inequality-kind joins
 
-The `innerjoin` function can also use inequality comparisons to match observations from the left data set with the observations in the right data set. It can find all observations in the right data set that are `<=`(`<`) or `>=`(`>`) than a selected observation in the left data set. Additionally, if the user specifies two columns in the right table for a single key in the left table, it matches the observations in the left data set when they fall into the range specifies by the selected two key columns in the right data set. This conditional joining can be done within groups of observations if the user provide more than one key column for the left and the right data sets, i.e. the last key will be used for "inequality-kind" join and the rest will be used for the exact match.
+The `innerjoin`, `contains`, `semijoin`, `semijoin!`, `antijoin`, `antijoin!` functions can also use inequality comparisons to match observations from the left data set with the observations in the right data set. They can find all observations in the right data set that are `<=`(`<`) or `>=`(`>`) than a selected observation in the left data set. Additionally, if the user specifies two columns in the right table for a single key in the left table, they matche the observations in the left data set when they fall into the range specifies by the selected two key columns in the right data set. These conditional joins can be done within groups of observations if the user provide more than one key column for the left and the right data sets, i.e. the last key will be used for "inequality-kind" join and the rest will be used for the exact match.
 
-For this kind of inner join, the key columns for both data sets which are defined for grouping observation must be passed as pair of column names (similar to normal use of `innerjoin`), however, the key column from the left data set which is going to be used for conditional joining must be also passed as a column name, and the key column(s) for conditional joining from the right data set must be passed as a Tuple of column names. For example, if the key column for the left data set is `:l_key`, and there are two columns in the right table called, `:r_start` and `:r_end` the following demonstrates how a user can perform different kinds of conditional joining:
+For these kind of joins, the key columns for both data sets which are defined for grouping observation must be passed as pair of column names (similar to normal use of other joins), however, the key column from the left data set which is going to be used for conditional joining must be also passed as a column name, and the key column(s) for conditional joining from the right data set must be passed as a Tuple of column names. For example, if the key column for the left data set is `:l_key`, and there are two columns in the right table called, `:r_start` and `:r_end` the following demonstrates how a user can perform different kinds of conditional joining:
 
 * `:l_key => (:r_start, nothing)`, a match happens if the selected observation from the left data set is `>= :r_start`.
 * `:l_key => (nothing, :r_end)`, a match happens if the selected observation from the left data set is `<= :r_end`.
 * `:l_key => (:r_start, :r_end)`, a match happens if the selected observation from the left data set is `>= :r_start` and `<= :r_end`.
 
-To change inequalities to strict inequality the `strict_inequality` keyword argument must be set to `true` for one or both sides, e.g. `strict_inequality = true`(both side), `strict_inequality = [false, true]`(only one side).
+To change inequalities to strict inequalities the `strict_inequality` keyword argument must be set to `true` for one or both sides, e.g. `strict_inequality = true`(both side), `strict_inequality = [false, true]`(only one side).
 
-`innerjoin` supports `method = :hash` for all key columns which are not used for inequality like join.
+These joins also support the `method` keyword argument for all key columns which are not used for inequality like join. `contains` and its related functions use `method = :hash` by default.
 
 ### Examples
 
@@ -415,6 +415,34 @@ julia> innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :
    7 │ 2019-10-04  A                   4
    8 │ 2019-10-03  A                   1
    9 │ 2019-10-03  A                   2
+
+julia> dsl = Dataset(x1 = [1,2,1,3], y = [-1.2,-3,2.1,-3.5])
+4×2 Dataset
+ Row │ x1        y        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1      -1.2
+   2 │        2      -3.0
+   3 │        1       2.1
+   4 │        3      -3.5
+
+julia> dsr = Dataset(x1 = [1,2,3], lower = [0, -3,1], upper = [3,0,2])
+3×3 Dataset
+ Row │ x1        lower     upper    
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         0         3
+   2 │        2        -3         0
+   3 │        3         1         2
+
+julia> contains(dsl, dsr, on = [1=>1, 2=>(2,3)], strict_inequality = true)
+4-element Vector{Bool}:
+ 0
+ 0
+ 1
+ 0
 ```
 
 ## Update a data set by values from another data set
