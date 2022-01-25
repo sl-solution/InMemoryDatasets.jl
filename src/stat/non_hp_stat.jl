@@ -142,7 +142,7 @@ function stat_maximum(f::F, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where
 end
 stat_maximum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_maximum(identity, x; lo = lo, hi = hi)
 
-function _arg_minmax_barrier(x, minmaxval, f)
+function _arg_minmax_barrier(x, minmaxval, f)::Int
     @inbounds for i in 1:length(x)
         isequal(f(x[i]), minmaxval) && return i
     end
