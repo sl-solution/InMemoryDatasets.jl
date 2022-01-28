@@ -1156,7 +1156,7 @@ in the close match phase, only one of them will be selected, and the selected on
   for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `tol`: Select close match only if the distance is less than it.
 - `allow_exact_match`: If `true`, allows matching with the same key.
-- `op`: When `direction = :nearest` user can supply an operator where `closejoin!` call on two nearest points from the right data set close to the currrent observation in the left data set. The order of the argument to `op` is the same as the sorted order of point. It is important that `op` be able to handle misssing values. If there are multiple columns in the right table to be joined to the left table, the `op` operation applies to all of them.
+- `op`: When `direction = :nearest` user can supply an operator where `closejoin!` call on two nearest points from the right data set close to the currrent observation in the left data set. The order of the argument to `op` is the same as the sorted order of point. It is important that `op` be able to handle misssing values.
 - `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
   it can also be `QuickSort` (the Quicksort algorithm).
 - `stable`: by default is `true`, means that the sorting results have to be stable;
