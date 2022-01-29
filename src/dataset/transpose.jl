@@ -61,7 +61,7 @@ end
 _find_id_unique_values(ds, ididx::ColumnIndex, perms; mapformats = true) = _find_id_unique_values(ds, [ididx], perms; mapformats = mapformats)
 
 """
-    transpose(ds::Dataset, cols;
+    transpose(ds::AbstractDataset, cols;
         id = nothing,
         renamecolid = (x -> "_c" * string(x)),
         renamerowid = identity,
@@ -70,7 +70,7 @@ _find_id_unique_values(ds, ididx::ColumnIndex, perms; mapformats = true) = _find
         mapformats = true,
         threads = true)
 
-transpose `ds[!, cols]`. When `id` is set, the values of `ds[!, id]` will be used to label the columns in the new data set. The function uses the `renamecolid` function to generate the new columns labels. The `renamerowid` function is applied to stringified names of `ds[!, cols]` and these are attached to the output as a new column with the label `variable_name`. When a grouped dataset (e.g. by using `groupby!(ds, gcols)`, or `groupby(ds, gcols)`) passed as the first argument the transposing is done within each group constructed by grouping columns. If the number of rows in a group is smaller than other groups, the extra columns for that group in the output data frame is filled with `missing` by default, however, the default value can be changed by passing `default = ` argument.
+transpose `ds[!, cols]`. When `id` is set, the values of `ds[!, id]` will be used to label the columns in the new data set. The function uses the `renamecolid` function to generate the new columns labels. The `renamerowid` function is applied to stringified names of `ds[!, cols]` and these are attached to the output as a new column with the label `variable_name`. When a grouped dataset (e.g. by using `groupby!(ds, gcols)`, ,`groupby(ds, gcols)`, or `gatherby(ds, gcols)`) passed as the first argument the transposing is done within each group constructed by grouping columns. If the number of rows in a group is smaller than other groups, the extra columns for that group in the output data frame is filled with `missing` by default, however, the default value can be changed by passing `default = ` argument.
 
 When `cols` is a Tuple of column indices, the transposing is done for each set of indices and at the end all transposed columns are horizontally concatenated. In this case, by default, the `variable_name` keyword argument is set to `nothing`.
 

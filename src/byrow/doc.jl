@@ -93,7 +93,7 @@ end
 
 byrow_docs_text = """
 @@@@default@@@@
-    byrow(ds, fun, cols; ...)
+    byrow(ds::AbstractDataset, fun, cols; ...)
 
 Perform a row-wise operation specified by `fun` on selected columns `cols`. Generally,
 `fun` can be any function that returns a scalar value for each row.
@@ -144,7 +144,7 @@ Perform a row-wise operation specified by `fun` on selected columns `cols`. Gene
 - `stdze`
 - `stdze!`
 @@@@sum@@@@
-    byrow(ds, sum, cols = names(ds, Number); [by = identity, threads])
+    byrow(ds::AbstractDataset, sum, cols = names(ds, Number); [by = identity, threads])
 
 Sum results of calling function `by` on each element of each row of `ds`. If `cols` is not specified, `byrow`
 computes sum for all numeric columns in `ds`.
@@ -173,7 +173,7 @@ julia> byrow(ds, sum, :)
  7.0
 ```
 @@@@mean@@@@
-    byrow(ds, mean, cols = names(ds, Number); [by = identity, threads])
+    byrow(ds::AbstractDataset, mean, cols = names(ds, Number); [by = identity, threads])
 
 Compute mean of the results of calling function `by` on each element of each row of `ds`. If `cols` is not specified, `byrow`
 computes mean for all numeric columns in `ds`.
@@ -202,7 +202,7 @@ julia> byrow(ds, mean, :)
  3.5
 ```
 @@@@all@@@@
-    byrow(ds, all, cols = :; [by = isequal(true), threads, mapformats = false])
+    byrow(ds::AbstractDataset, all, cols = :; [by = isequal(true), threads, mapformats = false])
 
 Test whether all elements in each row in selected columns are `true`, when `by` is passed, determine whether predicate `by` returns `true` for all elements in the row.
 
@@ -235,7 +235,7 @@ julia> byrow(ds, all, :, by = [==(2), >(1)])
  0
 ```
 @@@@any@@@@
-    byrow(ds, any, cols = :; [by = isequal(true), threads, mapformats = false])
+    byrow(ds::AbstractDataset, any, cols = :; [by = isequal(true), threads, mapformats = false])
 
 Test whether any elements in each row in selected columns is `true`, when `by` is passed, determine whether predicate `by` returns `true` for any elements in the row.
 
@@ -268,7 +268,7 @@ julia> byrow(ds, any, :, by = [==(2), >(1)])
  1
 ```
 @@@@count@@@@
-    byrow(ds, count, cols = :; [by = isequal(true), threads])
+    byrow(ds::AbstractDataset, count, cols = :; [by = isequal(true), threads])
 
 Count the number of elements in each row for selected columns which the function `by` returns `true`.
 
@@ -294,7 +294,7 @@ julia> byrow(ds, count, :, by = isodd)
  2
 ```
 @@@@prod@@@@
-    byrow(ds, prod, cols = names(ds, Number); [by = identity, threads])
+    byrow(ds::AbstractDataset, prod, cols = names(ds, Number); [by = identity, threads])
 
 Return the product of the results of calling function `by` on each element of each row of `ds`. If `cols` is not specified, `byrow`
 computes product for all numeric columns in `ds`.
@@ -323,7 +323,7 @@ julia> byrow(ds, prod, :)
  12.0
 ```
 @@@@isequal@@@@
-    byrow(ds, isequal, cols; [with = nothing, threads])
+    byrow(ds::AbstractDataset, isequal, cols; [with = nothing, threads])
 
 Returns a boolean vector which is `true` if all values in the corresponding row are equal (using `isequal`).
  Optionally, a vector of values can be passed view the `with` keyword argument to compare values in selected
@@ -368,7 +368,7 @@ julia> byrow(ds, isequal, [1,2], with = [2,2,2,3,3,3])
  0
 ```
 @@@@isless@@@@
-    byrow(ds, isless, cols, [with, threads, rev = false, lt = isless])
+    byrow(ds::AbstractDataset, isless, cols, [with, threads, rev = false, lt = isless])
 
 Return a boolean vector which is true if all values in corresponding row for selected `cols` are less than value given by the `with` keyword argument. A vector, or a column name can be passed via `with`.
 
@@ -438,7 +438,7 @@ julia> byrow(ds, isless, 1:2, with = :x3, lt = in)
  0
 ```
 @@@@in@@@@
-    byrow(ds, in, cols; [item, threads, eq = isequal])
+    byrow(ds::AbstractDataset, in, cols; [item, threads, eq = isequal])
 
 Return a boolean vector which its elements are true if in a row the value of `item` is equal to any values from `cols`. The equality is checked via the function passed as `eq`. User can pass a vector of values or a column name to `item`.
 
@@ -491,7 +491,7 @@ julia> byrow(ds, in, r"x", item = [5,4,5,4,5,4], eq = (x,y) -> x+y == 11)
  0
 ```
 @@@@findfirst@@@@
-    byrow(ds, findfirst, cols; [by = identity, item = nothing, eq = isequal, threads])
+    byrow(ds::AbstractDataset, findfirst, cols; [by = identity, item = nothing, eq = isequal, threads])
 
 Return the column name of the first `true` value in `cols` or for which `by` returns `true`. If no such value is found, it returns `missing`. User can pass a vector of values or a column name to `item` to find the column name of the first time that the value of `item` is equal to the value of the column. User may use a customised function for checking the equlity of `item` and `columns` by passing it to the `eq` keyword argument. The function passed as `eq` must be a binary function where its first argument is from `item` and its second argument is from `col`.
 
@@ -551,7 +551,7 @@ julia> byrow(ds, select, :, with = byrow(ds, findfirst, :, by = isodd))
  7
 ```
 @@@@findlast@@@@
-    byrow(ds, findlast, cols; [by = identity, item = nothing, eq = isequal, threads])
+    byrow(ds::AbstractDataset, findlast, cols; [by = identity, item = nothing, eq = isequal, threads])
 
 Return the column name of the last `true` value in `cols` or for which `by` returns `true`. If no such value is found, it returns `missing`. User can pass a vector of values or a column name to `item` to find the column name of the last time that the value of `item` is equal to the value of the column. User may use a customised function for checking the equlity of `item` and `columns` by passing it to the `eq` keyword argument. The function passed as `eq` must be a binary function where its first argument is from `item` and its second argument is from `col`.
 
@@ -611,7 +611,7 @@ julia> byrow(ds, select, :, with = byrow(ds, findlast, :, by = isodd))
  7
 ```
 @@@@select@@@@
-    byrow(ds, select, cols; [with, threads])
+    byrow(ds::AbstractDataset, select, cols; [with, threads])
 
 Select value of `with` among `cols`. The `with` must be a vector of column names(`Symbol` or `String`) or column index (relative to column position in `cols`) or a column name which contains this information.
 
@@ -677,7 +677,7 @@ julia> byrow(ds, select, :, with = byrow(ds, findfirst, :, by = isodd))
  7
 ```
 @@@@fill!@@@@
-    byrow(ds, fill!, cols; [with, by = ismissing, rolling = false, threads])
+    byrow(ds::AbstractDataset, fill!, cols; [with, by = ismissing, rolling = false, threads])
 
 Fill missing (default behaviour) values in `cols` with values from `with`. User can pass a vector of values or a column name to `with`. `byrow` fills the values in-place, so the type of `cols` and `with` must match. By default, `byrow` fills only missing values in `cols`, but, user can pass any function to `by` which `byrow` fills only the values that returns `true` when `by` is called on them.
 
@@ -752,13 +752,13 @@ julia> byrow(ds, fill!, :, with = [missing, missing, missing], by = isequal(0), 
    3 │        3         3         3
 ```
 @@@@fill@@@@
-    byrow(ds, fill, cols; [with, by = ismissing, rolling = false, threads])
+    byrow(ds::AbstractDataset, fill, cols; [with, by = ismissing, rolling = false, threads])
 
 Variant of `byrow(fill!)` which passes a copy of `ds` and leaves `ds` unchanged.
 
 See [`byrow(fill!)`](@ref)
 @@@@coalesce@@@@
-    byrow(ds, coalesce, cols; [threads])
+    byrow(ds::AbstractDataset, coalesce, cols; [threads])
 
 Return the first value in each row of `cols` which is not equal to `missing`, if any. Otherwise return `missing`.
 
@@ -791,7 +791,7 @@ julia> byrow(ds, coalesce, [:z, :y, :x])
  3
 ```
 @@@@maximum@@@@
-    byrow(ds, maximum, cols; [by = identity, threads])
+    byrow(ds::AbstractDataset, maximum, cols; [by = identity, threads])
 
 Return the largest result of calling function `by` on each values in each row (of selected columns). If `cols` is not specified, `byrow`
 returns maximum for all numeric columns in `ds`.
@@ -828,7 +828,7 @@ julia> byrow(ds, maximum, [1,3])
  3
 ```
 @@@@minimum@@@@
-    byrow(ds, minimum, cols; [by = identity, threads])
+    byrow(ds::AbstractDataset, minimum, cols; [by = identity, threads])
 
 Return the smallest result of calling function `by` on each values in each row (of selected columns). If `cols` is not specified, `byrow`
 returns minimum for all numeric columns in `ds`.
@@ -865,7 +865,7 @@ julia> byrow(ds, minimum, [1,3])
  1
 ```
 @@@@argmax@@@@
-    byrow(ds, argmax, cols; [by = identity, threads])
+    byrow(ds::AbstractDataset, argmax, cols; [by = identity, threads])
 
 Return the column name of the maximum result of calling function `by` on each values in each row (of selected columns). If `cols` is not specified, `byrow`
 passes all numeric columns in `ds`.
@@ -901,7 +901,7 @@ julia> byrow(ds, argmax, 1:2, by = abs)
  missing
 ```
 @@@@argmin@@@@
-    byrow(ds, argmin, cols; [by = identity, threads])
+    byrow(ds::AbstractDataset, argmin, cols; [by = identity, threads])
 
 Return the column name of the minimum result of calling function `by` on each values in each row (of selected columns). If `cols` is not specified, `byrow`
 passes all numeric columns in `ds`.
@@ -937,7 +937,7 @@ julia> byrow(ds, argmin, 1:2, by = abs)
  missing
 ```
 @@@@issorted@@@@
-    byrow(ds, issorted, cols; [rev = false, lt = isless, threads])
+    byrow(ds::AbstractDataset, issorted, cols; [rev = false, lt = isless, threads])
 
 Test whether the values in rows (in selected `cols`) are in sorted order. Passing `rev = true` test whether the values in rows are in descending order. By default, the order of values is check by the `isless` function, however, user may pass any function to `lt`. The passed function to `lt` must accept two arguments where `byrow` calls `!lt(x2, x1)` when `rev = false` and `!lt(x1, x2)` when `rev = true` on consecutive column values.
 
@@ -984,27 +984,27 @@ julia> byrow(ds, issorted, :, lt = !isequal)
  1
 ```
 @@@@join@@@@
-    byrow(ds, join, cols; [delim = "", last = "", threads])
+    byrow(ds::AbstractDataset, join, cols; [delim = "", last = "", threads])
 
 For each row and selected columns convert values to string and join them into a single string, inserting the given delimiter (if any) between adjacent strings. If `last` is given, it will be used instead of `delim` between the last two strings. Missing values are converted to empty string and `true` and `false` converted to `1` and `0`, respectively.
 
 Passing `threads = false` disables multitrheaded computations.
 @@@@hash@@@@
-    byrow(ds, hash, cols; [by = identity, threads])
+    byrow(ds::AbstractDataset, hash, cols; [by = identity, threads])
 
 Compute an integer hash code of result of calling `by` on each values in each row of selected `cols`. When `cols` is not specified `byrow` compute hash code for all columns in `ds`.
 
 Passing `threads = false` disables multitrheaded computations.
 @@@@nunique@@@@
-    byrow(ds, nunique, cols; [by = identity, count_missing = true])
+    byrow(ds::AbstractDataset, nunique, cols; [by = identity, count_missing = true])
 
 Return the number of unique values of the result of calling `by` on each values in each row of selected `cols`. When `cols` is not specified, `byrow` returns the number of unique values for all numeric columns. `missing` are counted as distinct value, and passing `count_missing = false` drop missings from the final count.
 @@@@mapreduce@@@@
-    byrow(ds, mapreduce, cols; op = .+, f = identity, init, kwargs...)
+    byrow(ds::AbstractDataset, mapreduce, cols; op = .+, f = identity, init, kwargs...)
 
 Map `f` on each values in each row of selected `cols` and reduce the result by using `op`. Keyword arguments `op` and `init` must be passed.
 @@@@var@@@@
-    byrow(ds, var, cols; [dof = true, by = identity, threads])
+    byrow(ds::AbstractDataset, var, cols; [dof = true, by = identity, threads])
 
 Compute the variance of result of calling `by` on each value in each row of `ds` for selected `cols`. When `cols` is not specified `byrow` computes the variance for all numeric columns. By default, degree of freedom is used for denominator, and passing `dof = false` change it to number of values.
 
@@ -1037,7 +1037,7 @@ julia> byrow(ds, var, :, dof = false)
   missing
 ```
 @@@@std@@@@
-    byrow(ds, std, cols; [dof = true, by = identity, threads])
+    byrow(ds::AbstractDataset, std, cols; [dof = true, by = identity, threads])
 
 Compute the standard deviation of result of calling `by` on each value in each row of `ds` for selected `cols`. When `cols` is not specified `byrow` computes the standard deviation for all numeric columns. By default, degree of freedom is used for denominator, and passing `dof = false` change it to number of values.
 
@@ -1070,7 +1070,7 @@ julia> byrow(ds, std, :, dof = false)
   missing
 ```
 @@@@cumsum!@@@@
-    byrow(ds, cumsum!, cols; [missings = :ignore, threads])
+    byrow(ds::AbstractDataset, cumsum!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of `cumsum` on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1121,7 +1121,7 @@ julia> byrow(ds, cumsum!, missings = :skip)
    3 │       2.0  missing
 ```
 @@@@cumsum@@@@
-    byrow(ds, cumsum, cols; [missings = :ignore, threads])
+    byrow(ds::AbstractDataset, cumsum, cols; [missings = :ignore, threads])
 
 Variant of `byrow(cumsum!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@cumprod!@@@@
@@ -1139,7 +1139,7 @@ See [`byrow(cumprod)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cummax!)`](@ref)
 
 Variant of `byrow(cumprod!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@cummax!@@@@
-    byrow(ds, cummax!, cols; [missings = :ignore, threads])
+    byrow(ds::AbstractDataset, cummax!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of cumulative maximum on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1147,11 +1147,11 @@ Passing `threads = false` disables multitrheaded computations.
 
 See [`byrow(cummax)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref), [`byrow(cummin!)`](@ref)
 @@@@cummax@@@@
-    byrow(ds, cummax, cols; [missings = :ignore, threads])
+    byrow(ds::AbstractDataset, cummax, cols; [missings = :ignore, threads])
 
 Variant of `byrow(cummax!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@cummin!@@@@
-    byrow(ds, cummin!, cols; [missings = :ignore, threads])
+    byrow(ds::AbstractDataset, cummin!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of cumulative minimum on each row. When `cols` is not specified `byrow` replaces every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1159,11 +1159,11 @@ Passing `threads = false` disables multitrheaded computations.
 
 See [`byrow(cummin)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref), [`byrow(cummax!)`](@ref)
 @@@@cummin@@@@
-    byrow(ds, cummin, cols; [missings = :ignore, threads])
+    byrow(ds::AbstractDataset, cummin, cols; [missings = :ignore, threads])
 
 Variant of `byrow(cummin!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@sort!@@@@
-    byrow(ds, sort!, cols; [threads, kwargs...])
+    byrow(ds::AbstractDataset, sort!, cols; [threads, kwargs...])
 
 Update `ds` in place with sorted values in each row of selected `cols`. When `cols` is not specified `byrow` uses every numeric columns. User can pass any keyword argument support by Julia `sort` function. Columns in `cols` will be promoted to be able to contain the new sorted values.
 
@@ -1214,11 +1214,11 @@ julia> byrow(ds, sort!, :, rev = true)
    3 │ missing         2.0
 ```
 @@@@sort@@@@
-    byrow(ds, sort, cols; [threads, kwargs...])
+    byrow(ds::AbstractDataset, sort, cols; [threads, kwargs...])
 
 Variant of `byrow(sort!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@stdze!@@@@
-    byrow(ds, stdze!, cols; [threads])
+    byrow(ds::AbstractDataset, stdze!, cols; [threads])
 
 Replace each value in each row of `ds` for selected `cols` by its standardised values.
 
@@ -1226,11 +1226,11 @@ Passing `threads = false` disables multitrheaded computations.
 
 See [`byrow(stdze)`](@ref)
 @@@@stdze@@@@
-    byrow(ds, stdze, cols; [threads])
+    byrow(ds::AbstractDataset, stdze, cols; [threads])
 
 Variant of `byrow(stdze!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@generic@@@@
-    byrow(ds, fun, cols; [threads])
+    byrow(ds::AbstractDataset, fun, cols; [threads])
 
 Return the result of calling `fun` on each row of `ds` selected by `cols`. The `fun` function must accept one argument which contains the values of each row as a vector of values and return a scalar.
 """
