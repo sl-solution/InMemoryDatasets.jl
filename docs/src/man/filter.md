@@ -418,7 +418,7 @@ julia> @btime ds[ds.x1 .== 100, :];
   1.579 ms (480 allocations: 251.73 KiB)
 
 julia> @btime filter(ds, :x1, by = ==(100));
-  880.436 μs (526 allocations: 1.09 MiB)
+  508.430 μs (568 allocations: 1.21 MiB)
 ```
 
 ## Related functions

@@ -418,8 +418,8 @@ end
 
 
 """
-    map!(ds::Dataset, f::Function, cols; [threads = true])
-    map!(ds::Dataset, f::Vector{Function}, cols; [threads = true])
+    map!(ds::AbstractDataset, f::Function, cols; [threads = true])
+    map!(ds::AbstractDataset, f::Vector{Function}, cols; [threads = true])
 
 Update each row of each `col` in `ds[!, cols]` in-place when `map!` return a result, and skip when it is not possible.
 
@@ -905,7 +905,7 @@ end
 
 
 """
-    compare(ds1, ds2; [on = nothing, eq = isequal, mapformats = false, threads = true])
+    compare(ds1::AbstractDataset, ds2::AbstractDataset; [on = nothing, eq = isequal, mapformats = false, threads = true])
 
 Compare values of two data sets column by column. It returns a boolean data set which is the result of calling  `eq` on each value of
 corresponding columns. The `on` keyword can be used to specifiy the pair of columns which is needed to be compared. The `mapformats` keyword
@@ -1070,7 +1070,7 @@ nmissing(x) = count(ismissing, x)
 n(x) = count(!ismissing, x)
 
 """
-    filter(ds, cols; [type = all,...])
+    filter(ds::AbstractDataset, cols; [type = all,...])
 
 A convenient shortcut for `ds[byrow(ds, type, cols; ...), :]`.
 
@@ -1148,7 +1148,7 @@ function Base.filter(ds::AbstractDataset, cols::Union{ColumnIndex, MultiColumnIn
     end
 end
 """
-    filter!(ds, cols; [type = all, ...])
+    filter!(ds::AbstractDataset, cols; [type = all, ...])
 
 Variant of `filter` which replaces the passed data set with the filtered one.
 
@@ -1164,8 +1164,8 @@ Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all
 
 
 """
-    mapcols(ds, f, cols)
-    mapcols(ds, f::Vector, cols)
+    mapcols(ds::AbstractDataset, f, cols)
+    mapcols(ds::AbstractDataset, f::Vector, cols)
 
 Return a `Dataset` where each column in `cols` of `ds` is transformed using function `f`.
 `f` must return `AbstractVector` objects all with the same length or scalars
