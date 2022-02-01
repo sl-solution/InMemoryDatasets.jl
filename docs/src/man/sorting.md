@@ -188,7 +188,7 @@ julia> sort(ds, [1,2], mapformats = false)
 In some scenarios the performance of sort can be improved by using formats. For example, when we know for a specific column there is only a few numbers after the decimal point, using a format can improve the performance of the sort. In the following example we are using the `@btime` macro from the `BenchmarkTools` package to demonstrate this;
 
 ```jldoctest
-# column :x1 has at most 2 digits after the decimal point
+julia> ;# column :x1 has at most 2 digits after the decimal point
 julia> ds = Dataset(x1 = round.(rand(10^6),digits = 2),
                x2 = repeat(1:100, 10^4));
 julia> @btime sort(ds, 1);
