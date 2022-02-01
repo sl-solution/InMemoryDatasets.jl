@@ -328,6 +328,12 @@ julia> byrow(ds, fill, 1:2, with = [0,2,1], by = x->ismissing(x) || isequal(x, 1
 the cumulative functions calculate the cumulative min, max, sum, and product, `sort` sorts the values in each row, and `stdze` standardises the values in each row. The `sort` operation accepts all keyword arguments that the function `sort` in Julia Base accept.
 
 ```jldoctest
+julia> ds = Dataset(g = [1, 1, 1, 2, 2],
+                    x1_int = [0, 0, 1, missing, 2],
+                    x2_int = [3, 2, 1, 3, -2],
+                    x1_float = [1.2, missing, -1.0, 2.3, 10],
+                    x2_float = [missing, missing, 3.0, missing, missing],
+                    x3_float = [missing, missing, -1.4, 3.0, -100.0]);
 julia> byrow(ds, cumsum, 1:3)
 5×6 Dataset
  Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
