@@ -114,7 +114,7 @@ Select columns of `ds` based on `args...`. `args` can be any column selector: co
 
 It modifies the data set in-place. See [`select`](@ref) if a copy of selected columns is desired.
 """
-function select!(ds, @nospecialize(args...))
+function select!(ds::Dataset, @nospecialize(args...))
     selected_cols_all = normalize_select(index(ds), args...)
     selected_cols = setdiff!(selected_cols_all[1], selected_cols_all[2])
     unwanted_cols = setdiff(1:ncol(ds), selected_cols)

@@ -335,6 +335,12 @@
 
     ds = Dataset(x = [1,10], x2 = ["A", "BC"], x3 = [2.0,4.54])
     @test byrow(ds, join, :, delim = "--", last = "-") == ["1--A-2.0", "10--BC-4.54"]
+
+
+    ds = Dataset(x = ["α1", "β∘1"], y = [1,2], z = [1.4,5.6])
+    @test byrow(ds, join, :) == ["α111.4", "β∘125.6"]
+    @test byrow(ds, join, :, delim = ",") == ["α1,1,1.4", "β∘1,2,5.6"]
+    @test byrow(ds, join, :, delim = ":×:") == ["α1:×:1:×:1.4", "β∘1:×:2:×:5.6"]
 end
 
 @testset "cum*/! - sort/!" begin

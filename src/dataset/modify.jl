@@ -254,7 +254,7 @@ end
 function normalize_modify!(outidx::Index, idx, arg::AbstractVector)
     res = Any[]
     for i in 1:length(arg)
-        _res = normalize_modify!(outidx::Index, idx::Index, arg[i])
+        _res = normalize_modify!(outidx::Index, idx, arg[i])
         if _res isa AbstractVector
             for j in 1:length(_res)
                 push!(res, _res[j])

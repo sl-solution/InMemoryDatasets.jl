@@ -1142,8 +1142,8 @@ end
 function row_join(ds::AbstractDataset, cols = :; threads = true, delim::AbstractString = ",", last::AbstractString = "")
     colsidx = multiple_getindex(index(ds), cols)
 
-    max_line_size = maximum(byrow(ds, sum, colsidx, by = y->length(__STRING(y)), threads = threads))
-    max_line_size += length(delim)*(length(colsidx)) + length(last)+1
+    max_line_size = maximum(byrow(ds, sum, colsidx, by = y->ncodeunits(__STRING(y)), threads = threads))
+    max_line_size += ncodeunits(delim)*(length(colsidx)) + ncodeunits(last)+1
     init0 = Matrix{UInt8}(undef, max_line_size, nrow(ds))
     curr_pos = ones(Int, nrow(ds))
 

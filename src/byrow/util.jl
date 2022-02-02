@@ -145,14 +145,14 @@ end
 
 
 function write_vals!(a, pos, x::AbstractString)
-    needed_space = length(x)
+    needed_space = ncodeunits(x)
     available_space = length(a)-pos+1
     needed_space > available_space && throw(ArgumentError("not enough space in buffer to write value into it"))
     z = Base.CodeUnits(x)
-    for i in 1:length(x)
+    for i in 1:ncodeunits(x)
         a[i+pos-1] =z[i]
     end
-    pos+length(x)
+    pos+ncodeunits(x)
 end
 
 
