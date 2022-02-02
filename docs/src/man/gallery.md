@@ -153,6 +153,37 @@ julia> a1.result = reduce((x,y)-> x .|= byrow(a1, in, r"2", item = y, eq = eq), 
  1
 ```
 
+* [Creating new column by selecting and matching](https://stackoverflow.com/questions/70948067/creating-new-column-in-r-dataframe-by-selecting-and-matching) : I want to use the option columns 1,2,3 to pull the appropriate values from length, weight, height.
+
+```julia
+julia> using DLMReader, Chain
+julia> ds = filereader(IOBuffer("""item,length,width,height,color,option_1,option_2,option_3
+                        Box 1,2,4,6,,length,width,height
+                        Tape,10,3,,clear,width,length,color
+                        Pen,,,,red,color,,
+                        """));
+
+julia> @chain ds begin
+         filter(2:4, by = !ismissing, type = any, view = true) # filter rows with dimensions
+         modify!(Ref(2:4) .=> [byrow(select, with = 6), byrow(select, with = 7), byrow(select, with = 8)] .=> [:_t1, :_t2, :_t3],  # extract dimensions
+                 r"_t" => byrow(join, delim = " × ") => :size, # create :size
+                 :size => byrow(x->"size : " * replace(x, r" × $"=>"")) # remove orphans " × " at the end
+                )
+         filter(parent(_), 5, by = !ismissing, view = true) # filter rows with colours
+         modify!(:color => byrow(x->"color : " * x) => :col) # create :col
+         modify!(parent(_), [:size, :col]=>byrow(x->ismissing(x[1]) ? x[2] : ismissing(x[2]) ? x[1] : x[1] * ", " * x[2])=>:option_set) # join :size and :col
+         select!(Not([:size, :col]), Not(r"_t")) # remove temp columns
+      end
+3×9 Dataset
+ Row │ item      length    width     height    color     option_1  option_2  option_3  option_set                   
+     │ identity  identity  identity  identity  identity  identity  identity  identity  identity                     
+     │ String?   Int64?    Int64?    Int64?    String?   String?   String?   String?   String?                      
+─────┼──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+   1 │ Box 1            2         4         6  missing   length    width     height    size : 2 × 4 × 6
+   2 │ Tape            10         3   missing  clear     width     length    color     size : 3 × 10, color : clear
+   3 │ Pen        missing   missing   missing  red       color     missing   missing   color : red
+```
+
 ## Filtering
 
 * [Filtering based on conditions comparing one column to other columns](https://discourse.julialang.org/t/dataframe-filtering-based-on-conditions-comparing-one-column-to-other-columns/70802) : In the following example we like to filter rows where columns `:x1` and `:x2` are greater than `:x5`.
