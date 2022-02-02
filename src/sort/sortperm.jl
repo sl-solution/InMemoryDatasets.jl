@@ -389,8 +389,8 @@ function ds_sort_perm(ds, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a:
                           last_valid_range = fast_sortperm_int_lm!(_tmp, idx, int_permcpy, ranges, rangelen, minval, _missat == :left, last_valid_range, Val(T))
                           continue
                       end
-                      # we should check if there are many observations in each group
-                      if threads && n/last_valid_range > 2.0*rangelen && rangelen*Threads.nthreads() < n/2 # if rangelen is not that much
+                      # we should check if there are many observations in each group/ this version of int sort allocate where for every iteration
+                      if threads && n/last_valid_range > max(2.0*rangelen,10^6) && rangelen*Threads.nthreads() < n/2 # if rangelen is not that much
 
                           last_valid_range = fast_sortperm_int_threaded!(_tmp, idx, int_permcpy, ranges, rangelen, minval, _missat == :left, last_valid_range, Val(T))
                           continue
