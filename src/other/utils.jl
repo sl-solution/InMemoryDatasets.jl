@@ -34,14 +34,14 @@ function return_type(f::Function, x)
     if CT <: AbstractVector
         return return_type_tuple(f, x)
     end
-    T = Core.Compiler.return_type(f, (Vector{CT}, ))
+    T = Core.Compiler.return_type(f, Tuple{Vector{CT}})
     # workaround for SubArray type
     if T <: SubArray
-        return Core.Compiler.return_type(f, (typeof(x), ))
+        return Core.Compiler.return_type(f, Tuple{typeof(x)})
     elseif T <: AbstractVector
         T = AbstractVector{Union{Missing, eltype(T)}}
     elseif T <: Tuple
-        T = Union{Missing, Core.Compiler.return_type(f, (Vector{eltype(x)}, ))}
+        T = Union{Missing, Core.Compiler.return_type(f, Tuple{Vector{eltype(x)}})}
     else
         T = Union{Missing, T}
     end
@@ -50,14 +50,14 @@ end
 
 function return_type_tuple(f::Function, x)
     CT = ntuple(i -> nonmissingtype(eltype(x[i])), length(x))
-    T = Core.Compiler.return_type(f, ntuple(i->Vector{CT[i]}, length(x)))
+    T = Core.Compiler.return_type(f, Tuple{ntuple(i->Vector{CT[i]}, length(x))...})
     # workaround for SubArray type
     if T <: SubArray
-        return Core.Compiler.return_type(f, typeof.(x))
+        return Core.Compiler.return_type(f, Tuple{(typeof.(x))...})
     elseif T <: AbstractVector
         T = AbstractVector{Union{Missing, eltype(T)}}
     elseif T <: Tuple
-        T = Union{Missing, Core.Compiler.return_type(f, ntuple(i->Vector{eltype(x[i])}, length(x)))}
+        T = Union{Missing, Core.Compiler.return_type(f, Tuple{ntuple(i->Vector{eltype(x[i])}, length(x))...})}
     else
         T = Union{Missing, T}
     end
@@ -436,7 +436,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true, t
         else
             v = _columns(ds)[colidx[j]]
         end
-        if nonmissingtype(Core.Compiler.return_type(_f, (nonmissingtype(eltype(v)),))) <: Union{Missing, INTEGERS}
+        if nonmissingtype(Core.Compiler.return_type(_f, Tuple{nonmissingtype(eltype(v))})) <: Union{Missing, INTEGERS}
 			if threads
 				_minval = hp_minimum(_f, v)
 			else
@@ -741,7 +741,7 @@ struct Cat2Vec{F1, F2, CT, T, S, A, B} <: AbstractVector{Union{T, S}}
 				_rev_map_invrefpool!(res, dict, x, f1)
 				new{typeof(identity), typeof(identity), Union{Missing, vtype}, Union{vtype, Missing}, Union{vtype, Missing}, typeof(res), typeof(res)}(res, DataAPI.refarray(v), identity, identity, length(x), length(y))
 			else
-				new{F1, F2, promote_type(Core.Compiler.return_type(f1, (eltype(x), )), Core.Compiler.return_type(f2, (eltype(y), ))), eltype(x), eltype(y), typeof(x), typeof(y)}(x, y, f1, f2, length(x), length(y))
+				new{F1, F2, promote_type(Core.Compiler.return_type(f1, Tuple{eltype(x)}), Core.Compiler.return_type(f2, Tuple{eltype(y)})), eltype(x), eltype(y), typeof(x), typeof(y)}(x, y, f1, f2, length(x), length(y))
 			end
 		else
 			if DataAPI.invrefpool(y) !== nothing
@@ -775,12 +775,11 @@ struct Cat2Vec{F1, F2, CT, T, S, A, B} <: AbstractVector{Union{T, S}}
 				_rev_map_invrefpool!(res, dict, y, f2)
 				new{typeof(identity), typeof(identity), Union{Missing ,vtype}, Union{vtype, Missing}, Union{vtype, Missing}, typeof(res), typeof(res)}(DataAPI.refarray(v), res, identity, identity, length(x), length(y))
 			else
-				new{F1, F2, promote_type(Core.Compiler.return_type(f1, (eltype(x), )), Core.Compiler.return_type(f2, (eltype(y), ))), eltype(x), eltype(y), typeof(x), typeof(y)}(x, y, f1, f2, length(x), length(y))
+				new{F1, F2, promote_type(Core.Compiler.return_type(f1, Tuple{eltype(x)}), Core.Compiler.return_type(f2, Tuple{eltype(y)})), eltype(x), eltype(y), typeof(x), typeof(y)}(x, y, f1, f2, length(x), length(y))
 			end
 		end
 	end
-	#
-	# Cat2Vec(x,y,f1::F1,f2::F2) where {F1, F2}= new{F1, F2, promote_type(Core.Compiler.return_type(f1, (eltype(x), )), Core.Compiler.return_type(f2, (eltype(y), ))), eltype(x), eltype(y), typeof(x), typeof(y)}(x, y, f1, f2, length(x), length(y))
+
 end
 
 function _rev_map_invrefpool!(res, dict, y, f)

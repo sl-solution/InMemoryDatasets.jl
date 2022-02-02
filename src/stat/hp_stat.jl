@@ -3,7 +3,7 @@ function hp_maximum(f, x::AbstractVector{T}) where T
 	nt = Threads.nthreads()
 	cz = div(n, nt)
 	cz == 0 && return stat_maximum(f, x)
-	CT = Core.Compiler.return_type(f, (nonmissingtype(eltype(x)), ))
+	CT = Core.Compiler.return_type(f, Tuple{nonmissingtype(eltype(x))})
 	if T >: Missing
 		CT = Union{Missing, CT}
 	end
@@ -22,7 +22,7 @@ function hp_minimum(f, x::AbstractVector{T}) where T
 	nt = Threads.nthreads()
 	cz = div(n, nt)
 	cz == 0 && return stat_minimum(f, x)
-	CT = Core.Compiler.return_type(f, (nonmissingtype(eltype(x)), ))
+	CT = Core.Compiler.return_type(f, Tuple{nonmissingtype(eltype(x))})
 	if T >: Missing
 		CT = Union{Missing, CT}
 	end
@@ -41,7 +41,7 @@ function hp_sum(f, x::AbstractVector{T}) where T
 	nt = Threads.nthreads()
 	cz = div(n, nt)
 	cz == 0 && return stat_sum(f, x)
-	CT = Core.Compiler.return_type(f, (nonmissingtype(eltype(x)), ))
+	CT = Core.Compiler.return_type(f, Tuple{nonmissingtype(eltype(x))})
 	CT <: Base.SmallSigned ? CT = Int : nothing
 	CT <: Base.SmallUnsigned ? CT = UInt : nothing
 	CT <: Bool ? CT = Int : nothing

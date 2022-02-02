@@ -394,7 +394,7 @@ function Base.map(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumnI
         v = _columns(ds)[j]
 
         if threads
-            T = Core.Compiler.return_type(_f, (eltype(v), ))
+            T = Core.Compiler.return_type(_f, Tuple{eltype(v)})
             fv = _our_vect_alloc(T, length(v))
             _hp_map_a_function!(fv, _f, v)
         else
@@ -492,7 +492,7 @@ function Base.map!(ds::AbstractDataset, f::Vector{<:Function}, cols::MultiColumn
         # Core.Compiler.return_type cannot handle the situations like x->ismissing(x) ? 0 : x when x is missing and float, since the output of Core.Compiler.return_type is Union{Missing, Float64, Int64}
         # we remove missing and then check the result,
         # TODO is there any problem with this?
-        T = Core.Compiler.return_type(f[j], (nonmissingtype(CT),))
+        T = Core.Compiler.return_type(f[j], Tuple{nonmissingtype(CT)})
         T = Union{Missing, T}
         if promote_type(T, CT) <: CT
             if threads && DataAPI.refpool(_columns(ds)[colsidx[j]]) === nothing

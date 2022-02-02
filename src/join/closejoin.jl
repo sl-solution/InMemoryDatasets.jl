@@ -290,12 +290,12 @@ function _change_refpool_find_range_for_close!(ranges, dsl, dsr, r_perms, oncols
         _fr = identity
     end
 
-    T1 = Core.Compiler.return_type(_fl, (eltype(var_l), ))
+    T1 = Core.Compiler.return_type(_fl, Tuple{eltype(var_l)})
 
     if DataAPI.refpool(var_r) !== nothing && nsfpaj
         true && throw(ErrorException("we shouldn't end up here"))
     else
-        T2 = Core.Compiler.return_type(_fr, (eltype(var_r), ))
+        T2 = Core.Compiler.return_type(_fr, Tuple{eltype(var_r)})
         if direction == :backward
             _find_ranges_for_closeback!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2); threads = threads)
         elseif direction == :forward

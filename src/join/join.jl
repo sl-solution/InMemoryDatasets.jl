@@ -373,7 +373,7 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_
         _fr = identity
     end
 
-    T1 = Core.Compiler.return_type(DataAPI.unwrap∘_fl, (eltype(var_l), ))
+    T1 = Core.Compiler.return_type(DataAPI.unwrap∘_fl, Tuple{eltype(var_l)})
 
     if DataAPI.refpool(var_r) !== nothing && nsfpaj
         # sort taken care for refs ordering of modified values, but we still need to change refs
@@ -388,7 +388,7 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_
         # we should use invpool of right column
         _find_ranges_for_join_pa!(ranges, var_l, DataAPI.invrefpool(var_r_cpy), view(DataAPI.refarray(var_r_cpy), r_perms), _fl, _fr, Val(T1), Val(T2); type = type, threads = threads)
     else
-        T2 = Core.Compiler.return_type(_fr, (eltype(var_r), ))
+        T2 = Core.Compiler.return_type(_fr, Tuple{eltype(var_r)})
         _find_ranges_for_join!(ranges, var_l, view(var_r, r_perms), _fl, _fr, Val(T1), Val(T2); type = type, threads = threads)
     end
 end

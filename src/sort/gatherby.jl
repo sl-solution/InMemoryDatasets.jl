@@ -166,7 +166,7 @@ end
 
 _gatherby_maximum(gds, col; f = identity, nt = Threads.nthreads(), threads = true) = gatherby_mapreduce(gds, f, _stat_max_fun, col, nt, missing, Val(nonmissingtype(eltype(gds.parent[!, col]))), threads = threads)
 _gatherby_minimum(gds, col; f = identity, nt = Threads.nthreads(), threads = true) = gatherby_mapreduce(gds, f, _stat_min_fun, col, nt, missing, Val(nonmissingtype(eltype(gds.parent[!, col]))), threads = threads)
-_gatherby_sum(gds, col; f = identity, nt = Threads.nthreads(), threads = true) = gatherby_mapreduce(gds, f, _stat_add_sum, col, nt, missing, Val(typeof(zero(Core.Compiler.return_type(f, (eltype(gds.parent[!, col]), ))))), promotetypes = true, threads = threads)
+_gatherby_sum(gds, col; f = identity, nt = Threads.nthreads(), threads = true) = gatherby_mapreduce(gds, f, _stat_add_sum, col, nt, missing, Val(typeof(zero(Core.Compiler.return_type(f, Tuple{eltype(gds.parent[!, col])})))), promotetypes = true, threads = threads)
 _gatherby_n(gds, col; nt = Threads.nthreads(), threads = true) = _gatherby_sum(gds, col, f = _stat_notmissing, nt = nt, threads = threads)
 _gatherby_length(gds, col; nt = Threads.nthreads(), threads = true) = _gatherby_sum(gds, col, f = x->1, nt = nt, threads = threads)
 _gatherby_cntnan(gds, col; nt = Threads.nthreads(), threads = true) = _gatherby_sum(gds, col, f = ISNAN, nt = nt, threads = threads)
@@ -199,7 +199,7 @@ function _gatherby_mean(gds, col; nt = Threads.nthreads(), threads = true)
 		nval = t2
 	end
 
-	T = Core.Compiler.return_type(/, (nonmissingtype(eltype(sval)), nonmissingtype(eltype(nval))))
+	T = Core.Compiler.return_type(/, Tuple{nonmissingtype(eltype(sval)), nonmissingtype(eltype(nval))})
 	res = _our_vect_alloc(Union{Missing, T}, length(nval))
 	_fill_gatherby_mean_barrier!(res, sval, nval)
 	res
@@ -255,7 +255,7 @@ function _gatherby_var(gds, col; dof = true, cal_std = false, threads = true)
 		ss = t3
 		nval = t4
 	end
-	T = Core.Compiler.return_type(/, (nonmissingtype(eltype(meanval)), nonmissingtype(eltype(nval))))
+	T = Core.Compiler.return_type(/, Tuple{nonmissingtype(eltype(meanval)), nonmissingtype(eltype(nval))})
 	res = _our_vect_alloc(Union{Missing, T}, length(nval))
 	_fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std, dof)
 	res

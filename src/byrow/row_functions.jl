@@ -34,7 +34,7 @@ end
 function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = Core.Compiler.return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, Tuple{CT})
     init0 = _missings(T, nrow(ds))
 
     if threads
@@ -64,7 +64,7 @@ end
 function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = Core.Compiler.return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, Tuple{CT})
     init0 = _missings(T, nrow(ds))
 
     if threads
@@ -568,7 +568,7 @@ end
 function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = Core.Compiler.return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, Tuple{CT})
     init0 = _missings(T, nrow(ds))
 
     if threads
@@ -588,7 +588,7 @@ row_minimum(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); threa
 function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = Core.Compiler.return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, Tuple{CT})
     init0 = _missings(T, nrow(ds))
 
     if threads
@@ -691,12 +691,12 @@ end
 function row_var(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); dof = true, threads = true)
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
-    T = Core.Compiler.return_type(f, (CT,))
+    T = Core.Compiler.return_type(f, Tuple{CT})
     _sq_(x) = x^2
     ss = row_sum(ds, _sq_ ∘ f, cols; threads = threads)
     sval = row_sum(ds, f, cols; threads = threads)
     n = row_count(ds, x -> !ismissing(x), cols; threads = threads)
-    T2 = Core.Compiler.return_type(/, (eltype(ss), eltype(n)))
+    T2 = Core.Compiler.return_type(/, Tuple{eltype(ss), eltype(n)})
     res = Vector{Union{Missing, T2}}(undef, length(ss))
     res .= ss ./ n .- (sval ./ n) .^ 2
     if dof

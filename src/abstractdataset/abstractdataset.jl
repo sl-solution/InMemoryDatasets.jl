@@ -147,7 +147,7 @@ end
 function _check_format_validity(ds, col, f)
     flag = false
     string(nameof(f))[1] == '#' && return flag
-    Core.Compiler.return_type(f, (eltype(ds[!, col].val), )) == Union{} && return flag
+    Core.Compiler.return_type(f, Tuple{eltype(ds[!, col].val)}) == Union{} && return flag
     flag = true
 end
 #Modify Dataset

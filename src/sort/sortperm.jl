@@ -133,7 +133,7 @@ end
 function _apply_by_f_barrier(x::AbstractVector{T}, by, rev, threads) where T
     needrev = rev
     missat = :right
-    CT = Core.Compiler.return_type(_date_value∘by, (nonmissingtype(T), ))
+    CT = Core.Compiler.return_type(_date_value∘by, Tuple{nonmissingtype(T)})
     if CT == Bool
         CT = Int8
     end
