@@ -904,7 +904,7 @@ Base.Array{T}(ds::AbstractDataset) where {T} = Matrix{T}(ds)
     duplicates(ds::AbstractDataset; [mapformats = false, leave = :first, threads])
     duplicates(ds::AbstractDataset, cols; [mapformats = false, leave = :first, threads])
 
-Return a `BitVector` in which `true` entries indicate duplicate rows.
+Return a `Vector{Bool}` in which `true` entries indicate duplicate rows.
 A row is a duplicate if there exists a prior row (default behavior, see the `leave` keyword argument for other options) with all columns containing
 equal values (according to `isequal`).
 
