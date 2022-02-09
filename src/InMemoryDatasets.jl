@@ -190,4 +190,10 @@ include("stat/ds_stat.jl")
 include("precompile/warmup.jl")
 include("precompile/create_sysimage.jl")
 # _precompile_()
+
+function __init__()
+   if Threads.nthreads() == 1
+         @warn "Julia started with single thread, to enable multithreaded functionalities in InMemoryDatasets.jl start Julia with multiple threads."
+   end
+end
 end
