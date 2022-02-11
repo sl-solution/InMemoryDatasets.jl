@@ -292,30 +292,30 @@ function _fast_gatherby_combine_f_barrier(gds, col, newds, mssecond, mslast, new
 
     if !(mssecond isa Expr)
         if mssecond == sum
-            push!(_columns(newds), _gatherby_sum(gds, col, threads = threads))
+            newds[!, mslast] =  _gatherby_sum(gds, col, threads = threads)
         elseif mssecond == maximum
-            push!(_columns(newds), _gatherby_maximum(gds, col, threads = threads))
+            newds[!, mslast] =  _gatherby_maximum(gds, col, threads = threads)
         elseif mssecond == minimum
-            push!(_columns(newds), _gatherby_minimum(gds, col, threads = threads))
+            newds[!, mslast] =  _gatherby_minimum(gds, col, threads = threads)
         elseif mssecond == mean
-            push!(_columns(newds), _gatherby_mean(gds, col, threads = threads))
+            newds[!, mslast] =  _gatherby_mean(gds, col, threads = threads)
         elseif mssecond == mean
-            push!(_columns(newds), _gatherby_mean(gds, col, threads = threads))
+            newds[!, mslast] =  _gatherby_mean(gds, col, threads = threads)
         elseif mssecond == var
-            push!(_columns(newds), _gatherby_var(gds, col, dof = true, threads = threads))
+            newds[!, mslast] =  _gatherby_var(gds, col, dof = true, threads = threads)
         elseif mssecond == std
-            push!(_columns(newds), _gatherby_std(gds, col, dof = true, threads = threads))
+            newds[!, mslast] =  _gatherby_std(gds, col, dof = true, threads = threads)
         elseif mssecond == length
-            push!(_columns(newds), _gatherby_length(gds, col, threads = threads))
+            newds[!, mslast] =  _gatherby_length(gds, col, threads = threads)
         elseif mssecond == IMD.n
-            push!(_columns(newds), _gatherby_n(gds, col, threads = threads))
+            newds[!, mslast] =  _gatherby_n(gds, col, threads = threads)
         else mssecond == IMD.nmissing
-            push!(_columns(newds), _gatherby_nmissing(gds, col, threads = threads))
+            newds[!, mslast] =  _gatherby_nmissing(gds, col, threads = threads)
         end
 
 
     elseif (mssecond isa Expr) && mssecond.head == :BYROW
-        push!(_columns(newds), byrow(newds, mssecond.args[1], col; mssecond.args[2]...))
+        newds[!, mslast] = byrow(newds, mssecond.args[1], col; mssecond.args[2]...)
     else
         throw(ArgumentError("`combine` doesn't support $(msfirst=>mssecond=>mslast) combination"))
     end
@@ -351,9 +351,9 @@ function _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm; dropgroupc
 	end
 	for i in 1:length(ms)
 		_fast_gatherby_combine_f_barrier(gds, ms[i].first, newds, ms[i].second.first, ms[i].second.second, newds_lookup, groups, ngroups, threads)
-		if !haskey(index(newds), ms[i].second.second)
-			push!(index(newds), ms[i].second.second)
-		end
+		# if !haskey(index(newds), ms[i].second.second)
+			# push!(index(newds), ms[i].second.second)
+		# end
 
 	end
 	newds
