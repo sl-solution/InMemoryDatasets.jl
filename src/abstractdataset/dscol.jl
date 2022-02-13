@@ -43,6 +43,21 @@ function Base.fill!(col::SubOrDSCol, i)
     col
 end
 
+function Base.pop!(col::SubOrDSCol)
+    res = pop!(__!(col))
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
+    _modified(_attributes(parent(col.ds)))
+    res
+end
+function Base.popfirst!(col::SubOrDSCol)
+    res = popfirst!(__!(col))
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
+    _modified(_attributes(parent(col.ds)))
+    res
+end
+
+
+
 Base.:(*)(col1::SubOrDSCol, x::Any) = *(__!(col1), x)
 Base.:(+)(col1::SubOrDSCol, x::Any) = +(__!(col1), x)
 Base.:(/)(col1::SubOrDSCol, x::Any) = /(__!(col1), x)
