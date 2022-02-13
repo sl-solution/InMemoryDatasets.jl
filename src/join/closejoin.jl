@@ -259,9 +259,9 @@ function  _fill_right_cols_table_close!(_res, x, ranges, total, borderval, fill_
     else
         if nn
             if op === nothing
-                _close_tol_nn_noborder!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; threads = threads)
+                _close_tol_nn!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue; threads = threads)
             else
-                _close_tol_nn_noborder!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue, op; threads = threads)
+                _close_tol_nn!(_res, ranges, x, rnn, lnn, tol, aem, bordervalue, op; threads = threads)
             end
         else
             if ismissing(bordervalue)
