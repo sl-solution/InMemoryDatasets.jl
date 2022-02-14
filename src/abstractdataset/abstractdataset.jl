@@ -144,12 +144,13 @@ end
 # end
 # using Core.Compiler.return_type to check if f make sense for selected column
 # this cannot take care of situations like setting sqrt for negative numbers
-function _check_format_validity(ds, col, f)
+function _check_format_validity(ds, col, f::Function)
     flag = false
     string(nameof(f))[1] == '#' && return flag
     Core.Compiler.return_type(f, Tuple{eltype(ds[!, col].val)}) == Union{} && return flag
     flag = true
 end
+_check_format_validity(ds, col, f) = throw(ArgumentError("Only functions can be set as columns' format"))
 #Modify Dataset
 """
     setformat!(ds::Dataset, col, f)
