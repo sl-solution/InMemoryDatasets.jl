@@ -3,7 +3,7 @@ function normalize_select(idx, @nospecialize(cols...))
     for i in 1:length(cols)
         normalize_select!(selected_cols, idx, cols[i])
     end
-    unique!(selected_cols)
+    selected_cols
 end
 function normalize_select!(selected_cols, idx, cols::ColumnIndex)
     push!(selected_cols[1], idx[cols])
@@ -27,7 +27,7 @@ end
 """
     select(ds, args...)
 
-Select columns of `ds` based on `args...`. `args` can be any column selector: column index, column Name, `:`, `Between`, `Not`, Vector of column indices or column names, a regular expression.
+Select columns of `ds` based on `args...`. `args` can be any column selector: column index, column Name, `:`, `Between`, `Not`, Vector of column indices or column names, a regular expression. When columns are wrapped in `Not`, they will not appear in the output data set.
 
 It makes a copy of `ds`. See [`select!`](@ref) if an in-place modification is desired.
 
@@ -110,7 +110,7 @@ end
 """
     select!(ds, args...)
 
-Select columns of `ds` based on `args...`. `args` can be any column selector: column index, column Name, `:`, `Between`, `Not`, Vector of column indices or column names, a regular expression.
+Select columns of `ds` based on `args...`. `args` can be any column selector: column index, column Name, `:`, `Between`, `Not`, Vector of column indices or column names, a regular expression. When columns are wrapped in `Not`, they will not appear in the output data set.
 
 It modifies the data set in-place. See [`select`](@ref) if a copy of selected columns is desired.
 """
