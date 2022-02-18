@@ -116,7 +116,7 @@ Alternatively you can pass a vector of column names as a second argument to the
 `Dataset`:
 
 ```jldoctest
-julia> Dataset([1 0; 2 0], ["col1", "col2"])
+julia> Dataset([1 0; 2 0], [:col1, :col2])
 2×2 Dataset
  Row │ col1      col2
      │ identity  identity
