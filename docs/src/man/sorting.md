@@ -185,36 +185,6 @@ julia> sort(ds, [1,2], mapformats = false)
    8 │ TX        2           134
 ```
 
-In some scenarios the performance of sort can be improved by using formats. For example, when we know for a specific column there is only a few numbers after the decimal point, using a format can improve the performance of the sort. In the following example we are using the `@btime` macro from the `BenchmarkTools` package to demonstrate this;
-
-```jldoctest
-julia> ;# column :x1 has at most 2 digits after the decimal point
-julia> ds = Dataset(x1 = round.(rand(10^6),digits = 2),
-               x2 = repeat(1:100, 10^4));
-julia> @btime sort(ds, 1);
-  56.278 ms (1661 allocations: 67.65 MiB)
-
-julia> custom_fmt(x) = round(x * 100);
-julia> setformat!(ds, 1=>custom_fmt);
-julia> @btime sort(ds, 1);
-  13.718 ms (446 allocations: 53.44 MiB)
-```
-
-The 4 times improvement in the performance is due to the fact that the formatted values in the data set are basically integer rather than float (the actual values) and the algorithms for sorting integers are usually faster than those for sorting double precision numbers.
-
-Another trick can be used for situations when a data set contains a column of string values where the values can be treated as numbers, e.g. in the following code `:x1` is basically integer values with `"id"` been attached to each value, here we use a customised format that extracts the numeric values from `:x1`;
-
-```jldoctest
-julia> ds = Dataset(x1 = "id" .* string.(rand(1:100000, 10^6)));
-julia> @btime sort(ds, 1);
-  296.101 ms (612 allocations: 54.40 MiB)
-julia> custom_fmt(x) = parse(Int, @views x[3:end])
-   custom_fmt (generic function with 1 method)
-julia> setformat!(ds, 1=>custom_fmt);
-julia> @btime sort(ds, 1)
-  38.057 ms (323 allocations: 44.27 MiB)
-```
-
 ## `sortperm`
 
 The `sortperm(ds, cols)` function returns a permutation vector `perm` that puts `ds[perm, :]` in sorted order based on `cols`. Similar to `sort!`/`sort`, this function accepts `rev`, `alg`, `mapformats` and `stable` options.
@@ -374,4 +344,62 @@ julia> ds
    1 │        1       3.0  1
    2 │        4       1.1  2
    3 │        7     -10.0  3
+```
+
+## Performance improvement using `formats`
+
+In some scenarios the performance of sort can be improved by using formats. For example, when we know for a specific column there is only a few numbers after the decimal point, using a format can improve the performance of the sort. In the following example we are using the `@btime` macro from the `BenchmarkTools` package to demonstrate this;
+
+```jldoctest
+julia> ;# column :x1 has at most 2 digits after the decimal point
+julia> ds = Dataset(x1 = round.(rand(10^6),digits = 2),
+               x2 = repeat(1:100, 10^4));
+julia> @btime sortperm(ds, 1);
+  37.169 ms (751 allocations: 31.53 MiB)
+
+julia> custom_fmt(x) = round(x * 100);
+
+julia> setformat!(ds, 1=>custom_fmt);
+
+julia> @btime sortperm(ds, 1);
+  5.678 ms (317 allocations: 17.19 MiB)
+```
+
+The 6 times improvement in the performance is due to the fact that the formatted values in the data set are basically integer rather than float (the actual values) and the algorithms for sorting integers are usually faster than those for sorting double precision numbers.
+
+This can be generalised to situations where the numbers after the decimal point is not known, e.g. suppose we have the following data set
+
+```jldoctest
+julia> ds = Dataset(x = rand(10^6))
+```
+
+in this case we cannot use the round trick directly, however, we can create an alias of `:x` and partially apply `round` trick on alias column and sort the data set based on both columns,
+
+```jldoctest
+julia> fmt(x) = round(Int, x*100) # this split data up to 100 parts
+julia> ds._tmp = ds.x # alias of :x - it is an instance operation
+julia> setformat!(ds, :_tmp=>fmt)
+julia> @btime sortperm(ds, [:x], alg = QuickSort); # without using formats
+  36.460 ms (508 allocations: 29.60 MiB)
+
+julia> @btime sortperm(ds, [:_tmp, :x], alg = QuickSort);
+  17.550 ms (505 allocations: 25.79 MiB)
+```
+
+This works because the second method exploits integer and float sorting algorithms and also utilises multiple cpus more efficiently.
+
+Another trick can be used for situations when a data set contains a column of string values where the values can be treated as numbers, e.g. in the following code `:x1` is basically integer values with `"id"` been attached to each value, here we use a customised format that extracts the numeric values from `:x1`;
+
+```jldoctest
+julia> ds = Dataset(x1 = "id" .* string.(rand(1:100000, 10^6)));
+julia>julia> @btime sortperm(ds, 1);
+  257.070 ms (580 allocations: 27.70 MiB)
+
+julia> custom_fmt(x) = parse(Int, @views x[3:end])
+custom_fmt (generic function with 1 method)
+
+julia> setformat!(ds, 1=>custom_fmt);
+
+julia> @btime sortperm(ds, 1);
+  15.456 ms (278 allocations: 17.57 MiB)
 ```
