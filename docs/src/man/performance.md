@@ -67,7 +67,7 @@ Beside the order of the output, note that `groupby` and `gatherby` use very diff
 
 ## Beware that every column must support `missings`
 
-Every columns in InMemoryDatasets will be converted to support `missing`. Thus, it is wise to create the vectors in that way. For example, if you load an `Arrow` file which its columns don't support missing values, InMemoryDatasets materialised the whole file, but if they already support missing values, InMemoryDatasets uses the memory map for accessing values.
+Every columns in InMemoryDatasets will be converted to support `missing`. Thus, it is wise to create the vectors in that way. For example, if you load an `Arrow` file which its columns don't support missing values, InMemoryDatasets materialises the whole file, but if they already support missing values, InMemoryDatasets uses the memory map for accessing values.
 
 ## Master `byrow`
 
