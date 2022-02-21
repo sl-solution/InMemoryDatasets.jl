@@ -206,7 +206,7 @@ Use the `modify!` or `modify` (`modify` makes a copy of data) functions to add a
 
 ```julia
 julia> m2h(x) = 60x
-julia> modify!(flights, [:Distance, :AirTime] => byrow(/) => :Speed, :Speed => m2h)
+julia> modify!(flights, [:Distance, :AirTime] => byrow(/) => :Speed, :Speed => byrow(m2h))
 ```
 
 ## Applying functions on each group of observations
