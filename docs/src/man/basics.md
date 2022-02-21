@@ -282,6 +282,8 @@ By default, formatted values of a column will be used when operations like displ
 
 ### Accessing individual column or observation
 
+> User must avoid using `getindex` and `setindex!` for modifying data sets, we just briefly discuss them here to make sure users understand the effect of these operations on data sets. InMemoryDatasets provides efficient APIs for modifying observations, e.g. see `modify!`, `modify`, `map!`, `map`, ...
+
 `ds[:, col]`, `ds[i, col]` can be used to access a specific column or specific observation of a specific column of `ds`, respectively. For example,
 
 ```jldoctest

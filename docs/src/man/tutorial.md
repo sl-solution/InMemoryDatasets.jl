@@ -20,9 +20,7 @@ julia> _tmp = Downloads.download("https://raw.githubusercontent.com/sl-solution/
 
 julia> flights = filereader(_tmp, dtformat = Dict(1=>dateformat"y-m-d"));
 
-julia> for col in [:IATA, :Tail_Number, :Origin, :Dest, :CancellationCode]
-           flights[!, col] = PooledArray(flights[!, col])
-       end # convert Strings to PooledArray for efficiency
+julia> modify!(flights, [:IATA, :Tail_Number, :Origin, :Dest, :CancellationCode] => PooledArray) # convert Strings to PooledArray for efficiency - We discuss the modify! function later
 
 julia> setinfo!(flights, "Reporting Carrier On-Time Performance for all flights in 2020 from CA. Downloaded from www.transtats.bts.gov");
 ```
@@ -42,7 +40,7 @@ To test if one of two conditions is verified:
 
 
 ```julia
-julia> filter(flights, :IATA, by = in(["AA", "UA"]))
+julia> filter(flights, :IATA, by = in(("AA", "UA")))
 ```
 
 ## Select: pick columns by name
