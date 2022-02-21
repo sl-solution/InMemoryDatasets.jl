@@ -63,7 +63,7 @@ This is because every single change in a data set will trigger multiple function
 
 ## Choose `groupby` or `gatherby` based on the problem in hand
 
-Beside the order of the output, `groupby` and `gatherby` use very different approaches for grouping observations. `groupby/!` utilises the multithreading efficiently however, `gatherby` exploits the fast path of computations for some specific operations and usually has lower memory footprint.
+Beside the order of the output, note that `groupby` and `gatherby` use very different approaches for grouping observations. `groupby/!` utilises the multithreading efficiently however, `gatherby` exploits the fast path of computations for some specific operations and usually has lower memory footprint.
 
 ## Beware that every column must support `missings`
 
