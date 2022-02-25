@@ -376,8 +376,8 @@ julia> ds = Dataset(x = rand(10^6))
 in this case we cannot use the round trick directly, however, we can create an alias of `:x` and partially apply `round` trick on alias column and sort the data set based on both columns,
 
 ```jldoctest
-julia> fmt(x) = round(Int, x*100) # this split data up to 100 parts
-julia> ds._tmp = ds.x # alias of :x - it is an instance operation
+julia> fmt(x) = round(Int, x*100) # split data up to 100 parts
+julia> ds._tmp = ds.x # alias of :x - This is an instance operation
 julia> setformat!(ds, :_tmp=>fmt)
 julia> @btime sortperm(ds, [:x], alg = QuickSort); # without using formats
   36.460 ms (508 allocations: 29.60 MiB)

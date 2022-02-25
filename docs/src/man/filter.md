@@ -355,6 +355,19 @@ julia> antijoin!(ds1, _tmp, on = :y=>:vals)
 ─────┼────────────────────
    1 │        7       0.2
    2 │        4       0.3
+
+julia> ; Since vals is a vector we can directly use filter
+
+julia> ds1 = Dataset(x = [1,7,4,5], y = [.1,.2,.3,.4]);
+
+julia> filter!(ds1, :y, by = !in(Set(vals)))
+2×2 Dataset
+ Row │ x         y        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        7       0.2
+   2 │        4       0.3
 ```
 
 ## Julia broadcasting
