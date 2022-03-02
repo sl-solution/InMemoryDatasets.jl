@@ -522,6 +522,73 @@ function _combine_f_barrier_tuple(fromds, newds, msfirst, mssecond, mslast, newd
 
 end
 
+"""
+    combine(ds::AbstractDataset, args...; dropgroupcols = false, threads = true)
+
+Create a new data set while the `args` aggregations has been applied on passed columns. The `args` argument must be in the form of `cols=>fun=>newname`, where `cols` refers to columns in the passed data set. `fun` assumes a single column as its input, thus, multiple columns will be broadcasted, i.e. `cols=>fun` will be tranlated as `col1=>fun`, `col2=>fun`, ..., and `col=>funs` will be translated as `col=>fun1`, `col=>fun2`, .... The `byrow` function can be passed as `fun`, however, its input must be referring to columns which already an operation has been done on them.
+
+For using a multivate function the columns must be passed as tuple of column names or column indices.
+
+For grouped data set the operations are done on each group of observations.
+
+# Examples
+
+```jldoctest
+julia> ds = Dataset(g = [1,2,1,2,1,2], x = 1:6)
+6×2 Dataset
+ Row │ g         x
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        1         3
+   4 │        2         4
+   5 │        1         5
+   6 │        2         6
+
+julia> combine(groupby(ds, :g), :x=>[sum, mean])
+2×3 Dataset
+ Row │ g         sum_x     mean_x
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼──────────────────────────────
+   1 │        1         9       3.0
+   2 │        2        12       4.0
+
+julia> combine(gatherby(ds, :g), :x => [maximum, minimum], 2:3 => byrow(-) => :range)
+2×4 Dataset
+ Row │ g         maximum_x  minimum_x  range
+     │ identity  identity   identity   identity
+     │ Int64?    Int64?     Int64?     Int64?
+─────┼──────────────────────────────────────────
+   1 │        1          5          1         4
+   2 │        2          6          2         4
+
+julia> ds = Dataset(g = [1,2,1,2,1,2], x = 1:6, y = 6:-1:1)
+6×3 Dataset
+ Row │ g         x         y
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?
+─────┼──────────────────────────────
+   1 │        1         1         6
+   2 │        2         2         5
+   3 │        1         3         4
+   4 │        2         4         3
+   5 │        1         5         2
+   6 │        2         6         1
+
+julia> combine(groupby(ds,1), (:x, :y)=>(x1,x2)->maximum(x1)-minimum(x2))
+2×2 Dataset
+ Row │ g         function_x_y
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────────
+   1 │        1             3
+   2 │        2             5
+
+```
+"""
 function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false, threads = true)
     !isgrouped(ds) &&  return combine_ds(ds, args...)#throw(ArgumentError("`combine` is only for grouped data sets, use `modify` instead"))
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())

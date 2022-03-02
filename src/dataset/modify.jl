@@ -281,9 +281,121 @@ function normalize_modify_multiple!(outidx::Index, idx, @nospecialize(args...))
     res
 end
 
+"""
+    modify(...)
+
+A variant of `modify!` which modifies a copy of the passed data set.
+
+See [`modify!`](@ref)
+"""
 modify(origninal_ds::AbstractDataset, @nospecialize(args...); threads::Bool = true) = modify!(copy(origninal_ds), args...; threads = threads)
 
 modify!(ds::Dataset; threads::Bool = true) = parent(ds)
+
+"""
+    modify!(ds::AbstractDataset, args...; [threads = true])
+
+Modify columns of a data set. The `args` arguments must be in the form of `cols => fun => newnames`. The `fun` function will be called on passed `cols`, with the excpetion of two special functions: `byrow` and `splitter`. `fun` assumes a single column as its input, thus passing multiple columns will be broadcasted, i.e. `cols => fun` will be translated to `col1=>fun`, `col2=>fun`, .... When `newname` is not provided `modify!` modifies the passed column.
+
+When a grouped data set is passed to `modify!`, the operation is done on each group of observations.
+
+each `args` can be constructed based on columns in the original data set or the columns which have been created before it.
+
+# Special functions
+
+`byrow` and `splitter` are two special functions which can be passed as `fun`.
+
+`byrow` can accept multiple columns as input and does a given operation on each row of the data set. When a single column is passed to `byrow`, `modify!` modifies the passed column, however, when multiple columns are passed, `byrow` applies the row-wise operation on them and creates a new column.
+
+`splitter` splits a column of tuples to multiple columns. When `splitter` is set as `fun` the `newnames` must be given.
+
+# Using multivariate functions
+
+To pass multiple columns to a `fun` function which operates on multiple inputs, the columns must be passed as tuple of column names, or column indices.
+
+See [`modify`](@ref)
+
+# Examples
+
+```jldoctest
+julia> ds = Dataset(x1 = 1:5, x2 = [-2, -1, missing, 1, 2],
+                    x3 = [0.0, 0.1, 0.2, missing, 0.4])
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼──────────────────────────────
+   1 │        1        -2       0.0
+   2 │        2        -1       0.1
+   3 │        3   missing       0.2
+   4 │        4         1   missing
+   5 │        5         2       0.4
+
+julia> modify!(ds, 2:3 => sum)
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Int64?    Int64?    Float64?
+─────┼──────────────────────────────
+   1 │        1         0       0.7
+   2 │        2         0       0.7
+   3 │        3         0       0.7
+   4 │        4         0       0.7
+   5 │        5         0       0.7
+
+julia> modify!(ds, :x1 => x -> x .- mean(x))
+5×3 Dataset
+ Row │ x1        x2        x3
+     │ identity  identity  identity
+     │ Float64?  Int64?    Float64?
+─────┼──────────────────────────────
+   1 │     -2.0         0       0.7
+   2 │     -1.0         0       0.7
+   3 │      0.0         0       0.7
+   4 │      1.0         0       0.7
+   5 │      2.0         0       0.7
+
+julia> body = Dataset(weight = [78.5, 59, 80], height = [160, 171, 183])
+3×2 Dataset
+ Row │ weight    height
+     │ identity  identity
+     │ Float64?  Int64?
+─────┼────────────────────
+   1 │     78.5       160
+   2 │     59.0       171
+   3 │     80.0       183
+
+julia> modify!(body, :height => byrow(x -> (x/100)^2) => :BMI, [1, 3] => byrow(/) => :BMI)
+3×3 Dataset
+ Row │ weight    height    BMI
+     │ identity  identity  identity
+     │ Float64?  Int64?    Float64?
+─────┼──────────────────────────────
+   1 │     78.5       160   30.6641
+   2 │     59.0       171   20.1771
+   3 │     80.0       183   23.8884
+
+julia> body = Dataset(weight = [78.5, 59, 80], height = [160, 171, 183])
+3×2 Dataset
+ Row │ weight    height
+     │ identity  identity
+     │ Float64?  Int64?
+─────┼────────────────────
+   1 │     78.5       160
+   2 │     59.0       171
+   3 │     80.0       183
+
+julia> modify!(body, (:weight, :height)=> cor)
+3×3 Dataset
+ Row │ weight    height    cor_weight_height
+     │ identity  identity  identity
+     │ Float64?  Int64?    Float64?
+─────┼───────────────────────────────────────
+   1 │     78.5       160          0.0890411
+   2 │     59.0       171          0.0890411
+   3 │     80.0       183          0.0890411
+```
+"""
 function modify!(ds::AbstractDataset, @nospecialize(args...); threads::Bool = true)
     if ds isa SubDataset
 		idx_cpy = copy(index(parent(ds)))
