@@ -879,7 +879,6 @@ julia> dropmissing!(ds, [:x, :y])
    1 │        4         2  d
    2 │        5         1  e
 
-julia>
 ```
 """
 function dropmissing!(ds::Dataset,

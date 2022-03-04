@@ -130,46 +130,6 @@ Base.summary(io::IO, dfcs::DatasetColumns) = print(io, summary(dfcs))
 Return a `DatasetColumns` object that is a vector-like that allows iterating
 an `AbstractDataset` column by column.
 
-$DATASETCOLUMNS_DOCSTR
-
-# Examples
-```jldoctest
-julia> df = Dataset(x=1:4, y=11:14)
-4×2 Dataset
- Row │ x      y
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1     11
-   2 │     2     12
-   3 │     3     13
-   4 │     4     14
-
-julia> eachcol(df)
-4×2 DatasetColumns
- Row │ x      y
-     │ Int64  Int64
-─────┼──────────────
-   1 │     1     11
-   2 │     2     12
-   3 │     3     13
-   4 │     4     14
-
-julia> collect(eachcol(df))
-2-element Vector{AbstractVector{T} where T}:
- [1, 2, 3, 4]
- [11, 12, 13, 14]
-
-julia> map(eachcol(df)) do col
-           maximum(col) - minimum(col)
-       end
-2-element Vector{Int64}:
- 3
- 3
-
-julia> sum.(eachcol(df))
-2-element Vector{Int64}:
- 10
- 50
 ```
 """
 Base.eachcol(ds::AbstractDataset) = DatasetColumns(ds)

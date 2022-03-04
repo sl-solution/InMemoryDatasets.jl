@@ -7,7 +7,7 @@ for working with tabular data.
 # Common methods
 
 An `AbstractDataset` is a two-dimensional table with `Symbol`s or strings
-for column names.
+for column names. It is the supertype of `Dataset` and `SubDataset` (view of a `Dataset`).
 
 The following are normally implemented for AbstractDatasets:
 
@@ -38,8 +38,6 @@ that can be used for standard arrays. You can also access a single column
 of an `AbstractDataset` using `getproperty` and `setproperty!` functions.
 Columns can be selected using integers, `Symbol`s, or strings.
 In broadcasting `AbstractDataset` behavior is similar to a `Matrix`.
-
-A detailed description of `getindex`, `setindex!`, `getproperty`, `setproperty!`,
 
 """
 abstract type AbstractDataset end

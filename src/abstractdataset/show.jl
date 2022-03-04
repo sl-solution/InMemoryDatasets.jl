@@ -354,20 +354,6 @@ and `allrows`, `allcols` and `allgroups` default to `false`.
 - `kwargs...`: Any keyword argument supported by the function `pretty_table` of
   PrettyTables.jl can be passed here to customize the output.
 
-# Examples
-```jldoctest
-julia> using DataFrames
-
-julia> ds = DataFrame(A = 1:3, B = ["x", "y", "z"]);
-
-julia> show(ds, show_row_number=false)
-3×2 DataFrame
- A      B
- Int64  String
-───────────────
-     1  x
-     2  y
-     3  z
 ```
 """
 function Base.show(io::IO,
