@@ -250,7 +250,7 @@ julia> combine(gatherby(ds, [1, 3], isgathered = true),
                         (:) => last,
                         dropgroupcols = true)
 7×3 Dataset
- Row │ id_last   date_last   outcome_last
+ Row │ last_id   last_date   last_outcome
      │ identity  identity    identity     
      │ Int64?    Date?       Bool?        
 ─────┼────────────────────────────────────
@@ -261,6 +261,7 @@ julia> combine(gatherby(ds, [1, 3], isgathered = true),
    5 │        2  2019-04-22          true
    6 │        2  2019-05-04         false
    7 │        3  2019-12-12          true
+
 ```
 ## Joins
 
@@ -286,7 +287,7 @@ julia> @chain store begin
           combine(:employee_ID => length)
        end
 10×3 Dataset
- Row │ store     date        employee_ID_length
+ Row │ store     date        length_employee_ID
      │ identity  identity    identity           
      │ String?   Date?       Int64?             
 ─────┼──────────────────────────────────────────
@@ -300,6 +301,7 @@ julia> @chain store begin
    8 │ B         2019-10-03                   3
    9 │ B         2019-10-04                   4
   10 │ B         2019-10-05                   2
+
 ```
 ## Reshape
 
