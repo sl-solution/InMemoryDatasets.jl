@@ -409,7 +409,7 @@ end
     @test isa(uds[!,:b].val, Vector{Union{Int,Missing}})
     @test isa(uds[!,:c].val, Vector{Union{Int,Missing}})
     @test isa(uds[!,:d].val, Vector{Union{Int,Missing}})
-    ds = Dataset([categorical(repeat(2:-1:1, inner=4)),
+    ds = Dataset(Any[categorical(repeat(2:-1:1, inner=4)),
                            categorical(repeat('a':'d', outer=2)), categorical(1:8)],
                        [:id, :variable, :value])
 

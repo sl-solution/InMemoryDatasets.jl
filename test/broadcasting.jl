@@ -1067,7 +1067,7 @@ end
 end
 
 @testset "test categorical values" begin
-    for v in [categorical([1, 2, 3]), categorical([1, 2, missing]),
+    for v in Any[categorical([1, 2, 3]), categorical([1, 2, missing]),
               categorical([missing, 1, 2]),
               categorical(["1", "2", "3"]), categorical(["1", "2", missing]),
               categorical([missing, "1", "2"])]
