@@ -55,6 +55,12 @@ function Base.popfirst!(col::SubOrDSCol)
     _modified(_attributes(parent(col.ds)))
     res
 end
+function Base.pushfirst!(col::SubOrDSCol, x)
+    res = pushfirst!(__!(col), x)
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
+    _modified(_attributes(parent(col.ds)))
+    res
+end
 
 
 

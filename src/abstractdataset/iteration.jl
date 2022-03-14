@@ -308,6 +308,7 @@ Base.show(dfcs::DatasetColumns;
 # prevent using broadcasting to mutate columns e.g. in pop!.(eachcol(ds))
 Base.broadcasted(::typeof(pop!), ::DatasetColumns, args...) = throw(ArgumentError("broadcasting `pop!` over DatasetColums is reserved."))
 Base.broadcasted(::typeof(popfirst!), ::DatasetColumns, args...) = throw(ArgumentError("broadcasting `popfirst!` over DatasetColums is reserved."))
+Base.broadcasted(::typeof(pushfirst!), ::DatasetColumns, args...) = throw(ArgumentError("broadcasting `pushfirst!` over DatasetColums is reserved."))
 Base.broadcasted(::typeof(fill!), ::DatasetColumns, args...) = throw(ArgumentError("broadcasting `fill!` over DatasetColums is reserved."))
 Base.broadcasted(::typeof(Statistics.median!), ::DatasetColumns, args...) = throw(ArgumentError("broadcasting `median!` over DatasetColums is reserved."))
 Base.broadcasted(::typeof(sort!), ::DatasetColumns, args...) = throw(ArgumentError("broadcasting `sort!` over DatasetColums is reserved."))
