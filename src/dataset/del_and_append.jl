@@ -639,3 +639,331 @@ function Base.push!(ds::Dataset, row::Any; promote::Bool=false)
     _reset_grouping_info!(ds)
     ds
 end
+
+
+function Base.pushfirst!(ds::Dataset, row::Union{AbstractDict, NamedTuple};
+                    cols::Symbol=:setequal,
+                    promote::Bool=(cols in [:union, :subset]))
+    # push keep formats
+    possible_cols = (:orderequal, :setequal, :intersect, :subset, :union)
+    if !(cols in possible_cols)
+        throw(ArgumentError("`cols` keyword argument must be any of :" *
+                            join(possible_cols, ", :")))
+    end
+
+    nrows, ncols = size(ds)
+    targetrows = nrows + 1
+    # here the formats should be kept, setproperty! modifies time
+    if ncols == 0 && row isa NamedTuple
+        for (n, v) in pairs(row)
+            format_of_cur_col = getformat(ds, n)
+            setproperty!(ds, n, fill!(allocatecol(typeof(v), 1), v))
+            setformat!(ds, n => format_of_cur_col)
+        end
+        _reset_grouping_info!(ds)
+        return ds
+    end
+
+    old_row_type = typeof(row)
+    if row isa AbstractDict && keytype(row) !== Symbol &&
+        (keytype(row) <: AbstractString || all(x -> x isa AbstractString, keys(row)))
+        row = (;(Symbol.(keys(row)) .=> values(row))...)
+    end
+
+    # in the code below we use a direct access to _columns because
+    # we resize the columns so temporarily the `Dataset` is internally
+    # inconsistent and normal data set indexing would error.
+    if cols == :union
+        current_modified = _attributes(ds).meta.modified[]
+        if row isa AbstractDict && keytype(row) !== Symbol && !all(x -> x isa Symbol, keys(row))
+            throw(ArgumentError("when `cols == :union` all keys of row must be Symbol"))
+        end
+        for (i, colname) in enumerate(_names(ds))
+            format_of_cur_col = getformat(ds, colname)
+            col = _columns(ds)[i]
+            if haskey(row, colname)
+                val = row[colname]
+            else
+                val = missing
+            end
+            S = typeof(val)
+            T = eltype(col)
+            if S <: T || promote_type(S, T) <: T
+                pushfirst!(col, val)
+            elseif !promote
+                try
+                    pushfirst!(col, val)
+                catch err
+                    setformat!(ds, colname => format_of_cur_col)
+                    for col in _columns(ds)
+                        resize!(col, nrows)
+                    end
+                    _attributes(ds).meta.modified[] = current_modified
+                    @error "Error adding value to column :$colname."
+                    rethrow(err)
+                end
+            else
+                newcol = similar(col, promote_type(S, T), targetrows)
+                copyto!(newcol, 2, col, 1, nrows)
+                newcol[1] = val
+                firstindex(newcol) != 1 && _onebased_check_error()
+                _columns(ds)[i] = newcol
+                setformat!(ds, colname => format_of_cur_col)
+            end
+        end
+        for (colname, col) in zip(_names(ds), _columns(ds))
+            if length(col) != targetrows
+                for col2 in _columns(ds)
+                    resize!(col2, nrows)
+                end
+                _attributes(ds).meta.modified[] = current_modified
+                throw(AssertionError("Error adding value to column :$colname"))
+            end
+        end
+        for colname in setdiff(keys(row), _names(ds))
+            val = row[colname]
+            S = typeof(val)
+            if nrows == 0
+                newcol = [val]
+            else
+                newcol = allocatecol(Union{Missing, S}, targetrows)
+                fill!(newcol, missing)
+                newcol[1] = val
+            end
+            ds[!, colname] = newcol
+        end
+        _modified(_attributes(ds))
+        _reset_grouping_info!(ds)
+        return ds
+    end
+
+    if cols == :orderequal
+        if old_row_type <: Dict
+            throw(ArgumentError("passing `Dict` as `row` when `cols == :orderequal` " *
+                                "is not allowed as it is unordered"))
+        elseif length(row) != ncol(ds) || any(x -> x[1] != x[2], zip(keys(row), _names(ds)))
+            throw(ArgumentError("when `cols == :orderequal` pushed row must " *
+                                "have the same column names and in the " *
+                                "same order as the target data set"))
+        end
+    elseif cols === :setequal
+        # Only check for equal lengths if :setequal is selected,
+        # as an error will be thrown below if some names don't match
+        if length(row) != ncols
+            # an explicit error is thrown as this was allowed in the past
+            throw(ArgumentError("`pushfirst!` with `cols` equal to `:setequal` " *
+                                "requires `row` to have the same number of elements " *
+                                "as the number of columns in `ds`."))
+        end
+    end
+    current_col = 0
+    current_modified = _attributes(ds).meta.modified[]
+    try
+        for (col, nm) in zip(_columns(ds), _names(ds))
+            format_of_cur_col = getformat(ds, nm)
+            current_col += 1
+            if cols === :subset
+                val = get(row, nm, missing)
+            else
+                val = row[nm]
+            end
+            S = typeof(val)
+            T = eltype(col)
+            if S <: T || !promote || promote_type(S, T) <: T
+                pushfirst!(col, val)
+            else
+                newcol = similar(col, promote_type(S, T), targetrows)
+                copyto!(newcol, 2, col, 1, nrows)
+                newcol[1] = val
+                firstindex(newcol) != 1 && _onebased_check_error()
+                _columns(ds)[columnindex(ds, nm)] = newcol
+                setformat!(ds, nm => format_of_cur_col)
+            end
+        end
+        current_col = 0
+        for col in _columns(ds)
+            current_col += 1
+            @assert length(col) == targetrows
+        end
+    catch err
+        for col in _columns(ds)
+            resize!(col, nrows)
+        end
+        _attributes(ds).meta.modified[] = current_modified
+        @error "Error adding value to column :$(_names(ds)[current_col])."
+        rethrow(err)
+    end
+    _modified(_attributes(ds))
+    _reset_grouping_info!(ds)
+    return ds
+end
+
+"""
+    pushfirst!(ds::Dataset, row::Union{Tuple, AbstractArray}; promote::Bool=false)
+    pushfirst!(ds::Dataset, row::Union{DatasetRow, NamedTuple, AbstractDict};
+          cols::Symbol=:setequal, promote::Bool=(cols in [:union, :subset]))
+
+Add in-place one row at the beginning of `ds` taking the values from `row`.
+
+Column types of `ds` are preserved, and new values are converted if necessary.
+An error is thrown if conversion fails.
+
+If `row` is neither a `DatasetRow`, `NamedTuple` nor `AbstractDict` then
+it must be a `Tuple` or an `AbstractArray`
+and columns are matched by order of appearance. In this case `row` must contain
+the same number of elements as the number of columns in `ds`.
+
+If `row` is a `DatasetRow`, `NamedTuple` or `AbstractDict` then
+values in `row` are matched to columns in `ds` based on names. The exact behavior
+depends on the `cols` argument value in the following way:
+* If `cols == :setequal` (this is the default)
+  then `row` must contain exactly the same columns as `ds` (but possibly in a
+  different order).
+* If `cols == :orderequal` then `row` must contain the same columns in the same
+  order (for `AbstractDict` this option requires that `keys(row)` matches
+  `propertynames(ds)` to allow for support of ordered dicts; however, if `row`
+  is a `Dict` an error is thrown as it is an unordered collection).
+* If `cols == :intersect` then `row` may contain more columns than `ds`,
+  but all column names that are present in `ds` must be present in `row` and only
+  they are used to populate a new row in `ds`.
+* If `cols == :subset` then `pushfirst!` behaves like for `:intersect` but if some
+  column is missing in `row` then a `missing` value is pushed to `ds`.
+* If `cols == :union` then columns missing in `ds` that are present in `row` are
+  added to `ds` (using `missing` for existing rows) and a `missing` value is
+  pushed to columns missing in `row` that are present in `ds`.
+
+If `promote=true` and element type of a column present in `ds` does not allow
+the type of a pushed argument then a new column with a promoted element type
+allowing it is freshly allocated and stored in `ds`. If `promote=false` an error
+is thrown.
+
+As a special case, if `ds` has no columns and `row` is a `NamedTuple` or
+`DatasetRow`, columns are created for all values in `row`, using their names
+and order.
+
+Please note that `pushfirst!` must not be used on a `Dataset` that contains columns
+that are aliases (equal when compared with `===`).
+
+# Examples
+```jldoctest
+julia> ds = Dataset(A=1:3, B=1:3);
+
+julia> pushfirst!(ds, (true, false))
+4×2 Dataset
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        1         1
+   3 │        2         2
+   4 │        3         3
+
+julia> pushfirst!(ds, ds[1, :])
+5×2 Dataset
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        1         0
+   3 │        1         1
+   4 │        2         2
+   5 │        3         3
+
+julia> pushfirst!(ds, (C="something", A=true, B=false), cols=:intersect)
+6×2 Dataset
+ Row │ A         B
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         0
+   2 │        1         0
+   3 │        1         0
+   4 │        1         1
+   5 │        2         2
+   6 │        3         3
+
+julia> pushfirst!(ds, Dict(:A=>1.0, :C=>1.0), cols=:union)
+7×3 Dataset
+ Row │ A         B         C
+     │ identity  identity  identity
+     │ Float64?  Int64?    Float64?
+─────┼───────────────────────────────
+   1 │      1.0   missing        1.0
+   2 │      1.0         0  missing
+   3 │      1.0         0  missing
+   4 │      1.0         0  missing
+   5 │      1.0         1  missing
+   6 │      2.0         2  missing
+   7 │      3.0         3  missing
+
+julia> pushfirst!(ds, NamedTuple(), cols=:subset)
+8×3 Dataset
+ Row │ A          B         C
+     │ identity   identity  identity
+     │ Float64?   Int64?    Float64?
+─────┼────────────────────────────────
+   1 │ missing     missing  missing
+   2 │       1.0   missing        1.0
+   3 │       1.0         0  missing
+   4 │       1.0         0  missing
+   5 │       1.0         0  missing
+   6 │       1.0         1  missing
+   7 │       2.0         2  missing
+   8 │       3.0         3  missing   
+```
+"""
+function Base.pushfirst!(ds::Dataset, row::Any; promote::Bool=false)
+
+# Modify Dataset
+    if !(row isa Union{Tuple, AbstractArray})
+        # an explicit error is thrown as this was allowed in the past
+        throw(ArgumentError("`pushfirst!` does not allow passing collections of type " *
+                            "$(typeof(row)) to be pushed into a Dataset. Only " *
+                            "`Tuple`, `AbstractArray`, `AbstractDict`, `DatasetRow` " *
+                            "and `NamedTuple` are allowed."))
+    end
+    nrows, ncols = size(ds)
+    targetrows = nrows + 1
+    if length(row) != ncols
+        msg = "Length of `row` does not match `Dataset` column count."
+        throw(DimensionMismatch(msg))
+    end
+    current_col = 0
+    current_modified = _attributes(ds).meta.modified[]
+    try
+        for (i, (col, val)) in enumerate(zip(_columns(ds), row))
+            current_col += 1
+            format_of_cur_col = getformat(ds, current_col)
+            S = typeof(val)
+            T = eltype(col)
+            if S <: T || !promote || promote_type(S, T) <: T
+                pushfirst!(col, val)
+            else
+                newcol = allocatecol(promote_type(S, T), targetrows)
+                copyto!(newcol, 2, col, 1, nrows)
+                newcol[1] = val
+                firstindex(newcol) != 1 && _onebased_check_error()
+                _columns(ds)[i] = newcol
+                setformat!(ds, i => format_of_cur_col)
+            end
+        end
+        current_col = 0
+        for col in _columns(ds)
+            current_col += 1
+            @assert length(col) == targetrows
+        end
+    catch err
+        #clean up partial row
+        for col in _columns(ds)
+            resize!(col, nrows)
+        end
+        _attributes(ds).meta.modified[] = current_modified
+        @error "Error adding value to column :$(_names(ds)[current_col])."
+        rethrow(err)
+    end
+    _modified(_attributes(ds))
+    _reset_grouping_info!(ds)
+    ds
+end
