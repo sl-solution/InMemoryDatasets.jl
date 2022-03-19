@@ -104,12 +104,26 @@ function gatherby(ds::AbstractDataset, cols::MultiColumnIndex; mapformats::Bool 
 			return GatherBy(ds, colsidx, 1:nrow(ds), nrow(ds), mapformats, b[1], 1:nrow(ds))
 		else
 			a = _gather_groups(ds, colsidx, Val(T), mapformats = mapformats, stable = stable, threads = threads)
-    		return GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
+			return GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
 		end
 	end
 end
 gatherby(ds::AbstractDataset, col::ColumnIndex; mapformats = true, stable = true, isgathered = false, eachrow = false, threads = true) = gatherby(ds, [col], mapformats = mapformats, stable = stable, isgathered = isgathered, eachrow = eachrow, threads = threads)
 
+
+__SPFRMT(x) = x & 1023
+__SPFRMT(::Missing) = missing # not needed
+
+# currently not been used in gatherby
+# use sort and format trick for fast gatherby - hm stands for high memory footprint
+function hm_gatherby(ds::AbstractDataset, cols::MultiColumnIndex; mapformats = false, threads = true)
+	modify!(ds, cols=>byrow(hash; threads = threads, mapformats = mapformats)=>:___tmp___cols8934, :___tmp___cols8934=>identity=>:___tmp___cols8934_2)
+	setformat!(ds, :___tmp___cols8934_2=>__SPFRMT)
+	gds = groupby(ds, [:___tmp___cols8934_2, :___tmp___cols8934], stable = false, threads = threads)
+	grpcols, ranges, last_valid_index = _find_starts_of_groups(view(ds, gds.perm, cols), cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64); mapformats = mapformats, threads = threads)
+	select!(ds, Not([:___tmp___cols8934, :___tmp___cols8934_2]))
+	GatherBy(ds, grpcols, nothing, last_valid_index, mapformats, gds.perm, ranges)
+end
 
 function _fill_mapreduce_col!(x, f, op, y, loc)
     @inbounds for i in 1:length(y)

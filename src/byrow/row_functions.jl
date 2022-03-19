@@ -1096,19 +1096,33 @@ Base.@propagate_inbounds function _op_for_hash!(x, y, f, lo, hi)
     x
 end
 
-function row_hash(ds::AbstractDataset, f::Function, cols = :; threads = true)
+function row_hash(ds::AbstractDataset, f::Union{AbstractVector{<:Function}, Function}, cols = :; threads = true)
     colsidx = multiple_getindex(index(ds), cols)
     init0 = zeros(UInt64, nrow(ds))
+
+    multi_f = false
+    if f isa AbstractVector
+        @assert length(f) == length(colsidx) "number of provided functions must match the number of selected columns"
+        multi_f = true
+    end
 
     if threads
         cz = div(length(init0), __NCORES)
         Threads.@threads for i in 1:__NCORES
             lo = (i-1)*cz+1
             i == __NCORES ? hi = length(init0) : hi = i*cz
-            mapreduce(identity, (x,y) -> _op_for_hash!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
+            if multi_f
+                mapreduce_index(f, (x, y, func) -> _op_for_hash!(x, y, func, lo, hi), view(_columns(ds),colsidx), init0)
+            else
+                mapreduce(identity, (x,y) -> _op_for_hash!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
+            end
         end
     else
-        mapreduce(identity, (x,y) -> _op_for_hash!(x, y, f, 1, length(x)), view(_columns(ds),colsidx), init = init0)
+        if multi_f
+            mapreduce_index(f, (x, y, func) -> _op_for_hash!(x, y, func, 1, length(x)), view(_columns(ds),colsidx), init0)
+        else
+            mapreduce(identity, (x,y) -> _op_for_hash!(x, y, f, 1, length(x)), view(_columns(ds),colsidx), init = init0)
+        end
     end
     init0
 end

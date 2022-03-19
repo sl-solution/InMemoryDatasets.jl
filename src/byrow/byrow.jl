@@ -140,8 +140,15 @@ byrow(ds::AbstractDataset, ::typeof(stdze), cols::MultiColumnIndex = names(ds, U
 
 byrow(ds::AbstractDataset, ::typeof(stdze!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); threads = true) = row_stdze!(ds, cols, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(hash), cols::MultiColumnIndex = :; by = identity, threads = nrow(ds) > __NCORES*10) = row_hash(ds, by, cols, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(hash), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, hash, [col]; by = by, threads = threads)
+function byrow(ds::AbstractDataset, ::typeof(hash), cols::MultiColumnIndex = :; by = identity, mapformats = false, threads = nrow(ds) > __NCORES*10)
+	colsidx = multiple_getindex(index(ds), cols)
+	if mapformats
+		by = map(y->expand_Base_Fix(by, getformat(ds, y)), colsidx)
+	end
+	row_hash(ds, by, cols, threads = threads)
+end
+
+byrow(ds::AbstractDataset, ::typeof(hash), col::ColumnIndex; by = identity, mapformats = false, threads = nrow(ds) > __NCORES*10) = byrow(ds, hash, [col]; by = by, mapformats = mapformats, threads = threads)
 
 byrow(ds::AbstractDataset, ::typeof(join), col::MultiColumnIndex; threads = nrow(ds) > __NCORES*10, delim = "", last = "") = row_join(ds, col, threads = threads, delim = delim, last = last)
 

@@ -409,6 +409,15 @@ end
 function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true, threads = true) where T
     colidx = index(ds)[cols]
     _max_level = nrow(ds)
+
+
+	if nrow(ds) > 2^23 && !stable && 5<length(colidx)<16 # the result is stable anyway
+		if !mapformats || all(==(identity), getformat.(Ref(ds), colidx))
+			return _gather_groups_hugeds_multicols(ds, cols, Val(T); threads = threads)
+		end
+	end
+
+
     prev_max_group = UInt(1)
     prev_groups = ones(T, nrow(ds))
     groups = T[]
@@ -509,6 +518,64 @@ function _find_groups_with_more_than_one_observation_barrier!(res, groups, seen_
     end
     nothing
 end
+
+### Special path for huge ds and multiple cols - trade off between compilation and performance
+# table columns are passed as a tuple of vectors to ensure type specialization - From DataFrames.jl
+isequal_row(cols::Tuple{AbstractVector}, r1::Int, r2::Int) =
+    isequal(cols[1][r1], cols[1][r2])
+isequal_row(cols::Tuple{Vararg{AbstractVector}}, r1::Int, r2::Int) =
+    isequal(cols[1][r1], cols[1][r2]) && isequal_row(Base.tail(cols), r1, r2)
+
+isequal_row(cols1::Tuple{AbstractVector}, r1::Int, cols2::Tuple{AbstractVector}, r2::Int) =
+    isequal(cols1[1][r1], cols2[1][r2])
+isequal_row(cols1::Tuple{Vararg{AbstractVector}}, r1::Int,
+            cols2::Tuple{Vararg{AbstractVector}}, r2::Int) =
+    isequal(cols1[1][r1], cols2[1][r2]) &&
+        isequal_row(Base.tail(cols1), r1, Base.tail(cols2), r2)
+
+
+_grabrefs(x) = DataAPI.refpool(x) == nothing ? x : DataAPI.refarray(x)
+function _gather_groups_hugeds_multicols(ds, cols, ::Val{T}; threads = true) where T
+	colidx = index(ds)[cols]
+	rhashes = byrow(ds, hash, cols, threads = threads)
+	colsvals = ntuple(i->_grabrefs(_columns(ds)[colidx[i]]), length(colidx))
+	create_dict_hugeds_multicols(colsvals, rhashes, Val(T))
+end
+
+function create_dict_hugeds_multicols(colvals, rhashes, ::Val{T}) where T
+	sz = max(1 + ((5 * length(rhashes)) >> 2), 16)
+    sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
+    @assert 4 * sz >= 5 * length(rhashes)
+    szm1 = sz-1
+    gslots = zeros(T, sz)
+	groups = Vector{T}(undef, length(rhashes))
+    ngroups = 0
+    @inbounds for i in eachindex(rhashes)
+        # find the slot and group index for a row
+        slotix = rhashes[i] & szm1 + 1
+        gix = -1
+        probe = 0
+        while true
+            g_row = gslots[slotix]
+            if g_row == 0 # unoccupied slot, current row starts a new group
+                gslots[slotix] = i
+                gix = ngroups += 1
+                break
+            elseif rhashes[i] == rhashes[g_row] # occupied slot, check if miss or hit
+                if isequal_row(colvals, i, Int(g_row)) # hit
+                    gix = groups[g_row]
+                    break
+                end
+            end
+            slotix = slotix & szm1 + 1 # check the next slot
+            probe += 1
+            @assert probe < sz
+        end
+        groups[i] = gix
+    end
+    return groups, gslots, ngroups
+end
+
 
 function _gather_groups_old_version(ds, cols, ::Val{T}; mapformats = false) where T
     colidx = index(ds)[cols]
