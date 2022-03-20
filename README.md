@@ -18,7 +18,7 @@ we do our best to keep the overall complexity of the package as low as possible 
 
 # Features
 
-`InMemoryDatasets.jl` has many interesting features which we highlight some of our favourites (in no particular order):
+`InMemoryDatasets.jl` has many interesting features, here, we highlight some of our favourites (in no particular order):
 
 * Assigning a named function to a column as its **format**
   * By default, formatted values are used for operations like: displaying, sorting, grouping, joining,...
