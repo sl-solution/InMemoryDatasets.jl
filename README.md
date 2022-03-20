@@ -1,12 +1,57 @@
 # InMemoryDatasets
 
-`InMemoryDatasets.jl` is a `Julia` package for working with tabular data sets.
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://sl-solution.github.io/InMemoryDatasets.jl/stable) [![CI](https://github.com/sl-solution/InMemoryDatasets.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/sl-solution/InMemoryDatasets.jl/actions/workflows/ci.yml)
 
-The package is developed for Julia 1.6 and later, and only works on 64bit operating systems.
+# Introduction
 
-[![CI](https://github.com/sl-solution/InMemoryDatasets.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/sl-solution/InMemoryDatasets.jl/actions/workflows/ci.yml)
-## Documentation
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://sl-solution.github.io/InMemoryDatasets.jl/stable) 
+`InMemoryDatasets.jl` is a multithreaded package for data manipulation and it is designed for `Julia` 1.6+ (64bit OS). The core computation engine of the package is a set of customised algorithms developed specifically for columnar tables. The package performance is tuned with two goals in mind, a) low overhead of allowing missing values everywhere, and b) the following priorities - in order of importance:
+
+* Low compilation time
+* Memory efficiency
+* High performance
+
+we do our best to keep the overall complexity of the package as low as possible to simplify:
+
+* the maintenance of the package
+* adding new features to the package
+* contributing to the package
+
+# Features
+
+`InMemoryDatasets.jl` has many interesting features which we highlight some of our favourites (in no particular order):
+
+* Assigning a named function to a column as its **format**
+  * By default, formatted values are used for operations like: displaying, sorting, grouping, joining,...
+  * Format evaluation is lazy
+  * Formats don't change the actual values
+* **Multi-threading** across the whole package
+  * Most functions in `InMemoryDatasets.jl` exploit all cores available to `Julia` by default
+  * Disabling parallel computation via passing the `threads = false` keyword argument to functions
+* Powerful **row-wise** operations
+  * Support many common operations
+  * Specialised operations for modifying columns
+  * Customised row-wise operations for **filtering** observations / `filter` simply wraps `byrow`
+* Unique approach for **reshaping** data
+  * **Unified** syntax for all type of reshaping
+  * Cover all reshaping functions:
+    * stacking and un-stacking on single/multiple columns
+    * wide to long and long to wide reshaping
+    * transposing and more
+* Fast **sorting** algorithms
+  * Stable and Unstable `HeapSort` and `QuickSort` algorithms
+  * Count sort for integers
+* Compiler friendly **grouping** algorithms
+  * `groupby!`/`groupby` to group observation using sorting algorithms - sorted order
+  * `gatherby` to group observation using hybrid hash algorithms - observations order
+  * incremental grouping operation for
+    `groupby!`/`groupby`, i.e. adding a column at a time
+* Efficient **joining** algorithms
+  * Preserve the order of observations in the left data set
+  * Support two methods for joining: `sort-merge` join and `hash` join.
+  * Customised columnar-hybrid-hash algorithms for join
+  * Inequality-kind (**non-equi**) and **range joins** for `innerjoin`, `contains`, `semijoin!`/`semijoin`, `antijoin!`/`antijoin`
+  * `closejoin!`/`closejoin` for **non exact match** join
+  * `update!`/`update` for **updating** a master data set with values from a transaction data set
 
 # Example
 
