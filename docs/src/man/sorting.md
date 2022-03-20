@@ -377,7 +377,7 @@ in this case we cannot use the round trick directly, however, we can create an a
 
 ```jldoctest
 julia> fmt(x) = round(Int, x*100) # split data up to 100 parts
-julia> ds._tmp = ds.x # alias of :x - This is an instance operation
+julia> modify!(ds, :x => identity => :_tmp) # alias of :x - This is an instance operation
 julia> setformat!(ds, :_tmp=>fmt)
 julia> @btime sortperm(ds, [:x], alg = QuickSort); # without using formats
   36.460 ms (508 allocations: 29.60 MiB)
@@ -392,7 +392,7 @@ Another trick can be used for situations when a data set contains a column of st
 
 ```jldoctest
 julia> ds = Dataset(x1 = "id" .* string.(rand(1:100000, 10^6)));
-julia>julia> @btime sortperm(ds, 1);
+julia> @btime sortperm(ds, 1);
   257.070 ms (580 allocations: 27.70 MiB)
 
 julia> custom_fmt(x) = parse(Int, @views x[3:end])
