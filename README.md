@@ -218,3 +218,7 @@ julia> @chain mds begin
   35 │        4  ∑∑∑∑∑∑∑∑∑∑
   36 │        4
 ```
+
+# Acknowledgement
+
+We like to acknowledge the contributors to `Julia`'s data ecosystem, especially, [`DataFrames.jl`](https://github.com/JuliaData/DataFrames.jl), since, the existence of their works gave the development of `InMemoryDatasets.jl` a head start.
