@@ -4,11 +4,11 @@
 
 # Introduction
 
-`InMemoryDatasets.jl` is a multithreaded package for data manipulation and it is designed for `Julia` 1.6+ (64bit OS). The core computation engine of the package is a set of customised algorithms developed specifically for columnar tables. The package performance is tuned with two goals in mind, a) low overhead of allowing missing values everywhere, and b) the following priorities - in order of importance:
+`InMemoryDatasets.jl` is a multithreaded package for data manipulation and is designed for `Julia` 1.6+ (64bit OS). The core computation engine of the package is a set of customised algorithms developed specifically for columnar tables. The package performance is tuned with two goals in mind, a) low overhead of allowing missing values everywhere, and b) the following priorities - in order of importance:
 
-* Low compilation time
-* Memory efficiency
-* High performance
+1. Low compilation time
+2. Memory efficiency
+3. High performance
 
 we do our best to keep the overall complexity of the package as low as possible to simplify:
 
@@ -221,4 +221,4 @@ julia> @chain mds begin
 
 # Acknowledgement
 
-We like to acknowledge the contributors to `Julia`'s data ecosystem, especially, [`DataFrames.jl`](https://github.com/JuliaData/DataFrames.jl), since, the existence of their works gave the development of `InMemoryDatasets.jl` a head start.
+We like to acknowledge the contributors to `Julia`'s data ecosystem, especially [`DataFrames.jl`](https://github.com/JuliaData/DataFrames.jl), since the existence of their works gave the development of `InMemoryDatasets.jl` a head start.
