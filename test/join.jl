@@ -2,6 +2,9 @@
 using Test, InMemoryDatasets, Random, CategoricalArrays, PooledArrays
 const ≅ = isequal
 
+DATE(x) = Date(x)
+DATE(::Missing) = missing
+
 isequal_coltyped(ds1::AbstractDataset, ds2::AbstractDataset) =
     isequal(ds1, ds2) && typeof.(eachcol(ds1)) == typeof.(eachcol(ds2))
 
@@ -1192,7 +1195,8 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
 
 
     dsl = Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0])
-    dsr = Dataset(x1 = Date.([missing, 250, 260, 120]), y = [1,2,3,4])
+
+    dsr = Dataset(x1 = DATE.([missing, 250, 260, 120]), y = [1,2,3,4])
     @test closejoin(dsl, dsr, on = :x1) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
     @test closejoin!(copy(dsl), dsr, on = :x1) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 4, 3])
     @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 1])
@@ -1220,34 +1224,34 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest, threads = false) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 3])
     @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest, method = :hash, threads = false) == Dataset(x1 = Date.([100, 200, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 2, 3])
 
-    dsl = Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0])
-    dsr = Dataset(x1 = Date.([missing, 250, 260, 120]), y = [1,2,3,4])
-    @test closejoin(dsl, dsr, on = :x1) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
-    @test closejoin!(copy(dsl), dsr, on = :x1) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
-    @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
-    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
-    @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
-    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+    dsl = Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0])
+    dsr = Dataset(x1 = DATE.([missing, 250, 260, 120]), y = [1,2,3,4])
+    @test closejoin(dsl, dsr, on = :x1) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
 
-    @test closejoin(dsl, dsr, on = :x1, method = :hash) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
-    @test closejoin!(copy(dsl), dsr, on = :x1, method = :hash) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
-    @test closejoin(dsl, dsr, on = :x1, direction = :forward, method = :hash) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
-    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward, method = :hash) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
-    @test closejoin(dsl, dsr, on = :x1, direction = :nearest, method = :hash) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
-    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest, method = :hash) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+    @test closejoin(dsl, dsr, on = :x1, method = :hash) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1, method = :hash) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward, method = :hash) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward, method = :hash) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest, method = :hash) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest, method = :hash) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
 
-    @test closejoin(dsl, dsr, on = :x1, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
-    @test closejoin(dsl, dsr, on = :x1, method = :hash, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
-    @test closejoin!(copy(dsl), dsr, on = :x1, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
-    @test closejoin!(copy(dsl), dsr, on = :x1, method = :hash, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
-    @test closejoin(dsl, dsr, on = :x1, direction = :forward, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
-    @test closejoin(dsl, dsr, on = :x1, direction = :forward, method = :hash, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
-    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
-    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward, method = :hash, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
-    @test closejoin(dsl, dsr, on = :x1, direction = :nearest, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
-    @test closejoin(dsl, dsr, on = :x1, direction = :nearest, method = :hash, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
-    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
-    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest, method = :hash, threads = false) == Dataset(x1 = Date.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+    @test closejoin(dsl, dsr, on = :x1, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin(dsl, dsr, on = :x1, method = :hash, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1, method = :hash, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [missing, 1, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :forward, method = :hash, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :forward, method = :hash, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 1])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+    @test closejoin(dsl, dsr, on = :x1, direction = :nearest, method = :hash, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
+    @test closejoin!(copy(dsl), dsr, on = :x1, direction = :nearest, method = :hash, threads = false) == Dataset(x1 = DATE.([100, missing, 300]), x2 = [5.0, 6.0, 7.0], y = [4, 1, 3])
 
 
     dsl = Dataset(x1 = [.3,.74,.53,.30, .65, 1])
@@ -1989,8 +1993,11 @@ end
 
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "B", "B", "A", "B", "A", "B", "B", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[3, 4, 1, 3, 4, 5, 6, 3, 5, 1, 8, 5, 6, 8, 1, 3, 5, 6]], ["date", "store", "employee_ID"])
     @test inn_r1 == inn_r1_t
-    setformat!(store, 1=>month)
-    setformat!(roster, r"date"=>month)
+    MONTH(x) = month(x)
+    MONTH(::Missing) = missing
+
+    setformat!(store, 1=>MONTH)
+    setformat!(roster, r"date"=>MONTH)
     inn_r3 = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, false])
     @test inn_r3 == innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, false], method = :hash)
 

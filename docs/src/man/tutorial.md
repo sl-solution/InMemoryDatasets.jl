@@ -245,13 +245,13 @@ julia> combine(groupby(flights, :Dest), :ArrDelay => mean)
                100 rows omitted
 ```
 
-we can summarise several columns at the same time, e.g. for each carrier, calculate the minimum and maximum arrival and departure delays:(Note that in the following code, `r"Delay" => [minimum, maximum]` is normalised as `names(flights, r"Delay") .=> Ref([minimum, maximum])`)
+we can summarise several columns at the same time, e.g. for each carrier, calculate the minimum and maximum arrival and departure delays:(Note that in the following code, `r"Delay" => [IMD.minimum, IMD.maximum]` is normalised as `names(flights, r"Delay") .=> Ref([IMD.minimum, IMD.maximum])`)
 
 
 ```julia
 julia> @chain flights begin
            groupby(:IATA)
-           combine(r"Delay" => [minimum, maximum])
+           combine(r"Delay" => [IMD.minimum, IMD.maximum])
         end
 14×5 Dataset
  Row │ IATA      minimum_DepDelay  maximum_DepDelay  minimum_ArrDelay  maximum_ArrDelay

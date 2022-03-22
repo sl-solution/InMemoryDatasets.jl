@@ -547,7 +547,7 @@ julia> ds = Dataset(g = [1,2,1,2,1,2], x = 1:6)
    5 │        1         5
    6 │        2         6
 
-julia> combine(groupby(ds, :g), :x=>[sum, mean])
+julia> combine(groupby(ds, :g), :x=>[IMD.sum, mean])
 2×3 Dataset
  Row │ g         sum_x     mean_x
      │ identity  identity  identity
@@ -556,7 +556,7 @@ julia> combine(groupby(ds, :g), :x=>[sum, mean])
    1 │        1         9       3.0
    2 │        2        12       4.0
 
-julia> combine(gatherby(ds, :g), :x => [maximum, minimum], 2:3 => byrow(-) => :range)
+julia> combine(gatherby(ds, :g), :x => [IMD.maximum, IMD.minimum], 2:3 => byrow(-) => :range)
 2×4 Dataset
  Row │ g         maximum_x  minimum_x  range
      │ identity  identity   identity   identity
@@ -578,7 +578,7 @@ julia> ds = Dataset(g = [1,2,1,2,1,2], x = 1:6, y = 6:-1:1)
    5 │        1         5         2
    6 │        2         6         1
 
-julia> combine(groupby(ds,1), (:x, :y)=>(x1,x2)->maximum(x1)-minimum(x2))
+julia> combine(groupby(ds,1), (:x, :y)=>(x1,x2)->IMD.maximum(x1)-IMD.minimum(x2))
 2×2 Dataset
  Row │ g         function_x_y
      │ identity  identity

@@ -7,8 +7,11 @@ stdze!(::_DUMMY_STRUCT) = false
 stdze(::_DUMMY_STRUCT) = false
 select(::_DUMMY_STRUCT) = false
 
-byrow(ds::AbstractDataset, ::typeof(sum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_sum(ds, by, cols, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(sum), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, sum, [col]; by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.sum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_sum(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.sum), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, sum, [col]; by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.sum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_sum(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.sum), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, sum, [col]; by = by, threads = threads)
+
 
 byrow(ds::AbstractDataset, ::typeof(prod), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_prod(ds, by, cols; threads = threads)
 byrow(ds::AbstractDataset, ::typeof(prod), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, prod, [col]; by = by, threads = threads)
@@ -83,17 +86,35 @@ byrow(ds::AbstractDataset, ::typeof(coalesce), cols::MultiColumnIndex; threads =
 byrow(ds::AbstractDataset, ::typeof(mean), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_mean(ds, by, cols, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(mean), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, mean, [col]; by = by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(maximum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_maximum(ds, by, cols, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(maximum), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, maximum, [col]; by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.maximum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_maximum(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.maximum), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, maximum, [col]; by = by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(minimum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_minimum(ds, by, cols, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(minimum), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, minimum, [col]; by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.minimum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_minimum(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.minimum), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, minimum, [col]; by = by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(argmin), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_argmin(ds, by, cols, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(argmin), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, argmin, [col]; by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.argmin), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_argmin(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.argmin), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, argmin, [col]; by = by, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(argmax), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_argmax(ds, by, cols, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(argmax), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, argmax, [col]; by = by, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.argmax), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_argmax(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.argmax), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, argmax, [col]; by = by, threads = threads)
+
+
+byrow(ds::AbstractDataset, ::typeof(IMD.maximum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_maximum(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.maximum), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, maximum, [col]; by = by, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(IMD.minimum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_minimum(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.minimum), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, minimum, [col]; by = by, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(IMD.argmin), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_argmin(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.argmin), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, argmin, [col]; by = by, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(IMD.argmax), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, threads = nrow(ds) > __NCORES*10) = row_argmax(ds, by, cols, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.argmax), col::ColumnIndex; by = identity, threads = nrow(ds) > __NCORES*10) = byrow(ds, argmax, [col]; by = by, threads = threads)
+
+
+
+
+
 
 byrow(ds::AbstractDataset, ::typeof(var), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, dof = true, threads = nrow(ds) > __NCORES*10) = row_var(ds, by, cols; dof = dof, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(var), col::ColumnIndex; by = identity, dof = true, threads = nrow(ds) > __NCORES*10) = byrow(ds, var, [col]; by = by, dof = dof, threads = threads)
@@ -104,17 +125,36 @@ byrow(ds::AbstractDataset, ::typeof(std), col::ColumnIndex; by = identity, dof =
 byrow(ds::AbstractDataset, ::typeof(nunique), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, count_missing = true) = row_nunique(ds, by, cols; count_missing = count_missing)
 byrow(ds::AbstractDataset, ::typeof(nunique), col::ColumnIndex; by = identity, count_missing = true) = byrow(ds, nunique, [col]; by = by, count_missing = count_missing)
 
-byrow(ds::AbstractDataset, ::typeof(cumsum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumsum(ds, cols, missings = missings, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(cumsum), col::ColumnIndex; missings = :ignore, threads = nrow(ds)> __NCORES) = byrow(ds, cumsum, [col], missings = missings, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(cumprod!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumprod!(ds, cols, missings = missings, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(cumprod!), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cumprod!, [col], missings = missings, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(cumprod), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumprod(ds, cols, missings = missings, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(cumprod), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cumprod, [col], missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.cumsum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumsum(ds, cols, missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.cumsum), col::ColumnIndex; missings = :ignore, threads = nrow(ds)> __NCORES) = byrow(ds, cumsum, [col], missings = missings, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(cumsum!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumsum!(ds, cols, missings = missings, threads = threads)
-byrow(ds::AbstractDataset, ::typeof(cumsum!), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cumsum!, [col], missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.cumprod!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumprod!(ds, cols, missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.cumprod!), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cumprod!, [col], missings = missings, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(Base.cumprod), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumprod(ds, cols, missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.cumprod), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cumprod, [col], missings = missings, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(Base.cumsum!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumsum!(ds, cols, missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(Base.cumsum!), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cumsum!, [col], missings = missings, threads = threads)
+
+
+
+byrow(ds::AbstractDataset, ::typeof(IMD.cumsum), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumsum(ds, cols, missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.cumsum), col::ColumnIndex; missings = :ignore, threads = nrow(ds)> __NCORES) = byrow(ds, cumsum, [col], missings = missings, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(IMD.cumprod!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumprod!(ds, cols, missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.cumprod!), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cumprod!, [col], missings = missings, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(IMD.cumprod), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumprod(ds, cols, missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.cumprod), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cumprod, [col], missings = missings, threads = threads)
+
+byrow(ds::AbstractDataset, ::typeof(IMD.cumsum!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cumsum!(ds, cols, missings = missings, threads = threads)
+byrow(ds::AbstractDataset, ::typeof(IMD.cumsum!), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cumsum!, [col], missings = missings, threads = threads)
+
+
+
 
 byrow(ds::AbstractDataset, ::typeof(cummin!), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); missings = :ignore, threads = nrow(ds)>__NCORES*10) = row_cummin!(ds, cols, missings = missings, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(cummin!), col::ColumnIndex; missings = :ignore, threads = nrow(ds)>__NCORES*10) = byrow(ds, cummin!, [col], missings = missings, threads = threads)

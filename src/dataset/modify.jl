@@ -331,7 +331,7 @@ julia> ds = Dataset(x1 = 1:5, x2 = [-2, -1, missing, 1, 2],
    4 │        4         1   missing
    5 │        5         2       0.4
 
-julia> modify!(ds, 2:3 => sum)
+julia> modify!(ds, 2:3 => IMD.sum)
 5×3 Dataset
  Row │ x1        x2        x3
      │ identity  identity  identity

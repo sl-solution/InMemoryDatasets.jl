@@ -194,7 +194,7 @@ Grouped by: g
    4 │        2   missing         3        2.3  missing          3.0
    5 │        2         2        -2       10.0  missing       -100.0
 
-julia> modify(ds, r"int" => x -> x .- maximum(x))
+julia> modify(ds, r"int" => x -> x .- IMD.maximum(x))
 5×6 Grouped Dataset with 2 groups
 Grouped by: g
  Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float  
@@ -235,7 +235,7 @@ julia> setformat!(sale, :date=>year)
    5 │ 2014        132
    6 │ 2013        150
 
-julia> spct(x) = x ./ sum(x) .* 100
+julia> spct(x) = x ./ IMD.sum(x) .* 100
 spct (generic function with 1 method)
 
 julia> modify(groupby(sale, :date), :sale => spct => :sale_pct)

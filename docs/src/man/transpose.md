@@ -494,7 +494,7 @@ julia> ds = Dataset(A = ["foo", "foo", "foo", "foo", "foo",
    9 │ bar       two       large            7         9
 
 julia> ; # This first example aggregates values by taking the sum.
-julia> _tmp = combine(groupby(ds, 1:3), 4=>sum);
+julia> _tmp = combine(groupby(ds, 1:3), 4=>IMD.sum);
 
 julia> transpose(gatherby(_tmp, 1:2, isgathered = true), :sum_D, id = :C, variable_name = nothing)
 4×4 Dataset
@@ -530,7 +530,7 @@ julia> combine(groupby(ds, [:A, :C]), [:D, :E] => mean)
    3 │ foo       large      2.0       4.5
    4 │ foo       small      2.33333   4.33333
 
-julia> combine(groupby(ds, [:A, :C]), :D => mean, :E => [minimum, maximum, mean])
+julia> combine(groupby(ds, [:A, :C]), :D => mean, :E => [IMD.minimum, IMD.maximum, mean])
 4×6 Dataset
  Row │ A         C         mean_D    minimum_E  maximum_E  mean_E   
      │ identity  identity  identity  identity   identity   identity

@@ -413,10 +413,10 @@ end
 
 @testset "combine - set 3" begin
     ds = Dataset(x1 = [1,2,1,2,2,1], x2=[1.0,missing,1.1,1.1,1.1,1.1],y=100:100:600.0)
-    c1 = combine(gatherby(ds, 1), :x2=>sum)
+    c1 = combine(gatherby(ds, 1), :x2=>IMD.sum)
     c2 = combine(groupby(ds, 1, stable = false), :y=>mean)
-    c3 = combine(gatherby(ds,[:x2], isgathered=true), :y=>maximum)
-    c4 = combine(groupby(ds, r"x", stable = false), (:y, :x2)=>(x,y)->y[argmax(x)])
+    c3 = combine(gatherby(ds,[:x2], isgathered=true), :y=>IMD.maximum)
+    c4 = combine(groupby(ds, r"x", stable = false), (:y, :x2)=>(x,y)->y[IMD.argmax(x)])
 
     @test c1 == Dataset(x1=[1,2], sum_x2=[3.2,2.2])
     @test c2 == Dataset(x1=[1,2], mean_y=[1000/3, 1100/3])
@@ -424,43 +424,43 @@ end
     @test c4 == Dataset(x1=[1,1,2,2], x2=[1.0,1.1,1.1,missing], function_y_x2=[1,1.1,1.1,missing])
     combinefmt(x)=ismissing(x) ? missing : 0
     setformat!(ds, :x2=>combinefmt)
-    c1 = combine(groupby(ds, :x2), :y=>maximum)
-    c2 = combine(groupby(ds, :x2, mapformats = false), :y=>maximum)
-    c3 = combine(gatherby(ds, :x2), (:x1,:y)=>(x,y)->(maximum(x), minimum(y)))
+    c1 = combine(groupby(ds, :x2), :y=>IMD.maximum)
+    c2 = combine(groupby(ds, :x2, mapformats = false), :y=>IMD.maximum)
+    c3 = combine(gatherby(ds, :x2), (:x1,:y)=>(x,y)->(IMD.maximum(x), IMD.minimum(y)))
 
-    @test c1 == combine(groupby(ds, :x2, threads = false), :y=>maximum, threads = false)
-    @test c2 == combine(groupby(ds, :x2, mapformats = false, threads = false), :y=>maximum, threads = false)
-    @test c3 == combine(gatherby(ds, :x2, threads = false), (:x1,:y)=>(x,y)->(maximum(x), minimum(y)), threads = false)
+    @test c1 == combine(groupby(ds, :x2, threads = false), :y=>IMD.maximum, threads = false)
+    @test c2 == combine(groupby(ds, :x2, mapformats = false, threads = false), :y=>IMD.maximum, threads = false)
+    @test c3 == combine(gatherby(ds, :x2, threads = false), (:x1,:y)=>(x,y)->(IMD.maximum(x), IMD.minimum(y)), threads = false)
 
     @test all(byrow(compare(c1, Dataset(x2=[0, missing], maximum_y=[600.0, 200]), mapformats=true), all))
     @test all(byrow(compare(c2, Dataset(x2=[0, 0, missing], maximum_y=[100, 600.0, 200]), mapformats=true), all))
     @test all(byrow(compare(c3, Dataset(x2=[0,missing], function_x1_y=[(2, 100.0), (2, 200.0)]), mapformats=true), all))
     ds = Dataset(x1 = [1,2,1,2,2,1], x2=[1.0,missing,1.1,1.1,1.1,1.1],y=100:100:600.0)
-    @test byrow(compare(combine(gatherby(ds, 1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
-    @test byrow(compare(combine(gatherby(ds, 1), :x2=>[x->sum(x), maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], function_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
-    @test byrow(compare(combine(groupby(ds, 1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(gatherby(ds, 1), :x2=>[IMD.sum, IMD.maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(gatherby(ds, 1), :x2=>[x->IMD.sum(x), IMD.maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], function_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(groupby(ds, 1), :x2=>[IMD.sum, IMD.maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
 
-    @test byrow(compare(combine(gatherby(view(ds, :, [2,1]), :x1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
-    @test byrow(compare(combine(gatherby(view(ds, :, [2,1]), :x1), :x2=>[x->sum(x), maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], function_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
-    @test byrow(compare(combine(groupby(view(ds, :, [2,1]), :x1), :x2=>[sum, maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(gatherby(view(ds, :, [2,1]), :x1), :x2=>[IMD.sum, IMD.maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(gatherby(view(ds, :, [2,1]), :x1), :x2=>[x->IMD.sum(x), IMD.maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], function_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
+    @test byrow(compare(combine(groupby(view(ds, :, [2,1]), :x1), :x2=>[IMD.sum, IMD.maximum],2:3=>byrow(+)=>:row), Dataset(x1=[1,2], sum_x2=[3.2,2.2], maximum_x2=[1.1,1.1], row = [4.3, 3.3] ), eq = isapprox), all)|>all
 end
 
 @testset "combine - set4 - checking normalize_combine" begin
     ds = Dataset(g1 = [1,2,1,2,2,1], g2 = [2,3,1,1,2,3], x2=[1.0,missing,1.1,1.1,1.1,1.1],y=100:100:600.0)
-    @test combine(groupby(ds, 2), [1,3] => [maximum, minimum])== Dataset(g2 = [1,2,3], maximum_g1 = [2,2,2], minimum_g1 = [1,1,1], maximum_x2 = [1.1,1.1,1.1], minimum_x2 = [1.1,1,1.1])
-    @test combine(gatherby(ds, 2), [1,3] => [maximum, minimum])== Dataset(g2 = [2,3,1], maximum_g1 = [2,2,2], minimum_g1 = [1,1,1], maximum_x2 = [1.1,1.1,1.1], minimum_x2 = [1.,1.1,1.1])
-    @test combine(groupby(ds, [2,1]), r"x"=>sum) == Dataset(g2 = [1,1,2,2,3,3], g1=[1,2,1,2,1,2], sum_x2 = [1.1,1.1,1,1.1,1.1, missing])
-    @test combine(gatherby(ds, [2,1]), r"x"=>sum) == Dataset(g2 = [2,3,1,1,2,3], g1=[1,2,1,2,2,1], sum_x2 = [1, missing, 1.1,1.1,1.1,1.1])
+    @test combine(groupby(ds, 2), [1,3] => [IMD.maximum, IMD.minimum])== Dataset(g2 = [1,2,3], maximum_g1 = [2,2,2], minimum_g1 = [1,1,1], maximum_x2 = [1.1,1.1,1.1], minimum_x2 = [1.1,1,1.1])
+    @test combine(gatherby(ds, 2), [1,3] => [IMD.maximum, IMD.minimum])== Dataset(g2 = [2,3,1], maximum_g1 = [2,2,2], minimum_g1 = [1,1,1], maximum_x2 = [1.1,1.1,1.1], minimum_x2 = [1.,1.1,1.1])
+    @test combine(groupby(ds, [2,1]), r"x"=>IMD.sum) == Dataset(g2 = [1,1,2,2,3,3], g1=[1,2,1,2,1,2], sum_x2 = [1.1,1.1,1,1.1,1.1, missing])
+    @test combine(gatherby(ds, [2,1]), r"x"=>IMD.sum) == Dataset(g2 = [2,3,1,1,2,3], g1=[1,2,1,2,2,1], sum_x2 = [1, missing, 1.1,1.1,1.1,1.1])
     groupby!(ds, [2,1])
-    @test combine(ds, r"x"=>sum) == Dataset(g2 = [1,1,2,2,3,3], g1=[1,2,1,2,1,2], sum_x2 = [1.1,1.1,1,1.1,1.1, missing])
-    @test combine(groupby(ds, 2), [1,3] => [maximum, minimum])== Dataset(g2 = [1,2,3], maximum_g1 = [2,2,2], minimum_g1 = [1,1,1], maximum_x2 = [1.1,1.1,1.1], minimum_x2 = [1.1,1,1.1])
-    @test combine(groupby(ds, [2,1]), r"x"=>sum) == Dataset(g2 = [1,1,2,2,3,3], g1=[1,2,1,2,1,2], sum_x2 = [1.1,1.1,1,1.1,1.1, missing])
+    @test combine(ds, r"x"=>IMD.sum) == Dataset(g2 = [1,1,2,2,3,3], g1=[1,2,1,2,1,2], sum_x2 = [1.1,1.1,1,1.1,1.1, missing])
+    @test combine(groupby(ds, 2), [1,3] => [IMD.maximum, IMD.minimum])== Dataset(g2 = [1,2,3], maximum_g1 = [2,2,2], minimum_g1 = [1,1,1], maximum_x2 = [1.1,1.1,1.1], minimum_x2 = [1.1,1,1.1])
+    @test combine(groupby(ds, [2,1]), r"x"=>IMD.sum) == Dataset(g2 = [1,1,2,2,3,3], g1=[1,2,1,2,1,2], sum_x2 = [1.1,1.1,1,1.1,1.1, missing])
 
-    @test combine(groupby(ds, 1), 3:4 => sum,  2:3=> byrow.([maximum, minimum])) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2])
-    @test combine(groupby(ds, 1), 3:4 => sum,  2:3=> byrow.([maximum, minimum]), 4:5=>byrow(sum)) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2], row_sum = [1003.2, 1102.2])
+    @test combine(groupby(ds, 1), 3:4 => IMD.sum,  2:3=> byrow.([maximum, minimum])) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2])
+    @test combine(groupby(ds, 1), 3:4 => IMD.sum,  2:3=> byrow.([maximum, minimum]), 4:5=>byrow(sum)) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2], row_sum = [1003.2, 1102.2])
 
-    @test combine(groupby(view(ds, :, [4,3,2,1]), 4), [2,1] => sum,  2:3=> byrow.([maximum, minimum])) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2])
-    @test combine(groupby(view(ds,:, [4,3,2,1]), 4), [:x2, :y] => sum,  2:3=> byrow.([maximum, minimum]), 4:5=>byrow(sum)) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2], row_sum = [1003.2, 1102.2])
+    @test combine(groupby(view(ds, :, [4,3,2,1]), 4), [2,1] => IMD.sum,  2:3=> byrow.([maximum, minimum])) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2])
+    @test combine(groupby(view(ds,:, [4,3,2,1]), 4), [:x2, :y] => IMD.sum,  2:3=> byrow.([maximum, minimum]), 4:5=>byrow(sum)) == Dataset(g1 = [1,2], sum_x2 = [3.2, 2.2], sum_y = [1000, 1100], row_maximum = [1000,1100], row_minimum=[3.2,2.2], row_sum = [1003.2, 1102.2])
 
 end
 
@@ -469,15 +469,15 @@ end
     sds1 = dropmissing(ds, 2, view = true)
     sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
 
-    @test combine(groupby(sds1, :x), :z => sum) == Dataset(x = [2, 3], sum_z = [-4, 11])
-    @test combine(gatherby(sds1, :x), :z => sum) == Dataset(x = [3, 2], sum_z = [11, -4])
-    @test combine(groupby(sds2, :x), :z => sum) == Dataset(x = [1,2, 3, missing], sum_z = [15, -15, 22, 12])
-    @test combine(gatherby(sds2, :x), :z => sum) == Dataset(x = [1, 3, 2, missing], sum_z = [15, 22, -15, 12])
+    @test combine(groupby(sds1, :x), :z => IMD.sum) == Dataset(x = [2, 3], sum_z = [-4, 11])
+    @test combine(gatherby(sds1, :x), :z => IMD.sum) == Dataset(x = [3, 2], sum_z = [11, -4])
+    @test combine(groupby(sds2, :x), :z => IMD.sum) == Dataset(x = [1,2, 3, missing], sum_z = [15, -15, 22, 12])
+    @test combine(gatherby(sds2, :x), :z => IMD.sum) == Dataset(x = [1, 3, 2, missing], sum_z = [15, 22, -15, 12])
 
-    @test combine(groupby(sds1, :x), :z => (x->sum(x))=>:sum_z) == Dataset(x = [2, 3], sum_z = [-4, 11])
-    @test combine(gatherby(sds1, :x), :z => (x->sum(x))=>:sum_z) == Dataset(x = [3, 2], sum_z = [11, -4])
-    @test combine(groupby(sds2, :x), :z => (x->sum(x))=>:sum_z) == Dataset(x = [1,2, 3, missing], sum_z = [15, -15, 22, 12])
-    @test combine(gatherby(sds2, :x), :z => (x->sum(x))=>:sum_z) == Dataset(x = [1, 3, 2, missing], sum_z = [15, 22, -15, 12])
+    @test combine(groupby(sds1, :x), :z => (x->IMD.sum(x))=>:sum_z) == Dataset(x = [2, 3], sum_z = [-4, 11])
+    @test combine(gatherby(sds1, :x), :z => (x->IMD.sum(x))=>:sum_z) == Dataset(x = [3, 2], sum_z = [11, -4])
+    @test combine(groupby(sds2, :x), :z => (x->IMD.sum(x))=>:sum_z) == Dataset(x = [1,2, 3, missing], sum_z = [15, -15, 22, 12])
+    @test combine(gatherby(sds2, :x), :z => (x->IMD.sum(x))=>:sum_z) == Dataset(x = [1, 3, 2, missing], sum_z = [15, 22, -15, 12])
 
     @test combine(groupby(sds1, :x), :y=>(sort!)=>:s_y) == Dataset(x=[2,2,3,3,3], s_y=[-3.0,-1.0,1.1,4.0,5.0])
     @test combine(gatherby(sds1, :x), :y=>(sort!)=>:s_y) == Dataset(x=[3,3,3,2,2], s_y=[1.1,4.0,5.0,-3.0,-1.0])
@@ -488,24 +488,24 @@ end
     @test combine(groupby(sds1, :x), (:y,:z)=>cor) == Dataset(x=[2,3],cor_y_z=[1.0, -0.9690582663799521])
     @test combine(gatherby(sds1, :x), (:y,:z)=>cor) == Dataset(x=[3,2],cor_y_z=[-0.9690582663799521, 1.0])
 
-    @test combine(groupby(sds2, :x), (1,2)=>((x,y)->maximum(x)/length(y))=>:q) == Dataset(x=[1,2,3,missing], q=[15.0, 7/3,11/4,12.0])
-    @test combine(gatherby(sds2, :x), (1,2)=>((x,y)->maximum(x)/length(y))=>:q) == Dataset(x=[1,3,2,missing], q=[15.0, 11/4,7/3,12.0])
+    @test combine(groupby(sds2, :x), (1,2)=>((x,y)->IMD.maximum(x)/length(y))=>:q) == Dataset(x=[1,2,3,missing], q=[15.0, 7/3,11/4,12.0])
+    @test combine(gatherby(sds2, :x), (1,2)=>((x,y)->IMD.maximum(x)/length(y))=>:q) == Dataset(x=[1,3,2,missing], q=[15.0, 11/4,7/3,12.0])
 
-    @test combine(groupby(sds1, :x), :y=>maximum, :z=>maximum, 2:3=>byrow(-)=>:q) == Dataset(x=[2,3], maximum_y=[-1.0,5],maximum_z=[7, 11], q=[-8,-6.0])
-    @test combine(gatherby(sds1, :x), :y=>maximum, :z=>maximum, 2:3=>byrow(-)=>:q) == Dataset(x=[3,2], maximum_y=reverse([-1.0,5]),maximum_z=reverse([7, 11]), q=reverse([-8,-6.0]))
+    @test combine(groupby(sds1, :x), :y=>IMD.maximum, :z=>IMD.maximum, 2:3=>byrow(-)=>:q) == Dataset(x=[2,3], maximum_y=[-1.0,5],maximum_z=[7, 11], q=[-8,-6.0])
+    @test combine(gatherby(sds1, :x), :y=>IMD.maximum, :z=>IMD.maximum, 2:3=>byrow(-)=>:q) == Dataset(x=[3,2], maximum_y=reverse([-1.0,5]),maximum_z=reverse([7, 11]), q=reverse([-8,-6.0]))
 
-    @test combine(groupby(sds2, :x), :z=>(sort!)=>:s_z, :x=>maximum, :z=>minimum, 3:4=>byrow(-)=>:q) == Dataset([Union{Missing, Int64}[1, 2, 2, 2, 3, 3, 3, 3, missing], Union{Missing, Int64}[15, -11, -11, 7, 0, 0, 11, 11, 12], Union{Missing, Int64}[1, 2, 2, 2, 3, 3, 3, 3, missing], Union{Missing, Int64}[15, -11, -11, -11, 0, 0, 0, 0, 12], Union{Missing, Int64}[-14, 13, 13, 13, 3, 3, 3, 3, missing]], [:x, :s_z, :maximum_x, :minimum_z, :q])
+    @test combine(groupby(sds2, :x), :z=>(sort!)=>:s_z, :x=>IMD.maximum, :z=>IMD.minimum, 3:4=>byrow(-)=>:q) == Dataset([Union{Missing, Int64}[1, 2, 2, 2, 3, 3, 3, 3, missing], Union{Missing, Int64}[15, -11, -11, 7, 0, 0, 11, 11, 12], Union{Missing, Int64}[1, 2, 2, 2, 3, 3, 3, 3, missing], Union{Missing, Int64}[15, -11, -11, -11, 0, 0, 0, 0, 12], Union{Missing, Int64}[-14, 13, 13, 13, 3, 3, 3, 3, missing]], [:x, :s_z, :maximum_x, :minimum_z, :q])
 
-    @test combine(gatherby(sds2, :x), :z=>(sort!)=>:s_z, :x=>maximum, :z=>minimum, 3:4=>byrow(-)=>:q) == Dataset([Union{Missing, Int64}[1, 3, 3, 3, 3, 2, 2, 2, missing], Union{Missing, Int64}[15, 0, 0, 11, 11, -11, -11, 7, 12], Union{Missing, Int64}[1, 3, 3, 3, 3, 2, 2, 2, missing], Union{Missing, Int64}[15, 0, 0, 0, 0, -11, -11, -11, 12], Union{Missing, Int64}[-14, 3, 3, 3, 3, 13, 13, 13, missing]], [:x, :s_z, :maximum_x, :minimum_z, :q])
+    @test combine(gatherby(sds2, :x), :z=>(sort!)=>:s_z, :x=>IMD.maximum, :z=>IMD.minimum, 3:4=>byrow(-)=>:q) == Dataset([Union{Missing, Int64}[1, 3, 3, 3, 3, 2, 2, 2, missing], Union{Missing, Int64}[15, 0, 0, 11, 11, -11, -11, 7, 12], Union{Missing, Int64}[1, 3, 3, 3, 3, 2, 2, 2, missing], Union{Missing, Int64}[15, 0, 0, 0, 0, -11, -11, -11, 12], Union{Missing, Int64}[-14, 3, 3, 3, 3, 13, 13, 13, missing]], [:x, :s_z, :maximum_x, :minimum_z, :q])
 
     @test ds == Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0])
 
-    @test_throws ArgumentError combine(gatherby(sds2, :x), :q=>sum)
-    @test_throws ArgumentError combine(gatherby(sds2, :x), :y=>sum)
+    @test_throws ArgumentError combine(gatherby(sds2, :x), :q=>IMD.sum)
+    @test_throws ArgumentError combine(gatherby(sds2, :x), :y=>IMD.sum)
 
-    modify!(groupby(sds1, :x), :y=>maximum=>:q)
+    modify!(groupby(sds1, :x), :y=>IMD.maximum=>:q)
     @test ds == Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0], q=[5.0, missing, -1,-1,missing,5,5])
-    modify!(gatherby(sds1, :x), :y=>maximum=>:q2)
+    modify!(gatherby(sds1, :x), :y=>IMD.maximum=>:q2)
     @test ds == Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0], q=[5.0, missing, -1,-1,missing,5,5], q2=[5.0, missing, -1,-1,missing,5,5])
 
     # original data set
@@ -513,9 +513,9 @@ end
     sds1 = dropmissing(ds, 2, view = true)
     sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
 
-    modify!(groupby(sds2, :x), :z=>maximum=>:q)
+    modify!(groupby(sds2, :x), :z=>IMD.maximum=>:q)
     @test ds == Dataset([Union{Missing, Int64}[3, 1, 2, 2, missing, 3, 3], Union{Missing, Float64}[1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], Union{Missing, Int64}[11, 15, 7, -11, 12, 0, 0], Union{Missing, Int64}[11, 15, 7, 7, 12, 11, 11]], ["x", "y", "z", "q"])
-    modify!(gatherby(sds2, :x), :z=>maximum=>:q2)
+    modify!(gatherby(sds2, :x), :z=>IMD.maximum=>:q2)
     @test ds == Dataset([Union{Missing, Int64}[3, 1, 2, 2, missing, 3, 3], Union{Missing, Float64}[1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], Union{Missing, Int64}[11, 15, 7, -11, 12, 0, 0], Union{Missing, Int64}[11, 15, 7, 7, 12, 11, 11], [11, 15, 7, 7, 12, 11, 11]], ["x", "y", "z", "q","q2"])
 
     # original data set
@@ -530,7 +530,7 @@ end
     # sds2 is not well defined anymore, since the original data has been changed
     sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
 
-    modify!(groupby(sds2, :x), (:x, :z)=>((x,y)->length(x)/maximum(y))=>:q, [:z, :q]=>byrow(maximum)=>:q2)
+    modify!(groupby(sds2, :x), (:x, :z)=>((x,y)->length(x)/IMD.maximum(y))=>:q, [:z, :q]=>byrow(maximum)=>:q2)
     @test ds == Dataset([Union{Missing, Int64}[3, 1, 2, 2, missing, 3, 3], Union{Missing, Float64}[1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], Union{Missing, Int64}[11, 15, 7, -11, 12, 0, 0], Union{Missing, Float64}[-0.9690582663799521, missing, 1.0, 1.0, missing, -0.9690582663799521, -0.9690582663799521], Union{Missing, Float64}[0.36363636363636365, 0.06666666666666667, 0.42857142857142855, 0.42857142857142855, 0.08333333333333333, 0.36363636363636365, 0.36363636363636365], Union{Missing, Float64}[11.0, 15.0, 7.0, 0.42857142857142855, 12.0, 0.36363636363636365, 0.36363636363636365]], ["x", "y", "z", "cor_y_z", "q", "q2"])
 
     @test IMD.index(view(ds,[2,1,1,3,5,6,7,4,4],[:z,:x,:q,:q2])) == IMD.index(sds2)
@@ -548,24 +548,24 @@ end
     # sds2 is not well defined anymore, since the original data has been changed
     sds2 = view(ds, [2,1,1,3,5,6,7,4,4], [:z, :x])
 
-    modify!(groupby(sds2, :x), (:x, :z)=>((x,y)->length(x)/maximum(y))=>:q, [:z, :q]=>byrow(maximum)=>:q2)
+    modify!(groupby(sds2, :x), (:x, :z)=>((x,y)->length(x)/IMD.maximum(y))=>:q, [:z, :q]=>byrow(maximum)=>:q2)
     @test ds == Dataset([Union{Missing, Int64}[2, 2, 3, 3, 3, 1, missing], Union{Missing, Float64}[-3.0, -1.0, 1.1, 4.0, 5.0, missing, missing], Union{Missing, Int64}[-11, 7, 11, 0, 0, 15, 12], Union{Missing, Float64}[1.0, 1.0, -0.9690582663799521, -0.9690582663799521, -0.9690582663799521, missing, missing], Union{Missing, Float64}[0.42857142857142855, 0.42857142857142855, 0.36363636363636365, 0.36363636363636365, 0.36363636363636365, 0.06666666666666667, 0.08333333333333333], Union{Missing, Float64}[0.42857142857142855, 7.0, 11.0, 0.36363636363636365, 0.36363636363636365, 15.0, 12.0]], ["x", "y", "z", "cor_y_z", "q", "q2"])
 
     @test IMD.index(view(ds,[2,1,1,3,5,6,7,4,4],[:z,:x,:q,:q2])) == IMD.index(sds2)
 
     ds = Dataset(x = [3,1,2,2,missing,3,3], y = [1.1, missing, -1.0, -3.0, missing, 4.0, 5.0], z = [11,15,7,-11,12,0,0])
     sds2 = view(ds, [2,1,1,3,5,6,7,4,4], 1:2)
-    @test combine(gatherby(sds2, 1), :y=>sum) == Dataset(x=[1,3,2, missing],  sum_y=[missing, 11.2,-7.0,missing])
-    @test combine(gatherby(sds2, 1), :y=>(x->sum(x))=>:sum_y) == Dataset(x=[1,3,2, missing],  sum_y=[missing, 11.2,-7.0,missing])
-    @test combine(groupby(sds2, 1), :y=>sum) == Dataset(x=[1,2,3, missing],  sum_y=[missing, -7.0, 11.2,missing])
-    @test combine(gatherby(sds2, 1, isgathered = true), :y=>sum) == Dataset(x = [1,3,2,missing,3,2], sum_y=[missing, 2.2, -1,missing, 9,-6])
+    @test combine(gatherby(sds2, 1), :y=>IMD.sum) == Dataset(x=[1,3,2, missing],  sum_y=[missing, 11.2,-7.0,missing])
+    @test combine(gatherby(sds2, 1), :y=>(x->IMD.sum(x))=>:sum_y) == Dataset(x=[1,3,2, missing],  sum_y=[missing, 11.2,-7.0,missing])
+    @test combine(groupby(sds2, 1), :y=>IMD.sum) == Dataset(x=[1,2,3, missing],  sum_y=[missing, -7.0, 11.2,missing])
+    @test combine(gatherby(sds2, 1, isgathered = true), :y=>IMD.sum) == Dataset(x = [1,3,2,missing,3,2], sum_y=[missing, 2.2, -1,missing, 9,-6])
 
     ds = Dataset(x = [1,2,1,2,3], y1 = Union{Int8, Missing}[1,2,missing,4,missing], y2 = Union{Int32, Missing}[1,2,3,4,missing], y3=Union{Int16, Missing}[100,20,3000,4,missing], y4=Float16.(rand(5)), y5=rand(BigFloat, 5), y6=[missing, missing, missing, missing, missing])
     sds = view(ds, [1,2,3,4,5], [1,2,3,4,5,6,7])
 
-    @test combine(gatherby(sds, 1), 2:4 .=>Ref([sum, mean, maximum, minimum, IMD.n, IMD.nmissing])) == Dataset([Union{Missing, Int64}[1, 2, 3], Union{Missing, Int64}[1, 6, missing], Union{Missing, Float64}[1.0, 3.0, missing], Union{Missing, Int8}[1, 4, missing], Union{Missing, Int8}[1, 2, missing], Union{Missing, Int64}[1, 2, 0], Union{Missing, Int64}[1, 0, 1], Union{Missing, Int64}[4, 6, missing], Union{Missing, Float64}[2.0, 3.0, missing], Union{Missing, Int32}[3, 4, missing], Union{Missing, Int32}[1, 2, missing], Union{Missing, Int64}[2, 2, 0], Union{Missing, Int64}[0, 0, 1], Union{Missing, Int64}[3100, 24, missing], Union{Missing, Float64}[1550.0, 12.0, missing], Union{Missing, Int16}[3000, 20, missing], Union{Missing, Int16}[100, 4, missing], Union{Missing, Int64}[2, 2, 0], Union{Missing, Int64}[0, 0, 1]], ["x", "sum_y1", "mean_y1", "maximum_y1", "minimum_y1", "n_y1", "nmissing_y1", "sum_y2", "mean_y2", "maximum_y2", "minimum_y2", "n_y2", "nmissing_y2", "sum_y3", "mean_y3", "maximum_y3", "minimum_y3", "n_y3", "nmissing_y3"])
+    @test combine(gatherby(sds, 1), 2:4 .=>Ref([IMD.sum, mean, IMD.maximum, IMD.minimum, IMD.n, IMD.nmissing])) == Dataset([Union{Missing, Int64}[1, 2, 3], Union{Missing, Int64}[1, 6, missing], Union{Missing, Float64}[1.0, 3.0, missing], Union{Missing, Int8}[1, 4, missing], Union{Missing, Int8}[1, 2, missing], Union{Missing, Int64}[1, 2, 0], Union{Missing, Int64}[1, 0, 1], Union{Missing, Int64}[4, 6, missing], Union{Missing, Float64}[2.0, 3.0, missing], Union{Missing, Int32}[3, 4, missing], Union{Missing, Int32}[1, 2, missing], Union{Missing, Int64}[2, 2, 0], Union{Missing, Int64}[0, 0, 1], Union{Missing, Int64}[3100, 24, missing], Union{Missing, Float64}[1550.0, 12.0, missing], Union{Missing, Int16}[3000, 20, missing], Union{Missing, Int16}[100, 4, missing], Union{Missing, Int64}[2, 2, 0], Union{Missing, Int64}[0, 0, 1]], ["x", "sum_y1", "mean_y1", "maximum_y1", "minimum_y1", "n_y1", "nmissing_y1", "sum_y2", "mean_y2", "maximum_y2", "minimum_y2", "n_y2", "nmissing_y2", "sum_y3", "mean_y3", "maximum_y3", "minimum_y3", "n_y3", "nmissing_y3"])
 
-    @test combine(gatherby(sds,1), :y6=>sum=>:mm) == combine(gatherby(sds,1), :y6=>minimum=>:mm) == combine(gatherby(sds,1), :y6=>var=>:mm) == combine(gatherby(sds,1), :y6=>(x->sum(x))=>:mm) == combine(gatherby(sds,1), :y6=>(x->var(x))=>:mm) == combine(gatherby(sds,1), :y6=>(x->minimum(x))=>:mm) == Dataset(x = [1,2,3] , mm = [missing, missing, missing])
+    @test combine(gatherby(sds,1), :y6=>IMD.sum=>:mm) == combine(gatherby(sds,1), :y6=>IMD.minimum=>:mm) == combine(gatherby(sds,1), :y6=>var=>:mm) == combine(gatherby(sds,1), :y6=>(x->IMD.sum(x))=>:mm) == combine(gatherby(sds,1), :y6=>(x->var(x))=>:mm) == combine(gatherby(sds,1), :y6=>(x->IMD.minimum(x))=>:mm) == Dataset(x = [1,2,3] , mm = [missing, missing, missing])
 
     var1(x) = var(x)
     std1(x) = std(x)
@@ -574,9 +574,9 @@ end
     c2 =  combine(gatherby(copy(sds), 1), 2:4 .=> Ref([var1, std1, median1]))
     @test byrow(compare(c1, c2, on = names(c1) .=> names(c2)) , all)|>all
 
-    c3 = combine(gatherby(sds,1), :y4=>sum)
+    c3 = combine(gatherby(sds,1), :y4=>IMD.sum)
     @test eltype(c3.sum_y4) == Union{Missing, Float16}
-    c3 = combine(gatherby(sds,1), :y5=>sum)
+    c3 = combine(gatherby(sds,1), :y5=>IMD.sum)
     @test eltype(c3.sum_y5) == Union{Missing, BigFloat}
 
     ds = Dataset(rand(1:10, 300_000,3), :auto)
@@ -584,9 +584,9 @@ end
     map!(ds, x->rand()<.7 ? missing : x, r"x")
     sds = view(ds, :, :)
 
-    @test combine(gatherby(sds, 1), r"x"=>sum) == combine(groupby(sds, 1), r"x"=>sum)
-    @test combine(gatherby(sds, 1), r"x"=>maximum) == combine(groupby(sds, 1), r"x"=>maximum)
-    @test combine(gatherby(sds, 1), r"x"=>minimum) == combine(groupby(sds, 1), r"x"=>minimum)
+    @test combine(gatherby(sds, 1), r"x"=>IMD.sum) == combine(groupby(sds, 1), r"x"=>IMD.sum)
+    @test combine(gatherby(sds, 1), r"x"=>IMD.maximum) == combine(groupby(sds, 1), r"x"=>IMD.maximum)
+    @test combine(gatherby(sds, 1), r"x"=>IMD.minimum) == combine(groupby(sds, 1), r"x"=>IMD.minimum)
     @test combine(gatherby(sds, 1), r"x"=>var) == combine(groupby(sds, 1), r"x"=>var)
 
 end

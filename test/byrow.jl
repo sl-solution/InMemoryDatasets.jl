@@ -278,7 +278,7 @@
     ds = Dataset(rand(1:10, 10000, 4), :auto)
     @test byrow(ds, fill, :, with = missings(Int, nrow(ds)), by = isequal(1), threads = false) == byrow(ds, fill, :, with = missings(Int, nrow(ds)), by = isequal(1), threads = true)
     byrow(ds, fill!, :, with = missings(Int, nrow(ds)), by = isequal(1))
-    @test minimum.(eachcol(ds)) == [2,2,2,2]
+    @test IMD.minimum.(eachcol(ds)) == [2,2,2,2]
 
     ds = Dataset(g = [1, 1, 1, 2, 2],
                         x1_int = [0, 0, 1, missing, 2],

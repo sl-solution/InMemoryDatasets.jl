@@ -30,7 +30,7 @@ julia> ds = Dataset(g = [1,2,1,2,1,2], x = 1:6)
    5 │        1         5
    6 │        2         6
 
-julia> combine(groupby(ds, :g), :x=>[sum, mean])
+julia> combine(groupby(ds, :g), :x=>[IMD.sum, mean])
 2×3 Dataset
  Row │ g         sum_x     mean_x   
      │ identity  identity  identity
@@ -39,7 +39,7 @@ julia> combine(groupby(ds, :g), :x=>[sum, mean])
    1 │        1         9       3.0
    2 │        2        12       4.0
 
-julia> combine(gatherby(ds, :g), :x => [maximum, minimum], 2:3 => byrow(-) => :range)
+julia> combine(gatherby(ds, :g), :x => [IMD.maximum, IMD.minimum], 2:3 => byrow(-) => :range)
 2×4 Dataset
  Row │ g         maximum_x  minimum_x  range    
      │ identity  identity   identity   identity
@@ -65,7 +65,7 @@ julia> ds = Dataset(rand(1:10, 10, 4), :auto)
    9 │        5        10         9         6
   10 │        1         1         3         4
 
-julia> combine(gatherby(ds, 1), r"x" => sum)
+julia> combine(gatherby(ds, 1), r"x" => IMD.sum)
 6×5 Dataset
  Row │ x1        sum_x1    sum_x2    sum_x3    sum_x4   
      │ identity  identity  identity  identity  identity
@@ -91,7 +91,7 @@ julia> ds = Dataset(g = [1,2,1,2,1,2], x = 1:6)
    5 │        1         5
    6 │        2         6
 
-julia> combine(gatherby(ds, :g), :x=>[maximum, minimum], 2:3=>byrow(-)=>:range, dropgroupcols = true)
+julia> combine(gatherby(ds, :g), :x=>[IMD.maximum, IMD.minimum], 2:3=>byrow(-)=>:range, dropgroupcols = true)
 2×3 Dataset
  Row │ maximum_x  minimum_x  range    
      │ identity   identity   identity
