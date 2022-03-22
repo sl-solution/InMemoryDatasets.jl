@@ -193,7 +193,9 @@ include("precompile/create_sysimage.jl")
 
 function __init__()
    if Threads.nthreads() == 1
-         @warn "Julia started with single thread, to enable multithreaded functionalities in InMemoryDatasets.jl start Julia with multiple threads."
+         if get(ENV, "IMD_WARN_THREADS", "1") == "1"
+               @warn "Julia started with single thread, to enable multithreaded functionalities in InMemoryDatasets.jl start Julia with multiple threads."
+         end
    end
 end
 end
