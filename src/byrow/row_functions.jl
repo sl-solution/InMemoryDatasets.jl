@@ -16,8 +16,6 @@ _max_fun(::Missing, y) = y
 _max_fun(::Missing, ::Missing) = missing
 _bool(f) = x->f(x)::Bool
 
-const __NCORES = Threads.nthreads()
-
 struct _Prehashed
     hash::UInt64
 end
@@ -38,10 +36,10 @@ function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missi
     init0 = _missings(T, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_sum!(x,y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -68,10 +66,10 @@ function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missi
     init0 = _missings(T, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_prod!(x,y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -95,10 +93,10 @@ function row_count(ds::AbstractDataset, f::Function, cols = names(ds, Union{Miss
     init0 = zeros(Int32, size(ds,1))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_count!(x, y, _bool(f), lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -128,10 +126,10 @@ function row_any(ds::AbstractDataset, f::Union{AbstractVector{<:Function}, Funct
     end
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if multi_f
                 mapreduce_index(f, (x, y, func) -> op_for_any!(x, y, _bool(func), lo, hi), view(_columns(ds),colsidx), init0)
             else
@@ -170,10 +168,10 @@ function row_all(ds::AbstractDataset, f::Union{AbstractVector{<:Function}, Funct
     end
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if multi_f
                 mapreduce_index(f, (x, y, func) -> op_for_all!(x, y, _bool(func), lo, hi), view(_columns(ds),colsidx), init0)
             else
@@ -220,10 +218,10 @@ function row_isequal(ds::AbstractDataset, cols = :; by::Union{AbstractVector, Da
     init0 = ones(Bool, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_isequal!(x,y, x1, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -259,10 +257,10 @@ function row_isless(ds::AbstractDataset, cols, colselector::Union{AbstractVector
     init0 = ones(Bool, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_isless!(x, y, colselector, rev, lt, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -322,11 +320,11 @@ function row_findfirst(ds::AbstractDataset, f, cols = names(ds, Union{Missing, N
     init0 = fill(missref, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        idx = [Ref{Int}(0) for _ in 1:__NCORES]
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        idx = [Ref{Int}(0) for _ in 1:Threads.nthreads()]
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if item === nothing
                 mapreduce(identity, (x,y) -> _op_for_findfirst!(x, y, f, idx[i], missref, lo, hi), view(_columns(ds),colsidx), init = init0)
             else
@@ -360,11 +358,11 @@ function row_findlast(ds::AbstractDataset, f, cols = names(ds, Union{Missing, Nu
     init0 = fill(missref, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        idx = [Ref{Int}(0) for _ in 1:__NCORES]
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        idx = [Ref{Int}(0) for _ in 1:Threads.nthreads()]
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if item === nothing
                 mapreduce(identity, (x,y) -> _op_for_findlast!(x, y, f, idx[i], missref, lo, hi), view(_columns(ds),colsidx), init = init0)
             else
@@ -403,10 +401,10 @@ function row_in(ds::AbstractDataset, collections, items::Union{AbstractVector, D
     init0 = zeros(Bool, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_in!(x, y, items, eq, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -447,11 +445,11 @@ function row_select(ds::AbstractDataset, cols, colselector::Union{AbstractVector
     init0 = _missings(CT, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        idx = [Ref{Int}(0) for _ in 1:__NCORES]
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        idx = [Ref{Int}(0) for _ in 1:Threads.nthreads()]
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_select!(x, y, colselector, nnames, idx[i], lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -491,10 +489,10 @@ function row_fill!(ds::AbstractDataset, cols, val::Union{AbstractVector, Dataset
     init0 = val
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if rolling
                 mapreduce(identity, (x,y) -> _op_for_fill_roll!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
             else
@@ -533,10 +531,10 @@ function row_coalesce(ds::AbstractDataset, cols = names(ds, Union{Missing, Numbe
     init0 = _missings(CT, size(ds,1))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_coalesce!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -572,10 +570,10 @@ function row_minimum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mi
     init0 = _missings(T, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_min!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -592,10 +590,10 @@ function row_maximum(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mi
     init0 = _missings(T, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_max!(x, y, f, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -624,11 +622,11 @@ function row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mis
     init0 = fill(missref, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        idx = [Ref{Int}(0) for _ in 1:__NCORES]
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        idx = [Ref{Int}(0) for _ in 1:Threads.nthreads()]
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_argminmax!(x, y, f, minvals, idx[i], missref, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -650,11 +648,11 @@ function row_argmax(ds::AbstractDataset, f::Function, cols = names(ds, Union{Mis
     init0 = fill(missref, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        idx = [Ref{Int}(0) for _ in 1:__NCORES]
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        idx = [Ref{Int}(0) for _ in 1:Threads.nthreads()]
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_argminmax!(x, y, f, maxvals, idx[i], missref, lo, hi), view(_columns(ds),colsidx), init = init0)
         end
     else
@@ -750,10 +748,10 @@ function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
     init0 = _missings(T, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if missings == :ignore
                 mapreduce(identity, (x,y) -> _op_for_cumsum_ignore!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
             else
@@ -812,10 +810,10 @@ function row_cumprod!(ds::Dataset, cols = names(ds, Union{Missing, Number}); mis
 
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if missings == :ignore
                 mapreduce(identity, (x,y) -> _op_for_cumprod_ignore!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
             else
@@ -875,10 +873,10 @@ function row_cummin!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
 
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if missings == :ignore
                 mapreduce(identity, (x,y) -> _op_for_cummin_ignore!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
             else
@@ -939,10 +937,10 @@ function row_cummax!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
 
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if missings == :ignore
                 mapreduce(identity, (x,y) -> _op_for_cummax_ignore!(x, y, lo, hi), view(_columns(ds),colsidx), init = init0)
             else
@@ -1032,10 +1030,10 @@ function row_issorted(ds::AbstractDataset, cols; rev = false, lt = isless, threa
     init0 = ones(Bool, nrow(ds))
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if rev
                 mapreduce(identity, (x,y) -> _op_for_issorted_rev!(x, y, init0, lt, lo, hi), view(_columns(ds),colsidx))
             else
@@ -1107,10 +1105,10 @@ function row_hash(ds::AbstractDataset, f::Union{AbstractVector{<:Function}, Func
     end
 
     if threads
-        cz = div(length(init0), __NCORES)
-        Threads.@threads for i in 1:__NCORES
+        cz = div(length(init0), Threads.nthreads())
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = length(init0) : hi = i*cz
+            i == Threads.nthreads() ? hi = length(init0) : hi = i*cz
             if multi_f
                 mapreduce_index(f, (x, y, func) -> _op_for_hash!(x, y, func, lo, hi), view(_columns(ds),colsidx), init0)
             else

@@ -265,11 +265,11 @@ function row_join!(buffer, currentpos, ds::AbstractDataset, f::Vector{<:Function
     p = length(colsidx)
     dlm = UInt8.(delim)
     if threads
-        cz = div(nrow(ds), __NCORES)
-        idx = [Ref{Int}(0) for _ in 1:__NCORES]
-        Threads.@threads for i in 1:__NCORES
+        cz = div(nrow(ds), Threads.nthreads())
+        idx = [Ref{Int}(0) for _ in 1:Threads.nthreads()]
+        Threads.@threads for i in 1:Threads.nthreads()
             lo = (i-1)*cz+1
-            i == __NCORES ? hi = nrow(ds) : hi = i*cz
+            i == Threads.nthreads() ? hi = nrow(ds) : hi = i*cz
             mapreduce(identity, (x,y) -> _op_for_row_join!(buffer, x, y, f, dlm, quotechar, idx[i], p, lo, hi), view(_columns(ds),colsidx), init = currentpos)
         end
     else

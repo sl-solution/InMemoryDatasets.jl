@@ -784,7 +784,7 @@ julia> completecases(ds, [:x, :y])
  1
 ```
 """
-function completecases(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, threads = nrow(ds)>__NCORES*10)
+function completecases(ds::AbstractDataset, cols::MultiColumnIndex = :; mapformats = false, threads = nrow(ds)>Threads.nthreads()*10)
     if mapformats
         colsidx = index(ds)[cols]
         by = Function[]
@@ -796,7 +796,7 @@ function completecases(ds::AbstractDataset, cols::MultiColumnIndex = :; mapforma
         byrow(ds, all, cols, by = !ismissing, threads = threads)
     end
 end
-completecases(ds::AbstractDataset, col::ColumnIndex; mapformats = false, threads = nrow(ds)>__NCORES*10) = completecases(ds, [col]; mapformats = mapformats, threads = threads)
+completecases(ds::AbstractDataset, col::ColumnIndex; mapformats = false, threads = nrow(ds)>Threads.nthreads()*10) = completecases(ds, [col]; mapformats = mapformats, threads = threads)
 
 """
     dropmissing(ds::AbstractDataset, cols=:; view::Bool=false, mapformats = false, threads)
@@ -859,7 +859,7 @@ julia> dropmissing(ds, [:x, :y])
 """
 @inline function dropmissing(ds::AbstractDataset,
                              cols::Union{ColumnIndex, MultiColumnIndex}=:;
-                             view::Bool=false, mapformats = false, threads = nrow(ds)>__NCORES*10)
+                             view::Bool=false, mapformats = false, threads = nrow(ds)>Threads.nthreads()*10)
     rowidxs = completecases(ds, cols; mapformats = mapformats, threads = threads)
     if view
         return Base.view(ds, rowidxs, :)
