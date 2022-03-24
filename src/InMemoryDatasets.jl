@@ -96,6 +96,10 @@ export
       cummax!,
       cummin,
       cummin!,
+      ffill!,
+      ffill,
+      bfill!,
+      bfill,
       # from join
       innerjoin,
       outerjoin,

@@ -45,6 +45,7 @@ same size as `x` (the input array).
 (lag, lag!)
 
 function lag(x::AbstractVector, k; default = missing)
+    @assert firstindex(x) == 1 "lag only supports 1-based indexing"
     res = Vector{Union{promote_type(typeof(default), eltype(x)), Missing}}(undef, length(x))
     for i in 1:k
         @inbounds res[i] = default
@@ -58,6 +59,7 @@ end
 lag(x::AbstractVector; default = missing) = lag(x,1; default = default)
 
 function lag!(x::AbstractVector, k; default = missing)
+    @assert firstindex(x) == 1 "lag! only supports 1-based indexing"
     @assert promote_type(typeof(default), eltype(x)) <: eltype(x) "`default` must be the same type as the element of the passed vector"
     for i in length(x):-1:(k+1)
         @inbounds x[i] = x[i-k]
@@ -83,6 +85,7 @@ same size as `x` (the input array).
 (lead, lead!)
 
 function lead(x::AbstractVector, k; default = missing)
+    @assert firstindex(x) == 1 "lead only supports 1-based indexing"
     res = Vector{Union{promote_type(typeof(default), eltype(x)), Missing}}(undef, length(x))
     for i in 1:length(x)-k
         @inbounds res[i] = x[i+k]
@@ -95,6 +98,7 @@ end
 lead(x::AbstractVector; default = missing) = lead(x, 1; default = default)
 
 function lead!(x::AbstractVector, k; default = missing)
+    @assert firstindex(x) == 1 "lead! only supports 1-based indexing"
     @assert promote_type(typeof(default), eltype(x)) <: eltype(x) "`default` must be the same type as the element of the passed vector"
     for i in 1:length(x)-k
         @inbounds x[i] = x[i+k]
@@ -447,9 +451,51 @@ end
 Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `missing`
 """
 function topk(x::AbstractVector, k::Int; rev = false)
+    @assert firstindex(x) == 1 "topk only supports 1-based indexing"
     if rev
         k_smallest(x, k)
     else
         k_largest(x, k)
     end
 end
+
+
+"""
+    ffill(x; [by = ismissing])
+    ffill!(x; [by = ismissing])
+
+Replace those elements of `x` which returns `true` when `by` is called on them with the last element which calling `by` on it returns `false`.
+
+`ffill!` modifies the input vector in-place
+"""
+(ffill, ffill!)
+
+function ffill!(x::AbstractVector; by = ismissing)
+    @assert firstindex(x) == 1 "ffill!/ffill only support 1-based indexing"
+    for i in 2:length(x)
+        if by(x[i])
+            x[i] = x[i-1]
+        end
+    end
+    x
+end
+ffill(x; by = ismissing) = ffill!(copy(x), by = by)
+
+"""
+    bfill(x; [by = ismissing])
+    bfill!(x; [by = ismissing])
+
+Replace those elements of `x` which returns `true` when `by` is called on them with the next element which calling `by` on it returns `false`.
+
+`bfill!` modifies the input vector in-place
+"""
+function bfill!(x::AbstractVector; by = ismissing)
+    @assert firstindex(x) == 1 "bfill!/bfill only support 1-based indexing"
+    for i in length(x)-1:-1:1
+        if by(x[i])
+            x[i] = x[i+1]
+        end
+    end
+    x
+end
+bfill(x, by = ismissing) = bfill!(copy(x), by = by)

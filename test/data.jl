@@ -366,3 +366,17 @@ end
     @test byrow(mask(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), [>(5), ==(10)], [2,1], threads = false), all, threads = false) == [trues(500);falses(500)]
     @test byrow(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), all, [2,1], by = [>(5), ==(10)], threads = false) == [trues(500);falses(500)]
 end
+
+@testset "ffill, ffill!, bfill, bfill!" begin
+    x = [missing, 1, 2, missing, missing, missing, 10, missing]
+    @test isequal(ffill(x) , [missing, 1, 2,2,2,2,10,10])
+    @test isequal(bfill(x), [1,1,2,10,10,10,10, missing])
+    @test isequal(bfill([missing]), [missing])
+    @test isequal(ffill([missing]), [missing])
+
+    ds = Dataset(g = [1,1,1,1,2,2,2,2], x = [1.0,2.0,1.0,2.0,missing, missing,1.0,1.0])
+    @test modify(groupby(ds, :g), :x=>ffill!) == ds
+    @test modify(groupby(ds, :g), :x=>bfill!) == Dataset(g = [1,1,1,1,2,2,2,2], x = [1.0,2.0,1.0,2.0,1.0, 1.0,1.0,1.0])
+    @test modify(groupby(ds, :g), :x=>x->ffill!(x, by = isequal(1.0))) == Dataset(g = [1,1,1,1,2,2,2,2], x = [1.0,2.0,2.0,2.0,missing, missing, missing, missing])
+    @test modify(groupby(ds, :g), :x=>x->bfill!(x, by = isequal(1.0))) == Dataset(g = [1,1,1,1,2,2,2,2], x = [2.0,2.0,2.0,2.0,missing, missing,1.0,1.0])
+end

@@ -107,6 +107,10 @@ The `IMD.sum`, `IMD.minimum`, and `IMD.maximum` functions also support the `thre
 
 The following functions are also exported by InMemoryDatasets:
 
+* `bfill` : backward filling
+* `bfill!` : backward filling in-place
+* `ffill` : forward filling
+* `ffill!` : forward filling in-place
 * `lag` : Create a lag-k of the provided vector
 * `lag!` : Replace its input with a lag-k values
 * `lead` : Create a lead-k of the provided vector
