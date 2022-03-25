@@ -1,4 +1,4 @@
-const INTEGERS = Union{Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Bool}
+const INTEGERS = Union{Int8, Int16, Int32, Int64, Int128, UInt8, UInt16, UInt32, UInt64, UInt128, Bool}
 const FLOATS = Union{Float16, Float32, Float64}
 
 # work around slow allocation of type union in julia
