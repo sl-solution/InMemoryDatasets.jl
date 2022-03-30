@@ -98,7 +98,7 @@ function cumprod!(outx::AbstractVector, x::AbstractArray{Union{Missing, T},1}; m
     end
 end
 cumprod!(x,y) = Base.cumprod!(x,y)
-function cummin(x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
+function cummin(x::AbstractArray{<:Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
     if missings == :ignore
         stat_cummin_ignore(x)
     elseif missings == :skip
@@ -107,7 +107,7 @@ function cummin(x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where
         throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
     end
 end
-function cummin!(outx, x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
+function cummin!(outx, x::AbstractArray{<:Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
     if missings == :ignore
         stat_cummin!_ignore(outx, x)
     elseif missings == :skip
@@ -116,7 +116,7 @@ function cummin!(outx, x::AbstractArray{Union{Missing, T},1}; missings = :ignore
         throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
     end
 end
-function cummax(x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
+function cummax(x::AbstractArray{<:Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
     if missings == :ignore
         stat_cummax_ignore(x)
     elseif missings == :skip
@@ -125,7 +125,7 @@ function cummax(x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where
         throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
     end
 end
-function cummax!(outx, x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
+function cummax!(outx, x::AbstractArray{<:Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
     if missings == :ignore
         stat_cummax!_ignore(outx, x)
     elseif missings == :skip
