@@ -10,7 +10,7 @@ InMemoryDatasets uses two approaches to group observations: sorting, and hashing
 
 The main functions for grouping observations based on sorting approach are `groupby!` and `groupby`. The `groupby!` function replaces the original data set with the sorted one and attaches a meta information about the grouping orders to the replaced data set, on the other hand, the `groupby` function performs the sorting phase, however, it creates a view of the main data set where the meta information is attached to it. The output of `groupby` is basically a view of the sorted data set.
 
-The syntax for calling `groupby!` and `groupby` is the same as the `sort!` function. This means `groupby!` and `groupby` accept all keyword arguments that the `sort!` function supports, these include:
+The syntax for calling `groupby!` and `groupby` is the same as the `sort!` function. This means `groupby!` and `groupby` accept all keyword arguments that the [`sort!`](https://sl-solution.github.io/InMemoryDatasets.jl/stable/man/sorting/#sort!/sort) function supports, these include:
 
 * `rev` with default value of `false`
 * `mapformats` with default value of `true`, i.e. by default these functions group data sets based on the formatted values.
