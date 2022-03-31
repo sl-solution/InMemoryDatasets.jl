@@ -182,6 +182,7 @@ function _show(io::IO,
         names_format[k] = string(v)
         push!(_pt_formmatters_, (vv, i, j) -> j == k ? v(vv) : vv)
     end
+    push!(_pt_formmatters_, _pretty_tables_general_formatter)
 
     pt_formatter = ntuple(i->_pt_formmatters_[i], length(_pt_formmatters_))
     names_len = Int[textwidth(n) for n in names_str]
