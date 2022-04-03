@@ -196,6 +196,25 @@ using InMemoryDatasets, PooledArrays, Random, Test, CategoricalArrays
     @test sort(ds, 1, rev = true) == ds[[5,3,4,2,6,1], :]
     @test sort(ds, 1, threads = false) == ds[[1,6,2,4,3,5], :]
     @test sort(ds, 1, rev = true, threads = false) == ds[[5,3,4,2,6,1], :]
+
+    # issue #49
+    ds = Dataset(key = repeat(["key1"], 10), day = repeat(collect((today() - Day(4)) : Day(1): today()), 2), value = 1:10)
+    dss=sort(ds,1:2)
+    dss2 = sort(ds,[2,1])
+    dss3 = sort(ds,[1,2,3], stable = false)
+    dss4 = sort(ds,[1,2,3], stable = false, alg=QuickSort)
+    dss5 = sort(ds,[1,2], alg=QuickSort)
+
+    @test dss == dss2 == dss3 == dss4 == dss5
+    @test sort(sort(ds,1),2) == sort(ds,1:2)
+    @test sort(sort(ds,1,rev=true),2,rev=true) == sort(ds,1:2,rev=true)
+    @test sort(sort(ds,1,rev=false),2,rev=true) == sort(ds,1:2,rev=[false,true])
+    ds.day=rand([1.1,2.1],10)
+    repeat!(ds,10^6)
+    sort!(ds,1:2)
+    @test issorted(ds,1:2)
+
+
 end
 
 @testset "_find_starts_of_groups" begin

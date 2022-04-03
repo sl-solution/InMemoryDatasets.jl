@@ -337,7 +337,7 @@ function ds_sort_perm(ds, colsidx, by::Vector{<:Function}, rev::Vector{Bool}, a:
                     rangelen = Int(rnglen)
                 end
                 if o1 && maxval < typemax(Int) && (rangelen <= div(n,2))
-                    if last_valid_range == 1
+                    if last_valid_range == 1 && (i==1 || issorted(idx))
                       #for many levels but not too many we use parallel version
                       if threads && Threads.nthreads() > 1 && nrow(ds) > Threads.nthreads() && rangelen > 100_000 && rangelen*Threads.nthreads() < n
 
