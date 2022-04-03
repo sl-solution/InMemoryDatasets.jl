@@ -2,6 +2,11 @@
 
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://sl-solution.github.io/InMemoryDatasets.jl/stable) [![CI](https://github.com/sl-solution/InMemoryDatasets.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/sl-solution/InMemoryDatasets.jl/actions/workflows/ci.yml)
 
+# Documentation
+
+The Documentation for the stable release is available via https://sl-solution.github.io/InMemoryDatasets.jl/stable.
+
+
 # Introduction
 
 `InMemoryDatasets.jl` is a multithreaded package for data manipulation and is designed for `Julia` 1.6+ (64bit OS). The core computation engine of the package is a set of customised algorithms developed specifically for columnar tables. The package performance is tuned with two goals in mind, a) low overhead of allowing missing values everywhere, and b) the following priorities - in order of importance:
