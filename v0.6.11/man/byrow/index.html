@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Row-wise operations · InMemoryDatasets</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">InMemoryDatasets</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><a class="tocitem" href="../basics/">First Steps</a></li><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../missing/">Missing Values</a></li><li><a class="tocitem" href="../formats/">Formats</a></li><li><a class="tocitem" href="../map/">Call functions on each observation</a></li><li class="is-active"><a class="tocitem" href>Row-wise operations</a><ul class="internal"><li><a class="tocitem" href="#Introduction"><span>Introduction</span></a></li><li><a class="tocitem" href="#Optimised-operations"><span>Optimised operations</span></a></li><li><a class="tocitem" href="#mapreduce"><span><code>mapreduce</code></span></a></li><li><a class="tocitem" href="#User-defined-operations"><span>User defined operations</span></a></li><li><a class="tocitem" href="#Special-operations"><span>Special operations</span></a></li></ul></li><li><a class="tocitem" href="../modify/">Transform columns</a></li><li><a class="tocitem" href="../filter/">Filter observations</a></li><li><a class="tocitem" href="../sorting/">Sort</a></li><li><a class="tocitem" href="../grouping/">Group observations</a></li><li><a class="tocitem" href="../aggregation/">Aggregation</a></li><li><a class="tocitem" href="../transpose/">Transpose data</a></li><li><a class="tocitem" href="../joins/">Joins</a></li></ul></li><li><a class="tocitem" href="../gallery/">Gallery</a></li><li><a class="tocitem" href="../performance/">Performance tips</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Row-wise operations</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Row-wise operations</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/sl-solution/InMemoryDatasets.jl/blob/master/docs/src/man/byrow.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Function-byrow"><a class="docs-heading-anchor" href="#Function-byrow">Function <code>byrow</code></a><a id="Function-byrow-1"></a><a class="docs-heading-anchor-permalink" href="#Function-byrow" title="Permalink"></a></h1><h2 id="Introduction"><a class="docs-heading-anchor" href="#Introduction">Introduction</a><a id="Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction" title="Permalink"></a></h2><p>The <code>byrow</code> function is a high performance (multi-threaded) function for row-wise operations. It is designed to make tasks like summing up each row simple, efficient, and lightening fast. The function can be used as a stand-alone function or inside <code>modify</code>/<code>modify!</code> or <code>combine</code> functions. The stand-alone syntax of the function is <code>byrow(ds, fun, cols, ...)</code>, where <code>ds</code> is a data set, <code>fun</code> is a function, and <code>cols</code>  is the list of columns which row-wise operation is going to be applied on their values in each row, e.g. the following code creates a data set with 100,000 rows and 100 columns, and adds the values in each row,</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(rand(10^5, 100), :auto);
+julia&gt; byrow(ds, sum, 1:100)
+100000-element Vector{Union{Missing, Float64}}:
+ 50.655934293702366
+ 51.481108371018266
+ 51.27498152964299
+ 54.097941432844536
+ 52.28727157779627
+ 56.215091415376975
+ 53.940023864095856
+ 47.65424080373157
+  ⋮
+ 46.360565247921
+ 45.91721147194705
+ 52.047072415296824
+ 48.71125460530455
+ 50.82102574082131
+ 49.90462723123929
+ 46.594683329278816
+ 50.47529543725829</code></pre><p>As it can be observed the function syntax is very straightforward, and to examine the efficiency of it, we use the <code>@btime</code> macro from the BenchmarkTools package,</p><pre><code class="language-julia-repl hljs">julia&gt; using BenchmarkTools
+julia&gt; @btime byrow(ds, sum, 1:100);
+  4.528 ms (1587 allocations: 919.97 KiB)
+julia&gt; m = Matrix(ds)
+julia&gt; @btime sum(m, dims = 2)
+  14.867 ms (7 allocations: 879.11 KiB)</code></pre><p>In the above benchmark, <code>byrow</code> should be even more performant when the data set has a group of heterogeneous columns.</p><h2 id="Optimised-operations"><a class="docs-heading-anchor" href="#Optimised-operations">Optimised operations</a><a id="Optimised-operations-1"></a><a class="docs-heading-anchor-permalink" href="#Optimised-operations" title="Permalink"></a></h2><p>Generally, <code>byrow</code> is efficient for any <code>fun</code> which returns a single value for each row, however, it is fine tuned for the following functions: (for details of each of the following function refer to its docstring by typing <code>?byrow(fun)</code> in a Julia session, e.g. <code>?byrow(sum)</code>)</p><ul><li><code>all</code> : Test whether all elements of a boolean collection are <code>true</code></li><li><code>any</code> : Test whether any elements of a boolean collection are <code>true</code></li><li><code>argmax</code> : Return the column name of the maximum element</li><li><code>argmin</code> : Return the column name of the minimum element</li><li><code>coalesce</code> : Return the first value which is not equal to <code>missing</code></li><li><code>count</code> : Count the number of <code>trues</code></li><li><code>findfirst</code> : Return the column name of the first true value. Alternatively, user can pass a vector of values to <code>item</code> to search for the first column with the same value.</li><li><code>findlast</code> : Return the column name of the last true value. Alternatively, user can pass a vector of values to <code>item</code> to search for the first column with the same value.</li><li><code>hash</code> : Compute an integer hash code</li><li><code>in</code> : Determine whether values passed via the <code>item</code> keyword argument are in the given collection of columns.</li><li><code>isequal</code> : Return <code>true</code> when all values are equal. Optionally, a vector of values can be passed via the <code>with</code> keyword to compare equality with it.</li><li><code>isless</code> : Return <code>true</code> when all values are less than passed vector(or column specified by its name) as <code>with</code>. Passing <code>rev = true</code> change <code>less</code> to <code>greater</code>.</li><li><code>issorted</code> : Check if the values are sorted</li><li><code>join</code>: Convert values in each row to string and join them into a single string, inserting the given delimiter (if any) between adjacent values. If <code>last</code> is given, it will be used instead of <code>delim</code> between the last two strings.</li><li><code>maximum</code> : Return the maximum value</li><li><code>mean</code> : Compute the mean value</li><li><code>minimum</code> : Return the minimum value</li><li><code>nunique</code> : Return the number of unique values</li><li><code>prod</code> : Return the product of values</li><li><code>select</code> : Select values of specific columns in each row. The specific columns can be passed using <code>with = scols</code>, where <code>scols</code> can be a vector of columns names or a column name of the passed data set.</li><li><code>std</code> : Compute the standard deviation of values</li><li><code>sum</code> : Return the sum of values</li><li><code>var</code> : Compute the variance of values</li></ul><p>The common syntax of <code>byrow</code> for most of these functions is:</p><p><code>byrow(ds, fun, cols; [by , threads = true])</code></p><p>The <code>by</code> keyword argument is for specifying a function to call on each value before calling <code>fun</code> to aggregate the result, and <code>threads = true</code> causes <code>byrow</code> to exploit all cores available to Julia for performing the computations.</p><p>The <code>nunique</code> function doesn&#39;t accept <code>threads</code> argument, however, it has an extra keyword argument <code>count_missing</code>. <code>nunique</code> counts the number of unique values of each row, and <code>count_missing = true</code> counts missings as a unique value.</p><p>The <code>coalesce</code> and <code>issorted</code> functions don&#39;t accept <code>by</code> argument, however, <code>issorted</code> and <code>isless</code> accept extra keyword argument <code>rev</code> which is set to <code>false</code> by default, and <code>isequal</code>, <code>select</code>, and <code>isless</code> accept extra keyword argument <code>with</code> for passing a vector of values or a column name.</p><p>By default, <code>issorted</code> and <code>isless</code> use the <code>isless</code> function for comparing values, however, user can pass any other function via the <code>lt</code> keyword argument.</p><p>A column name or a vector of values must be passed via <code>item</code> if <code>in</code> operation is used in <code>byrow</code>. By default, <code>in</code> operation uses <code>isequal(item, collection)</code> for determining whether an item is in the given collection, however, any user defined function passed via the <code>eq</code> keyword argument can replace it. Both <code>findfirst</code> and <code>findlast</code> support the <code>eq</code> keyword argument.</p><h3 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h3><p>Let&#39;s first create an example data set which we will use for the rest of this section:</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(g = [1, 1, 1, 2, 2],
+                    x1_int = [0, 0, 1, missing, 2],
+                    x2_int = [3, 2, 1, 3, -2],
+                    x1_float = [1.2, missing, -1.0, 2.3, 10],
+                    x2_float = [missing, missing, 3.0, missing, missing],
+                    x3_float = [missing, missing, -1.4, 3.0, -100.0])
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
+     │ identity  identity  identity  identity   identity   identity
+     │ Int64?    Int64?    Int64?    Float64?   Float64?   Float64?
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1         0         3        1.2  missing    missing
+   2 │        1         0         2  missing    missing    missing
+   3 │        1         1         1       -1.0        3.0       -1.4
+   4 │        2   missing         3        2.3  missing          3.0
+   5 │        2         2        -2       10.0  missing       -100.0</code></pre><p>To compute the mean of each row for the float columns, we simply call,</p><pre><code class="language-julia-repl hljs">julia&gt; byrow(ds, mean, r&quot;_float&quot;)
+5-element Vector{Union{Missing, Float64}}:
+   1.2
+    missing
+   0.20000000000000004
+   2.65
+ -45.0</code></pre><p>Note that, since for the second row all values are <code>missing</code>, the result of mean is also <code>missing</code>.</p><p>To calculate the mean of the absolute value of each row for the float columns we use the same code and pass <code>by = abs</code> as the keyword argument,</p><pre><code class="language-julia-repl hljs">julia&gt; byrow(ds, mean, r&quot;_float&quot;, by = abs)
+5-element Vector{Union{Missing, Float64}}:
+  1.2
+   missing
+  1.8
+  2.65
+ 55.0</code></pre><p>To find rows which all their values are greater than 0 in the first three columns we can use the following code,</p><pre><code class="language-julia-repl hljs">julia&gt; byrow(ds, all, 1:3, by = x -&gt; isless(0, x))
+5-element Vector{Bool}:
+ 0
+ 0
+ 1
+ 1
+ 0</code></pre><p>Note that in Julia <code>isless(0, missing)</code> is <code>true</code>.</p><p>To find rows which contain at least one missing value in any of the columns we can use the following code,</p><pre><code class="language-julia-repl hljs">julia&gt; byrow(ds, any, :, by = ismissing)
+5-element Vector{Bool}:
+ 1
+ 1
+ 0
+ 1
+ 1</code></pre><p>It means that except the third row, all other rows contain missing values. Using <code>byrow</code> with <code>count</code> function, we can count the number of non-missing values in each row,</p><pre><code class="language-julia-repl hljs">julia&gt; byrow(ds, count, :, by = !ismissing)
+5-element Vector{Int32}:
+ 4
+ 3
+ 6
+ 4
+ 5</code></pre><p>To check if in each row all integer columns are less(greater) than <code>x1_float</code> we should use the following code:</p><pre><code class="language-julia-repl hljs">julia&gt; byrow(ds, isless, r&quot;int&quot;, with = :x1_float)
+5-element Vector{Bool}:
+ 0
+ 1
+ 0
+ 0
+ 1
+
+julia&gt; byrow(ds, isless, r&quot;int&quot;, with = :x1_float, rev = true) # greater
+5-element Vector{Bool}:
+ 0
+ 0
+ 1
+ 1
+ 0</code></pre><p>In the following example, in each row we pick the values of selected columns passed by the <code>with</code> keyword argument.</p><pre><code class="language-julia-repl hljs">julia&gt; ds2 = Dataset(x1 = 1:4, x2 = [1,2,1,2], NAMES = [:x1, :x2, :x1, :x1])
+4×3 Dataset
+ Row │ x1        x2        NAMES    
+     │ identity  identity  identity
+     │ Int64?    Int64?    Symbol?  
+─────┼──────────────────────────────
+   1 │        1         1  x1
+   2 │        2         2  x2
+   3 │        3         1  x1
+   4 │        4         2  x1
+
+julia&gt; byrow(ds2, select, r&quot;x&quot;, with = :NAMES)
+4-element Vector{Union{Missing, Int64}}:
+ 1
+ 2
+ 3
+ 4
+
+julia&gt; byrow(ds2, select, r&quot;x&quot;, with = [&quot;x1&quot;, &quot;x2&quot;, &quot;x2&quot;, &quot;x2&quot;])
+4-element Vector{Union{Missing, Int64}}:
+ 1
+ 2
+ 1
+ 2
+
+julia&gt; byrow(ds2, select, [:x2, :x1], with = [1,2,2,1])
+4-element Vector{Union{Missing, Int64}}:
+ 1
+ 2
+ 3
+ 2</code></pre><p>In the last example, note that the integers in <code>with</code> are mapped to the corresponding columns passed to the function, i.e. 1 is referring to <code>:x2</code> (it is the first column passed to the function as the column selector) and 2 is referring to <code>:x1</code>.</p><h2 id="mapreduce"><a class="docs-heading-anchor" href="#mapreduce"><code>mapreduce</code></a><a id="mapreduce-1"></a><a class="docs-heading-anchor-permalink" href="#mapreduce" title="Permalink"></a></h2><p>One special function that can be used as <code>fun</code> in the <code>byrow</code> function is <code>mapreduce</code>. This can be used to implement a customised reduction as row operation. When <code>mapreduce</code> is used in <code>byrow</code>, two keyword arguments must be passed, <code>op</code> and <code>init</code>. For example in the following code we use <code>mapreduce</code> to <code>sum</code> all values in each row: (note that unlike <code>byrow(ds, sum, :)</code> the following function will return missing for a row if any of the value in that row is missing)</p><blockquote><p><code>byrow(ds, mapreduce, :, op = .+, init = zeros(nrow(ds)))</code></p></blockquote><h2 id="User-defined-operations"><a class="docs-heading-anchor" href="#User-defined-operations">User defined operations</a><a id="User-defined-operations-1"></a><a class="docs-heading-anchor-permalink" href="#User-defined-operations" title="Permalink"></a></h2><p>For user defined functions which return a single value, <code>byrow</code> treats each row as a vector of values, thus the user defined function must accept a vector and returns a single value. For instance to calculate <code>1 * col1 + 2 * col2 + 3 * col3</code> for each row in <code>ds</code> we can define the following function:</p><pre><code class="language-julia-repl hljs">julia&gt; avg(x) = 1 * x[1] + 2 * x[2] + 3 * x[3]
+avg (generic function with 1 method)</code></pre><p>and directly use it in <code>byrow</code>,</p><pre><code class="language-julia-repl hljs">julia&gt; byrow(ds, avg, 1:3)
+5-element Vector{Union{Missing, Int64}}:
+ 10
+  7
+  6
+   missing
+  0</code></pre><p>Note that <code>avg</code> is missing if any of the values in <code>x</code> is missing.</p><h2 id="Special-operations"><a class="docs-heading-anchor" href="#Special-operations">Special operations</a><a id="Special-operations-1"></a><a class="docs-heading-anchor-permalink" href="#Special-operations" title="Permalink"></a></h2><p><code>byrow</code> also supports a few optimised operations which return a vector of values for each row. The <code>fun</code> argument for these operations is one of the followings:</p><ul><li><code>cummax</code></li><li><code>cummax!</code></li><li><code>cummin</code></li><li><code>cummin!</code></li><li><code>cumprod</code></li><li><code>cumprod!</code></li><li><code>cumsum</code></li><li><code>cumsum!</code></li><li><code>fill</code></li><li><code>fill!</code></li><li><code>sort</code></li><li><code>sort!</code></li><li><code>stdze</code></li><li><code>stdze!</code></li></ul><p>The main difference between these operations and the previous operations is that these operations return a data set with the corresponding row has been updated with the operation. For the operations with <code>!</code> the updated version of the original data set is returned and for the operations without <code>!</code> a modified copy of the original data set is returned.</p><p>The <code>fill</code> and <code>fill!</code> functions fill values which calling the function passed as <code>by</code> on them returns true with values passed to the <code>with</code> keyword argument. The function passed to the <code>by</code> keyword argument must return <code>true</code> or <code>false</code> and by default it is set to <code>by = ismissing</code>.</p><blockquote><p>Note that for the <code>fill</code> and <code>fill!</code> functions the filling happens in-place, thus, if this is not possible Julia will throw errors.</p></blockquote><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = [missing, 2, 1], x2 = [1, missing, missing], y = [4,5,3])
+3×3 Dataset
+ Row │ x1        x2        y        
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │  missing         1         4
+   2 │        2   missing         5
+   3 │        1   missing         3
+
+julia&gt; byrow(ds, fill, 1:2, with = :y)
+3×3 Dataset
+ Row │ x1        x2        y        
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        4         1         4
+   2 │        2         5         5
+   3 │        1         3         3
+
+julia&gt; byrow(ds, fill, 1:2, with = [0,2,1])
+3×3 Dataset
+ Row │ x1        x2        y        
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        0         1         4
+   2 │        2         2         5
+   3 │        1         1         3
+
+julia&gt; byrow(ds, fill, 1:2, with = [0,2,1], by = x-&gt;ismissing(x) || isequal(x, 1))
+3×3 Dataset
+ Row │ x1        x2        y        
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        0         0         4
+   2 │        2         2         5
+   3 │        1         1         3</code></pre><p>the cumulative functions calculate the cumulative min, max, sum, and product, <code>sort</code> sorts the values in each row, and <code>stdze</code> standardises the values in each row. The <code>sort</code> operation accepts all keyword arguments that the function <code>sort</code> in Julia Base accept.</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(g = [1, 1, 1, 2, 2],
+                    x1_int = [0, 0, 1, missing, 2],
+                    x2_int = [3, 2, 1, 3, -2],
+                    x1_float = [1.2, missing, -1.0, 2.3, 10],
+                    x2_float = [missing, missing, 3.0, missing, missing],
+                    x3_float = [missing, missing, -1.4, 3.0, -100.0]);
+julia&gt; byrow(ds, cumsum, 1:3)
+5×6 Dataset
+ Row │ g         x1_int    x2_int    x1_float   x2_float   x3_float
+     │ identity  identity  identity  identity   identity   identity
+     │ Int64?    Int64?    Int64?    Float64?   Float64?   Float64?
+─────┼───────────────────────────────────────────────────────────────
+   1 │        1         1         4        1.2  missing    missing
+   2 │        1         1         3  missing    missing    missing
+   3 │        1         2         3       -1.0        3.0       -1.4
+   4 │        2         2         5        2.3  missing          3.0
+   5 │        2         4         2       10.0  missing       -100.0</code></pre><p>Note that for these operations, by default, <code>cumsum/!</code>, <code>cumprod/!</code>, <code>cumax/!</code>, and <code>cummin/!</code> ignore <code>missing</code> values, however, passing <code>missings = :skip</code> causes these functions to skip the missing values (leave them as <code>missing</code>).</p><p>The special operations don&#39;t change the columns names or their orders.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../map/">« Call functions on each observation</a><a class="docs-footer-nextpage" href="../modify/">Transform columns »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.15 on <span class="colophon-date" title="Sunday 3 April 2022 11:18">Sunday 3 April 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
