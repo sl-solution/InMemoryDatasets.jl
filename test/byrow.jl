@@ -341,6 +341,14 @@
     @test byrow(ds, join, :) == ["α111.4", "β∘125.6"]
     @test byrow(ds, join, :, delim = ",") == ["α1,1,1.4", "β∘1,2,5.6"]
     @test byrow(ds, join, :, delim = ":×:") == ["α1:×:1:×:1.4", "β∘1:×:2:×:5.6"]
+
+
+    # promoting small ints
+    ds = Dataset(x1=Int8[127,127],x2=Int8[127,-127])
+    @test byrow(ds,sum) == [254,0]
+    @test byrow(ds,prod) == [16129,-16129]
+    ds = Dataset(x1=[true,true,false],x2=[true,true,false],x3=[true,false,true])
+    @test byrow(ds,sum)==[3,2,1]
 end
 
 @testset "cum*/! - sort/!" begin

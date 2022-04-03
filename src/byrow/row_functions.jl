@@ -33,6 +33,11 @@ function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missi
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, Tuple{CT})
+	CT = nonmissingtype(T)
+	CT <: Base.SmallSigned ? CT = Int : nothing
+	CT <: Base.SmallUnsigned ? CT = UInt : nothing
+	CT <: Bool ? CT = Int : nothing
+	T = Union{Missing, CT}
     init0 = _missings(T, nrow(ds))
 
     if threads
@@ -63,6 +68,11 @@ function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missi
     colsidx = multiple_getindex(index(ds), cols)
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, Tuple{CT})
+	CT = nonmissingtype(T)
+	CT <: Base.SmallSigned ? CT = Int : nothing
+	CT <: Base.SmallUnsigned ? CT = UInt : nothing
+	CT <: Bool ? CT = Int : nothing
+	T = Union{Missing, CT}
     init0 = _missings(T, nrow(ds))
 
     if threads
