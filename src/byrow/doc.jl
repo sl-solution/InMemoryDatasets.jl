@@ -1233,4 +1233,9 @@ Variant of `byrow(stdze!)` which pass a copy of `ds` and leave `ds` untouched.
     byrow(ds::AbstractDataset, fun, cols; [threads])
 
 Return the result of calling `fun` on each row of `ds` selected by `cols`. The `fun` function must accept one argument which contains the values of each row as a vector of values and return a scalar.
+
+For generic functions there are two special cases:
+
+* When `cols` is a single column, `byrow(ds, fun, cols)` acts like `fun.(ds[:, cols])`
+* When `cols` is referring to exactly two columns and it is possible to pass two vectors as arguments of `fun`, `byrow` returns `fun.(ds[:, col1], ds[:, col2])` when possible.
 """
