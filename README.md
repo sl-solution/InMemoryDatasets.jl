@@ -4,7 +4,7 @@
 
 # Documentation
 
-The Documentation for the stable release is available via https://sl-solution.github.io/InMemoryDatasets.jl/stable.
+The latest release's Documentation is available via https://sl-solution.github.io/InMemoryDatasets.jl/stable.
 
 
 # Introduction
