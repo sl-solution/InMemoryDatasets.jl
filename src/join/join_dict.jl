@@ -353,7 +353,7 @@ function _join_inner_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
 
 end
 
-function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols_right, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true) where T
+function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols_right, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true, source::Bool = false, source_col_name = :source) where T
     _fl = _date_value∘identity
     _fr = _date_value∘identity
     if mapformats[1]
@@ -372,6 +372,10 @@ function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols
     notinleft = _find_right_not_in_left(ranges, nrow(dsr), 1:nrow(dsr))
     cumsum!(new_ends, new_ends)
     total_length = new_ends[end] + length(notinleft)
+    if source
+        source_col = _create_source_for_outer(ranges, notinleft, total_length, new_ends)
+    end
+
     if check
         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly, alternatively, pass `check = false` to ignore this error."
     end
@@ -409,6 +413,9 @@ function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
+    end
+    if source
+        insertcols!(newds, source_col_name => source_col)
     end
     true, newds
 

@@ -699,8 +699,33 @@ function _fill_oncols_left_table_left_outer!(res, x, notinleft, en, total)
     end
 end
 
+function _fill_source_for_outer!(res, ranges, notinleft, lval, rval, en, total)
+    cnt = 0
+    for i in 1:length(ranges)
+        if length(ranges[i]) == 0
+            cnt += 1
+            res[cnt] = lval
+        else
+            cnt += length(ranges[i])
+        end
+    end
+    for i in en[end]+1:total
+        res[i] = rval
+    end
+end
 
-function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true) where T
+
+
+function _create_source_for_outer(ranges, notinleft, total_length, en)
+    res = allowmissing(PooledArray(["left", "right", "both"]))
+    resize!(res.refs, total_length)
+    fill!(res.refs, get(res.invpool, "both", missing))
+    _fill_source_for_outer!(res.refs, ranges, notinleft, get(res.invpool, "left", missing), get(res.invpool, "right", missing), en, total_length)
+    res
+end
+
+
+function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, source::Bool = false, source_col_name = :source) where T
     isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
@@ -713,7 +738,7 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
         end
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && nrow(dsr)>1
-            success, result = _join_outer_dict(dsl, dsr, ranges, oncols_left, oncols_right, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads)
+            success, result = _join_outer_dict(dsl, dsr, ranges, oncols_left, oncols_right, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, source = source, source_col_name = source_col_name)
             if success
                 return result
             end
@@ -727,6 +752,9 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
     notinleft = _find_right_not_in_left(ranges, nrow(dsr), idx)
     cumsum!(new_ends, new_ends)
     total_length = new_ends[end] + length(notinleft)
+    if source
+        source_col = _create_source_for_outer(ranges, notinleft, total_length, new_ends)
+    end
     if check
         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly, alternatively, pass `check = false` to ignore this error."
     end
@@ -764,6 +792,9 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
+    end
+    if source
+        insertcols!(newds, source_col_name => source_col)
     end
     newds
 

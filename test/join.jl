@@ -1303,6 +1303,31 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test closejoin(dsl, dsr, on = :x1, direction = :nearest, border = :none, threads = false) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [missing,3,3,missing,3, missing])
     @test closejoin(dsl, dsr, on = :x1, direction = :nearest, border = :none, method = :hash, threads = false) == Dataset(x1=[.3,.74,.53,.30, .65,1], y = [missing,3,3,missing,3, missing])
 
+    dsl = Dataset(x1 = [1,2,3,4], y = [100,200,300,400])
+    dsr = Dataset(x1 = [2,1,5,6], y1 = [-100,-200,-300,-400])
+    out1 = outerjoin(dsl, dsr, on = :x1, source = true)
+    out2 = outerjoin(dsr, dsl, on = :x1, source = true)
+    out1_t = Dataset(AbstractVector[Union{Missing, Int64}[1, 2, 3, 4, 5, 6], Union{Missing, Int64}[100, 200, 300, 400, missing, missing], Union{Missing, Int64}[-200, -100, missing, missing, -300, -400], Union{Missing, String}["both", "both", "left", "left", "right", "right"]], ["x1", "y", "y1", "source"])
+    out2_t = Dataset(AbstractVector[Union{Missing, Int64}[2, 1, 5, 6, 3, 4], Union{Missing, Int64}[-100, -200, -300, -400, missing, missing], Union{Missing, Int64}[200, 100, missing, missing, 300, 400], Union{Missing, String}["both", "both", "left", "left", "right", "right"]], ["x1", "y1", "y", "source"])
+    @test out1 == out1_t
+    @test out2 == out2_t
+    dsl = Dataset(x1 = [1,2,3,4], y = [100,200,300,400])
+    dsr = Dataset(x1 = [2,1], y1 = [-100,missing])
+    out1 = outerjoin(dsl, view(dsr,[2,1],:), on = :x1, source = true)
+    out2 = outerjoin(view(dsr,[2,1],:), dsl, on = :x1, source = true)
+    out1_t = Dataset(AbstractVector[Union{Missing, Int64}[1, 2, 3, 4], Union{Missing, Int64}[100, 200, 300, 400], Union{Missing, Int64}[missing, -100, missing, missing], Union{Missing, String}["both", "both", "left", "left"]], ["x1", "y", "y1", "source"])
+    out2_t = Dataset(AbstractVector[Union{Missing, Int64}[1, 2, 3, 4], Union{Missing, Int64}[missing, -100, missing, missing], Union{Missing, Int64}[100, 200, 300, 400], Union{Missing, String}["both", "both", "right", "right"]], ["x1", "y1", "y", "source"])
+    @test out1 == out1_t
+    @test out2 == out2_t
+    dsl = Dataset(x1 = [1,2,3,4],x2=[1,1,1,1], y = [100,200,300,400])
+    dsr = Dataset(x1 = [2,1,5,6],x2= [1,1,1,1], y1 = [-100,-200,-300,-400])
+    out1 = outerjoin(dsl, dsr, on = [:x1, :x2], source = true)
+    out2 = outerjoin(dsr, dsl, on = [:x1, :x2], source = true)
+    out1_t = Dataset(AbstractVector[Union{Missing, Int64}[1, 2, 3, 4, 5, 6], Union{Missing, Int64}[1, 1, 1, 1, 1, 1], Union{Missing, Int64}[100, 200, 300, 400, missing, missing], Union{Missing, Int64}[-200, -100, missing, missing, -300, -400], Union{Missing, String}["both", "both", "left", "left", "right", "right"]], ["x1", "x2", "y", "y1", "source"])
+    out2_t = Dataset(AbstractVector[Union{Missing, Int64}[2, 1, 5, 6, 3, 4], Union{Missing, Int64}[1, 1, 1, 1, 1, 1], Union{Missing, Int64}[-100, -200, -300, -400, missing, missing], Union{Missing, Int64}[200, 100, missing, missing, 300, 400], Union{Missing, String}["both", "both", "left", "left", "right", "right"]], ["x1", "x2", "y1", "y", "source"])
+    @test out1 == out1_t
+    @test out2 == out2_t
+
 end
 
 @testset "Test empty inputs 1" begin
