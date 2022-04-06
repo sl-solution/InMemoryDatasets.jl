@@ -7,11 +7,11 @@ minimum(f, x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Un
 minimum(f, x) = Base.minimum(f, x)
 minimum(x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS, TimeType}= threads ? hp_minimum(identity, x) : stat_minimum(identity, x)
 minimum(x) = Base.minimum(x)
-# not optimised for simd
-maximum(f, x::AbstractVector{Union{Missing, T}}) where T <: AbstractString = mapreduce(f, _stat_max_fun, x)
-minimum(f, x::AbstractVector{Union{Missing, T}}) where T <: AbstractString = mapreduce(f, _stat_min_fun, x)
-maximum(x::AbstractVector{Union{Missing, T}}) where T <: AbstractString = maximum(identity, x)
-minimum(x::AbstractVector{Union{Missing, T}}) where T <: AbstractString = minimum(identity, x)
+# TODO not optimised for simd - threads option is useless here / it is here because we have it for other types of data
+maximum(f, x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = mapreduce(f, _stat_max_fun, x)
+minimum(f, x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = mapreduce(f, _stat_min_fun, x)
+maximum(x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = maximum(identity, x)
+minimum(x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = minimum(identity, x)
 
 sum(f, x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS} = threads ? hp_sum(f, x) : stat_sum(f, x)
 sum(f, x)=Base.sum(f, x)
