@@ -1549,7 +1549,7 @@ Compare values of two data sets column by column. By default, it returns a boole
 corresponding columns. The `cols` keyword can be used to specifiy the pair of columns which is needed to be compared. The `mapformats` keyword
 controls whether the actual values or the formatted values should be compared.
 
-When `on = nothing` and passed data sets have different number of rows, the result for the corresponding rows where one of data sets doesn't have values will be `missing`. When user passes `on` keyword, the function first use an outer join to join datasets and then compare values correspond to match rows. In this case, user can use observations ids to locate the corresponding rows in each data set.
+When `on = nothing` and passed data sets have different number of rows, the result for the corresponding rows where one of data sets doesn't have values will be `missing`. When user passes `on` keyword, the function first use an outer join to join datasets and then compare values correspond to matching rows. In this case, user can use observations ids to locate the corresponding rows in each data set.
 
 ```julia
 julia> ds1 = Dataset(x = 1:9, y = 9:-1:1);
