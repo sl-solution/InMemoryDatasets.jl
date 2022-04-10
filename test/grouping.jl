@@ -320,9 +320,9 @@ end
     @test combine_out9[!, 2] == combine_out9[!, 1]
     @test combine_out9[!, 3] == combine_out9[!, 1]
 
-    @test all(byrow(compare(combine_out7, combine_out7_v, on = names(combine_out7)), all, :))
-    @test all(byrow(compare(combine_out8, combine_out8_v, on = names(combine_out8)), all, :))
-    @test all(byrow(compare(combine_out9, combine_out9_v, on = names(combine_out9)), all, :))
+    @test all(byrow(compare(combine_out7, combine_out7_v, cols = names(combine_out7)), all, :))
+    @test all(byrow(compare(combine_out8, combine_out8_v, cols = names(combine_out8)), all, :))
+    @test all(byrow(compare(combine_out9, combine_out9_v, cols = names(combine_out9)), all, :))
 
     ds = Dataset(rand(Int, 100, 1), :auto)
     @test sort(combine(gatherby(ds, 1), 1=>length), :) == combine(groupby(ds, 1), 1=>length)
@@ -374,12 +374,12 @@ if !Base.Sys.iswindows()
         @test c1_IMD == combine(gatherby(ds, [:a, :x3], threads = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3, threads = false)
         c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
 
-        @test all(byrow(compare(c1_IMD, Dataset(c1_DF), on = names(c1_IMD)), all, :))
+        @test all(byrow(compare(c1_IMD, Dataset(c1_DF), cols = names(c1_IMD)), all, :))
         c1_IMD = combine(groupby(ds, [:a, :x3]), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
         @test c1_IMD == combine(groupby(ds, [:a, :x3], threads = false), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3, threads = false)
 
         c1_DF = DF.combine(DF.groupby(DF.DataFrame(ds), [:a, :x3], sort = true), :x1=>sum=>:o1, :x1=>argmax=>:o2, :x1=>sort=>:o3)
-        @test all(byrow(compare(c1_IMD, Dataset(c1_DF), on = names(c1_IMD)), all, :))
+        @test all(byrow(compare(c1_IMD, Dataset(c1_DF), cols = names(c1_IMD)), all, :))
 
         for r in 0:.1:1
             ds = Dataset(rand(1:100, 100, 10), :auto)
@@ -572,7 +572,7 @@ end
     median1(x) = median(x)
     c1 =combine(gatherby(sds, 1), 2:4 .=>Ref([var, std, median]))
     c2 =  combine(gatherby(copy(sds), 1), 2:4 .=> Ref([var1, std1, median1]))
-    @test byrow(compare(c1, c2, on = names(c1) .=> names(c2)) , all)|>all
+    @test byrow(compare(c1, c2, cols = names(c1) .=> names(c2)) , all)|>all
 
     c3 = combine(gatherby(sds,1), :y4=>IMD.sum)
     @test eltype(c3.sum_y4) == Union{Missing, Float16}

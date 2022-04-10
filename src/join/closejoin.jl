@@ -308,7 +308,7 @@ end
 
 
 # border = :nearest | :missing | :none
-function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, direction = :backward, inplace = false, tol = nothing,  allow_exact_match = true, op = nothing, method = :sort, threads = true) where T
+function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, border = :nearest, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, direction = :backward, inplace = false, tol = nothing,  allow_exact_match = true, op = nothing, method = :sort, threads = true, obs_id = false, obs_id_name = :obs_id) where T
     isempty(dsl) && return copy(dsl)
     if !allow_exact_match
         #aem is the function to check allow_exact_match
@@ -380,7 +380,16 @@ function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, m
         push!(index(newds), new_var_name)
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
-
+    if obs_id
+        obs_id_name1 = Symbol(obs_id_name, "_left")
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_left = allocatecol(T, total_length)
+        obs_id_right = allocatecol(T, total_length)
+        obs_id_left .= 1:nrow(dsl)
+        _fill_right_cols_table_close!(obs_id_right, idx, ranges, total_length, border, missing, direction; nn = direction == :nearest, rnn = view(_columns(dsr)[oncols_right[end]], idx), lnn = _columns(dsl)[oncols_left[end]], tol = tol, aem = aem, op = op, threads = threads)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
+    end
     if inplace
         _modified(_attributes(newds))
     end

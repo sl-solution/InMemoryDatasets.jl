@@ -2598,3 +2598,123 @@ end
     @test main == t_ds
 
 end
+
+@testset "compare, obs_id, multiple_match" begin
+
+    ds1 = Dataset(x = ["a1", "a2", "a1", "a4"], y = [1,2,1,2], z = [1.2,0,-10,100])
+    ds2 = Dataset(x = ["a10","a2", "a5"], y = [1,2,3], z=[2,200,-100])
+
+    cmp_out = compare(ds1, ds2, cols = :z)
+    @test cmp_out == Dataset("z=>z" => [false, false, false, missing])
+    cmp_out = compare(ds1, ds2)
+    @test cmp_out == Dataset("x=>x" => [false, true, false, missing], "y=>y" => [true, true, false, missing], "z=>z" => [false, false, false, missing])
+
+    l1 = leftjoin(ds2, ds1, on = "y", multiple_match = true, makeunique = true, multiple_match_name = :multiple)
+
+    @test isequal(l1[:, :multiple], [true, true, true, true, false])
+
+    i1 = innerjoin(ds2, ds1, on = :x, multiple_match = true, multiple_match_name = :multiple, makeunique = true)
+    @test i1[:, :multiple] == [false]
+    i2 = innerjoin(ds2, ds1, on = :y, multiple_match = true, multiple_match_name = :multiple, makeunique = true)
+    @test i2[:, :multiple] == [true, true, true, true]
+
+    i3 = innerjoin(ds2, ds1, on = [:x, :y], multiple_match = true, multiple_match_name = :multiple, makeunique = true)
+    @test i3[:, :multiple] == [false]
+
+
+    l1 = leftjoin(view(ds2, :, [3,2,1]), ds1, on = "y", multiple_match = true, makeunique = true, multiple_match_name = :multiple)
+
+    @test isequal(l1[:, :multiple], [true, true, true, true, false])
+
+    i1 = innerjoin(view(ds2, :, :), view(ds1, :, :), on = :x, multiple_match = true, multiple_match_name = :multiple, makeunique = true)
+    @test i1[:, :multiple] == [false]
+
+    i2 = innerjoin(ds2, view(ds1, :, [3,2,1]), on = :y, multiple_match = true, multiple_match_name = :multiple, makeunique = true)
+    @test i2[:, :multiple] == [true, true, true, true]
+
+    i3 = innerjoin(view(ds2, [3,2,1], [3,2,1]), ds1, on = [:x, :y], multiple_match = true, multiple_match_name = :multiple, makeunique = true)
+    @test i3[:, :multiple] == [false]
+
+    i4 = innerjoin(ds1, ds2, on = [:x], multiple_match = true, multiple_match_name = :multiple, makeunique = true)
+    @test i4[:, :multiple] == [false]
+
+    i5 = innerjoin(ds1, ds2, on = [:x], multiple_match = true, multiple_match_name = :multiple, makeunique = true, obs_id = true, obs_id_name = :obs_id)
+
+    @test i5[:, :obs_id_left] == [2]
+    @test i5[:, :obs_id_right] == [2]
+
+    o1 = outerjoin(ds1, ds2, on = [:x, :y], makeunique = true, obs_id = true, obs_id_name = :obs_id)
+    @test isequal(o1[:, :obs_id_left], [1,2,3,4,missing,missing])
+    @test isequal(o1[:, :obs_id_right], [missing,2,missing,missing,1,3])
+
+    old = Dataset(Insurance_Id=[1,2,3,5],Business_Id=[10,20,30,50],
+                     Amount=[100,200,300,missing],
+                     Account_Id=["x1","x10","x5","x5"])
+    new = Dataset(Ins_Id=[1,3,2,4,3,2],
+                     B_Id=[10,40,30,40,30,20],
+                     AMT=[100,200,missing,-500,350,700],
+                     Ac_Id=["x1","x1","x10","x10","x7","x5"])
+    eq_fun(x::Number, y::Number) = abs(x - y) <= 50
+    eq_fun(x::AbstractString, y::AbstractString) = isequal(x,y)
+    eq_fun(x,y) = missing
+    cmp_out = compare(old, new,
+                  on = [1=>1,2=>2],
+                  cols = [:Amount=>:AMT, :Account_Id=>:Ac_Id],
+                  eq = eq_fun)
+    cmp_out_t = Dataset([Union{Missing, Int64}[1, 2, 3, 5, 2, 3, 4], Union{Missing, Int64}[10, 20, 30, 50, 30, 40, 40], Union{Missing, Int32}[1, 2, 3, 4, missing, missing, missing], Union{Missing, Int32}[1, 6, 5, missing, 3, 2, 4], Union{Missing, Bool}[true, false, true, missing, missing, missing, missing], Union{Missing, Bool}[true, false, false, missing, missing, missing, missing]], ["Insurance_Id", "Business_Id", "obs_id_left", "obs_id_right", "Amount=>AMT", "Account_Id=>Ac_Id"])
+    @test cmp_out == cmp_out_t
+
+    dsl = Dataset(x = 1:10)
+    dsr = Dataset(x = 10:-1:1)
+    l1 = leftjoin(dsl, dsr, on = :x, obs_id = true, obs_id_name = :obs_id)
+    @test l1[:, :obs_id_left] == 1:nrow(dsl)
+    @test l1[:, :obs_id_right] == dsr[:, :x]
+
+    dsl = Dataset(x = 1:10, y=1)
+    dsr = Dataset(x = 10:-1:1, y=1)
+    l1 = leftjoin(dsl, dsr, on = [:y, :x], obs_id = true, obs_id_name = :obs_id)
+    @test l1[:, :obs_id_left] == 1:nrow(dsl)
+    @test l1[:, :obs_id_right] == dsr[:, :x]
+
+    dsl = Dataset(x = 1:10, y=1)
+    dsr = Dataset(x = 10:-1:1, y=1)
+    l1 = leftjoin(dsl, dsr, on = [:y, :x], obs_id = true, obs_id_name = :obs_id, method = :hash)
+    @test l1[:, :obs_id_left] == 1:nrow(dsl)
+    @test l1[:, :obs_id_right] == dsr[:, :x]
+
+    dsl = Dataset(x = 1:10000, y=1)
+    dsr = Dataset(x = 10000:-1:1, y=1)
+    l1 = leftjoin(dsl, dsr, on = [:y, :x], obs_id = true, obs_id_name = :obs_id, threads = true)
+    @test l1[:, :obs_id_left] == 1:nrow(dsl)
+    @test l1[:, :obs_id_right] == dsr[:, :x]
+
+    dsl = Dataset(x = 1:10)
+    dsr = Dataset(x = 10:-1:1)
+    l1 = innerjoin(dsl, dsr, on = :x, obs_id = true, obs_id_name = :obs_id)
+    @test l1[:, :obs_id_left] == 1:nrow(dsl)
+    @test l1[:, :obs_id_right] == dsr[:, :x]
+
+    dsl = Dataset(x = 1:10, y=1)
+    dsr = Dataset(x = 10:-1:1, y=1)
+    l1 = innerjoin(dsl, dsr, on = [:y, :x], obs_id = true, obs_id_name = :obs_id)
+    @test l1[:, :obs_id_left] == 1:nrow(dsl)
+    @test l1[:, :obs_id_right] == dsr[:, :x]
+
+    dsl = Dataset(x = 1:10, y=1)
+    dsr = Dataset(x = 10:-1:1, y=1)
+    l1 = innerjoin(dsl, dsr, on = [:y, :x], obs_id = true, obs_id_name = :obs_id, method = :hash)
+    @test l1[:, :obs_id_left] == 1:nrow(dsl)
+    @test l1[:, :obs_id_right] == dsr[:, :x]
+
+    dsl = Dataset(x = 1:10000, y=1)
+    dsr = Dataset(x = 10000:-1:1, y=1)
+    l1 = innerjoin(dsl, dsr, on = [:y, :x], obs_id = true, obs_id_name = :obs_id, threads = true)
+    @test l1[:, :obs_id_left] == 1:nrow(dsl)
+    @test l1[:, :obs_id_right] == dsr[:, :x]
+end
+
+
+
+
+
+

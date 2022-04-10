@@ -110,7 +110,7 @@ julia> leftjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, method::Symbol = :sort, threads::Bool = true)
+function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -136,7 +136,7 @@ function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
-    _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, method = method, threads = threads)
+    _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
 
 end
 """
@@ -145,7 +145,7 @@ end
 Variant of `leftjoin` that performs `leftjoin` in place for special case that the number of matching rows from the right data set is at most one.
 ```
 """
-function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method::Symbol = :sort, threads::Bool = true)
+function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool=false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -169,7 +169,7 @@ function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique 
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
-    _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, check = false, method = method, threads = threads)
+    _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, check = false, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
 end
 
 """
@@ -311,7 +311,7 @@ julia> innerjoin(dsl, dsr, on = [1=>1, 2=>(:lower, nothing)])
 
 ```
 """
-function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols::Bool = true, strict_inequality = false, method = :sort, threads::Bool = true)
+function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols::Bool = true, strict_inequality = false, method = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -348,7 +348,7 @@ function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
-    _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, droprangecols = droprangecols, strict_inequality = strict_inequality, method = method, threads = threads)
+    _join_inner(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, droprangecols = droprangecols, strict_inequality = strict_inequality, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
 end
 
 """
@@ -461,7 +461,7 @@ julia> outerjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for data
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads::Bool = true, source::Bool = false, source_name = :source)
+function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads::Bool = true, source::Bool = false, source_name = :source, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -485,7 +485,7 @@ function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
-    _join_outer(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, method = method, threads = threads, source = source, source_col_name = source_name)
+    _join_outer(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, method = method, threads = threads, source = source, source_col_name = source_name, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
 end
 
 """
@@ -1093,7 +1093,7 @@ end
 Variant of `closejoin!` that returns an updated copy of `dsl` leaving `dsl` itself unmodified.
 ```
 """
-function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol=nothing, allow_exact_match = true, op = nothing, method = :sort, threads::Bool = true)
+function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol=nothing, allow_exact_match = true, op = nothing, method = :sort, threads::Bool = true, obs_id::Bool = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing, :none))
@@ -1120,7 +1120,7 @@ function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, dir
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
     if direction in (:backward, :forward, :nearest)
-        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, tol=tol, allow_exact_match = allow_exact_match, op = op, method = method, threads = threads)
+        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, tol=tol, allow_exact_match = allow_exact_match, op = op, method = method, threads = threads, obs_id = obs_id, obs_id_name = obs_id_name)
 
     else
         throw(ArgumentError("`direction` can be only :backward, :forward, or :nearest"))
@@ -1395,7 +1395,7 @@ julia> trades # The left table has been changed after joining.
    5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100     97.99     98.01
 ```
 """
-function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing, method = :sort, threads::Bool = true)
+function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing, method = :sort, threads::Bool = true, obs_id::Bool = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing, :none))
@@ -1422,7 +1422,7 @@ function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction 
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
     if direction in (:backward, :forward, :nearest)
-        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, inplace = true, tol = tol, allow_exact_match = allow_exact_match, op = op, method = method, threads = threads)
+        _join_closejoin(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, border = border, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, direction = direction, inplace = true, tol = tol, allow_exact_match = allow_exact_match, op = op, method = method, threads = threads, obs_id = obs_id, obs_id_name = obs_id_name)
 
     else
         throw(ArgumentError("`direction` can be only :backward, :forward, or :nearest"))
@@ -1538,3 +1538,170 @@ end
 Variant of `update!` that returns an updated copy of `dsmain` leaving `dsmain` itself unmodified.
 """
 update(dsmain::AbstractDataset, dsupdate::AbstractDataset; on = nothing, allowmissing = false, mode = :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, method = :sort, threads = true) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode,  mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads)
+
+
+
+# TODO the docstring is very limited, we need a more comprehensive docs here / and more examples
+"""
+    compare(ds1::AbstractDataset, ds2::AbstractDataset; [cols = nothing, on = nothing, eq = isequal, mapformats = false, on_mapformats = true, threads = true, ...])
+
+Compare values of two data sets column by column. By default, it returns a boolean data set which is the result of calling  `eq` on each value of
+corresponding columns. The `cols` keyword can be used to specifiy the pair of columns which is needed to be compared. The `mapformats` keyword
+controls whether the actual values or the formatted values should be compared.
+
+When `on = nothing` and passed data sets have different number of rows, the result for the corresponding rows where one of data sets doesn't have values will be `missing`. When user passes `on` keyword, the function first use an outer join to join datasets and then compare values correspond to match rows. In this case, user can use observations ids to locate the corresponding rows in each data set.
+
+```julia
+julia> ds1 = Dataset(x = 1:9, y = 9:-1:1);
+julia> ds2 = Dataset(x = 1:9, y2 = 9:-1:1, y3 = 1:9);
+julia> compare(ds1, ds2, cols = [:x=>:x, :y=>:y2])
+9×2 Dataset
+ Row │ x=>x      y=>y2
+     │ identity  identity
+     │ Bool?     Bool?
+─────┼────────────────────
+   1 │     true      true
+   2 │     true      true
+   3 │     true      true
+   4 │     true      true
+   5 │     true      true
+   6 │     true      true
+   7 │     true      true
+   8 │     true      true
+   9 │     true      true
+
+julia> compare(ds1, ds2, cols = [:x=>:x, :y=>:y3])
+9×2 Dataset
+ Row │ x=>x      y=>y3
+     │ identity  identity
+     │ Bool?     Bool?
+─────┼────────────────────
+   1 │     true     false
+   2 │     true     false
+   3 │     true     false
+   4 │     true     false
+   5 │     true      true
+   6 │     true     false
+   7 │     true     false
+   8 │     true     false
+   9 │     true     false
+
+julia> old = Dataset(Insurance_Id=[1,2,3,5],Business_Id=[10,20,30,50],
+                     Amount=[100,200,300,missing],
+                     Account_Id=["x1","x10","x5","x5"])
+4×4 Dataset
+ Row │ Insurance_Id  Business_Id  Amount    Account_Id
+     │ identity      identity     identity  identity
+     │ Int64?        Int64?       Int64?    String?
+─────┼─────────────────────────────────────────────────
+   1 │            1           10       100  x1
+   2 │            2           20       200  x10
+   3 │            3           30       300  x5
+   4 │            5           50   missing  x5
+
+julia> new = Dataset(Ins_Id=[1,3,2,4,3,2],
+                     B_Id=[10,40,30,40,30,20],
+                     AMT=[100,200,missing,-500,350,700],
+                     Ac_Id=["x1","x1","x10","x10","x7","x5"])
+6×4 Dataset
+ Row │ Ins_Id    B_Id      AMT       Ac_Id
+     │ identity  identity  identity  identity
+     │ Int64?    Int64?    Int64?    String?
+─────┼────────────────────────────────────────
+   1 │        1        10       100  x1
+   2 │        3        40       200  x1
+   3 │        2        30   missing  x10
+   4 │        4        40      -500  x10
+   5 │        3        30       350  x7
+   6 │        2        20       700  x5
+
+julia> eq_fun(x::Number, y::Number) = abs(x - y) <= 50
+eq_fun (generic function with 3 methods)
+
+julia> eq_fun(x::AbstractString, y::AbstractString) = isequal(x,y)
+eq_fun (generic function with 2 methods)
+
+julia> eq_fun(x,y) = missing
+eq_fun (generic function with 3 methods)
+
+julia> compare(old, new,
+                  on = [1=>1,2=>2],
+                  cols = [:Amount=>:AMT, :Account_Id=>:Ac_Id],
+                  eq = eq_fun)
+7×6 Dataset
+ Row │ Insurance_Id  Business_Id  obs_id_left  obs_id_right  Amount=>AMT  Account_Id=>Ac_Id
+     │ identity      identity     identity     identity      identity     identity
+     │ Int64?        Int64?       Int32?       Int32?        Bool?        Bool?
+─────┼──────────────────────────────────────────────────────────────────────────────────────
+   1 │            1           10            1             1         true               true
+   2 │            2           20            2             6        false              false
+   3 │            3           30            3             5         true              false
+   4 │            5           50            4       missing      missing            missing
+   5 │            2           30      missing             3      missing            missing
+   6 │            3           40      missing             2      missing            missing
+   7 │            4           40      missing             4      missing            missing
+```
+"""
+function compare(ds1::AbstractDataset, ds2::AbstractDataset; cols = nothing, on = nothing, check = true, mapformats = false, on_mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, method = :sort, threads = true, eq = isequal, obs_id_name = :obs_id, multiple_match = false, multiple_match_name = :multiple, dropobsidcols::Bool = on === nothing)
+    _check_consistency(ds1)
+    _check_consistency(ds2)
+    if on !== nothing
+        if !(on isa AbstractVector)
+            on = [on]
+        else
+            on = on
+        end
+    end
+
+    if cols !== nothing
+        if !(cols isa AbstractVector)
+            cols = [cols]
+        else
+            cols = cols
+        end
+    end
+
+    (multiple_match && (on === nothing)) && throw(ArgumentError("the `multiple_match` argument is only supported when `on` is set."))
+
+
+    if !(mapformats isa AbstractVector)
+        mapformats = repeat([mapformats], 2)
+    else
+        length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
+    end
+    if on !== nothing
+        if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
+            onleft = multiple_getindex(index(ds1), on)
+            onright = multiple_getindex(index(ds2), on)
+        elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+            onleft = multiple_getindex(index(ds1), map(x->x.first, on))
+            onright = multiple_getindex(index(ds2), map(x->x.second, on))
+        else
+            throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
+        end
+    else
+        onleft = nothing
+        onright = nothing
+    end
+
+    if cols === nothing && on === nothing
+        left_col_idx = 1:ncol(ds1)
+        right_col_idx = index(ds2)[names(ds1)]
+    elseif cols === nothing && on !== nothing
+        left_col_idx = setdiff(1:ncol(ds1), onleft)
+        right_col_idx = setdiff(index(ds2)[names(ds1)], onright)
+    elseif typeof(cols) <: AbstractVector{<:Union{AbstractString, Symbol}}
+        left_col_idx = index(ds1)[cols]
+        right_col_idx = index(ds2)[names(ds1)[left_col_idx]]
+    elseif (typeof(cols) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(cols) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
+        left_col_idx = index(ds1)[map(x->x.first, cols)]
+        right_col_idx = index(ds2)[map(x->x.second, cols)]
+    else
+        throw(ArgumentError("`cols` keyword must be a vector of column names or a vector of pairs of column names"))
+    end
+
+    # nrow(ds1) != nrow(ds2) && throw(ArgumentError("the number of rows for both data sets should be the same"))
+    max_nrow=max(nrow(ds1), nrow(ds2))
+    _compare(ds1, ds2, max_nrow < typemax(Int32) ? Val(Int32) : Val(Int); onleft = onleft, onright = onright, cols_left = left_col_idx, cols_right = right_col_idx, check = check, mapformats = mapformats, on_mapformats = on_mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, eq = eq, obs_id_name = obs_id_name, multiple_match = multiple_match, multiple_match_name = multiple_match_name, drop_obs_id = dropobsidcols)
+
+end

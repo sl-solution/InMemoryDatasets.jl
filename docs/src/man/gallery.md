@@ -7,7 +7,15 @@ This gallery contains some random questions about data manipulation that we foun
 * [Tally across columns with variable condition](https://stackoverflow.com/questions/70501316/tally-across-columns-with-variable-condition-in-r) : I am trying to tally across columns of a data frame with values that exceed a corresponding limit variable.
 
 ```julia
-julia> ds
+julia> ds = Dataset([[1.66077, -1.05298, -0.499206, 2.47123, 2.45914, 1.14014],
+                     [0.75, 0.75, 0.75, 0.75, 0.75, 0.75],
+                     [0.709184, -2.53609, 0.0130659, -0.587867, 0.55786, 1.60398],
+                     [0.333, 0.333, 0.333, 0.333, 0.333, 0.333],
+                     [1.47438, 2.01485, 2.49006, 1.80345, 0.569928, 1.58403],
+                     [1, 1, 1, 1, 1, 1],
+                     [2.02678, 1.51587, 1.70535, 2.51628, 1.909, 0.794765],
+                     [1.25, 1.25, 1.25, 1.25, 1.25, 1.25]],
+                     ["a", "a_lim", "b", "b_lim", "c", "c_lim", "d", "d_lim"])
 6×8 Dataset
  Row │ a          a_lim     b           b_lim     c         c_lim     d         d_lim    
      │ identity   identity  identity    identity  identity  identity  identity  identity
@@ -22,7 +30,7 @@ julia> ds
 
 julia> using Chain
 julia> @chain ds begin
-         compare(_[!, r"lim"], _[!, Not(r"lim")], on = 1:4 .=> 1:4), eq = isless)
+         compare(_[!, r"lim"], _[!, Not(r"lim")], cols = 1:4 .=> 1:4, eq = isless)
          byrow(count)
        end
 6-element Vector{Int32}:

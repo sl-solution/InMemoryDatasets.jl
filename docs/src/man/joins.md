@@ -531,3 +531,70 @@ julia> update(main, transaction, on = [:group, :id],
    6 │ G2               1        2.1   missing
    7 │ G2               2        0.0         2
 ```
+
+## `compare`
+
+The `compare` function compares two data sets. When the columns which needed to be compared are specified via the `cols` keyword argument, `compare` compares the corresponding values in each row by calling `eq` on the actual or formatted values. By default, `compare` compares two values via the `isequal` function, however, users may pass any function (that returns `true`/`false`) via the `eq` keyword arguments. When the number of rows of two data sets are not matched, `compare` fills the output data set with `missing`. Users can pass key columns to perform comparing matched pairs of observations. The key columns can be passed via the `on` keyword argument. The `compare` function uses `outerjoin` to find the corresponding matches, this also means, the `compare` function can accept the arguments of `outerjoin`.
+
+> To pass the `mapformats` keyword argument to `outerjoin` in `compare`, use the `on_mapformats` keyword argument, since the `mapformats` keyword argument in `compare` refers to how observations should be compared; based on actual values or formatted values.
+
+By default, the output data set contains observations id when users pass the `on` keyword argument. When an observation exists in only one of the passed data sets, the observation id will be missing for the other one.
+
+### Examples
+
+```jldoctest
+julia> old = Dataset(Insurance_Id=[1,2,3,5],Business_Id=[10,20,30,50],
+                     Amount=[100,200,300,missing],
+                     Account_Id=["x1","x10","x5","x5"])
+4×4 Dataset
+ Row │ Insurance_Id  Business_Id  Amount    Account_Id
+     │ identity      identity     identity  identity   
+     │ Int64?        Int64?       Int64?    String?    
+─────┼─────────────────────────────────────────────────
+   1 │            1           10       100  x1
+   2 │            2           20       200  x10
+   3 │            3           30       300  x5
+   4 │            5           50   missing  x5
+
+julia> new = Dataset(Ins_Id=[1,3,2,4,3,2],
+                     B_Id=[10,40,30,40,30,20],
+                     AMT=[100,200,missing,-500,350,700],
+                     Ac_Id=["x1","x1","x10","x10","x7","x5"])
+6×4 Dataset
+ Row │ Ins_Id    B_Id      AMT       Ac_Id    
+     │ identity  identity  identity  identity
+     │ Int64?    Int64?    Int64?    String?  
+─────┼────────────────────────────────────────
+   1 │        1        10       100  x1
+   2 │        3        40       200  x1
+   3 │        2        30   missing  x10
+   4 │        4        40      -500  x10
+   5 │        3        30       350  x7
+   6 │        2        20       700  x5
+
+julia> eq_fun(x::Number, y::Number) = abs(x - y) <= 50
+eq_fun (generic function with 3 methods)
+
+julia> eq_fun(x::AbstractString, y::AbstractString) = isequal(x,y)
+eq_fun (generic function with 2 methods)
+
+julia> eq_fun(x,y) = missing
+eq_fun (generic function with 3 methods)
+
+julia> compare(old, new,
+                  on = [1=>1,2=>2],
+                  cols = [:Amount=>:AMT, :Account_Id=>:Ac_Id],
+                  eq = eq_fun)
+7×6 Dataset
+ Row │ Insurance_Id  Business_Id  obs_id_left  obs_id_right  Amount=>AMT  Account_Id=>Ac_Id
+     │ identity      identity     identity     identity      identity     identity          
+     │ Int64?        Int64?       Int32?       Int32?        Bool?        Bool?             
+─────┼──────────────────────────────────────────────────────────────────────────────────────
+   1 │            1           10            1             1         true               true
+   2 │            2           20            2             6        false              false
+   3 │            3           30            3             5         true              false
+   4 │            5           50            4       missing      missing            missing
+   5 │            2           30      missing             3      missing            missing
+   6 │            3           40      missing             2      missing            missing
+   7 │            4           40      missing             4      missing            missing
+```

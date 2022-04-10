@@ -321,7 +321,7 @@ const ≅ = isequal
         setformat!(ds, 1=>isodd)
         groupby!(ds, [:g2, :g1])
         dst = transpose(ds, :x, variable_name = nothing)
-        dst_t = compare(ds, dst, on =[:g1=>:g1, :g2=>:g2, :x=>:_c1], mapformats = true)
+        dst_t = compare(ds, dst, cols =[:g1=>:g1, :g2=>:g2, :x=>:_c1], mapformats = true)
         @test all(byrow(dst_t, all, :))
 
         ds = Dataset(x = [1,2,1,2,3], y = [missing, missing, missing, missing, missing])

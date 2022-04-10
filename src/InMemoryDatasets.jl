@@ -174,6 +174,7 @@ include("join/join.jl")
 include("join/join_dict.jl")
 include("join/closejoin.jl")
 include("join/update.jl")
+include("join/compare.jl")
 include("join/main.jl")
 
 include("abstractdataset/iteration.jl")

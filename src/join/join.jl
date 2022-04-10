@@ -321,6 +321,50 @@ function _fill_right_cols_table_inner!(_res, x, ranges, en, total; inbits = noth
     end
 end
 
+function _create_multiple_match_col_left(ranges, total_length)
+    res = allocatecol(Bool, total_length)
+    cnt = 0
+    for i in 1:length(ranges)
+        if length(ranges[i]) == 0
+            cnt += 1
+            res[cnt] = false
+        else
+            if length(ranges[i]) == 1
+                cnt += 1
+                res[cnt] = false
+            else
+                for j in ranges[i]
+                    cnt += 1
+                    res[cnt] = true
+                end
+            end
+        end
+    end
+    res
+end
+function _create_multiple_match_col_inner(ranges, total_length)
+    res = allocatecol(Bool, total_length)
+    cnt = 0
+    for i in 1:length(ranges)
+        if length(ranges[i]) == 0
+            nothing
+        else
+            if length(ranges[i]) == 1
+                cnt += 1
+                res[cnt] = false
+            else
+                for j in ranges[i]
+                    cnt += 1
+                    res[cnt] = true
+                end
+            end
+        end
+    end
+    res
+end
+
+
+
 ISLE(x, ::Missing) = true
 ISLE(x, y) = (x <= y)
 ISLE(::Missing, y) = false
@@ -395,7 +439,7 @@ end
 
 
 
-function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true) where T
+function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :obs_id) where T
     isempty(dsl) && return copy(dsl)
     if method == :hash
         ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
@@ -409,7 +453,7 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
 
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && nrow(dsr)>1
-            success, result = _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads)
+            success, result = _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
             if success
                 return result
             end
@@ -427,6 +471,11 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
     if check
         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly, alternatively, pass `check = false` to ignore this error."
     end
+
+    if multiple_match
+        multiple_match_col = _create_multiple_match_col_left(ranges, total_length)
+    end
+
     res = []
     for j in 1:length(index(dsl))
         addmissing = false
@@ -461,11 +510,24 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
         push!(index(newds), new_var_name)
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
+    if multiple_match
+        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
+    end
+    if obs_id
+        obs_id_name1 = Symbol(obs_id_name, "_left")
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_left = allocatecol(T, total_length)
+        obs_id_right = allocatecol(T, total_length)
+        _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; threads = threads)
+        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
+    end
     newds
 
 end
 
-function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true) where T
+function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match = false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :obs_id) where T
     isempty(dsl) && return dsl
     if method == :hash
         ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
@@ -478,7 +540,7 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
         end
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && nrow(dsr)>1
-            success, result = _join_left!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads)
+            success, result = _join_left!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
             if success
                 return result
             end
@@ -500,6 +562,10 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly, alternatively, pass `check = false` to ignore this error."
     end
 
+    if multiple_match
+        multiple_match_col = _create_multiple_match_col_left(ranges, total_length)
+    end
+
     for j in 1:length(right_cols)
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
@@ -513,12 +579,25 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
         push!(index(dsl), new_var_name)
         setformat!(dsl, index(dsl)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
+    if multiple_match
+        insertcols!(dsl, ncol(dsl)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
+    end
+    if obs_id
+        obs_id_name1 = Symbol(obs_id_name, "_left")
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_left = allocatecol(T, total_length)
+        obs_id_right = allocatecol(T, total_length)
+        _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; threads = threads)
+        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
+        insertcols!(dsl, ncol(dsl)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+        insertcols!(dsl, ncol(dsl)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
+    end
     _modified(_attributes(dsl))
     dsl
 end
 
-function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], method = :sort, threads = true, onlyreturnrange = false) where T
-    isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
+function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], method = :sort, threads = true, onlyreturnrange = false, multiple_match = false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id) where T
+    (isempty(dsl) || isempty(dsr)) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
     type = :both
@@ -578,7 +657,7 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
     else
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && type == :both && nrow(dsr)>1
-            success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads)
+            success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
             if success
                 return result
             end
@@ -615,11 +694,16 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
     if length(right_range_cols) == 2
         total_length = sum(inbits)
     end
+
     if onlyreturnrange
         return ranges
     end
     if check
         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly, alternatively, pass `check = false` to ignore this error."
+    end
+
+    if multiple_match
+        multiple_match_col = _create_multiple_match_col_inner(ranges, total_length)
     end
 
     res = []
@@ -650,6 +734,19 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
+    end
+    if multiple_match
+        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
+    end
+    if obs_id
+        obs_id_name1 = Symbol(obs_id_name, "_left")
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_left = allocatecol(T, total_length)
+        obs_id_right = allocatecol(T, total_length)
+        _fill_oncols_left_table_inner!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
+        _fill_right_cols_table_inner!(obs_id_right, idx, ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
     newds
 
@@ -724,9 +821,30 @@ function _create_source_for_outer(ranges, notinleft, total_length, en)
     res
 end
 
+function _create_multiple_match_col_outer(ranges, notinleft, total_length, new_ends)
+    res = _missings(Bool, total_length)
+    cnt = 0
+    for i in 1:length(ranges)
+        if length(ranges[i]) == 0
+            cnt += 1
+            res[cnt] = false
+        else
+            if length(ranges[i]) == 1
+                cnt += 1
+                res[cnt] = false
+            else
+                for j in ranges[i]
+                    cnt += 1
+                    res[cnt] = true
+                end
+            end
+        end
+    end
+    res
+end
 
-function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, source::Bool = false, source_col_name = :source) where T
-    isempty(dsl) || isempty(dsr) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
+function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, source::Bool = false, source_col_name = :source, multiple_match = false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :obs_id) where T
+    (isempty(dsl) || isempty(dsr)) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
     if method == :hash
@@ -738,7 +856,7 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
         end
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && nrow(dsr)>1
-            success, result = _join_outer_dict(dsl, dsr, ranges, oncols_left, oncols_right, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, source = source, source_col_name = source_col_name)
+            success, result = _join_outer_dict(dsl, dsr, ranges, oncols_left, oncols_right, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, source = source, source_col_name = source_col_name, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
             if success
                 return result
             end
@@ -752,12 +870,18 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
     notinleft = _find_right_not_in_left(ranges, nrow(dsr), idx)
     cumsum!(new_ends, new_ends)
     total_length = new_ends[end] + length(notinleft)
-    if source
-        source_col = _create_source_for_outer(ranges, notinleft, total_length, new_ends)
-    end
+
     if check
         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly, alternatively, pass `check = false` to ignore this error."
     end
+
+    if source
+        source_col = _create_source_for_outer(ranges, notinleft, total_length, new_ends)
+    end
+    if multiple_match
+        multiple_match_col = _create_multiple_match_col_outer(ranges, notinleft, total_length, new_ends)
+    end
+
     res = []
     for j in 1:length(index(dsl))
         _res = allocatecol(_columns(dsl)[j], total_length)
@@ -794,7 +918,22 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
     if source
-        insertcols!(newds, source_col_name => source_col)
+        insertcols!(newds, ncol(newds)+1, source_col_name => source_col, unsupported_copy_cols = false)
+    end
+    if multiple_match
+        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
+    end
+    if obs_id
+        # Note that the name convention of obs_id_name1 and name2 are used in other places
+        obs_id_name1 = Symbol(obs_id_name, "_left")
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_left = allocatecol(T, total_length)
+        obs_id_right = allocatecol(T, total_length)
+        _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing, threads = threads)
+        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
+        _fill_oncols_left_table_left_outer!(obs_id_right, idx, notinleft, new_ends, total_length)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
     newds
 
