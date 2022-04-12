@@ -1,3 +1,9 @@
+# Dev
+
+## Fixes
+
+* Fix an issue related to `compare` which disallows non-boolean function to be passed to `eq` 
+
 # Version 0.7.0
 
 ## New features
