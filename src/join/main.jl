@@ -1545,7 +1545,7 @@ update(dsmain::AbstractDataset, dsupdate::AbstractDataset; on = nothing, allowmi
 """
     compare(ds1::AbstractDataset, ds2::AbstractDataset; [cols = nothing, on = nothing, eq = isequal, mapformats = false, on_mapformats = true, threads = true, ...])
 
-Compare values of two data sets column by column. By default, it returns a boolean data set which is the result of calling  `eq` on each value of
+Compare values of two data sets column by column. It returns a data set which is the result of calling  `eq` on each value of
 corresponding columns. The `cols` keyword can be used to specifiy the pair of columns which is needed to be compared. The `mapformats` keyword
 controls whether the actual values or the formatted values should be compared.
 
