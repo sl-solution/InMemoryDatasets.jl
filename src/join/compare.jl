@@ -39,7 +39,7 @@ function _compare(dsl, dsr, ::Val{T}; onleft, onright, cols_left, cols_right, ch
             if mapformats[2]
                 fr = getformat(dsr, cols_right[j])
             end
-            _res = allocatecol(Bool, total_length)
+            _res = allocatecol(Core.Compiler.return_type(eq, Tuple{eltype(_columns(dsl)[cols_left[j]]), eltype(_columns(dsr)[cols_right[j]])}), total_length)
             _compare_barrier_function!(_res, _columns(dsl)[cols_left[j]], _columns(dsr)[cols_right[j]], fl, fr, eq, obs_id_left, obs_id_right, threads)
 
             push!(_columns(res), _res)
