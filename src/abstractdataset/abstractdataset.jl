@@ -312,7 +312,7 @@ function content(ds::AbstractDataset; output = false)
     format_ds = Dataset(f_v, [:column, :format, :eltype], copycols = false)
     println("-----------------------------------")
     println("Columns information ")
-    pretty_table(format_ds, header = (["col", "format", "eltype"]), alignment =:l)
+    pretty_table(format_ds, header = (["col", "format", "eltype"]), alignment =:l, show_row_number = true)
     if output
         [Dataset(meta = ["created", "modified", "info"], value = [_attributes(ds).meta.created, _attributes(ds).meta.modified[], _attributes(ds).meta.info[]]), format_ds]
     end
