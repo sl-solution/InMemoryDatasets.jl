@@ -2606,6 +2606,8 @@ end
 
     cmp_out = compare(ds1, ds2, cols = :z)
     @test cmp_out == Dataset("z=>z" => [false, false, false, missing])
+    cmp_out = compare(ds1, ds2, on = [:y])
+    @test cmp_out == Dataset([Union{Missing, Int64}[1, 2, 1, 2, 3], Union{Missing, Int32}[1, 2, 3, 4, missing], Union{Missing, Int32}[1, 2, 1, 2, 3], Union{Missing, Bool}[false, true, false, false, missing], Union{Missing, Bool}[false, false, false, false, missing]], ["y", "obs_id_left", "obs_id_right", "x=>x", "z=>z"])
     cmp_out = compare(ds1, ds2)
     @test cmp_out == Dataset("x=>x" => [false, true, false, missing], "y=>y" => [true, true, false, missing], "z=>z" => [false, false, false, missing])
 
@@ -2712,9 +2714,3 @@ end
     @test l1[:, :obs_id_left] == 1:nrow(dsl)
     @test l1[:, :obs_id_right] == dsr[:, :x]
 end
-
-
-
-
-
-

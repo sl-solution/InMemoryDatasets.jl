@@ -23,7 +23,7 @@ function _compare(dsl, dsr, ::Val{T}; onleft, onright, cols_left, cols_right, ch
         res = Dataset(x1=obs_id_left, x2=obs_id_right, copycols = false)
         rename!(res, :x1=>Symbol(obs_id_name, "_left"), :x2=>Symbol(obs_id_name, "_right"))
     else
-        res = outerjoin(dsl[!, onleft], dsr[!, onright], on = onleft .=> onright, check = check, mapformats = on_mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, obs_id = true, obs_id_name = obs_id_name, multiple_match = multiple_match, multiple_match_name = multiple_match_name)
+        res = outerjoin(dsl[!, onleft], dsr[!, onright], on = 1:length(onleft) .=> 1:length(onright), check = check, mapformats = on_mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, obs_id = true, obs_id_name = obs_id_name, multiple_match = multiple_match, multiple_match_name = multiple_match_name)
         total_length = nrow(res)
         obs_cols = index(res)[[Symbol(obs_id_name, "_left"), Symbol(obs_id_name, "_right")]]
         obs_id_left = _columns(res)[obs_cols[1]]
@@ -42,7 +42,7 @@ function _compare(dsl, dsr, ::Val{T}; onleft, onright, cols_left, cols_right, ch
             _left_type = Core.Compiler.return_type(fl, Tuple{eltype(_columns(dsl)[cols_left[j]])})
             _right_type = Core.Compiler.return_type(fr, Tuple{eltype(_columns(dsr)[cols_right[j]])})
             _res = allocatecol(Core.Compiler.return_type(eq, Tuple{_left_type, _right_type}), total_length)
-            
+
             _compare_barrier_function!(_res, _columns(dsl)[cols_left[j]], _columns(dsr)[cols_right[j]], fl, fr, eq, obs_id_left, obs_id_right, threads)
 
             push!(_columns(res), _res)
