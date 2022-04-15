@@ -335,7 +335,7 @@ The `content` function shows that the data set has been created on `2021-08-04T1
 
 ### Adding a new column
 
-To add a new column (variable) to a data set use `ds.newvar` or `ds[:, :newvar]` syntax,
+To add a new column (variable) to a data set use the `insertcols!` function,
 
 ```jldoctest
 julia> ds = Dataset(var1 = [1, 2, 3])
@@ -348,13 +348,7 @@ julia> ds = Dataset(var1 = [1, 2, 3])
    2 │        2
    3 │        3
 
-julia> ds.var2 = ["val1", "val2", "val3"]
-3-element Vector{String}:
- "val1"
- "val2"
- "val3"
-
-julia> ds
+julia> insertcols!(ds, :var2 => ["val1", "val2", "val3"])
 3×2 Dataset
  Row │ var1      var2
      │ identity  identity
@@ -364,13 +358,7 @@ julia> ds
    2 │        2  val2
    3 │        3  val3
 
-julia> ds[:, :var3] = [3.5, 4.6, 32.0]
-3-element Vector{Float64}:
-  3.5
-  4.6
- 32.0
-
-julia> ds
+julia> insertcols!(ds, :var3 => [3.5, 4.6, 32.0])
 3×3 Dataset
  Row │ var1      var2        var3
      │ identity  identity    identity
@@ -380,8 +368,6 @@ julia> ds
    2 │        2  val2             4.6
    3 │        3  val3            32.0
 ```
-
-Beware that, when adding a new column to a data set, using the above syntax, if the column already exists in the data set it will be replaced by the new one.
 
 ### Some useful functions
 
