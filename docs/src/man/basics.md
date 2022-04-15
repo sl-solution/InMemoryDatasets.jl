@@ -156,17 +156,17 @@ julia> content(ds)
   Modified: 2021-08-04T13:11:53.743
       Info:
 -----------------------------------
-Variables information
-┌──────────┬──────────┬─────────┐
-│ var      │ format   │ eltype  │
-├──────────┼──────────┼─────────┤
-│ g        │ identity │ Int64   │
-│ x1_int   │ identity │ Int64   │
-│ x2_int   │ identity │ Int64   │
-│ x1_float │ identity │ Float64 │
-│ x2_float │ identity │ Float64 │
-│ x3_float │ identity │ Float64 │
-└──────────┴──────────┴─────────┘
+Columns information
+┌─────┬──────────┬──────────┬─────────┐
+│ Row │ col      │ format   │ eltype  │
+├─────┼──────────┼──────────┼─────────┤
+│   1 │ g        │ identity │ Int64   │
+│   2 │ x1_int   │ identity │ Int64   │
+│   3 │ x2_int   │ identity │ Int64   │
+│   4 │ x1_float │ identity │ Float64 │
+│   5 │ x2_float │ identity │ Float64 │
+│   6 │ x3_float │ identity │ Float64 │
+└─────┴──────────┴──────────┴─────────┘
 ```
 
 `content` shows that the data set has 5 rows and 6 columns. It also shows when the data set has been created and when is the last time that it has been modified. The `content` function also reports the data type and formats of each variable.
@@ -322,13 +322,13 @@ julia> content(ds)
   Modified: 2021-08-04T13:24:33.086
       Info:
 -----------------------------------
-Variables information
-┌─────┬──────────┬────────┐
-│ var │ format   │ eltype │
-├─────┼──────────┼────────┤
-│ x   │ identity │ Int64  │
-│ y   │ identity │ Int64  │
-└─────┴──────────┴────────┘
+Columns information
+┌─────┬─────┬──────────┬────────┐
+│ Row │ col │ format   │ eltype │
+├─────┼─────┼──────────┼────────┤
+│   1 │ x   │ identity │ Int64  │
+│   2 │ y   │ identity │ Int64  │
+└─────┴─────┴──────────┴────────┘
 ```
 
 The `content` function shows that the data set has been created on `2021-08-04T13:18:51.185`, and the last time that it has been modified is on `2021-08-04T13:24:33.086`.
