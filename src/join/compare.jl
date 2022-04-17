@@ -46,7 +46,7 @@ function _compare(dsl, dsr, ::Val{T}; onleft, onright, cols_left, cols_right, ch
             _compare_barrier_function!(_res, _columns(dsl)[cols_left[j]], _columns(dsr)[cols_right[j]], fl, fr, eq, obs_id_left, obs_id_right, threads)
 
             push!(_columns(res), _res)
-            push!(index(res),  Symbol(names(dsl)[cols_left[j]]* "=>" * names(dsr)[cols_right[j]]))
+            push!(index(res),  Symbol(names_left[j]* "=>" * names_right[j]))
     end
     if drop_obs_id
         select!(res, Not([Symbol(obs_id_name, "_left"), Symbol(obs_id_name, "_right")]))
