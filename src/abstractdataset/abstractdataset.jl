@@ -398,7 +398,6 @@ julia> rename!(uppercase, ds)
    1 │        1         2         3
 ```
 """
-
 function rename!(ds::AbstractDataset, vals::AbstractVector{Symbol};
                  makeunique::Bool=false)
     # Modify Dataset
@@ -542,7 +541,6 @@ julia> rename(uppercase, ds)
    1 │        1         2         3
 ```
 """
-
 rename(ds::AbstractDataset, vals::AbstractVector{Symbol};
        makeunique::Bool=false) = rename!(copy(ds), vals, makeunique=makeunique)
 rename(ds::AbstractDataset, vals::AbstractVector{<:AbstractString};
