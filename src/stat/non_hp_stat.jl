@@ -464,7 +464,7 @@ end
     ffill(x; [by = ismissing])
     ffill!(x; [by = ismissing])
 
-Replace those elements of `x` which returns `true` when `by` is called on them with the last element which calling `by` on it returns `false`.
+Replace those elements of `x` which returns `true` when `by` is called on them with the previous element which calling `by` on it returns `false`.
 
 `ffill!` modifies the input vector in-place
 """
