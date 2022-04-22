@@ -358,7 +358,7 @@ function _join_inner_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
     end
 
     if multiple_match
-        multiple_match_col = _create_multiple_match_col_inner(ranges, total_length)
+        multiple_match_col = _create_multiple_match_col_inner(ranges, nothing, total_length)
     end
 
     res = []

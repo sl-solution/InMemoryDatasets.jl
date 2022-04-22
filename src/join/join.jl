@@ -313,8 +313,7 @@ function _fill_right_cols_table_inner!(_res, x, ranges, en, total; inbits = noth
                 lo2 = en2[i-1] + 1
             end
             hi = en[i]
-            # @show sum(view(inbits, lo:hi))
-            # sum(view(inbits, lo:hi)) == 0 && continue
+
             hi2 = en2[i]
             _fill_right_col_range!(_res, lo2:hi2, x, ranges[i], inbits, lo:hi)
         end
@@ -342,24 +341,47 @@ function _create_multiple_match_col_left(ranges, total_length)
     end
     res
 end
-function _create_multiple_match_col_inner(ranges, total_length)
+function _create_multiple_match_col_inner(ranges, en, total_length)
     res = allocatecol(Bool, total_length)
     cnt = 0
-    for i in 1:length(ranges)
-        if length(ranges[i]) == 0
-            nothing
-        else
-            if length(ranges[i]) == 1
+    if en === nothing
+        for i in 1:length(ranges)
+            if length(ranges[i]) == 0
+                nothing
+            else
+                if length(ranges[i]) == 1
+                    cnt += 1
+                    res[cnt] = false
+                else
+                    for j in ranges[i]
+                        cnt += 1
+                        res[cnt] = true
+                    end
+                end
+            end
+        end
+    else
+        for i in 1:length(ranges)
+            if i == 1
+                lo = 1
+            else
+                lo = en[i - 1] + 1
+            end
+            hi = en[i]
+            if length(lo:hi) == 0
+                nothing
+            elseif length(lo:hi) == 1
                 cnt += 1
                 res[cnt] = false
             else
-                for j in ranges[i]
+                for j in lo:hi
                     cnt += 1
                     res[cnt] = true
                 end
             end
         end
     end
+
     res
 end
 
@@ -701,9 +723,8 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
     if check
         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly, alternatively, pass `check = false` to ignore this error."
     end
-
     if multiple_match
-        multiple_match_col = _create_multiple_match_col_inner(ranges, total_length)
+        multiple_match_col = _create_multiple_match_col_inner(ranges, revised_ends, total_length)
     end
 
     res = []

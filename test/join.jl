@@ -2713,4 +2713,335 @@ end
     l1 = innerjoin(dsl, dsr, on = [:y, :x], obs_id = true, obs_id_name = :obs_id, threads = true)
     @test l1[:, :obs_id_left] == 1:nrow(dsl)
     @test l1[:, :obs_id_right] == dsr[:, :x]
+
+    dsl = Dataset(rand(1:10, 1000, 3), [:x1,:x2,:x3])
+    dsr = Dataset(rand(1:10, 100, 3), [:y1,:y2,:y3])
+    unique!(dsr, 1:2)
+    insertcols!(dsl, :obs_left => 1:nrow(dsl))
+    insertcols!(dsr, :obs_right => 1:nrow(dsr))
+
+    i1 = innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>(:y2,:y3)], multiple_match = true, obs_id = true, check = false)
+    i2 = innerjoin(dsl, dsr, on = [1=>1,2=>2], multiple_match = true, obs_id = true)
+    l1 = leftjoin(dsl, dsr, on = [:x1=>:y1], multiple_match = true, obs_id = true, check = false)
+    l2 = leftjoin(dsl, dsr, on = [2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+    l3 = leftjoin(dsl, dsr, on = [1=>1, 2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+
+    @test isequal(i1.obs_id_left, i1.obs_left)
+    @test isequal(i1.obs_id_right, i1.obs_right)
+    @test isequal(i2.obs_id_left, i2.obs_left)
+    @test isequal(i2.obs_id_right, i2.obs_right)
+    @test isequal(l1.obs_id_left, l1.obs_left)
+    @test isequal(l1.obs_id_right, l1.obs_right)
+    @test isequal(l2.obs_id_left, l2.obs_left)
+    @test isequal(l2.obs_id_right, l2.obs_right)
+    @test isequal(l3.obs_id_left, l3.obs_left)
+    @test isequal(l3.obs_id_right, l3.obs_right)
+
+    if !isempty(i1)
+        modify!(groupby(i1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i1.multiple, i1.mm)
+    end
+    if !isempty(i2)
+        modify!(groupby(i2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i2.multiple, i2.mm)
+    end
+    modify!(groupby(l1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l3, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+
+    @test isequal(l1.multiple, l1.mm)
+    @test isequal(l2.multiple, l2.mm)
+    @test isequal(l3.multiple, l3.mm)
+
+    dsl = Dataset(rand(1:2, 1000, 3), [:x1,:x2,:x3])
+    dsr = Dataset(rand(1:2, 100, 3), [:y1,:y2,:y3])
+    unique!(dsr, 1:2)
+    insertcols!(dsl, :obs_left => 1:nrow(dsl))
+    insertcols!(dsr, :obs_right => 1:nrow(dsr))
+
+    i1 = innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>(:y2,:y3)], multiple_match = true, obs_id = true, check = false)
+    i2 = innerjoin(dsl, dsr, on = [1=>1,2=>2], multiple_match = true, obs_id = true)
+    l1 = leftjoin(dsl, dsr, on = [:x1=>:y1], multiple_match = true, obs_id = true, check = false)
+    l2 = leftjoin(dsl, dsr, on = [2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+    l3 = leftjoin(dsl, dsr, on = [1=>1, 2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+
+    @test isequal(i1.obs_id_left, i1.obs_left)
+    @test isequal(i1.obs_id_right, i1.obs_right)
+    @test isequal(i2.obs_id_left, i2.obs_left)
+    @test isequal(i2.obs_id_right, i2.obs_right)
+    @test isequal(l1.obs_id_left, l1.obs_left)
+    @test isequal(l1.obs_id_right, l1.obs_right)
+    @test isequal(l2.obs_id_left, l2.obs_left)
+    @test isequal(l2.obs_id_right, l2.obs_right)
+    @test isequal(l3.obs_id_left, l3.obs_left)
+    @test isequal(l3.obs_id_right, l3.obs_right)
+
+    if !isempty(i1)
+        modify!(groupby(i1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i1.multiple, i1.mm)
+    end
+    if !isempty(i2)
+        modify!(groupby(i2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i2.multiple, i2.mm)
+    end
+    modify!(groupby(l1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l3, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+
+    @test isequal(l1.multiple, l1.mm)
+    @test isequal(l2.multiple, l2.mm)
+    @test isequal(l3.multiple, l3.mm)
+
+    dsl = Dataset(rand(1:100, 1000, 3), [:x1,:x2,:x3])
+    dsr = Dataset(rand(1:110, 100, 3), [:y1,:y2,:y3])
+    unique!(dsr, 1:2)
+    insertcols!(dsl, :obs_left => 1:nrow(dsl))
+    insertcols!(dsr, :obs_right => 1:nrow(dsr))
+
+    i1 = innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>(:y2,:y3)], multiple_match = true, obs_id = true, check = false)
+    i2 = innerjoin(dsl, dsr, on = [1=>1,2=>2], multiple_match = true, obs_id = true)
+    l1 = leftjoin(dsl, dsr, on = [:x1=>:y1], multiple_match = true, obs_id = true, check = false)
+    l2 = leftjoin(dsl, dsr, on = [2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+    l3 = leftjoin(dsl, dsr, on = [1=>1, 2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+
+    @test isequal(i1.obs_id_left, i1.obs_left)
+    @test isequal(i1.obs_id_right, i1.obs_right)
+    @test isequal(i2.obs_id_left, i2.obs_left)
+    @test isequal(i2.obs_id_right, i2.obs_right)
+    @test isequal(l1.obs_id_left, l1.obs_left)
+    @test isequal(l1.obs_id_right, l1.obs_right)
+    @test isequal(l2.obs_id_left, l2.obs_left)
+    @test isequal(l2.obs_id_right, l2.obs_right)
+    @test isequal(l3.obs_id_left, l3.obs_left)
+    @test isequal(l3.obs_id_right, l3.obs_right)
+
+    if !isempty(i1)
+        modify!(groupby(i1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i1.multiple, i1.mm)
+    end
+    if !isempty(i2)
+        modify!(groupby(i2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i2.multiple, i2.mm)
+    end
+    modify!(groupby(l1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l3, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+
+    @test isequal(l1.multiple, l1.mm)
+    @test isequal(l2.multiple, l2.mm)
+    @test isequal(l3.multiple, l3.mm)
+
+
+    dsl = Dataset(rand(-10:1000, 1000, 3), [:x1,:x2,:x3])
+    dsr = Dataset(rand(-1:1100, 100, 3), [:y1,:y2,:y3])
+    unique!(dsr, 1:2)
+    insertcols!(dsl, :obs_left => 1:nrow(dsl))
+    insertcols!(dsr, :obs_right => 1:nrow(dsr))
+
+    i1 = innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>(:y2,:y3)], multiple_match = true, obs_id = true, check = false)
+    i2 = innerjoin(dsl, dsr, on = [1=>1,2=>2], multiple_match = true, obs_id = true)
+    l1 = leftjoin(dsl, dsr, on = [:x1=>:y1], multiple_match = true, obs_id = true, check = false)
+    l2 = leftjoin(dsl, dsr, on = [2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+    l3 = leftjoin(dsl, dsr, on = [1=>1, 2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+
+    @test isequal(i1.obs_id_left, i1.obs_left)
+    @test isequal(i1.obs_id_right, i1.obs_right)
+    @test isequal(i2.obs_id_left, i2.obs_left)
+    @test isequal(i2.obs_id_right, i2.obs_right)
+    @test isequal(l1.obs_id_left, l1.obs_left)
+    @test isequal(l1.obs_id_right, l1.obs_right)
+    @test isequal(l2.obs_id_left, l2.obs_left)
+    @test isequal(l2.obs_id_right, l2.obs_right)
+    @test isequal(l3.obs_id_left, l3.obs_left)
+    @test isequal(l3.obs_id_right, l3.obs_right)
+
+    if !isempty(i1)
+        modify!(groupby(i1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i1.multiple, i1.mm)
+    end
+    if !isempty(i2)
+        modify!(groupby(i2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i2.multiple, i2.mm)
+    end
+    modify!(groupby(l1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l3, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+
+    @test isequal(l1.multiple, l1.mm)
+    @test isequal(l2.multiple, l2.mm)
+    @test isequal(l3.multiple, l3.mm)
+
+
+
+    #########
+    dsl = Dataset(rand(1:10, 1000, 3), [:x1,:x2,:x3])
+    modify!(dsl, :x1=>byrow(x->x * 1.1))
+    dsr = Dataset(rand(1:10, 100, 3), [:y1,:y2,:y3])
+    modify!(dsr, :y1=>byrow(x->x * 1.1))
+    unique!(dsr, 1:2)
+    insertcols!(dsl, :obs_left => 1:nrow(dsl))
+    insertcols!(dsr, :obs_right => 1:nrow(dsr))
+
+    i1 = innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>(:y2,:y3)], multiple_match = true, obs_id = true, check = false)
+    i2 = innerjoin(dsl, dsr, on = [1=>1,2=>2], multiple_match = true, obs_id = true)
+    l1 = leftjoin(dsl, dsr, on = [:x1=>:y1], multiple_match = true, obs_id = true, check = false)
+    l2 = leftjoin(dsl, dsr, on = [2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+    l3 = leftjoin(dsl, dsr, on = [1=>1, 2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+
+    @test isequal(i1.obs_id_left, i1.obs_left)
+    @test isequal(i1.obs_id_right, i1.obs_right)
+    @test isequal(i2.obs_id_left, i2.obs_left)
+    @test isequal(i2.obs_id_right, i2.obs_right)
+    @test isequal(l1.obs_id_left, l1.obs_left)
+    @test isequal(l1.obs_id_right, l1.obs_right)
+    @test isequal(l2.obs_id_left, l2.obs_left)
+    @test isequal(l2.obs_id_right, l2.obs_right)
+    @test isequal(l3.obs_id_left, l3.obs_left)
+    @test isequal(l3.obs_id_right, l3.obs_right)
+
+    if !isempty(i1)
+        modify!(groupby(i1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i1.multiple, i1.mm)
+    end
+    if !isempty(i2)
+        modify!(groupby(i2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i2.multiple, i2.mm)
+    end
+    modify!(groupby(l1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l3, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+
+    @test isequal(l1.multiple, l1.mm)
+    @test isequal(l2.multiple, l2.mm)
+    @test isequal(l3.multiple, l3.mm)
+
+    dsl = Dataset(rand(1:2, 1000, 3), [:x1,:x2,:x3])
+    modify!(dsl, :x1=>byrow(x->x * 1.1))
+    dsr = Dataset(rand(1:2, 100, 3), [:y1,:y2,:y3])
+    modify!(dsr, :y1=>byrow(x->x * 1.1))
+    unique!(dsr, 1:2)
+    insertcols!(dsl, :obs_left => 1:nrow(dsl))
+    insertcols!(dsr, :obs_right => 1:nrow(dsr))
+
+    i1 = innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>(:y2,:y3)], multiple_match = true, obs_id = true, check = false)
+    i2 = innerjoin(dsl, dsr, on = [1=>1,2=>2], multiple_match = true, obs_id = true)
+    l1 = leftjoin(dsl, dsr, on = [:x1=>:y1], multiple_match = true, obs_id = true, check = false)
+    l2 = leftjoin(dsl, dsr, on = [2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+    l3 = leftjoin(dsl, dsr, on = [1=>1, 2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+
+    @test isequal(i1.obs_id_left, i1.obs_left)
+    @test isequal(i1.obs_id_right, i1.obs_right)
+    @test isequal(i2.obs_id_left, i2.obs_left)
+    @test isequal(i2.obs_id_right, i2.obs_right)
+    @test isequal(l1.obs_id_left, l1.obs_left)
+    @test isequal(l1.obs_id_right, l1.obs_right)
+    @test isequal(l2.obs_id_left, l2.obs_left)
+    @test isequal(l2.obs_id_right, l2.obs_right)
+    @test isequal(l3.obs_id_left, l3.obs_left)
+    @test isequal(l3.obs_id_right, l3.obs_right)
+
+    if !isempty(i1)
+        modify!(groupby(i1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i1.multiple, i1.mm)
+    end
+    if !isempty(i2)
+        modify!(groupby(i2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i2.multiple, i2.mm)
+    end
+    modify!(groupby(l1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l3, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+
+    @test isequal(l1.multiple, l1.mm)
+    @test isequal(l2.multiple, l2.mm)
+    @test isequal(l3.multiple, l3.mm)
+
+    dsl = Dataset(rand(1:100, 1000, 3), [:x1,:x2,:x3])
+    modify!(dsl, :x1=>byrow(x->x * 1.1))
+    dsr = Dataset(rand(1:110, 100, 3), [:y1,:y2,:y3])
+    modify!(dsr, :y1=>byrow(x->x * 1.1))
+    unique!(dsr, 1:2)
+    insertcols!(dsl, :obs_left => 1:nrow(dsl))
+    insertcols!(dsr, :obs_right => 1:nrow(dsr))
+
+    i1 = innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>(:y2,:y3)], multiple_match = true, obs_id = true, check = false)
+    i2 = innerjoin(dsl, dsr, on = [1=>1,2=>2], multiple_match = true, obs_id = true)
+    l1 = leftjoin(dsl, dsr, on = [:x1=>:y1], multiple_match = true, obs_id = true, check = false)
+    l2 = leftjoin(dsl, dsr, on = [2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+    l3 = leftjoin(dsl, dsr, on = [1=>1, 2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+
+    @test isequal(i1.obs_id_left, i1.obs_left)
+    @test isequal(i1.obs_id_right, i1.obs_right)
+    @test isequal(i2.obs_id_left, i2.obs_left)
+    @test isequal(i2.obs_id_right, i2.obs_right)
+    @test isequal(l1.obs_id_left, l1.obs_left)
+    @test isequal(l1.obs_id_right, l1.obs_right)
+    @test isequal(l2.obs_id_left, l2.obs_left)
+    @test isequal(l2.obs_id_right, l2.obs_right)
+    @test isequal(l3.obs_id_left, l3.obs_left)
+    @test isequal(l3.obs_id_right, l3.obs_right)
+
+    if !isempty(i1)
+        modify!(groupby(i1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i1.multiple, i1.mm)
+    end
+    if !isempty(i2)
+        modify!(groupby(i2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i2.multiple, i2.mm)
+    end
+    modify!(groupby(l1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l3, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+
+    @test isequal(l1.multiple, l1.mm)
+    @test isequal(l2.multiple, l2.mm)
+    @test isequal(l3.multiple, l3.mm)
+
+
+    dsl = Dataset(rand(-10:1000, 1000, 3), [:x1,:x2,:x3])
+    modify!(dsl, :x1=>byrow(x->x * 1.1))
+    dsr = Dataset(rand(-1:1100, 100, 3), [:y1,:y2,:y3])
+    modify!(dsr, :y1=>byrow(x->x * 1.1))
+    unique!(dsr, 1:2)
+    insertcols!(dsl, :obs_left => 1:nrow(dsl))
+    insertcols!(dsr, :obs_right => 1:nrow(dsr))
+
+    i1 = innerjoin(dsl, dsr, on = [:x1=>:y1, :x2=>(:y2,:y3)], multiple_match = true, obs_id = true, check = false)
+    i2 = innerjoin(dsl, dsr, on = [1=>1,2=>2], multiple_match = true, obs_id = true)
+    l1 = leftjoin(dsl, dsr, on = [:x1=>:y1], multiple_match = true, obs_id = true, check = false)
+    l2 = leftjoin(dsl, dsr, on = [2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+    l3 = leftjoin(dsl, dsr, on = [1=>1, 2=>2, 3=>3], multiple_match = true, obs_id = true, check = false)
+
+    @test isequal(i1.obs_id_left, i1.obs_left)
+    @test isequal(i1.obs_id_right, i1.obs_right)
+    @test isequal(i2.obs_id_left, i2.obs_left)
+    @test isequal(i2.obs_id_right, i2.obs_right)
+    @test isequal(l1.obs_id_left, l1.obs_left)
+    @test isequal(l1.obs_id_right, l1.obs_right)
+    @test isequal(l2.obs_id_left, l2.obs_left)
+    @test isequal(l2.obs_id_right, l2.obs_right)
+    @test isequal(l3.obs_id_left, l3.obs_left)
+    @test isequal(l3.obs_id_right, l3.obs_right)
+
+    if !isempty(i1)
+        modify!(groupby(i1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i1.multiple, i1.mm)
+    end
+    if !isempty(i2)
+        modify!(groupby(i2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+        @test isequal(i2.multiple, i2.mm)
+    end
+    modify!(groupby(l1, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l2, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+    modify!(groupby(l3, :obs_id_left), :obs_id_left => (x->length(x)>1)=>:mm)
+
+    @test isequal(l1.multiple, l1.mm)
+    @test isequal(l2.multiple, l2.mm)
+    @test isequal(l3.multiple, l3.mm)
+
+
+
+
+
+
 end
