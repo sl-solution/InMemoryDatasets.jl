@@ -6,7 +6,6 @@ function Base.sortperm(ds::Dataset, cols; alg = HeapSortAlg(), rev = false, mapf
 end
 
 function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
-    isempty(ds) && return ds
     _check_consistency(ds)
     colsidx = index(ds)[cols]
     if length(rev) == 1
@@ -16,6 +15,14 @@ function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), re
     end
 
     @assert length(colsidx) == length(revs) "the reverse argument must be the same length as the length of selected columns"
+    if isempty(ds)
+        _reset_grouping_info!(ds)
+        append!(index(ds).sortedcols, collect(colsidx))
+        append!(index(ds).rev, revs)
+        index(ds).fmt[] = mapformats
+        return ds
+    end
+
     _check_for_fast_sort(ds, colsidx, revs, mapformats) == 0 && return ds
     _use_ds_perm = false
     if _check_for_fast_sort(ds, colsidx, revs, mapformats) == 1

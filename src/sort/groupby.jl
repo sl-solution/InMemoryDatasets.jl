@@ -1,6 +1,9 @@
 function groupby!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
 	sort!(ds, cols, alg = alg, rev = rev,  mapformats = mapformats, stable = stable, threads = threads)
 	index(ds).grouped[] = true
+	if isempty(ds)
+		index(ds).ngroups[] = 0
+	end
 	_modified(_attributes(ds))
 	ds
 end
@@ -30,6 +33,9 @@ Base.parent(ds::GroupBy) = ds.parent
 function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
 	_check_consistency(ds)
 	colsidx = index(ds)[cols]
+	if isempty(ds)
+		return GroupBy(parent(ds), colsidx, rev, Int[], Int[], 0, mapformats)
+	end
 	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, threads = threads)
 	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats)
 end

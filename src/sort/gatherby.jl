@@ -86,6 +86,10 @@ end
 # eachrow = true tells gatherby that each row of passed dataset is a new group - this is useful for transpose()
 function gatherby(ds::AbstractDataset, cols::MultiColumnIndex; mapformats::Bool = true, stable::Bool = true, isgathered::Bool = false, eachrow::Bool = false, threads = true)
     colsidx = index(ds)[cols]
+	if isempty(ds)
+		return GatherBy(ds, colsidx, Int[], 0, mapformats, nothing, nothing)
+	end
+
 	T = nrow(ds) < typemax(Int32) ? Int32 : Int64
 	_check_consistency(ds)
 	if isgathered
