@@ -191,7 +191,7 @@ function _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats,
     ranges, a, gslots, minval, reps, sz, right_cols
 end
 
-function _join_left_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true, multiple_match = false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :obs_id ) where T
+function _join_left_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true, multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id ) where T
     _fl = _date_value∘identity
     _fr = _date_value∘identity
     if mapformats[1]
@@ -256,21 +256,23 @@ function _join_left_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}
     if multiple_match
         insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
     end
-    if obs_id
+    if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
-        obs_id_name2 = Symbol(obs_id_name, "_right")
-        obs_id_left = allocatecol(T, total_length)
-        obs_id_right = allocatecol(T, total_length)
+        obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; threads = threads)
-        _fill_right_cols_table_left!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, missing, threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+    end
+    if obs_id[2]
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_right = allocatecol(T, total_length)
+        _fill_right_cols_table_left!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, missing, threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
     true, newds
 
 end
 
-function _join_left!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true, multiple_match = false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :obs_id) where T
+function _join_left!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true, multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
     _fl = _date_value∘identity
     _fr = _date_value∘identity
     if mapformats[1]
@@ -318,14 +320,16 @@ function _join_left!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
     if multiple_match
         insertcols!(dsl, ncol(dsl)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
     end
-    if obs_id
+    if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
-        obs_id_name2 = Symbol(obs_id_name, "_right")
-        obs_id_left = allocatecol(T, total_length)
-        obs_id_right = allocatecol(T, total_length)
+        obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing, threads = threads)
-        _fill_right_cols_table_left!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, missing, threads = threads)
         insertcols!(dsl, ncol(dsl)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+    end
+    if obs_id[2]
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_right = allocatecol(T, total_length)
+        _fill_right_cols_table_left!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, missing, threads = threads)
         insertcols!(dsl, ncol(dsl)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
     _modified(_attributes(dsl))
@@ -333,7 +337,7 @@ function _join_left!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
 end
 
 
-function _join_inner_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true, multiple_match=false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :obs_id) where T
+function _join_inner_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true, multiple_match=false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
     _fl = _date_value∘identity
     _fr = _date_value∘identity
     if mapformats[1]
@@ -393,21 +397,23 @@ function _join_inner_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
     if multiple_match
         insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
     end
-    if obs_id
+    if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
-        obs_id_name2 = Symbol(obs_id_name, "_right")
-        obs_id_left = allocatecol(T, total_length)
-        obs_id_right = allocatecol(T, total_length)
+        obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_inner!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, threads = threads)
-        _fill_right_cols_table_inner!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+    end
+    if obs_id[2]
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_right = allocatecol(T, total_length)
+        _fill_right_cols_table_inner!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
     true, newds
 
 end
 
-function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols_right, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true, source::Bool = false, source_col_name = :source, multiple_match = false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :__OBSID__) where T
+function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols_right, right_cols, ::Val{T}; makeunique = makeunique, mapformats = mapformats, check = check, threads = true, source::Bool = false, source_col_name = :source, multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :__OBSID__) where T
     _fl = _date_value∘identity
     _fr = _date_value∘identity
     if mapformats[1]
@@ -479,16 +485,18 @@ function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols
     if multiple_match
         insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
     end
-    if obs_id
+    if obs_id[1]
         # Note that the name convention obs_id_name1 and name2 are used in other places
         obs_id_name1 = Symbol(obs_id_name, "_left")
-        obs_id_name2 = Symbol(obs_id_name, "_right")
-        obs_id_left = allocatecol(T, total_length)
-        obs_id_right = allocatecol(T, total_length)
+        obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing, threads = threads)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+    end
+    if obs_id[2]
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_right = allocatecol(T, total_length)
         _fill_right_cols_table_left!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, missing, threads = threads)
         _fill_oncols_left_table_left_outer!(obs_id_right, 1:nrow(dsr), notinleft, new_ends, total_length)
-        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
         insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
     true, newds

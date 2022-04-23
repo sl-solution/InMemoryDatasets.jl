@@ -461,7 +461,7 @@ end
 
 
 
-function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :obs_id) where T
+function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
     isempty(dsl) && return copy(dsl)
     if method == :hash
         ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
@@ -535,21 +535,23 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
     if multiple_match
         insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
     end
-    if obs_id
+    if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
-        obs_id_name2 = Symbol(obs_id_name, "_right")
-        obs_id_left = allocatecol(T, total_length)
-        obs_id_right = allocatecol(T, total_length)
+        obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; threads = threads)
-        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+    end
+    if obs_id[2]
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_right = allocatecol(T, total_length)
+        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
     newds
 
 end
 
-function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match = false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :obs_id) where T
+function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
     isempty(dsl) && return dsl
     if method == :hash
         ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
@@ -604,21 +606,24 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     if multiple_match
         insertcols!(dsl, ncol(dsl)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
     end
-    if obs_id
+    if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
-        obs_id_name2 = Symbol(obs_id_name, "_right")
-        obs_id_left = allocatecol(T, total_length)
-        obs_id_right = allocatecol(T, total_length)
+        obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; threads = threads)
-        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
         insertcols!(dsl, ncol(dsl)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+    end
+    if obs_id[2]
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_right = allocatecol(T, total_length)
+        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
         insertcols!(dsl, ncol(dsl)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
+
     _modified(_attributes(dsl))
     dsl
 end
 
-function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], method = :sort, threads = true, onlyreturnrange = false, multiple_match = false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id) where T
+function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], method = :sort, threads = true, onlyreturnrange = false, multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
     (isempty(dsl) || isempty(dsr)) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
@@ -759,14 +764,16 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
     if multiple_match
         insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
     end
-    if obs_id
+    if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
-        obs_id_name2 = Symbol(obs_id_name, "_right")
-        obs_id_left = allocatecol(T, total_length)
-        obs_id_right = allocatecol(T, total_length)
+        obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_inner!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
-        _fill_right_cols_table_inner!(obs_id_right, idx, ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+    end
+    if obs_id[2]
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_right = allocatecol(T, total_length)
+        _fill_right_cols_table_inner!(obs_id_right, idx, ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
     newds
@@ -864,7 +871,7 @@ function _create_multiple_match_col_outer(ranges, notinleft, total_length, new_e
     res
 end
 
-function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, source::Bool = false, source_col_name = :source, multiple_match = false, multiple_match_name = :multiple, obs_id = false, obs_id_name = :obs_id) where T
+function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, source::Bool = false, source_col_name = :source, multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
     (isempty(dsl) || isempty(dsr)) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
@@ -944,16 +951,18 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
     if multiple_match
         insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
     end
-    if obs_id
+    if obs_id[1]
         # Note that the name convention of obs_id_name1 and name2 are used in other places
         obs_id_name1 = Symbol(obs_id_name, "_left")
-        obs_id_name2 = Symbol(obs_id_name, "_right")
-        obs_id_left = allocatecol(T, total_length)
-        obs_id_right = allocatecol(T, total_length)
+        obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing, threads = threads)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+    end
+    if obs_id[2]
+        obs_id_name2 = Symbol(obs_id_name, "_right")
+        obs_id_right = allocatecol(T, total_length)
         _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
         _fill_oncols_left_table_left_outer!(obs_id_right, idx, notinleft, new_ends, total_length)
-        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
         insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
     end
     newds

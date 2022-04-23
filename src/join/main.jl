@@ -110,7 +110,7 @@ julia> leftjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id)
+function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -123,6 +123,11 @@ function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
         mapformats = repeat([mapformats], 2)
     else
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
+    end
+    if !(obs_id isa AbstractVector)
+        obs_id = repeat([obs_id], 2)
+    else
+        length(obs_id) !== 2 && throw(ArgumentError("`obs_id` must be a Bool or a vector of Bool with size two"))
     end
 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
@@ -145,7 +150,7 @@ end
 Variant of `leftjoin` that performs `leftjoin` in place for special case that the number of matching rows from the right data set is at most one.
 ```
 """
-function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool=false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id)
+function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool=false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -157,6 +162,11 @@ function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique 
         mapformats = repeat([mapformats], 2)
     else
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
+    end
+    if !(obs_id isa AbstractVector)
+        obs_id = repeat([obs_id], 2)
+    else
+        length(obs_id) !== 2 && throw(ArgumentError("`obs_id` must be a Bool or a vector of Bool with size two"))
     end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = multiple_getindex(index(dsl), on)
@@ -311,7 +321,7 @@ julia> innerjoin(dsl, dsr, on = [1=>1, 2=>(:lower, nothing)])
 
 ```
 """
-function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols::Bool = true, strict_inequality = false, method = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id)
+function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols::Bool = true, strict_inequality = false, method = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -323,6 +333,11 @@ function DataAPI.innerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
         mapformats = repeat([mapformats], 2)
     else
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
+    end
+    if !(obs_id isa AbstractVector)
+        obs_id = repeat([obs_id], 2)
+    else
+        length(obs_id) !== 2 && throw(ArgumentError("`obs_id` must be a Bool or a vector of Bool with size two"))
     end
     if !(strict_inequality isa AbstractVector)
         strict_inequality = repeat([strict_inequality], 2)
@@ -461,7 +476,7 @@ julia> outerjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for data
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads::Bool = true, source::Bool = false, source_name = :source, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Bool = false, obs_id_name = :obs_id)
+function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false,  mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads::Bool = true, source::Bool = false, source_name = :source, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -473,6 +488,11 @@ function DataAPI.outerjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = noth
         mapformats = repeat([mapformats], 2)
     else
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
+    end
+    if !(obs_id isa AbstractVector)
+        obs_id = repeat([obs_id], 2)
+    else
+        length(obs_id) !== 2 && throw(ArgumentError("`obs_id` must be a Bool or a vector of Bool with size two"))
     end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = multiple_getindex(index(dsl), on)
@@ -1093,7 +1113,7 @@ end
 Variant of `closejoin!` that returns an updated copy of `dsl` leaving `dsl` itself unmodified.
 ```
 """
-function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol=nothing, allow_exact_match = true, op = nothing, method = :sort, threads::Bool = true, obs_id::Bool = false, obs_id_name = :obs_id)
+function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol=nothing, allow_exact_match = true, op = nothing, method = :sort, threads::Bool = true, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing, :none))
@@ -1108,6 +1128,11 @@ function closejoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, dir
         mapformats = repeat([mapformats], 2)
     else
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
+    end
+    if !(obs_id isa AbstractVector)
+        obs_id = repeat([obs_id], 2)
+    else
+        length(obs_id) !== 2 && throw(ArgumentError("`obs_id` must be a Bool or a vector of Bool with size two"))
     end
 
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
@@ -1395,7 +1420,7 @@ julia> trades # The left table has been changed after joining.
    5 │ 2016-05-25T13:30:00.048  AAPL         98.0        100     97.99     98.01
 ```
 """
-function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing, method = :sort, threads::Bool = true, obs_id::Bool = false, obs_id_name = :obs_id)
+function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction = :backward, makeunique = false, border = :missing, mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, tol = nothing, allow_exact_match = true, op = nothing, method = :sort, threads::Bool = true, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(border ∈ (:nearest, :missing, :none))
@@ -1410,6 +1435,11 @@ function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction 
         mapformats = repeat([mapformats], 2)
     else
         length(mapformats) !== 2 && throw(ArgumentError("`mapformats` must be a Bool or a vector of Bool with size two"))
+    end
+    if !(obs_id isa AbstractVector)
+        obs_id = repeat([obs_id], 2)
+    else
+        length(obs_id) !== 2 && throw(ArgumentError("`obs_id` must be a Bool or a vector of Bool with size two"))
     end
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = multiple_getindex(index(dsl), on)
