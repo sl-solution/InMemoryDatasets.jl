@@ -92,6 +92,45 @@ Compat.hasproperty(itr::DatasetRows, s::AbstractString) = haskey(index(parent(it
 # Private fields are never exposed since they can conflict with column names
 Base.propertynames(itr::DatasetRows, private::Bool=false) = propertynames(parent(itr))
 
+
+# iteration by group
+
+struct GroupedDataset{D<:Union{Dataset, GroupBy, GatherBy}}
+    ds::D
+end
+
+Base.summary(gds::GroupedDataset) = "$(size(gds)[1])-element grouped data set"
+Base.summary(io::IO, gds::GroupedDataset) = print(io, summary(gds))
+
+function eachgroup(ds::Dataset)
+    !isgrouped(ds) && throw(ArgumentError("The data set is not grouped"))
+    GroupedDataset(ds)
+end
+function eachgroup(ds::Union{GroupBy, GatherBy})
+    GroupedDataset(ds)
+end
+
+
+Base.IndexStyle(::Type{<:GroupedDataset}) = Base.IndexLinear()
+Base.size(itr::GroupedDataset{Dataset}) = (index(itr.ds).ngroups[], )
+Base.size(itr::GroupedDataset{<:Union{GroupBy, GatherBy}}) = (itr.ds.lastvalid, )
+
+function Base.getindex(itr::GroupedDataset{Dataset}, i::Int)
+    i > size(itr)[1] && throw(BoundsError(itr, i))
+    st = index(itr.ds).starts
+    i == size(itr)[1] ? hi = nrow(itr.ds) : hi = st[i+1]-1
+    lo = st[i]
+    view(itr.ds, lo:hi, :)
+end
+function Base.getindex(itr::GroupedDataset{<:Union{GroupBy, GatherBy}}, i::Int)
+    i > size(itr)[1] && throw(BoundsError(itr, i))
+    st = _group_starts(itr.ds)
+    prm = _get_perms(itr.ds)
+    i == size(itr)[1] ? hi = nrow(parent(itr.ds)) : hi = st[i+1]-1
+    lo = st[i]
+    view(parent(itr.ds), view(prm, lo:hi), :)
+end
+
 # Iteration by columns
 
 const DATASETCOLUMNS_DOCSTR = """
