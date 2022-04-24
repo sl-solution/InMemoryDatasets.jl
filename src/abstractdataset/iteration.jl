@@ -72,6 +72,7 @@ julia> eachrow(view(df, [4, 3], [2, 1]))
    2 │    13      3
 ```
 """
+
 function Base.eachrow(df::AbstractDataset)
     DatasetRows(df)
 end
@@ -103,7 +104,7 @@ Base.summary(gds::GroupedDataset) = "$(size(gds)[1])-element grouped data set"
 Base.summary(io::IO, gds::GroupedDataset) = print(io, summary(gds))
 
 function eachgroup(ds::Dataset)
-    !isgrouped(ds) && throw(ArgumentError("The data set is not grouped"))
+    !isgrouped(ds) && throw(ArgumentError("data set is not grouped"))
     GroupedDataset(ds)
 end
 function eachgroup(ds::Union{GroupBy, GatherBy})
@@ -114,7 +115,10 @@ end
 Base.IndexStyle(::Type{<:GroupedDataset}) = Base.IndexLinear()
 Base.size(itr::GroupedDataset{Dataset}) = (index(itr.ds).ngroups[], )
 Base.size(itr::GroupedDataset{<:Union{GroupBy, GatherBy}}) = (itr.ds.lastvalid, )
-
+Base.length(itr::GroupedDataset{Dataset}) = index(itr.ds).ngroups[]
+Base.length(itr::GroupedDataset{<:Union{GroupBy, GatherBy}}) = itr.ds.lastvalid
+Base.iterate(itr::GroupedDataset, i::Integer=1) =
+    i <= length(itr) ? (itr[i], i + 1) : nothing
 function Base.getindex(itr::GroupedDataset{Dataset}, i::Int)
     i > size(itr)[1] && throw(BoundsError(itr, i))
     st = index(itr.ds).starts
