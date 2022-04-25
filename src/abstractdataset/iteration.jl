@@ -103,6 +103,45 @@ end
 Base.summary(gds::GroupedDataset) = "$(size(gds)[1])-element grouped data set"
 Base.summary(io::IO, gds::GroupedDataset) = print(io, summary(gds))
 
+"""
+    eachgroup(ds::Union{Dataset, GroupBy, GatherBy})
+
+Return a `GroupedDataset` that iterates a grouped data set created by `groupby!`, `groupby`, or `gatherby` group by group,
+with each group represented as a `SubDataset`.
+
+# Examples
+
+```jldoctest
+julia> ds = Dataset(x1 = [1,2,1,2], x2 = 1:4)
+4×2 Dataset
+ Row │ x1        x2
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        1         3
+   4 │        2         4
+
+julia> for g in eachgroup(groupby(ds, 1))
+            @show g
+        end
+g = 2×2 SubDataset
+ Row │ x1        x2
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        1         3
+g = 2×2 SubDataset
+ Row │ x1        x2
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        2         2
+   2 │        2         4
+```
+"""
 function eachgroup(ds::Dataset)
     !isgrouped(ds) && throw(ArgumentError("data set is not grouped"))
     GroupedDataset(ds)

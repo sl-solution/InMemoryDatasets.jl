@@ -79,6 +79,7 @@ export
       combine,
       setinfo!,
       getinfo,
+      eachgroup,
       # allowmissing!,
       # from byrow operations
       byrow,
