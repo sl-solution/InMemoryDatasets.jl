@@ -1,5 +1,9 @@
 # Dev
 
+## New features
+
+* Add a new function `eachgroup`. It allows iteration over each group of a grouped data set.
+
 ## Fixes
 
 # Version 0.7.0
