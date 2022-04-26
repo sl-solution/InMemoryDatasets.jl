@@ -1,4 +1,25 @@
-# TODO the docstring needs some updates, also some of the keyword arguments are missing int he docstring, e.g. accelerate, usehash
+# TODO the docstring needs proofread
+const _JOINTHREADSDOC = "- `threads`: By default it is set to `true` which means that the function will use all threads available to Julia for computations."
+const _JOINMAPFORMATSDOC = "- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
+  you can use the function `getformat` to see the format;
+  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
+  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`."
+const _JOINMETHODDOCSORT = "- `method`: is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`"
+const _JOINMETHODDOCHASH = "- `method`: is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`"
+
+const _JOINALGDOC = "- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;"
+const _JOINSTABLEDOC = "- `stable`: by default is `false`, means that the sorting results have not to be stable;
+  if it is set to `true`, then sorting for `dsr` have to be stable."
+const _JOINTCHECKDOC = "- `check`: to check whether the output is too large (10 times greater than number of rows if `dsl`, an AssertionError will be raised in this case),
+  it is set to `true` by default; if `false` is passed, the function will not check the output size."
+const _JOINTOBSIDDOC = " - `obs_id`: indicate whether the output data set should contains the observation ids for matching rows. By default it is set to `false` which supress the observation ids from the output data set. When it is set to `true` the output data set will contains the observation ids for matching rows from left and right table, user can pass a vector of values to suppress(include) only the row numbers for the left or the right data set, e.g. `obs_id = [true, false]`"
+const _JOINOBSIDNAMEDOC = "- `obs_id_name`: controls the column names of the output data set when `obs_id` is passed as true"
+const _JOINMULTIPLEMATCHDOC = "- `multiple_match` : If it is set as `true`, the output data set will contain a new column which indicates the rows in the left data set which are repeated in the output data set due to multiple matches in the right data set"
+const _JOINMULTIPLEMATCHNAMEDOC = "- `multiple_match_name`: controls the column name of the output data set when `multiple_match = true`"
+const _JOINACCELERATEDOC = "- `accelerate` : setting it as true might improve the performance of join when the method is set to `:sort`. This option is usually effective when the first key column is of `String` type."
+const _JOINSTRICTINEQUALITYDOC = "- `strict_inequality`: controls whether the inequalities in the non-equi join should be strict or not, e.g. user can pass `strict_inequality = true`, `strict_inequality = [false, true]`, etc."
+
+
 
 """
     leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, check=true, accelerate = false, method = :sort, threads = true)
@@ -17,17 +38,17 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format;
-  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
-  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
-- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
-  it can also be `QuickSort` (the Quicksort algorithm).
-- `stable`: by default is `false`, means that the sorting results have not to be stable;
-  if it is set to `true`, then sorting for `dsr` have to be stable.
-- `check`: to check whether the output is too large (10 times greater than number of rows if `dsl`, an AssertionError will be raised in this case),
-  it is set to `true` by default; if `false` is passed, the function will not check the output size.
+$_JOINMAPFORMATSDOC
+$_JOINMETHODDOCSORT
+$_JOINTHREADSDOC
+$_JOINTOBSIDDOC
+$_JOINMULTIPLEMATCHDOC
+$_JOINOBSIDNAMEDOC
+$_JOINMULTIPLEMATCHNAMEDOC
+$_JOINALGDOC
+$_JOINSTABLEDOC
+$_JOINACCELERATEDOC
+$_JOINTCHECKDOC
 
 See also: [`leftjoin!`](@ref)
 
@@ -199,19 +220,19 @@ will be as they appear if the `stable = true`, otherwise no specific rule is fol
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like innerjoin is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format;
-  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
-  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
-- `droprangecols`: determine whether the range columns should be dropped from the final output in case of inequality-like innerjoin. Default is set to `true`
-- `strict_inequality`: determine if the inequlities in inequlity-like innerjoins are strict. Default is set to `false`.
-- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
-  it can also be `QuickSort` (the Quicksort algorithm).
-- `stable`: by default is `false`, means that the sorting results have not to be stable;
-  if it is set to `true`, then sorting for `dsr` have to be stable.
-- `check`: to check whether the output is too large (10 times greater than number of rows if `dsl`, an AssertionError will be raised in this case),
-  it is set to `true` by default; if `false` is passed, the function will not check the output size.
+$_JOINMAPFORMATSDOC
+$_JOINMETHODDOCSORT
+$_JOINTHREADSDOC
+$_JOINTOBSIDDOC
+$_JOINMULTIPLEMATCHDOC
+$_JOINOBSIDNAMEDOC
+$_JOINMULTIPLEMATCHNAMEDOC
+- `droprangecols`: by default is set to `false`, however passing it as `true` will include the range columns from the right data set in the final output
+$_JOINSTRICTINEQUALITYDOC
+$_JOINALGDOC
+$_JOINSTABLEDOC
+$_JOINACCELERATEDOC
+$_JOINTCHECKDOC
 
 # Examples
 
@@ -384,17 +405,19 @@ will be added after the first part. No rule governs the order of observation for
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format;
-  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
-  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
-- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
-  it can also be `QuickSort` (the Quicksort algorithm).
-- `stable`: by default is `false`, means that the sorting results have not to be stable;
-  if it is set to `true`, then sorting for `dsr` have to be stable.
-- `check`: to check whether the output is too large (10 times greater than number of rows if `dsl`, an AssertionError will be raised in this case),
-  it is set to `true` by default; if `false` is passed, the function will not check the output size.
+$_JOINMAPFORMATSDOC
+$_JOINMETHODDOCSORT
+$_JOINTHREADSDOC
+$_JOINTOBSIDDOC
+$_JOINMULTIPLEMATCHDOC
+$_JOINOBSIDNAMEDOC
+$_JOINMULTIPLEMATCHNAMEDOC
+- `source`: setting it as `true` will include the source of the row in the output data set.
+- `source_name`: controls the column name of the output data set when `source = true`
+$_JOINALGDOC
+$_JOINSTABLEDOC
+$_JOINACCELERATEDOC
+$_JOINTCHECKDOC
 
 # Examples
 
@@ -515,7 +538,13 @@ returns a boolean vector where is true when the key for the
 corresponding row in the `main` data set is found in the transaction data set.
 
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `contains` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
+$_JOINMAPFORMATSDOC
+$_JOINTHREADSDOC
+$_JOINMETHODDOCHASH
+$_JOINSTRICTINEQUALITYDOC
+$_JOINALGDOC
+$_JOINSTABLEDOC
+$_JOINACCELERATEDOC
 
 # Examples
 
@@ -644,15 +673,14 @@ rows that have key values appear in `dsr` will be removed.
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `antijoin` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format;
-  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
-  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
-- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
-  it can also be `QuickSort` (the Quicksort algorithm).
-- `stable`: by default is `false`, means that the sorting results have not to be stable;
-  if it is set to `true`, then sorting for `dsr` have to be stable.
+$_JOINMAPFORMATSDOC
+$_JOINTHREADSDOC
+$_JOINMETHODDOCHASH
+$_JOINSTRICTINEQUALITYDOC
+- `view`: setting it as `true` returns a view of the result.
+$_JOINALGDOC
+$_JOINSTABLEDOC
+$_JOINACCELERATEDOC
 
 See also: [`antijoin!`](@ref)
 
@@ -756,15 +784,14 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `semijoin` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format;
-  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
-  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
-- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
-  it can also be `QuickSort` (the Quicksort algorithm).
-- `stable`: by default is `false`, means that the sorting results have not to be stable;
-  if it is set to `true`, then sorting for `dsr` have to be stable.
+$_JOINMAPFORMATSDOC
+$_JOINTHREADSDOC
+$_JOINMETHODDOCHASH
+$_JOINSTRICTINEQUALITYDOC
+- `view`: setting it as `true` returns a view of the result.
+$_JOINALGDOC
+$_JOINSTABLEDOC
+$_JOINACCELERATEDOC
 
 See also: [`semijoin!`](@ref)
 
@@ -870,15 +897,13 @@ rows that have key values appear in `dsr` will be removed.
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `antijoin!` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format;
-  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
-  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
-- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
-  it can also be `QuickSort` (the Quicksort algorithm).
-- `stable`: by default is `false`, means that the sorting results have not to be stable;
-  if it is set to `true`, then sorting for `dsr` have to be stable.
+$_JOINMAPFORMATSDOC
+$_JOINTHREADSDOC
+$_JOINMETHODDOCHASH
+$_JOINSTRICTINEQUALITYDOC
+$_JOINALGDOC
+$_JOINSTABLEDOC
+$_JOINACCELERATEDOC
 
 See also: [`antijoin`](@ref)
 
@@ -993,15 +1018,13 @@ rows that have values in `dsl` while do not have matching values `on` keys in `d
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the join function will based on. When an inequlity-like `semijoin!` is needed, the last key for the right data set should be passed as `Tuple` of column names or column index.
 - `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
   setting it to `true` if there are duplicated column names to make them unique.
-- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format;
-  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
-  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:hash`
-- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
-  it can also be `QuickSort` (the Quicksort algorithm).
-- `stable`: by default is `false`, means that the sorting results have not to be stable;
-  if it is set to `true`, then sorting for `dsr` have to be stable.
+$_JOINMAPFORMATSDOC
+$_JOINTHREADSDOC
+$_JOINMETHODDOCHASH
+$_JOINSTRICTINEQUALITYDOC
+$_JOINALGDOC
+$_JOINSTABLEDOC
+$_JOINACCELERATEDOC
 
 See also: [`semijoin`](@ref)
 
@@ -1169,23 +1192,22 @@ in the close match phase, only one of them will be selected, and the selected on
 - `direction`: direction of search in sorted `dsr` based on keys; by default, `:backward` is used
   and search direction are from the last row to the first row until the first value less than the key is found;
   setting to `:forward` can search for matching values top down until the first value larger than the key is found. Setting it to `:nearest` search in both direction and select the nearest one.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
-- `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined;
-  setting it to `true` if there are duplicated column names to make them unique.
+- `makeunique`: by default is set to `false`, and there will be an error message if duplicate names are found in columns not joined; setting it to `true` if there are duplicated column names to make them unique.
+$_JOINMAPFORMATSDOC
+$_JOINTHREADSDOC
+$_JOINMETHODDOCSORT
 - `border`: `:missing` is used by default for the border value,
   `:nearest` can be used to set border values to the nearest value rather than a `missing`,
   by setting `border = :none` any observation out of the right data set range will be set as missing.
-- `mapformats`: is set to `true` by default, which means formatted values are used to match observations for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format;
-  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
-  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
 - `tol`: Select close match only if the distance is less than it.
 - `allow_exact_match`: If `true`, allows matching with the same key.
 - `op`: When `direction = :nearest` user can supply an operator where `closejoin!` call on two nearest points from the right data set close to the currrent observation in the left data set. The order of the argument to `op` is the same as the sorted order of point. It is important that `op` be able to handle misssing values.
-- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
-  it can also be `QuickSort` (the Quicksort algorithm).
-- `stable`: by default is `true`, means that the sorting results have to be stable;
-  if it is set to `false`, then sorting for `dsr` have not to be stable.
+$_JOINTOBSIDDOC
+$_JOINOBSIDNAMEDOC
+$_JOINALGDOC
+$_JOINSTABLEDOC
+$_JOINACCELERATEDOC
+
 See also: [`closejoin`](@ref)
 
 # Examples
@@ -1478,15 +1500,12 @@ the order of selected observation from the right table.
   change this to `true` can update `dsmain` using `missing` values in `dsupdate`.
 - `mode`: by default is set to `:missings`, means that only rows in `dsmain` with `missing` values will be updated.
     changing it to `:all` means all matching rows based `on` keys will be updated. Otherwise a function can be passed as `mode` to update only observations which return true when `mode` call on them.
-- `mapformats`: is set to `true` by default, which means formatted values are used for matching observations for both `dsl` and `dsr`;
-  you can use the function `getformat` to see the format;
-  by setting `mapformats` to a `Bool Vector` of length 2, you can specify whether to use formatted values
-  for `dsl` and `dsr`, respectively; for example, passing a `[true, false]` means use formatted values for `dsl` and do not use formatted values for `dsr`.
-- `method` is either `:sort` or `:hash` for specifiying the method of match finding, default is `:sort`
-- `alg`: sorting algorithms used, is `HeapSort` (the Heap Sort algorithm) by default;
-  it can also be `QuickSort` (the Quicksort algorithm).
-- `stable`: by default is `true`, means that the sorting results have to be stable;
-  if it is set to `false`, then sorting for `dsr` have not to be stable.
+$_JOINMAPFORMATSDOC
+$_JOINTHREADSDOC
+$_JOINMETHODDOCSORT
+$_JOINACCELERATEDOC
+$_JOINALGDOC
+$_JOINSTABLEDOC
 
 See also: [`update`](@ref)
 
@@ -1580,6 +1599,26 @@ corresponding columns. The `cols` keyword can be used to specifiy the pair of co
 controls whether the actual values or the formatted values should be compared.
 
 When `on = nothing` and passed data sets have different number of rows, the result for the corresponding rows where one of data sets doesn't have values will be `missing`. When user passes `on` keyword, the function first use an outer join to join datasets and then compare values correspond to matching rows. In this case, user can use observations ids to locate the corresponding rows in each data set.
+
+# Key Arguments
+
+- `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the update function will based on.
+- `cols`: specifies the columns for comparisons
+- `mapformats`: controls whether the actual values or the formatted values should be compared.
+- `on_mapformats`: control whether the actual values or the formatted values should be used to join two data sets.
+$_JOINTHREADSDOC
+$_JOINMETHODDOCSORT
+- `eq`: is used to passed customised function for comparison, by default is set to `isequal`
+$_JOINTOBSIDDOC
+$_JOINMULTIPLEMATCHDOC
+$_JOINOBSIDNAMEDOC
+$_JOINMULTIPLEMATCHNAMEDOC
+- `dropobsidcols`: controls whether the output data set should contains the observation ids of the matching rows. By default it is set to `true` when `on` is set and is set `false` otherwise.
+$_JOINACCELERATEDOC
+$_JOINALGDOC
+$_JOINSTABLEDOC
+
+# Examples
 
 ```julia
 julia> ds1 = Dataset(x = 1:9, y = 9:-1:1);
