@@ -695,11 +695,16 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false, thr
 end
 
 
+combine(ds::SubDataset, @nospecialize(args...); threads = true) = combine_ds(ds::AbstractDataset, args...; threads = threads)
 
-function combine_ds(ds::Dataset, @nospecialize(args...); threads = true)
+function combine_ds(ds::AbstractDataset, @nospecialize(args...); threads = true)
     idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
     ms = normalize_combine_multiple!(idx_cpy, index(ds), args...)
-    newlookup, new_nm = _create_index_for_newds(ds, ms, index(ds).sortedcols)
+    if ds isa SubDataset
+        newlookup, new_nm = _create_index_for_newds(ds, ms, Int[])
+    else
+        newlookup, new_nm = _create_index_for_newds(ds, ms, index(ds).sortedcols)
+    end
     !(_is_byrow_valid(Index(newlookup, new_nm, Dict{Int, Function}()), ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` otherwise"))
     _first_vector_res = _check_mutliple_rows_for_each_group(ds, ms)
 
@@ -751,7 +756,7 @@ function combine_ds(ds::Dataset, @nospecialize(args...); threads = true)
             if ms[i].first isa Tuple
                 _combine_f_barrier_tuple(ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
             else
-                _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
+                _combine_f_barrier(haskey(index(ds), ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
             end
         end
         if !haskey(index(newds), ms[i].second.second)
