@@ -1711,7 +1711,7 @@ julia> compare(old, new,
    7 │            4           40      missing             4      missing            missing
 ```
 """
-function compare(ds1::AbstractDataset, ds2::AbstractDataset; cols = nothing, on = nothing, check = true, mapformats = false, on_mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, method = :sort, threads = true, eq = isequal, obs_id_name = :obs_id, multiple_match = false, multiple_match_name = :multiple, dropobsidcols::Bool = on === nothing)
+function compare(ds1::AbstractDataset, ds2::AbstractDataset; cols = nothing, on = nothing, check = true, mapformats = false, on_mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, method = :sort, threads = true, eq = isequal, obs_id_name = :obs_id, multiple_match = false, multiple_match_name = :multiple, dropobsidcols::Bool = on === nothing, makeunique  = false)
     _check_consistency(ds1)
     _check_consistency(ds2)
     if on !== nothing
@@ -1771,6 +1771,6 @@ function compare(ds1::AbstractDataset, ds2::AbstractDataset; cols = nothing, on 
 
     # nrow(ds1) != nrow(ds2) && throw(ArgumentError("the number of rows for both data sets should be the same"))
     max_nrow=max(nrow(ds1), nrow(ds2))
-    _compare(ds1, ds2, max_nrow < typemax(Int32) ? Val(Int32) : Val(Int); onleft = onleft, onright = onright, cols_left = left_col_idx, cols_right = right_col_idx, check = check, mapformats = mapformats, on_mapformats = on_mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, eq = eq, obs_id_name = obs_id_name, multiple_match = multiple_match, multiple_match_name = multiple_match_name, drop_obs_id = dropobsidcols)
+    _compare(ds1, ds2, max_nrow < typemax(Int32) ? Val(Int32) : Val(Int); onleft = onleft, onright = onright, cols_left = left_col_idx, cols_right = right_col_idx, check = check, mapformats = mapformats, on_mapformats = on_mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, eq = eq, obs_id_name = obs_id_name, multiple_match = multiple_match, multiple_match_name = multiple_match_name, drop_obs_id = dropobsidcols, makeunique = makeunique)
 
 end

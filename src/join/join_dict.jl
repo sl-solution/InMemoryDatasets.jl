@@ -254,19 +254,19 @@ function _join_left_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
     if multiple_match
-        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
         obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; threads = threads)
-        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[2]
         obs_id_name2 = Symbol(obs_id_name, "_right")
         obs_id_right = allocatecol(T, total_length)
         _fill_right_cols_table_left!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, missing, threads = threads)
-        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false, makeunique = makeunique)
     end
     true, newds
 
@@ -318,19 +318,19 @@ function _join_left!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
         setformat!(dsl, index(dsl)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
     if multiple_match
-        insertcols!(dsl, ncol(dsl)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
+        insertcols!(dsl, ncol(dsl)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
         obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing, threads = threads)
-        insertcols!(dsl, ncol(dsl)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+        insertcols!(dsl, ncol(dsl)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[2]
         obs_id_name2 = Symbol(obs_id_name, "_right")
         obs_id_right = allocatecol(T, total_length)
         _fill_right_cols_table_left!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, missing, threads = threads)
-        insertcols!(dsl, ncol(dsl)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
+        insertcols!(dsl, ncol(dsl)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false, makeunique = makeunique)
     end
     _modified(_attributes(dsl))
     true, dsl
@@ -395,19 +395,19 @@ function _join_inner_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
     if multiple_match
-        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
         obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_inner!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, threads = threads)
-        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[2]
         obs_id_name2 = Symbol(obs_id_name, "_right")
         obs_id_right = allocatecol(T, total_length)
         _fill_right_cols_table_inner!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, threads = threads)
-        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false, makeunique = makeunique)
     end
     true, newds
 
@@ -480,24 +480,24 @@ function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
     if source
-        insertcols!(newds, ncol(newds)+1, source_col_name => source_col, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, source_col_name => source_col, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if multiple_match
-        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[1]
         # Note that the name convention obs_id_name1 and name2 are used in other places
         obs_id_name1 = Symbol(obs_id_name, "_left")
         obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing, threads = threads)
-        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[2]
         obs_id_name2 = Symbol(obs_id_name, "_right")
         obs_id_right = allocatecol(T, total_length)
         _fill_right_cols_table_left!(obs_id_right, 1:nrow(dsr), ranges, new_ends, total_length, missing, threads = threads)
         _fill_oncols_left_table_left_outer!(obs_id_right, 1:nrow(dsr), notinleft, new_ends, total_length)
-        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false)
+        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false, makeunique = makeunique)
     end
     true, newds
 
