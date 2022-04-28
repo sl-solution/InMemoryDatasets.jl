@@ -2,9 +2,13 @@
 
 ## New features
 
+* Users now can choose between having the observations ids for the left data set and/or the right data set as part of the output data set.
 * Add a new function `eachgroup`. It allows iteration over each group of a grouped data set.
 
 ## Fixes
+
+* The `combine` function will now work fine when a view of data set is passed
+* For the join functions the `makeunique` argument is now passed correctly to the inside functions.
 
 # Version 0.7.0
 
