@@ -503,7 +503,7 @@ function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols
 
 end
 
-function _update!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort, threads = threads) where T
+function _update!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; allowmissing = true, mode = :all, mapformats = [true, true], stable = false, alg = HeapSort, threads = threads, op = nothing) where T
     _fl = _date_value∘identity
     _fr = _date_value∘identity
     if mapformats[1]
@@ -534,7 +534,7 @@ function _update!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; 
             TL = nonmissingtype(eltype(_columns(dsl)[left_cols_idx]))
             TR = nonmissingtype(eltype(_columns(dsr)[right_cols[j]]))
             if promote_type(TR, TL) <: TL
-                _update_left_with_right!(_columns(dsl)[left_cols_idx], _columns(dsr)[right_cols[j]], ranges, allowmissing, f_mode, threads = threads)
+                _update_left_with_right!(_columns(dsl)[left_cols_idx], _columns(dsr)[right_cols[j]], ranges, allowmissing, f_mode, threads = threads, op = op)
             end
         end
     end

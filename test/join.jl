@@ -2335,6 +2335,22 @@ end
     @test up1_a == update(main, transaction, on = [:group, :id],
     allowmissing = false, mode = :missing, accelerate = true, method = :hash)
 
+    @test update(main, transaction, on = [:group, :id], op = +) == Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
+              id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+              x1    = [1.2, 2.3,missing,  4.8, 1.3, 2.1  , 0.0 ],
+              x2    = [ 5  ,  4  ,  4  ,  2  , 4  ,missing, 2  ])
+    @test update(main, transaction, on = [:group, :id], op = +, method = :hash) == Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
+              id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+              x1    = [1.2, 2.3,missing,  4.8, 1.3, 2.1  , 0.0 ],
+              x2    = [ 5  ,  4  ,  4  ,  2  , 4  ,missing, 2  ])
+    @test update(main, transaction, on = [:group, :id], op = +, allowmissing = true) == Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
+              id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+              x1    = [1.2, 2.3,missing,  4.8, missing, missing  , 0.0 ],
+              x2    = [ 5  ,  4  ,  missing  ,  missing  , 4  ,missing, 2  ])
+    @test update(main, transaction, on = [:group, :id], op = +, allowmissing = true, method = :hash) == Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
+              id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+              x1    = [1.2, 2.3,missing,  4.8, missing, missing  , 0.0 ],
+              x2    = [ 5  ,  4  ,  missing  ,  missing  , 4  ,missing, 2  ])
 
     up1_t = Dataset([Union{Missing, String}["G1", "G1", "G1", "G1", "G2", "G2", "G2"], Union{Missing, Int64}[1, 1, 2, 2, 1, 1, 2], Union{Missing, Float64}[1.2, 2.3, 2.5, 2.3, 1.3, 2.1, 0.0], Union{Missing, Int64}[5, 4, 4, 2, 1, 3, 2]], ["group", "id", "x1", "x2"])
     @test up1 == up1_t
@@ -2395,7 +2411,7 @@ end
               x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
     transaction = Dataset(group = ["G1", "G2"], id = [2, 1],
               x1 = [2.5, missing], x2 = [missing, 3])
-    @test update(main, transaction, on = :group) == Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
+    @test update(main, transaction, on = :group, mode = :all) == Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
               id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
               x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
               x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
@@ -2413,7 +2429,7 @@ end
 
 
 
-    @test update(main, transaction, on = :group, method = :hash) == Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
+    @test update(main, transaction, on = :group, method = :hash, mode = :all) == Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
               id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
               x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
               x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
@@ -2440,153 +2456,166 @@ end
               x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
               x2    = [ missing, missing, missing, missing, 3,3,3])
 
-      main = Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
-      transaction = Dataset(group = [3,1], id = [2, 1],
-                x1 = [2.5, missing], x2 = [missing, 3])
-      @test update(main, transaction, on = :group) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
-                x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
-      @test update(main, transaction, on = :group, mode = :missing) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
-      @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2,2,2,2,1,1,1],
-                x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
-                x2    = [ missing, missing, missing, missing, 3,3,3])
-      @test update(main, transaction, on = :group) == update(main, view(transaction, [2,1], :), on = :group)
-      @test update(main, transaction, on = :group, mode = :missing) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
-      @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
+    main = Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
+    transaction = Dataset(group = [3,1], id = [2, 1],
+            x1 = [2.5, missing], x2 = [missing, 3])
+    @test update(main, transaction, on = :group, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
+            x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
+    @test update(main, transaction, on = :group, mode = :missing) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2,2,2,2,1,1,1],
+            x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
+            x2    = [ missing, missing, missing, missing, 3,3,3])
+    @test update(main, transaction, on = :group) == update(main, view(transaction, [2,1], :), on = :group)
+    @test update(main, transaction, on = :group, mode = :missing) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
 
-      @test update(main, transaction, on = :group, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
-                x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
-      @test update(main, transaction, on = :group, mode = :missing, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
-      @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2,2,2,2,1,1,1],
-                x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
-                x2    = [ missing, missing, missing, missing, 3,3,3])
-      @test update(main, transaction, on = :group, method = :hash) == update(main, view(transaction, [2,1], :), on = :group)
-      @test update(main, transaction, on = :group, mode = :missing, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
-      @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
+    @test update(main, transaction, on = :group, method = :hash, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
+            x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
+    @test update(main, transaction, on = :group, mode = :missing, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2,2,2,2,1,1,1],
+            x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
+            x2    = [ missing, missing, missing, missing, 3,3,3])
+    @test update(main, transaction, on = :group, method = :hash) == update(main, view(transaction, [2,1], :), on = :group)
+    @test update(main, transaction, on = :group, mode = :missing, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
 
-      update!(main, transaction, on = :group, mode = :missing)
-      @test main == Dataset(group = [3,3,3,3,1,1,1],
+    update!(main, transaction, on = :group, mode = :missing)
+    @test main == Dataset(group = [3,3,3,3,1,1,1],
+          id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+          x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
+          x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
+    update!(main, transaction, on = :group, allowmissing = true, mode = :all)
+    @test main == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2,2,2,2,1,1,1],
+            x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
+            x2    = [ missing, missing, missing, missing, 3,3,3])
+
+    main = Dataset(group = [3,3,3,3,1,1,1],
+              id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+              x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
+              x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
+    transaction = Dataset(group = PooledArray([3,1]), id = [2, 1],
+              x1 = [2.5, missing], x2 = [missing, 3])
+    @test update(main, transaction, on = :group, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
+              id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
+              x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
+              x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
+    @test update(main, transaction, on = :group, mode = :missing) == Dataset(group = [3,3,3,3,1,1,1],
               id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
               x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
               x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
-      update!(main, transaction, on = :group, allowmissing = true, mode = :all)
-      @test main == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2,2,2,2,1,1,1],
-                x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
-                x2    = [ missing, missing, missing, missing, 3,3,3])
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
+              id    = [ 2,2,2,2,1,1,1],
+              x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
+              x2    = [ missing, missing, missing, missing, 3,3,3])
+    @test update(main, transaction, on = :group) == update(main, view(transaction, [2,1], :), on = :group)
+    @test update(main, transaction, on = :group, mode = :missing) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
 
-        main = Dataset(group = [3,3,3,3,1,1,1],
-                  id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                  x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
-                  x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
-        transaction = Dataset(group = PooledArray([3,1]), id = [2, 1],
-                  x1 = [2.5, missing], x2 = [missing, 3])
-        @test update(main, transaction, on = :group) == Dataset(group = [3,3,3,3,1,1,1],
-                  id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
-                  x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
-                  x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
-        @test update(main, transaction, on = :group, mode = :missing) == Dataset(group = [3,3,3,3,1,1,1],
-                  id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                  x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
-                  x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
-        @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
-                  id    = [ 2,2,2,2,1,1,1],
-                  x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
-                  x2    = [ missing, missing, missing, missing, 3,3,3])
-        @test update(main, transaction, on = :group) == update(main, view(transaction, [2,1], :), on = :group)
-        @test update(main, transaction, on = :group, mode = :missing) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
-        @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
-
-        @test update(main, transaction, on = :group, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
-                  id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
-                  x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
-                  x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
-        @test update(main, transaction, on = :group, mode = :missing, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
-                  id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                  x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
-                  x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
-        @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
-                  id    = [ 2,2,2,2,1,1,1],
-                  x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
-                  x2    = [ missing, missing, missing, missing, 3,3,3])
-        @test update(main, transaction, on = :group, method = :hash) == update(main, view(transaction, [2,1], :), on = :group)
-        @test update(main, transaction, on = :group, mode = :missing, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
-        @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
-
-
-        update!(main, transaction, on = :group, mode = :missing)
-        @test main == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
-        update!(main, transaction, on = :group, allowmissing = true, mode = :all)
-        @test main == Dataset(group = [3,3,3,3,1,1,1],
-                  id    = [ 2,2,2,2,1,1,1],
-                  x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
-                  x2    = [ missing, missing, missing, missing, 3,3,3])
-
-      main = Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
-      transaction = Dataset(group = [3.0,1.0], id = [2, 1],
-                x1 = [2.5, missing], x2 = [missing, 3])
-      @test update(main, transaction, on = :group) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
-                x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
-      @test update(main, transaction, on = :group, mode = :missing) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
-      @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2,2,2,2,1,1,1],
-                x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
-                x2    = [ missing, missing, missing, missing, 3,3,3])
-      @test update(main, transaction, on = :group) == update(main, view(transaction, [2,1], :), on = :group)
-      @test update(main, transaction, on = :group, mode = :missing) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
-      @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
-
-      @test update(main, transaction, on = :group, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
-                x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
-      @test update(main, transaction, on = :group, mode = :missing, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
-                x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
-                x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
-      @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2,2,2,2,1,1,1],
-                x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
-                x2    = [ missing, missing, missing, missing, 3,3,3])
-      @test update(main, transaction, on = :group, method = :hash) == update(main, view(transaction, [2,1], :), on = :group)
-      @test update(main, transaction, on = :group, mode = :missing, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
-      @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
-
-      update!(main, transaction, on = :group, mode = :missing)
-      @test main == Dataset(group = [3,3,3,3,1,1,1],
+    @test update(main, transaction, on = :group, method = :hash, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
+              id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
+              x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
+              x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
+    @test update(main, transaction, on = :group, mode = :missing, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
               id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
               x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
               x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
-      update!(main, transaction, on = :group, allowmissing = true, mode = :all)
-      @test main == Dataset(group = [3,3,3,3,1,1,1],
-                id    = [ 2,2,2,2,1,1,1],
-                x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
-                x2    = [ missing, missing, missing, missing, 3,3,3])
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
+              id    = [ 2,2,2,2,1,1,1],
+              x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
+              x2    = [ missing, missing, missing, missing, 3,3,3])
+    @test update(main, transaction, on = :group, method = :hash) == update(main, view(transaction, [2,1], :), on = :group)
+    @test update(main, transaction, on = :group, mode = :missing, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
+
+
+    update!(main, transaction, on = :group, mode = :missing)
+    @test main == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
+    update!(main, transaction, on = :group, allowmissing = true, mode = :all)
+    @test main == Dataset(group = [3,3,3,3,1,1,1],
+              id    = [ 2,2,2,2,1,1,1],
+              x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
+              x2    = [ missing, missing, missing, missing, 3,3,3])
+
+    main = Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
+    transaction = Dataset(group = [3.0,1.0], id = [2, 1],
+            x1 = [2.5, missing], x2 = [missing, 3])
+
+    @test update(main, transaction, on = :group, op = max) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [2.5, 2.5,missing,  2.5, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  , 3  ,missing, 3  ])
+    @test update(main, select(transaction, 4,1,2,3), on = :group, op = max) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [2.5, 2.5,missing,  2.5, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  , 3  ,missing, 3  ])
+    @test update(main, transaction, on = :group, op = max, allowmissing = true) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [2.5, 2.5,missing,  2.5, missing, missing, missing ],
+            x2    = [ missing, missing, missing, missing, 3  ,missing, 3  ])
+    @test update(main, transaction, on = :group, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
+            x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
+    @test update(main, transaction, on = :group, mode = :missing) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2,2,2,2,1,1,1],
+            x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
+            x2    = [ missing, missing, missing, missing, 3,3,3])
+    @test update(main, transaction, on = :group) == update(main, view(transaction, [2,1], :), on = :group)
+    @test update(main, transaction, on = :group, mode = :missing) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
+
+    @test update(main, transaction, on = :group, method = :hash, mode = :all) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2  ,  2  ,  2  ,  2  ,  1  ,  1  ,  1  ],
+            x1    = [2.5, 2.5,2.5,2.5, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  ,3,3,3  ])
+    @test update(main, transaction, on = :group, mode = :missing, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+            x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
+            x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2,2,2,2,1,1,1],
+            x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
+            x2    = [ missing, missing, missing, missing, 3,3,3])
+    @test update(main, transaction, on = :group, method = :hash) == update(main, view(transaction, [2,1], :), on = :group)
+    @test update(main, transaction, on = :group, mode = :missing, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, mode = :missing)
+    @test update(main, transaction, on = :group, allowmissing = true, mode = :all, method = :hash) == update(main, view(transaction, [2,1], :), on = :group, allowmissing = true, mode = :all)
+
+    update!(main, transaction, on = :group, mode = :missing)
+    @test main == Dataset(group = [3,3,3,3,1,1,1],
+          id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+          x1    = [1.2, 2.3,2.5,  2.3, 1.3, 2.1  , 0.0 ],
+          x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,3, 2  ])
+    update!(main, transaction, on = :group, allowmissing = true, mode = :all)
+    @test main == Dataset(group = [3,3,3,3,1,1,1],
+            id    = [ 2,2,2,2,1,1,1],
+            x1    = [2.5,2.5,2.5,2.5, missing, missing, missing],
+            x2    = [ missing, missing, missing, missing, 3,3,3])
     main = Dataset(group = [3,3,3,3,1,1,1],
               id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
               x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],

@@ -1482,7 +1482,7 @@ function closejoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, direction 
 end
 
 """
-    update!(dsmain::Dataset, dsupdate::AbstractDataset; on=nothing, allowmissing=false, mode=:missings, mapformats=true, alg=HeapSort, stable=true, accelerate = false, method = :sort, threads = true)
+    update!(dsmain::Dataset, dsupdate::AbstractDataset; on=nothing, allowmissing=false, mode=:missings, op = nothing, mapformats=true, alg=HeapSort, stable=true, accelerate = false, method = :sort, threads = true)
 
 Update a `Dataset` `dsmain` with another `Dataset` `dsupdate` based `on` given keys for matching rows,
 and change the left `Dataset` after updating.
@@ -1498,8 +1498,9 @@ the order of selected observation from the right table.
 - `on`: can be a single column name, a vector of column names or a vector of pairs of column names, known as keys that the update function will based on.
 - `allowmissing`: is set to `false` by default, so `missing` values in `dsupdate` will not replace the values in `dsmain`;
   change this to `true` can update `dsmain` using `missing` values in `dsupdate`.
-- `mode`: by default is set to `:missings`, means that only rows in `dsmain` with `missing` values will be updated.
+- `mode`: by default is set to `:missings` and when `op` is passed the default is set to `:all`, it means when `op` is not set only rows in `dsmain` with `missing` values will be updated.
     changing it to `:all` means all matching rows based `on` keys will be updated. Otherwise a function can be passed as `mode` to update only observations which return true when `mode` call on them.
+- `op`: by default, `update!` replace the values in `dsmain` by the values from `dsupdate`, however, user can pass any binary function to `op` to replace the value in `dsmain` by `op(left_value, right_value)`, i.e. replace it by calling `op` on the old value and the new value.
 $_JOINMAPFORMATSDOC
 $_JOINTHREADSDOC
 $_JOINMETHODDOCSORT
@@ -1552,12 +1553,33 @@ julia> update!(dsmain, dsupdate, on = [:group, :id], mode = :missings) # Only mi
    5 │ G2               1       1.3         1
    6 │ G2               1       2.1         3
    7 │ G2               2       0.0         2
+
+julia> dsmain = Dataset(group = ["G1", "G1", "G1", "G1", "G2", "G2", "G2"],
+                             id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+                             x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
+                             x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ]);
+julia> dsupdate = Dataset(group = ["G1", "G2"], id = [2, 1],
+                               x1 = [2.5, missing], x2 = [missing, 3]);
+
+julia> update!(dsmain, dsupdate, on = [:group, :id], op = +, mode = :all)
+7×4 Dataset
+ Row │ group     id        x1         x2
+     │ identity  identity  identity   identity
+     │ String?   Int64?    Float64?   Int64?
+─────┼─────────────────────────────────────────
+   1 │ G1               1        1.2         5
+   2 │ G1               1        2.3         4
+   3 │ G1               2  missing           4
+   4 │ G1               2        4.8         2
+   5 │ G2               1        1.3         4
+   6 │ G2               1        2.1   missing
+   7 │ G2               2        0.0         2
 ```
 """
-function update!(dsmain::Dataset, dsupdate::AbstractDataset; on = nothing, allowmissing = false, mode::Union{Symbol, Function} = :missings,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, method = :sort, threads::Bool = true)
+function update!(dsmain::Dataset, dsupdate::AbstractDataset; on = nothing, allowmissing = false, op = nothing, mode::Union{Symbol, Function} = op === nothing ? :missings : :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, method = :sort, threads::Bool = true)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
-    mode isa Symbol && !(mode ∈ (:all, :missing, :missings))  && throw(ArgumentError("`mode` can be either :all or :missing"))
+    mode isa Symbol && !(mode ∈ (:all, :missing, :missings))  && throw(ArgumentError("`mode` can be either :all, :missing, or a function"))
     if !(on isa AbstractVector)
         on = [on]
     else
@@ -1577,7 +1599,7 @@ function update!(dsmain::Dataset, dsupdate::AbstractDataset; on = nothing, allow
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
-    _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads)
+    _update!(dsmain, dsupdate, nrow(dsupdate) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, op = op)
 
     dsmain
 end
@@ -1586,8 +1608,7 @@ end
 
 Variant of `update!` that returns an updated copy of `dsmain` leaving `dsmain` itself unmodified.
 """
-update(dsmain::AbstractDataset, dsupdate::AbstractDataset; on = nothing, allowmissing = false, mode = :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, method = :sort, threads = true) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode,  mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads)
-
+update(dsmain::AbstractDataset, dsupdate::AbstractDataset; on = nothing, allowmissing = false, op = nothing, mode = op === nothing ? :missings : :all,  mapformats::Union{Bool, Vector{Bool}} = true, stable = true, alg = HeapSort, accelerate = false, method = :sort, threads = true,) = update!(copy(dsmain), dsupdate; on = on, allowmissing = allowmissing, mode = mode, mapformats = mapformats, stable = stable, alg = alg, accelerate = accelerate, method = method, threads = threads, op = op)
 
 
 # TODO the docstring is very limited, we need a more comprehensive docs here / and more examples

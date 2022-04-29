@@ -447,7 +447,9 @@ julia> contains(dsl, dsr, on = [1=>1, 2=>(2,3)], strict_inequality = true)
 
 ## Update a data set by values from another data set
 
-`update!` updates a data set values by using values from a transaction data set. The function uses the given keys (`on = ...`) to select rows for updating. By default, the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true` changes this behaviour. If there are multiple rows in the main data set which match the key(s), using `mode = :all` causes all of them to be updated, `mode = :missing` causes only the ones which are missing in the main data set to be updated, and `mode = fun` updates the values which calling `fun` on them returns `true`. If there are multiple rows in the transaction data set which match the key, only the last one (given `stable = true` is passed) will be used to update the main data set.
+`update!` updates a data set values by using values from a transaction data set. The function uses the given keys (`on = ...`) to select rows for updating. By default, the missing values in transaction data set wouldn't replace the values in the main data set, however, using `allowmissing = true` changes this behaviour. If there are multiple rows in the main data set which match the key(s), using `mode = :all` causes all of them to be updated, `mode = :missings` causes only the ones which are missing in the main data set to be updated, and `mode = fun` updates the values which calling `fun` on them returns `true`. If there are multiple rows in the transaction data set which match the key, only the last one (given `stable = true` is passed) will be used to update the main data set.
+
+By default, `update!` updates the old values by the new values from the transaction data set, however, user may pass any function via the `op` keyword argument to update the values in the main data set by the result of calling `op` on values on both data sets. In this case, `update!` updates values in the main data set by `op(old, new)`, where `old` is the value from the main data set and `new` is the value from the transaction data set.
 
 The `update!` functions replace the main data set with the updated version, however, if a copy of the updated data set is required, the `update` function can be used instead.
 
@@ -486,7 +488,7 @@ julia> transaction = Dataset(group = ["G1", "G2"], id = [2, 1],
 
 
 julia> update(main, transaction, on = [:group, :id],
-               allowmissing = false, mode = :missing)
+               allowmissing = false, mode = :missings)
 7×4 Dataset
  Row │ group        id        x1        x2
      │ identity     identity  identity  identity
@@ -528,6 +530,20 @@ julia> update(main, transaction, on = [:group, :id],
    3 │ G1               2  missing           4
    4 │ G1               2        2.5         2
    5 │ G2               1        1.3         1
+   6 │ G2               1        2.1   missing
+   7 │ G2               2        0.0         2
+
+julia> update(main, transaction, on = [:group, :id], op = +) # add values of transaction to main, when op is set mode = :all is default
+7×4 Dataset
+ Row │ group     id        x1         x2       
+     │ identity  identity  identity   identity
+     │ String?   Int64?    Float64?   Int64?   
+─────┼─────────────────────────────────────────
+   1 │ G1               1        1.2         5
+   2 │ G1               1        2.3         4
+   3 │ G1               2  missing           4
+   4 │ G1               2        4.8         2
+   5 │ G2               1        1.3         4
    6 │ G2               1        2.1   missing
    7 │ G2               2        0.0         2
 ```
