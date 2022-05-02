@@ -5,15 +5,12 @@
 * Users now can choose between having the observations ids for the left data set and/or the right data set as part of the output data set.
 * Add a new function `eachgroup`. It allows iteration over each group of a grouped data set.
 * `op` is a new keyword argument for the `update/!` functions which allows passing a user defined function to control how the value of the main data set should be updated by the values from the transaction data set. ([issue #55](https://github.com/sl-solution/InMemoryDatasets.jl/issues/55))
-* Supporting of the `mapformats` keyword argument in `flatten/!`. Now users can flatten a data set based on the formatted values.
 
 ## Fixes
 
 * The `combine` function will now work fine when a view of data set is passed
 * For the join functions the `makeunique` argument is now passed correctly to the inside functions.
 * `update` and `update!` have the same `mode` option by default.
-* Fix the problem with preserving format of `SubDataset` in `flatten/!`
-* Fix the problem that caused `flatten!` to produce a copy of data when an empty data set were passed to it.
 
 # Version 0.7.0
 
