@@ -579,6 +579,16 @@ end
     @test ds_flat_cat == ref_cat
     flatten!(ds_cat, :b)
     @test ds_cat == ref_cat
+
+    ds = Dataset(x=1:4, y=["ab,bc","d","ef,gh",missing])
+    fmt(x) = split(x, ",")
+    fmt(::Missing) = missing
+    setformat!(ds, 2 => fmt)
+    @test flatten(ds, :y) == Dataset([[1, 1, 1, 1, 1, 2, 3, 3, 3, 3, 3, 4], Union{Missing, Char}['a', 'b', ',', 'b', 'c', 'd', 'e', 'f', ',', 'g', 'h', missing]], [:x, :y])
+    @test flatten(ds, :y, mapformats = true) == Dataset([Union{Missing, Int64}[1, 1, 2, 3, 3, 4], Union{Missing, SubString{String}}["ab", "bc", "d", "ef", "gh", missing]], [:x, :y])
+    @test flatten(view(ds, :, [2,1]), :y, mapformats = true) == Dataset(reverse([Union{Missing, Int64}[1, 1, 2, 3, 3, 4], Union{Missing, SubString{String}}["ab", "bc", "d", "ef", "gh", missing]]), reverse([:x, :y]))
+    flatten!(ds, :y, mapformats = true)
+    @test ds == Dataset([Union{Missing, Int64}[1, 1, 2, 3, 3, 4], Union{Missing, SubString{String}}["ab", "bc", "d", "ef", "gh", missing]], [:x, :y])
 end
 
 @testset "transpose - views" begin
