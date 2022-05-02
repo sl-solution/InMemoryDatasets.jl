@@ -5,7 +5,7 @@
 * Users now can choose between having the observations ids for the left data set and/or the right data set as part of the output data set.
 * Add a new function `eachgroup`. It allows iteration over each group of a grouped data set.
 * `op` is a new keyword argument for the `update/!` functions which allows passing a user defined function to control how the value of the main data set should be updated by the values from the transaction data set. ([issue #55](https://github.com/sl-solution/InMemoryDatasets.jl/issues/55))
-* Supporting of the `mapformats` keyword argument in `flatten/!`. Now users can flatten a data set based on the formatted values.
+* Supporting of the `mapformats` keyword argument in `flatten/!`. Now users can flatten a data set based on the formatted values. ([issue #57](https://github.com/sl-solution/InMemoryDatasets.jl/issues/57))
 
 ## Fixes
 
