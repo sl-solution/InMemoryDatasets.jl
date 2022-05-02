@@ -593,7 +593,7 @@ Base.transpose(ds::Union{GroupBy, GatherBy}, cols::Tuple; id = nothing, renameco
 
 
 """
-    flatten(ds::AbstractDataset, cols)
+    flatten(ds::AbstractDataset, cols; mapformats = false)
 
 When columns `cols` of data set `ds` have iterable elements that define
 `length` (for example a `Vector` of `Vector`s), return a `Dataset` where each
@@ -604,6 +604,8 @@ according to the length of `ds[i, col]`. These lengths must therefore be the
 same for each `col` in `cols`, or else an error is raised. Note that these
 elements are not copied, and thus if they are mutable changing them in the
 returned `Dataset` will affect `ds`.
+
+When `mapformats = true`, the function uses the formatted values of `cols`.
 
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
@@ -674,34 +676,140 @@ julia> ds3 = Dataset(a = [1, 2], b = [[1, 2], [3, 4]], c = [[5, 6], [7]])
 
 julia> flatten(ds3, [:b, :c])
 ERROR: ArgumentError: Lengths of iterables stored in columns :b and :c are not the same in row 2
+
+julia> ds = Dataset(x=1:3, y=["ab,cd", "e", missing], z=[[1,2], 2, 3])
+3×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    String?   Any
+─────┼──────────────────────────────
+   1 │        1  ab,cd     [1, 2]
+   2 │        2  e         2
+   3 │        3  missing   3
+
+julia> fmt(x) = split(x, ",")
+fmt (generic function with 2 methods)
+
+julia> fmt(::Missing) = missing
+fmt (generic function with 2 methods)
+
+julia> setformat!(ds, :y => fmt)
+3×3 Dataset
+ Row │ x         y                              z
+     │ identity  fmt                            identity
+     │ Int64?    String?                        Any
+─────┼───────────────────────────────────────────────────
+   1 │        1  SubString{String}["ab", "cd"]  [1, 2]
+   2 │        2  SubString{String}["e"]         2
+   3 │        3  missing                        3
+
+julia> flatten(ds, :y)
+7×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Char?     Any
+─────┼──────────────────────────────
+   1 │        1  a         [1, 2]
+   2 │        1  b         [1, 2]
+   3 │        1  ,         [1, 2]
+   4 │        1  c         [1, 2]
+   5 │        1  d         [1, 2]
+   6 │        2  e         2
+   7 │        3  missing   3
+
+julia> flatten(ds, :y, mapformats = true)
+4×3 Dataset
+ Row │ x         y           z
+     │ identity  identity    identity
+     │ Int64?    SubStrin…?  Any
+─────┼────────────────────────────────
+   1 │        1  ab          [1, 2]
+   2 │        1  cd          [1, 2]
+   3 │        2  e           2
+   4 │        3  missing     3
+
+julia> flatten(ds, 2:3, mapformats = true)
+4×3 Dataset
+ Row │ x         y           z
+     │ identity  identity    identity
+     │ Int64?    SubStrin…?  Int64?
+─────┼────────────────────────────────
+   1 │        1  ab                 1
+   2 │        1  cd                 2
+   3 │        2  e                  2
+   4 │        3  missing            3
 ```
 """
 flatten(ds, cols)
 
 """
-    flatten!(ds, cols)
+    flatten!(ds, cols; mapformats = false)
 
 Variant of `flatten` that does flatten `ds` in-place.
 """
 flatten!
 
-_ELTYPE(x) = eltype(x)
-_ELTYPE(::Missing) = Missing
-_LENGTH(x) = length(x)
-_LENGTH(::Missing) = 1
+function _ELTYPE(x; fmt = identity)
+    if fmt == identity
+        eltype(x)
+    else
+        eltype(fmt(x))
+    end
+end
+function _ELTYPE(x::Missing; fmt = identity)
+    if fmt == identity
+         Missing
+    elseif ismissing(fmt(x))
+        Missing
+    else
+        eltype(fmt(x))
+    end
+end
+
+
+function _LENGTH(x; fmt = identity)
+    if fmt == identity
+        res = length(x)
+    else
+        res = length(fmt(x))
+    end
+    res
+end
+
+function _LENGTH(x::Missing; fmt = identity)
+    if fmt == identity
+        res = 1
+    elseif ismissing(fmt(x))
+        res = 1
+    else
+        res = length(fmt(x))
+    end
+    res
+end
+
 
 function flatten!(ds::Dataset,
-                 cols::Union{ColumnIndex, MultiColumnIndex})
+                 cols::Union{ColumnIndex, MultiColumnIndex}; mapformats = false)
      _check_consistency(ds)
 
      idxcols = index(ds)[cols]
-     isempty(idxcols) && return copy(ds)
+     isempty(idxcols) && return ds
      col1 = first(idxcols)
-     lengths = _LENGTH.(_columns(ds)[col1])
+     if mapformats
+         f_fmt = getformat(ds, col1)
+         lengths = _LENGTH.(_columns(ds)[col1], fmt = f_fmt)
+     else
+        lengths =  _LENGTH.(_columns(ds)[col1])
+    end
      for col in idxcols
          v = _columns(ds)[col]
-         if any(x -> _LENGTH(x[1]) != x[2], zip(v, lengths))
-             r = findfirst(x -> x != 0, _LENGTH.(v) .- lengths)
+         if mapformats
+             f_fmt = getformat(ds, col)
+         else
+             f_fmt = identity
+         end
+         if any(x -> _LENGTH(x[1], fmt = f_fmt) != x[2], zip(v, lengths))
+             r = findfirst(x -> x != 0, _LENGTH.(v, fmt = f_fmt) .- lengths)
              colnames = _names(ds)
              throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
                                  "and :$(colnames[col]) are not the same in row $r"))
@@ -713,9 +821,14 @@ function flatten!(ds::Dataset,
      length(idxcols) > 1 && sort!(idxcols)
      for col in idxcols
          col_to_flatten = _columns(ds)[col]
-         T = mapreduce(_ELTYPE, promote_type, col_to_flatten)
+         if mapformats
+             f_fmt = getformat(ds, col)
+         else
+             f_fmt = identity
+         end
+         T = mapreduce(x->_ELTYPE(x, fmt = f_fmt), promote_type, col_to_flatten)
          _res = allocatecol(T, new_total)
-         _fill_flatten!(_res, col_to_flatten, lengths)
+         _fill_flatten!(_res, col_to_flatten, lengths; fmt = f_fmt)
          if length(idxcols) == ncol(ds)
              _columns(ds)[col] = _res
          else
@@ -729,17 +842,27 @@ end
 
 
 function flatten(ds::AbstractDataset,
-                 cols::Union{ColumnIndex, MultiColumnIndex})
+                 cols::Union{ColumnIndex, MultiColumnIndex}; mapformats = false)
      _check_consistency(ds)
 
      idxcols = index(ds)[cols]
      isempty(idxcols) && return copy(ds)
      col1 = first(idxcols)
-     lengths = _LENGTH.(_columns(ds)[col1])
+     if mapformats
+         f_fmt = getformat(ds, col1)
+         lengths = _LENGTH.(_columns(ds)[col1], fmt = f_fmt)
+     else
+        lengths =  _LENGTH.(_columns(ds)[col1])
+    end
      for col in idxcols
          v = _columns(ds)[col]
-         if any(x -> _LENGTH(x[1]) != x[2], zip(v, lengths))
-             r = findfirst(x -> x != 0, _LENGTH.(v) .- lengths)
+         if mapformats
+             f_fmt = getformat(ds, col)
+         else
+             f_fmt = identity
+         end
+         if any(x -> _LENGTH(x[1], fmt = f_fmt) != x[2], zip(v, lengths))
+             r = findfirst(x -> x != 0, _LENGTH.(v, fmt = f_fmt) .- lengths)
              colnames = _names(ds)
              throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
                                  "and :$(colnames[col]) are not the same in row $r"))
@@ -753,34 +876,41 @@ function flatten(ds::AbstractDataset,
      length(idxcols) > 1 && sort!(idxcols)
      for col in idxcols
          col_to_flatten = _columns(ds)[col]
-         T = mapreduce(_ELTYPE, promote_type, col_to_flatten)
+         if mapformats
+             f_fmt = getformat(ds, col)
+         else
+             f_fmt = identity
+         end
+         T = mapreduce(x->_ELTYPE(x, fmt = f_fmt), promote_type, col_to_flatten)
          _res = allocatecol(T, new_total)
-         _fill_flatten!(_res, col_to_flatten, lengths)
-         insertcols!(new_ds, col, _names(ds)[col] => _res)
+         _fill_flatten!(_res, col_to_flatten, lengths; fmt = f_fmt)
+         insertcols!(new_ds, col, _names(ds)[col] => _res, unsupported_copy_cols = false)
      end
-     setformat!(new_ds, copy(index(ds).format))
+     for j in setdiff(1:ncol(ds), idxcols)
+         setformat!(new_ds, j=>getformat(ds, j))
+     end
      setinfo!(new_ds, _attributes(ds).meta.info[])
      _reset_grouping_info!(new_ds)
      new_ds
 end
 
 
-function _fill_flatten!_barrier(_res, val, counter)
-    for j in val
+function _fill_flatten!_barrier(_res, val, counter; fmt = identity)
+    for j in fmt(val)
         _res[counter] = j
         counter += 1
     end
     counter
 end
 
-function _fill_flatten!(_res, col_to_flatten, lengths)
+function _fill_flatten!(_res, col_to_flatten, lengths; fmt = identity)
     counter = 1
     for i in 1:length(col_to_flatten)
-        if ismissing(col_to_flatten[i])
+        if ismissing(fmt(col_to_flatten[i]))
             _res[counter] = missing
             counter += 1
         else
-            counter = _fill_flatten!_barrier(_res, col_to_flatten[i], counter)
+            counter = _fill_flatten!_barrier(_res, col_to_flatten[i], counter; fmt = fmt)
         end
     end
 end
