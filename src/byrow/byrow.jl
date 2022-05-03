@@ -203,10 +203,10 @@ function byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads
 	length(colsidx) == 1 && return byrow(ds, f, colsidx[1]; threads = threads)
 	threads ?  hp_row_generic(ds, f, cols) : row_generic(ds, f, cols)
 end
-function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = nrow(ds)>1000, forcemissing::Bool = true)
+function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = nrow(ds)>1000, allowmissing::Bool = true)
 	if threads
 		T = Core.Compiler.return_type(f, Tuple{nonmissingtype(eltype(ds[!, col]))})
-		if forcemissing
+		if allowmissing
 			res = Vector{Union{Missing, T}}(undef, nrow(ds))
 		else
 			res = Vector{T}(undef, nrow(ds))
@@ -214,7 +214,7 @@ function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = nro
 		_hp_map_a_function!(res, f, _columns(ds)[index(ds)[col]])
 	else
 		T = Core.Compiler.return_type(f, Tuple{nonmissingtype(eltype(ds[!, col]))})
-		if forcemissing
+		if allowmissing
 			res = Vector{Union{Missing, T}}(undef, nrow(ds))
 		else
 			res = Vector{T}(undef, nrow(ds))

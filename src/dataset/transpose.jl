@@ -782,7 +782,7 @@ function flatten!(ds::Dataset,
      else
         push!(all_idxcols, _columns(ds)[col1])
     end
-    lengths = byrow(Dataset(all_idxcols, [:x], copycols = false), _LENGTH, 1, threads = threads, forcemissing = false)
+    lengths = byrow(Dataset(all_idxcols, [:x], copycols = false), _LENGTH, 1, threads = threads, allowmissing = false)
     if length(idxcols) > 1
         for col in 2:length(idxcols)
              if mapformats
@@ -827,6 +827,7 @@ function flatten!(ds::Dataset,
              deleteat!(_columns(ds), idxcols_sorted[col])
              insert!(_columns(ds), idxcols_sorted[col], _res)
          end
+         removeformat!(ds, idxcols_sorted[col])
      end
      _reset_grouping_info!(ds)
      _modified(_attributes(ds))
@@ -848,7 +849,7 @@ function flatten(ds::AbstractDataset,
      else
         push!(all_idxcols, _columns(ds)[col1])
     end
-    lengths = byrow(Dataset(all_idxcols, [:x], copycols = false), _LENGTH, 1, threads = threads, forcemissing = false)
+    lengths = byrow(Dataset(all_idxcols, [:x], copycols = false), _LENGTH, 1, threads = threads, allowmissing = false)
     if length(idxcols) > 1
         for col in 2:length(idxcols)
              if mapformats
