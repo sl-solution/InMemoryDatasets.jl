@@ -1450,7 +1450,7 @@ function Base.hash(ds::AbstractDataset, h::UInt)
     h += hashds_seed
     h += hash(size(ds))
     for i in 1:size(ds, 2)
-        h = hash(ds[!, i], h)
+        h = hash(_columns(ds)[i], h)
     end
     return h
 end

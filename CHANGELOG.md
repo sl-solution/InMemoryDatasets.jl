@@ -6,6 +6,7 @@
 * Add a new function `eachgroup`. It allows iteration over each group of a grouped data set.
 * `op` is a new keyword argument for the `update/!` functions which allows passing a user defined function to control how the value of the main data set should be updated by the values from the transaction data set. ([issue #55](https://github.com/sl-solution/InMemoryDatasets.jl/issues/55))
 * Supporting of the `mapformats` keyword argument in `flatten/!`. Now users can flatten a data set based on the formatted values. ([issue #57](https://github.com/sl-solution/InMemoryDatasets.jl/issues/57))
+* Support of the `threads` keyword argument in `flatten/!`.
 
 ## Fixes
 
@@ -14,6 +15,12 @@
 * `update` and `update!` have the same `mode` option by default.
 * Fix the problem with preserving format of `SubDataset` in `flatten/!`
 * Fix the problem that caused `flatten!` to produce a copy of data when an empty data set were passed to it.
+* Fix the bug in `flatten!` related to flatten the first column.
+* Fix the bug in `flatten` that caused Segmentation fault for view of data sets.
+
+## Performance
+
+* Faster `flatten/!`
 
 # Version 0.7.0
 

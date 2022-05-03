@@ -593,7 +593,7 @@ Base.transpose(ds::Union{GroupBy, GatherBy}, cols::Tuple; id = nothing, renameco
 
 
 """
-    flatten(ds::AbstractDataset, cols; mapformats = false)
+    flatten(ds::AbstractDataset, cols; mapformats = false, threads = true)
 
 When columns `cols` of data set `ds` have iterable elements that define
 `length` (for example a `Vector` of `Vector`s), return a `Dataset` where each
@@ -608,6 +608,8 @@ returned `Dataset` will affect `ds`.
 When `mapformats = true`, the function uses the formatted values of `cols`.
 
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
+
+To turn off multithreaded computations pass `threads = false`.
 
 See [`flatten!`](@ref)
 
@@ -743,96 +745,87 @@ julia> flatten(ds, 2:3, mapformats = true)
 flatten(ds, cols)
 
 """
-    flatten!(ds, cols; mapformats = false)
+    flatten!(ds, cols; mapformats = false, threads = true)
 
 Variant of `flatten` that does flatten `ds` in-place.
 """
 flatten!
 
-function _ELTYPE(x; fmt = identity)
-    if fmt == identity
-        eltype(x)
-    else
-        eltype(fmt(x))
-    end
+function _ELTYPE(x)
+    eltype(x)
 end
-function _ELTYPE(x::Missing; fmt = identity)
-    if fmt == identity
-         Missing
-    elseif ismissing(fmt(x))
-        Missing
-    else
-        eltype(fmt(x))
-    end
+function _ELTYPE(x::Missing)
+    Missing
 end
 
 
-function _LENGTH(x; fmt = identity)
-    if fmt == identity
-        res = length(x)
-    else
-        res = length(fmt(x))
-    end
-    res
+function _LENGTH(x)
+    length(x)
 end
 
-function _LENGTH(x::Missing; fmt = identity)
-    if fmt == identity
-        res = 1
-    elseif ismissing(fmt(x))
-        res = 1
-    else
-        res = length(fmt(x))
-    end
-    res
+function _LENGTH(x::Missing)
+    1
 end
 
 
 function flatten!(ds::Dataset,
-                 cols::Union{ColumnIndex, MultiColumnIndex}; mapformats = false)
+                 cols::Union{ColumnIndex, MultiColumnIndex}; mapformats = false, threads = true)
      _check_consistency(ds)
 
      idxcols = index(ds)[cols]
      isempty(idxcols) && return ds
      col1 = first(idxcols)
+     all_idxcols = Any[]
      if mapformats
          f_fmt = getformat(ds, col1)
-         lengths = _LENGTH.(_columns(ds)[col1], fmt = f_fmt)
+         push!(all_idxcols, byrow(ds, f_fmt, col1, threads = threads))
      else
-        lengths =  _LENGTH.(_columns(ds)[col1])
+        push!(all_idxcols, _columns(ds)[col1])
     end
-     for col in idxcols
-         v = _columns(ds)[col]
-         if mapformats
-             f_fmt = getformat(ds, col)
-         else
-             f_fmt = identity
-         end
-         if any(x -> _LENGTH(x[1], fmt = f_fmt) != x[2], zip(v, lengths))
-             r = findfirst(x -> x != 0, _LENGTH.(v, fmt = f_fmt) .- lengths)
-             colnames = _names(ds)
-             throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
-                                 "and :$(colnames[col]) are not the same in row $r"))
+    lengths = byrow(Dataset(all_idxcols, [:x], copycols = false), _LENGTH, 1, threads = threads, forcemissing = false)
+    if length(idxcols) > 1
+        for col in 2:length(idxcols)
+             if mapformats
+                 f_fmt = getformat(ds, idxcols[col])
+                 push!(all_idxcols, byrow(ds, f_fmt, idxcols[col]), threads = threads)
+             else
+                 push!(all_idxcols, _columns(ds)[idxcols[col]])
+             end
+             v = all_idxcols[col]
+             if any(x -> _LENGTH(x[1]) != x[2], zip(v, lengths))
+                 r = findfirst(x -> x != 0, _LENGTH.(v) .- lengths)
+                 colnames = _names(ds)
+                 throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
+                                     "and :$(colnames[idxcols[col]]) are not the same in row $r"))
+             end
          end
      end
      r_index = _create_index_for_repeat(lengths, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64))
-     _permute_ds_after_sort!(ds, r_index, check = false, cols = Not(cols))
-     new_total = sum(lengths)
-     length(idxcols) > 1 && sort!(idxcols)
-     for col in idxcols
-         col_to_flatten = _columns(ds)[col]
-         if mapformats
-             f_fmt = getformat(ds, col)
-         else
-             f_fmt = identity
-         end
-         T = mapreduce(x->_ELTYPE(x, fmt = f_fmt), promote_type, col_to_flatten)
+     _permute_ds_after_sort!(ds, r_index, check = false, cols = Not(cols), threads = threads)
+     if threads
+         new_total = hp_sum(lengths)
+     else
+         new_total = sum(lengths)
+     end
+     if length(idxcols) > 1
+         sort_permute_idxcols = sortperm(idxcols)
+         idxcols_sorted = idxcols[sort_permute_idxcols]
+     else
+         sort_permute_idxcols = [1]
+         idxcols_sorted = idxcols
+     end
+     cumsum!(lengths, lengths)
+     for col in 1:length(idxcols_sorted)
+         col_to_flatten = all_idxcols[sort_permute_idxcols[col]]
+
+         T = mapreduce(_ELTYPE, promote_type, col_to_flatten)
          _res = allocatecol(T, new_total)
-         _fill_flatten!(_res, col_to_flatten, lengths; fmt = f_fmt)
+         _fill_flatten!(_res, col_to_flatten, lengths, threads = threads)
          if length(idxcols) == ncol(ds)
-             _columns(ds)[col] = _res
+             _columns(ds)[idxcols_sorted[col]] = _res
          else
-             ds[!, col] = _res
+             deleteat!(_columns(ds), idxcols_sorted[col])
+             insert!(_columns(ds), idxcols_sorted[col], _res)
          end
      end
      _reset_grouping_info!(ds)
@@ -842,49 +835,62 @@ end
 
 
 function flatten(ds::AbstractDataset,
-                 cols::Union{ColumnIndex, MultiColumnIndex}; mapformats = false)
+                 cols::Union{ColumnIndex, MultiColumnIndex}; mapformats = false, threads = true)
      _check_consistency(ds)
 
      idxcols = index(ds)[cols]
      isempty(idxcols) && return copy(ds)
      col1 = first(idxcols)
+     all_idxcols = Any[]
      if mapformats
          f_fmt = getformat(ds, col1)
-         lengths = _LENGTH.(_columns(ds)[col1], fmt = f_fmt)
+         push!(all_idxcols, byrow(ds, f_fmt, col1, threads = threads))
      else
-        lengths =  _LENGTH.(_columns(ds)[col1])
+        push!(all_idxcols, _columns(ds)[col1])
     end
-     for col in idxcols
-         v = _columns(ds)[col]
-         if mapformats
-             f_fmt = getformat(ds, col)
-         else
-             f_fmt = identity
-         end
-         if any(x -> _LENGTH(x[1], fmt = f_fmt) != x[2], zip(v, lengths))
-             r = findfirst(x -> x != 0, _LENGTH.(v, fmt = f_fmt) .- lengths)
-             colnames = _names(ds)
-             throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
-                                 "and :$(colnames[col]) are not the same in row $r"))
+    lengths = byrow(Dataset(all_idxcols, [:x], copycols = false), _LENGTH, 1, threads = threads, forcemissing = false)
+    if length(idxcols) > 1
+        for col in 2:length(idxcols)
+             if mapformats
+                 f_fmt = getformat(ds, idxcols[col])
+                 push!(all_idxcols, byrow(ds, f_fmt, idxcols[col]), threads = threads)
+             else
+                 push!(all_idxcols, _columns(ds)[idxcols[col]])
+             end
+             v = all_idxcols[col]
+             if any(x -> _LENGTH(x[1]) != x[2], zip(v, lengths))
+                 r = findfirst(x -> x != 0, _LENGTH.(v) .- lengths)
+                 colnames = _names(ds)
+                 throw(ArgumentError("Lengths of iterables stored in columns :$(colnames[col1]) " *
+                                     "and :$(colnames[idxcols[col]]) are not the same in row $r"))
+             end
          end
      end
-     new_total = sum(lengths)
+     if threads
+         new_total = hp_sum(lengths)
+     else
+         new_total = sum(lengths)
+     end
      new_ds = similar(ds[!, Not(cols)], new_total)
      for name in _names(new_ds)
-        repeat_lengths_v2!(new_ds[!, name].val, ds[!, name].val, lengths)
+         col_name = index(ds)[name]
+        repeat_lengths_v2!(new_ds[!, name].val, _columns(ds)[col_name], lengths)
      end
-     length(idxcols) > 1 && sort!(idxcols)
-     for col in idxcols
-         col_to_flatten = _columns(ds)[col]
-         if mapformats
-             f_fmt = getformat(ds, col)
-         else
-             f_fmt = identity
-         end
-         T = mapreduce(x->_ELTYPE(x, fmt = f_fmt), promote_type, col_to_flatten)
+     if length(idxcols) > 1
+         sort_permute_idxcols = sortperm(idxcols)
+         idxcols_sorted = idxcols[sort_permute_idxcols]
+     else
+         sort_permute_idxcols = [1]
+         idxcols_sorted = idxcols
+     end
+     cumsum!(lengths, lengths)
+     for col in 1:length(idxcols_sorted)
+         col_to_flatten = all_idxcols[sort_permute_idxcols[col]]
+
+         T = mapreduce(_ELTYPE, promote_type, col_to_flatten)
          _res = allocatecol(T, new_total)
-         _fill_flatten!(_res, col_to_flatten, lengths; fmt = f_fmt)
-         insertcols!(new_ds, col, _names(ds)[col] => _res, unsupported_copy_cols = false)
+         _fill_flatten!(_res, col_to_flatten, lengths, threads = threads)
+         insertcols!(new_ds, idxcols_sorted[col], _names(ds)[idxcols_sorted[col]] => _res, unsupported_copy_cols = false)
      end
      for j in setdiff(1:ncol(ds), idxcols)
          setformat!(new_ds, j=>getformat(ds, j))
@@ -895,22 +901,22 @@ function flatten(ds::AbstractDataset,
 end
 
 
-function _fill_flatten!_barrier(_res, val, counter; fmt = identity)
-    for j in fmt(val)
-        _res[counter] = j
-        counter += 1
+function _fill_flatten!_barrier(_res, val, lo)
+    if ismissing(val)
+        _res[lo] = missing
+    else
+
+        cnt = 0
+        for j in val
+            _res[lo+cnt] = j
+            cnt += 1
+        end
     end
-    counter
 end
 
-function _fill_flatten!(_res, col_to_flatten, lengths; fmt = identity)
-    counter = 1
-    for i in 1:length(col_to_flatten)
-        if ismissing(fmt(col_to_flatten[i]))
-            _res[counter] = missing
-            counter += 1
-        else
-            counter = _fill_flatten!_barrier(_res, col_to_flatten[i], counter; fmt = fmt)
-        end
+function _fill_flatten!(_res, col_to_flatten, lengths; threads = false)
+    @_threadsfor threads for i in 1:length(col_to_flatten)
+        i == 1 ? lo = 1 : lo = lengths[i-1]+1
+        _fill_flatten!_barrier(_res, col_to_flatten[i], lo)
     end
 end

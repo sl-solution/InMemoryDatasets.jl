@@ -589,6 +589,22 @@ end
     @test flatten(view(ds, :, [2,1]), :y, mapformats = true) == Dataset(reverse([Union{Missing, Int64}[1, 1, 2, 3, 3, 4], Union{Missing, SubString{String}}["ab", "bc", "d", "ef", "gh", missing]]), reverse([:x, :y]))
     flatten!(ds, :y, mapformats = true)
     @test ds == Dataset([Union{Missing, Int64}[1, 1, 2, 3, 3, 4], Union{Missing, SubString{String}}["ab", "bc", "d", "ef", "gh", missing]], [:x, :y])
+
+    for i in 1:10
+            ds = Dataset(x=rand(10000),y=[rand(1:100, rand(1:5)) for _ in 1:10000],z=rand(["12,34", "2312,343","32423,,343", missing], 10000))
+            fmt__(x) = split(x, ",")
+            fmt__(::Missing) = missing
+            setformat!(ds, :z => fmt__)
+            @test flatten(ds, :y) == flatten!(copy(ds), :y)
+            @test flatten(ds, :z, mapformats = true) == flatten!(copy(ds), :z, mapformats = true)
+            @test flatten(view(ds, [1,2,5,10], [2,3,1]), :y) == flatten!(ds[[1,2,5,10], [2,3,1]], :y)
+            @test flatten(view(ds, [1,2,5,10], [2,3,1]), :z, mapformats = true) == flatten!(ds[[1,2,5,10], [2,3,1]], :z, mapformats = true)
+            @test flatten(ds, :y) == flatten!(copy(ds), :y, threads = false)
+            @test flatten(ds, :z, mapformats = true, threads = false) == flatten!(copy(ds), :z, mapformats = true)
+            @test flatten(view(ds, [1,2,5,10], [2,3,1]), :y, threads = true) == flatten!(ds[[1,2,5,10], [2,3,1]], :y, threads = false)
+            @test flatten(view(ds, [1,2,5,10], [2,3,1]), :z, mapformats = true, threads = false) == flatten!(ds[[1,2,5,10], [2,3,1]], :z, mapformats = true, threads = true)
+    end
+
 end
 
 @testset "transpose - views" begin
