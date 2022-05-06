@@ -1630,7 +1630,6 @@ When `on = nothing` and passed data sets have different number of rows, the resu
 $_JOINTHREADSDOC
 $_JOINMETHODDOCSORT
 - `eq`: is used to passed customised function for comparison, by default is set to `isequal`
-$_JOINTOBSIDDOC
 $_JOINMULTIPLEMATCHDOC
 $_JOINOBSIDNAMEDOC
 $_JOINMULTIPLEMATCHNAMEDOC
