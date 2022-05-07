@@ -119,7 +119,21 @@ function warmup()
     inn_r1 =  innerjoin(view(store, :, :), roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, method = :hash)
     inn_r1_a =  innerjoin(view(store, :, :), roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true, method = :hash)
 
-
+    old = Dataset(Insurance_Id=[1,2,3,5],Business_Id=[10,20,30,50],
+                     Amount=[100,200,300,missing],
+                     Account_Id=["x1","x10","x5","x5"])
+    new = Dataset(Ins_Id=[1,3,2,4,3,2],
+                     B_Id=[10,40,30,40,30,20],
+                     AMT=[100,200,missing,-500,350,700],
+                     Ac_Id=["x1","x1","x10","x10","x7","x5"])
+    eq_fun(x::Number, y::Number) = abs(x - y) <= 50
+    eq_fun(x::AbstractString, y::AbstractString) = isequal(x,y)
+    eq_fun(x,y) = missing
+    compare(old, new,
+                  on = [1=>1,2=>2],
+                  cols = [:Amount=>:AMT, :Account_Id=>:Ac_Id],
+                  eq = eq_fun)
+    
     ds = Dataset(foo = ["one", "one", "one", "two", "two","two"],
                       bar = ['A', 'B', 'C', 'A', 'B', 'C'],
                       baz = [1, 2, 3, 4, 5, 6],
