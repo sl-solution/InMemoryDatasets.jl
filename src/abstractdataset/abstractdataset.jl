@@ -736,7 +736,7 @@ Return a Boolean vector with `true` entries indicating rows without missing valu
 If `cols` is provided, only missing values in the corresponding columns are considered.
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
-See also: [`dropmissing`](@ref).
+See also: [`dropmissing`](@ref), [`byrow`](@ref), [`filter`](@ref), [`filter!`](@ref).
 
 Use `findall(completecases(ds))` to get the indices of the rows.
 
@@ -807,7 +807,7 @@ If `cols` is provided, only missing values in the corresponding columns are cons
 If `view=false` a freshly allocated `Dataset` is returned.
 If `view=true` then a `SubDataset` view into `ds` is returned.
 
-See also: [`completecases`](@ref) and [`dropmissing!`](@ref).
+See also: [`dropmissing!`](@ref), [`completecases`](@ref), [`byrow`](@ref), [`filter`](@ref), [`filter!`](@ref).
 
 # Examples
 

@@ -834,7 +834,7 @@ Remove rows with missing values from data set `ds` and return it.
 If `cols` is provided, only missing values in the corresponding columns are considered.
 `cols` can be any column selector ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR).
 
-See also: [`dropmissing`](@ref) and [`completecases`](@ref).
+See also: [`dropmissing`](@ref), [`completecases`](@ref), [`byrow`](@ref), [`filter`](@ref), [`filter!`](@ref).
 
 ```jldoctest
 julia> ds = Dataset(i = 1:5,
@@ -1073,6 +1073,8 @@ To apply different functions on different columns pass a vector of functions.
 
 Note that `mapcols` guarantees not to reuse the columns from `ds` in the returned
 `Dataset`. If `f` returns its argument then it gets copied before being stored.
+
+See also: [`map`](@ref), [`map!`](@ref)
 """
 function mapcols(ds::AbstractDataset, f::Union{Function, Type}, cols = :)
     # note: `f` must return a consistent length
