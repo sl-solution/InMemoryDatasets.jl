@@ -604,7 +604,11 @@ end
             @test flatten(view(ds, [1,2,5,10], [2,3,1]), :y, threads = true) == flatten!(ds[[1,2,5,10], [2,3,1]], :y, threads = false)
             @test flatten(view(ds, [1,2,5,10], [2,3,1]), :z, mapformats = true, threads = false) == flatten!(ds[[1,2,5,10], [2,3,1]], :z, mapformats = true, threads = true)
     end
-
+    ds = Dataset(x=1:3, y=[[1,2],[],[[],[]]])
+    @test flatten(flatten(ds,2), 2) == Dataset(x=[1,1], y=[1,2])
+    flatten!(ds, 2)
+    flatten!(ds, :y)
+    @test ds == Dataset(x=[1,1], y=[1,2])
 end
 
 @testset "transpose - views" begin

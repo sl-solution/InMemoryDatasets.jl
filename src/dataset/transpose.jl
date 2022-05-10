@@ -759,11 +759,11 @@ function _ELTYPE(x::Missing)
 end
 
 
-function _LENGTH(x)
+function _LENGTH(x)::Int
     length(x)
 end
 
-function _LENGTH(x::Missing)
+function _LENGTH(x::Missing)::Int
     1
 end
 
