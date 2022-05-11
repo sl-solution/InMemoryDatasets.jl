@@ -194,9 +194,6 @@ byrow(ds::AbstractDataset, ::typeof(join), col::MultiColumnIndex; threads = nrow
 
 byrow(ds::AbstractDataset, ::typeof(mapreduce), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); op = .+, f = identity,  init = _missings(mapreduce(eltype, promote_type, view(_columns(ds),index(ds)[cols])), nrow(ds)), kwargs...) = mapreduce(f, op, eachcol(ds[!, cols]), init = init; kwargs...)
 
-# specific path for converting Any to suitable type
-byrow(ds::AbstractDataset, ::typeof(identity), col::ColumnIndex) = identity.(_columns(ds)[index(ds)[col]])
-
 
 function byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads = nrow(ds)>1000)
 	colsidx = multiple_getindex(index(ds), cols)
@@ -223,3 +220,10 @@ function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = nro
 	end
 	res
 end
+
+
+# specific path for converting Any to suitable type
+byrow(ds::AbstractDataset, ::typeof(identity), col::ColumnIndex) = identity.(_columns(ds)[index(ds)[col]])
+
+# special case for converting the type of a column conveniently 
+byrow(ds::AbstractDataset, f::Type, col::ColumnIndex) = convert(Vector{Union{Missing, f}}, _columns(ds)[index(ds)[col]])

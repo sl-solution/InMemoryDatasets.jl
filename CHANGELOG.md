@@ -1,3 +1,13 @@
+# Dev
+
+## New features
+
+* `byrow(ds, t::DataType, col)` convert values of `col` to `t`. 
+
+## Fixes
+
+* Fix an issue in `flatten/!` - columns with type `Any`.
+
 # Version 0.7.3
 
 ## New features

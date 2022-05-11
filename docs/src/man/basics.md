@@ -44,7 +44,7 @@ The first line of the output provides the general information about the data set
 The following example shows how to create a data set by providing a range of values.
 
 ```jldoctest
-julia> Dataset(A=1:3, B=5:7, fixed=1)
+julia> Dataset(A = 1:3, B = 5:7, fixed = 1)
 3×3 Dataset
  Row │ A         B         fixed
      │ identity  identity  identity
@@ -99,7 +99,7 @@ julia> Dataset([1 0; 2 0], :auto)
    1 │        1         0
    2 │        2         0
 
-julia> Dataset([[1 ,2], [0, 0]], :auto)
+julia> Dataset([[1, 2], [0, 0]], :auto)
 2×2 Dataset
  Row │ x1        x2
      │ identity  identity
@@ -367,6 +367,91 @@ julia> insertcols!(ds, :var3 => [3.5, 4.6, 32.0])
    1 │        1  val1             3.5
    2 │        2  val2             4.6
    3 │        3  val3            32.0
+```
+
+### Converting the columns' type
+
+To convert the values of a column to another type, user can use the following syntax:
+
+`modify!(ds, col => byrow(T))`
+
+where `ds` is the input data set, `col` is the column which its values' type is going to be converted and `T` is the new type (the `byrow` function is discussed in [Row-wise operations](https://sl-solution.github.io/InMemoryDatasets.jl/stable/man/byrow/), and the `modify!` function is discussed in [Transforming datasets](https://sl-solution.github.io/InMemoryDatasets.jl/stable/man/modify/#Transforming-data-sets)). This functionality must be used in cases where each individual value needed to be converted. For scenarios that the convertion process needs the information of all values in a column, the `byrow` function must be dropped, e.g. `modify!(ds, col => PooledArray)`. Additionally, user may allow `Julia` to find the most suitable type of a column by calling `modify!(ds, col => byrow(identity))`. In the following example we are using `modify!` to correct the type of columns in `ds`.
+
+> Note that in the following example calling `byrow(identity)` on `:y` convert type `Any` to `Integer`. However, note that `Integer` is an abstract type and it will slow down the performance of operations on `ds`. To improve the performance of calculations, user may use `modify!(ds, :y => byrow(Int))` instead.
+
+```jldoctest
+julia> using PooledArrays
+
+julia> ds = Dataset(x = [missing,2,3,4], y = Any[1,missing,-1,true], z = ["a", "bc", "a", missing])
+4×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Any       String?  
+─────┼──────────────────────────────
+   1 │  missing  1         a
+   2 │        2  missing   bc
+   3 │        3  -1        a
+   4 │        4  true      missing  
+
+julia> modify!(ds, :x => byrow(Float64), :y => byrow(identity), :z => PooledArray)
+4×3 Dataset
+ Row │ x          y         z        
+     │ identity   identity  identity 
+     │ Float64?   Integer?  String?  
+─────┼───────────────────────────────
+   1 │ missing           1  a
+   2 │       2.0   missing  bc
+   3 │       3.0        -1  a
+   4 │       4.0      true  missing  
+
+julia> ds[:, :x]
+4-element Vector{Union{Missing, Float64}}:
+  missing
+ 2.0
+ 3.0
+ 4.0
+
+julia> ds[:, :y]
+4-element Vector{Union{Missing, Integer}}:
+    1
+     missing
+   -1
+ true
+
+julia> ds[:, :z]
+4-element PooledVector{Union{Missing, String}, UInt32, Vector{UInt32}}:
+ "a"
+ "bc"
+ "a"
+ missing
+```
+
+To convert the type of multiple columns at once, user may use the boradcasting technique:
+
+```jldoctest
+julia> using PooledArrays
+
+julia> ds = Dataset(x = [missing,2,3,4], y = Any[1,missing,-1,true], z = ["a", "bc", "a", missing])
+4×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Any       String?  
+─────┼──────────────────────────────
+   1 │  missing  1         a
+   2 │        2  missing   bc
+   3 │        3  -1        a
+   4 │        4  true      missing  
+
+julia> modify!(ds, [:x, :y] .=> byrow(Float64)) # note "." in ".=>"
+4×3 Dataset
+ Row │ x          y          z        
+     │ identity   identity   identity 
+     │ Float64?   Float64?   String?  
+─────┼────────────────────────────────
+   1 │ missing          1.0  a
+   2 │       2.0  missing    bc
+   3 │       3.0       -1.0  a
+   4 │       4.0        1.0  missing  
 ```
 
 ### Some useful functions
