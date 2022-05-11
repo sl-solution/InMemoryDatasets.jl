@@ -98,6 +98,8 @@ byrow_docs_text = """
 Perform a row-wise operation specified by `fun` on selected columns `cols`. Generally,
 `fun` can be any function that returns a scalar value for each row.
 
+> User can pass a type as `fun` when `cols` is referring to a single column. In this case, `byrow` simply converts the selected column to vector of type `fun`.
+
 `byrow` is fine tuned for the following operations. To get extra help for each of them search help for `byrow(fun)`, e.g. `?byrow(sum)`;
 
 # Reduction operations
@@ -1233,6 +1235,8 @@ Variant of `byrow(stdze!)` which pass a copy of `ds` and leave `ds` untouched.
     byrow(ds::AbstractDataset, fun, cols; [threads])
 
 Return the result of calling `fun` on each row of `ds` selected by `cols`. The `fun` function must accept one argument which contains the values of each row as a vector of values and return a scalar.
+
+When user passes a type as `fun` and a single column as `cols`,  `byrow` convert the corresponding column to the type specified by `fun`.
 
 For generic functions there are two special cases:
 

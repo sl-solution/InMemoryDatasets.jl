@@ -528,7 +528,7 @@ function _modify_f_barrier(ds, msfirst, mssecond, mslast)
             end
         catch e
             if e isa MethodError
-                throw(ArgumentError("There is problem in your `byrow`, make sure that the output of `byrow` is a vector"))
+                throw(ArgumentError("There might be a problem in the `byrow` usage, make sure that the output of `byrow` is a vector"))
             end
             rethrow(e)
         end
