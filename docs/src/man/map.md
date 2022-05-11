@@ -54,9 +54,9 @@ Now let's call `sqrt` on all values. Note that `sqrt` of an integer is a float a
 ```jldoctest
 julia> map!(ds, sqrt, :)
 ┌ Warning: cannot map `f` on ds[!, :x1] in-place, the selected column is Union{Missing, Int64} and the result of calculation is Union{Missing, Float64}
-└ @ InMemoryDatasets ~/.julia/dev/InMemoryDatasets/src/dataset/other.jl:394
+└ @ InMemoryDatasets ...
 ┌ Warning: cannot map `f` on ds[!, :x2] in-place, the selected column is Union{Missing, Int64} and the result of calculation is Union{Missing, Float64}
-└ @ InMemoryDatasets ~/.julia/dev/InMemoryDatasets/src/dataset/other.jl:394
+└ @ InMemoryDatasets ...
 5×3 Dataset
  Row │ x1        x2        x3
      │ identity  identity  identity
