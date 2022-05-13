@@ -293,14 +293,16 @@ end
 prints the meta information about `ds` and its columns. Setting `output = true` return a vector of data sets which contains the printed information as data sets.
 """
 function content(ds::AbstractDataset; output = false)
-    println(summary(ds))
-    if typeof(ds) <: SubDataset
-        println("-----------------------------------")
-        println("The parent's Meta information")
+    if !output
+        println(summary(ds))
+        if typeof(ds) <: SubDataset
+            println("-----------------------------------")
+            println("The parent's Meta information")
+        end
+        println("   Created: ", _attributes(ds).meta.created)
+        println("  Modified: ", _attributes(ds).meta.modified[])
+        println("      Info: ", _attributes(ds).meta.info[])
     end
-    println("   Created: ", _attributes(ds).meta.created)
-    println("  Modified: ", _attributes(ds).meta.modified[])
-    println("      Info: ", _attributes(ds).meta.info[])
     f_v = [String[], Function[], Type[]]
     all_names = names(ds)
     for i in 1:ncol(ds)
@@ -308,12 +310,13 @@ function content(ds::AbstractDataset; output = false)
         push!(f_v[2], getformat(ds, i))
         push!(f_v[3], nonmissingtype(eltype(ds[!, i])))
     end
-
     format_ds = Dataset(f_v, [:column, :format, :eltype], copycols = false)
-    println("-----------------------------------")
-    println("Columns information ")
-    pretty_table(format_ds, header = (["col", "format", "eltype"]), alignment =:l, show_row_number = true)
-    if output
+    if !output
+        println("-----------------------------------")
+        println("Columns information ")
+        pretty_table(format_ds, header = (["col", "format", "eltype"]), alignment =:l, show_row_number = true)
+
+    else
         [Dataset(meta = ["created", "modified", "info"], value = [_attributes(ds).meta.created, _attributes(ds).meta.modified[], _attributes(ds).meta.info[]]), format_ds]
     end
 end
