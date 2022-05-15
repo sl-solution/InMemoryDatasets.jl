@@ -590,3 +590,27 @@ end
     @test combine(gatherby(sds, 1), r"x"=>var) == combine(groupby(sds, 1), r"x"=>var)
 
 end
+
+@testset "eachgroup iterator" begin
+
+    ds = Dataset(x = [2,1,1,2], y = [1.0, -10.0, 2.0, 0.5])
+    i_gds_1 = eachgroup(groupby(ds, 1))
+    i_gds_2 = eachgroup(gatherby(ds, 1))
+    @test length(i_gds_1) == length(i_gds_2) == 2
+    @test i_gds_1[1] == Dataset(x = [1,1], y = [-10.0, 2.0])
+    @test i_gds_1[1] == i_gds_2[2]
+    @test i_gds_1[end] == Dataset(x = [2,2], y = [1.0, 0.5])
+    @test i_gds_2[begin] == i_gds_1[end]
+
+    sds = view(ds, [2,3,4], [2,1])
+    i_gds = eachgroup(groupby(sds, 2))
+    @test length(i_gds) == 2
+    @test i_gds[Int32(1)] == Dataset(y = [-10.0, 2.0], x = [1,1])
+    @test i_gds[Int8(2)] == i_gds[Int16(2)] == i_gds[2] == Dataset(y = [0.5], x = [2])
+    @test_throws BoundsError i_gds[3]
+    @test_throws BoundsError i_gds[0]
+
+end
+
+
+

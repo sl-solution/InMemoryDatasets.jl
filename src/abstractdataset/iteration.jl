@@ -152,20 +152,20 @@ end
 
 
 Base.IndexStyle(::Type{<:GroupedDataset}) = Base.IndexLinear()
-Base.size(itr::GroupedDataset{Dataset}) = (index(itr.ds).ngroups[], )
-Base.size(itr::GroupedDataset{<:Union{GroupBy, GatherBy}}) = (itr.ds.lastvalid, )
-Base.length(itr::GroupedDataset{Dataset}) = index(itr.ds).ngroups[]
-Base.length(itr::GroupedDataset{<:Union{GroupBy, GatherBy}}) = itr.ds.lastvalid
+Base.size(itr::GroupedDataset{Dataset})::Tuple{Int64} = (index(itr.ds).ngroups[], )
+Base.size(itr::GroupedDataset{<:Union{GroupBy, GatherBy}})::Tuple{Int64} = (itr.ds.lastvalid, )
+Base.length(itr::GroupedDataset{Dataset})::Int64 = index(itr.ds).ngroups[]
+Base.length(itr::GroupedDataset{<:Union{GroupBy, GatherBy}})::Int64 = itr.ds.lastvalid
 Base.iterate(itr::GroupedDataset, i::Integer=1) =
     i <= length(itr) ? (itr[i], i + 1) : nothing
-function Base.getindex(itr::GroupedDataset{Dataset}, i::Int)
+function Base.getindex(itr::GroupedDataset{Dataset}, i::Integer)
     i > size(itr)[1] && throw(BoundsError(itr, i))
     st = index(itr.ds).starts
     i == size(itr)[1] ? hi = nrow(itr.ds) : hi = st[i+1]-1
     lo = st[i]
     view(itr.ds, lo:hi, :)
 end
-function Base.getindex(itr::GroupedDataset{<:Union{GroupBy, GatherBy}}, i::Int)
+function Base.getindex(itr::GroupedDataset{<:Union{GroupBy, GatherBy}}, i::Integer)
     i > size(itr)[1] && throw(BoundsError(itr, i))
     st = _group_starts(itr.ds)
     prm = _get_perms(itr.ds)
@@ -173,7 +173,13 @@ function Base.getindex(itr::GroupedDataset{<:Union{GroupBy, GatherBy}}, i::Int)
     lo = st[i]
     view(parent(itr.ds), view(prm, lo:hi), :)
 end
-
+Base.firstindex(::GroupedDataset) = 1
+Base.lastindex(itr::GroupedDataset) = length(itr)
+Base.eltype(::GroupedDataset) = SubDataset
+Base.keys(itr::GroupedDataset) = LinearIndices(itr)
+Base.pairs(itr::GroupedDataset) = Base.Iterators.Pairs(itr, keys(itr))
+Base.axes(itr::GroupedDataset) = (Base.OneTo(length(itr)), )
+Base.LinearIndices(itr::GroupedDataset) = LinearIndices(axes(itr))
 # Iteration by columns
 
 const DATASETCOLUMNS_DOCSTR = """

@@ -336,3 +336,57 @@ Similar to `groupby!/groupby` functions, `gatherby` can be passed to functions w
 As mentioned before, the result of `gatherby` is stable, i.e. the observations order within each group will be the order of their appearance in the original data set. However, when this stability is not needed and there are many groups in the data set, passing `stable = false` improves the performance by sacrificing the stability.
 
 The `gatherby` function has two extra keyword arguments, `isgathered` and `eachrow`, which by default are set to `false`. When the `isgathered` argument is set to `true`, InMemoryDatasets assumes that the observations are currently gathered by some rules and it only finds the starts and ends of each group and marks the data set as gathered. So users can manually group observations by setting this keyword argument. When the `eachrow` argument is set to `true`, InMemoryDatasets does the gathering and then mark each row of the input data set as an individual group. This option is handy for transposing data sets.
+
+## Iterate `eachgroup`
+
+User can use `eachgroup` to iterate each group of a grouped data set. Each element of `eachgroup` is a `SubDataset`.
+
+
+### Examples
+
+```jldoctest
+julia> ds = Dataset(rand(1:10, 10, 3), :auto)
+10×3 Dataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        7         8        10
+   2 │        4         1         5
+   3 │        7         2         5
+   4 │        4         7         4
+   5 │        5         9         6
+   6 │        9         5         3
+   7 │        9         8         2
+   8 │        7         9         6
+   9 │        2         3         8
+  10 │        1         6         2
+
+julia> i_gds = eachgroup(groupby(ds, 1));
+
+julia> map(nrow, i_gds)
+6-element Vector{Int64}:
+ 1
+ 1
+ 2
+ 1
+ 3
+ 2
+
+julia> i_gds[1]
+1×3 SubDataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         6         2
+
+julia> i_gds[end]
+2×3 SubDataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        9         5         3
+   2 │        9         8         2
+``` 
