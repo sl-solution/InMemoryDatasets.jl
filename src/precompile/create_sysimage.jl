@@ -12,7 +12,7 @@ function create_sysimage(sysout::AbstractString, add_dlmreader::Bool = true; add
     if add_dlmreader
         tmpDLM = mktemp()
         close(tmpDLM[2])
-        warmupcode *= "; using DLMReader; repeat!(ds, 10000); ds.x1 = rand(10000); ds.x2 = rand(Int, 10000); filewriter(\"$(tmpDLM[1])\", ds); filereader(\"$(tmpDLM[1])\");"
+        warmupcode *= "; using DLMReader; repeat!(ds, 10000); ds.x1 = rand(10000); ds.x2 = rand(Int, 10000); filewriter(\"$(escape_string(tmpDLM[1]))\", ds); filereader(\"$(escape_string(tmpDLM[1]))\");"
     end
 
     run(`$juliaCMD --trace-compile=$(tmpIMD[1]) -e "$warmupcode"`)
@@ -34,7 +34,7 @@ function create_sysimage(sysout::AbstractString, add_dlmreader::Bool = true; add
     close(fout)
     close(f)
     run(`$juliaCMD -e "using PackageCompiler;
-    create_sysimage(:InMemoryDatasets, sysimage_path=\"$(sysout)\", precompile_execution_file=\"$(tmpIMD_out[1])\")"`)
+    create_sysimage(:InMemoryDatasets, sysimage_path=\"$(escape_string(sysout))\", precompile_execution_file=\"$(escape_string(tmpIMD_out[1]))\")"`)
     println("Now exit julia and re-run it again using $(sysout) as `--sysimage`, e.g. in unix type OS you can use the following command:
     julia --sysimage $sysout")
 end
