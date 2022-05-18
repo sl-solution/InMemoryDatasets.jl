@@ -12,7 +12,7 @@ function create_sysimage(sysout::AbstractString, add_dlmreader::Bool = true; add
     if add_dlmreader
         tmpDLM = mktemp()
         close(tmpDLM[2])
-        warmupcode *= "; using DLMReader; repeat!(ds, 10000); ds.x1 = rand(10000); ds.x2 = rand(Int, 10000); filewriter(\"$(escape_string(tmpDLM[1]))\", ds); filereader(\"$(escape_string(tmpDLM[1]))\");"
+        warmupcode *= "; using DLMReader; DLMReader.warmup(); repeat!(ds, 10000); ds.x1 = rand(10000); ds.x2 = rand(Int, 10000); filewriter(\"$(escape_string(tmpDLM[1]))\", ds); filereader(\"$(escape_string(tmpDLM[1]))\");"
     end
 
     run(`$juliaCMD --trace-compile=$(tmpIMD[1]) -e "$warmupcode"`)
@@ -24,7 +24,7 @@ function create_sysimage(sysout::AbstractString, add_dlmreader::Bool = true; add
     write(fout, "using REPL, Pkg, InMemoryDatasets, InMemoryDatasets.PooledArrays, InMemoryDatasets.DataAPI, InMemoryDatasets.PrettyTables, InMemoryDatasets.Tables, PackageCompiler, TOML, Logging, SuiteSparse
     ")
     if add_dlmreader
-        write(fout, "; using DLMReader, DLMReader.InlineStrings.Parsers
+        write(fout, "; using DLMReader, DLMReader.InlineStrings, DLMReader.InlineStrings.Parsers
         ")
     end
     for line in eachline(f)
