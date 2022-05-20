@@ -135,7 +135,7 @@ julia> byrow(ds, fill!, :, with = byrow(ds, mean, :));
 > since in the original post there are some specifications for checking equality of values we define a customised equality function
 
 ```julia
-julia> a1 = Dataset(z1=[1,missing,3,4,5],x1=string.(3:7),z2=[2,missing,4,5,6],x2=[3,5,4,7,5])
+julia> a1 = Dataset(z1 = [1,missing,3,4,5], x1 = string.(3:7), z2 = [2,missing,4,5,6], x2 = [3,5,4,7,5])
 5×4 Dataset
  Row │ z1        x1        z2        x2       
      │ identity  identity  identity  identity
@@ -149,10 +149,10 @@ julia> a1 = Dataset(z1=[1,missing,3,4,5],x1=string.(3:7),z2=[2,missing,4,5,6],x2
 
 julia> eq(x, y) = isequal(x, y)
 julia> eq(x::String, y) = isequal(parse(Int,x), y)
-julia> eq(x, y::String) = isequal(x,parse(Int, y))
-julia> eq(x::String, y::String) = isequal(parse(Int, x),parse(Int, y))
+julia> eq(x, y::String) = isequal(x, parse(Int, y))
+julia> eq(x::String, y::String) = isequal(parse(Int, x), parse(Int, y))
 julia> eq(::Missing, ::Missing) = false
-julia> a1.result = reduce((x,y)-> x .|= byrow(a1, in, r"2", item = y, eq = eq), names(a1, r"1"), init = zeros(Bool, nrow(a1)))
+julia> a1.result = reduce((x,y) -> x .|= byrow(a1, in, r"2", item = y, eq = eq), names(a1, r"1"), init = zeros(Bool, nrow(a1)))
 5-element Vector{Bool}:
  1
  0

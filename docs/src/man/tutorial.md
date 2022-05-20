@@ -4,7 +4,7 @@ An extended version of this tutorial is available [here](https://github.com/sl-s
 
 ## Getting and loading the data
 
-We use the `DLMReader` package to load a csv file into `InMemoryDatasets`, `DLMReader` is a high-performance and versatile package for reading delimited files into `InMemoryDatasets` (there are many alternative packages in Julia ecosystem, users can use any of them to read data into `InMemoryDatasets`):
+We recommend the `DLMReader` package to load a csv file into `InMemoryDatasets`, `DLMReader` is a high-performance and versatile package for reading delimited files into `InMemoryDatasets` (there are many alternative packages in Julia ecosystem, users can use any of them to read data into `InMemoryDatasets`):
 
 
 ```julia
