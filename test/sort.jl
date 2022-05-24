@@ -131,7 +131,7 @@ using InMemoryDatasets, PooledArrays, Random, Test, CategoricalArrays
 
 
 
-    x = CategoricalArray{Union{Characters{6, UInt8}, String}}(["Old", "Young", "Middle", "Young"])
+    x = CategoricalArray{Union{Characters{6}, String}}(["Old", "Young", "Middle", "Young"])
     levels!(x, ["Young", "Middle", "Old"])
     ds = Dataset(x = x)
     ds_s = sort(ds, :x)
@@ -166,7 +166,7 @@ using InMemoryDatasets, PooledArrays, Random, Test, CategoricalArrays
     end
     x1 = -rand(1:1000, 5000)
     x2 = -rand(1:100, 5000)
-    dsl = Dataset(x1 = Characters{6, UInt8}.(c"id" .* string.(-x1)), x2 = Characters{5, UInt8}.(c"id" .* string.(-x2)))
+    dsl = Dataset(x1 = Characters{6}.(c"id" .* string.(-x1)), x2 = Characters{5}.(c"id" .* string.(-x2)))
     dsr = Dataset(x1 = x1, x2 = x2)
     for i in 1:2
         dsl[!, i] = PooledArray(dsl[!, i])
@@ -366,7 +366,7 @@ end
     c1 = PooledArray(["string", "string", 1.1, 1.1, 1.1, 20000.0, 123.0])
     c2 = PooledArray(["string", missing, 1.1, 1.1, 'a', 'a', 'b'])
     c3 = PooledArray([missing, missing, missing, 1.1, 1.1, 20000.0, 123.0])
-    c4 = CategoricalArray{Union{Characters{6, UInt8}, String}}(["Old", "Young", "Young", "Young", "Old", "Young", "Middle"])
+    c4 = CategoricalArray{Union{Characters{6}, String}}(["Old", "Young", "Young", "Young", "Old", "Young", "Middle"])
     levels!(c4, ["Young", "Middle", "Old"])
     ds = Dataset(x1 = c1, x2 = c2, x3 = c3, x4 = c4)
     colsidx = [1, 2]

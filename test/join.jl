@@ -792,8 +792,8 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test close10_v == close10_t
     @test close11_v == close11_t
 
-    dsl = Dataset([[Characters{1, UInt8}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
-    dsr = Dataset([[Characters{1, UInt8}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
+    dsl = Dataset([[Characters{1}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
+    dsr = Dataset([[Characters{1}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
     left1 = leftjoin(dsl, dsr, on = [:x1, :x2], makeunique = true, accelerate = true, stable =true, check = false)
     left2 = leftjoin(dsl, dsr, on = [:x1, :x2], makeunique = true, accelerate = false, stable = true, check = false)
 
@@ -808,8 +808,8 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test left1 == left2
     @test unique(select!(left1, [:x1, :x2, :x3]), [:x1, :x2]) == unique(dsl, [:x1, :x2])
 
-    dsl = Dataset([[Characters{1, UInt8}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
-    dsr = Dataset([[Characters{1, UInt8}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
+    dsl = Dataset([[Characters{1}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
+    dsr = Dataset([[Characters{1}(randstring(1)) for _ in 1:10^5] for _ in 1:3], :auto)
     for i in 1:3
         dsl[!, i] = PooledArray(dsl[!, i])
         dsr[!, i] = PooledArray(dsr[!, i])
@@ -838,7 +838,7 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     x2 = rand(1:100, 5000)
     y = rand(5000)
     y2 = rand(5000)
-    dsl = Dataset(x1 = Characters{6, UInt8}.(c"id" .* string.(x1)), x2 = Characters{5, UInt8}.(c"id" .* string.(x2)), y = y)
+    dsl = Dataset(x1 = Characters{6}.(c"id" .* string.(x1)), x2 = Characters{5}.(c"id" .* string.(x2)), y = y)
     dsr = Dataset(x1 = x1, x2 = x2, y2 = y2)
     fmtfun(x) = @views parse(Int, x[3:end])
     setformat!(dsl, 1:2=>fmtfun)
@@ -875,7 +875,7 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test left1 == leftjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], accelerate = true, stable =true, method = :hash, threads = false)
 
     @test inn1 == out1 == left1
-    fmtfun2(x) = c"id" * Characters{4, UInt8}(x)
+    fmtfun2(x) = c"id" * Characters{4}(x)
     setformat!(dsr, 1:2=>fmtfun2)
     semi1 = semijoin(dsl, dsr, on = [:x1, :x2], mapformats = [false, true])
     @test semi1 == semijoin(dsl, dsr, on = [:x1, :x2], mapformats = [false, true], method = :hash)
@@ -906,7 +906,7 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     x2 = rand(1:100, 5000)
     y = rand(5000)
     y2 = rand(5000)
-    dsl = Dataset(x1 = Characters{6, UInt8}.(c"id" .* string.(x1)), x2 = Characters{5, UInt8}.(c"id" .* string.(x2)), y = y)
+    dsl = Dataset(x1 = Characters{6}.(c"id" .* string.(x1)), x2 = Characters{5}.(c"id" .* string.(x2)), y = y)
     dsr = Dataset(x1 = x1, x2 = x2, y2 = y2)
     for i in 1:2
         dsl[!, i] = PooledArray(dsl[!, i])
@@ -965,7 +965,7 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     x2 = -rand(1:100, 5000)
     y = rand(5000)
     y2 = rand(5000)
-    dsl = Dataset(x1 = Characters{6, UInt8}.(c"id" .* string.(-x1)), x2 = Characters{5, UInt8}.(c"id" .* string.(-x2)), y = y)
+    dsl = Dataset(x1 = Characters{6}.(c"id" .* string.(-x1)), x2 = Characters{5}.(c"id" .* string.(-x2)), y = y)
     dsr = Dataset(x1 = x1, x2 = x2, y2 = y2)
     for i in 1:2
         dsl[!, i] = PooledArray(dsl[!, i])

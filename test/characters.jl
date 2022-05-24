@@ -2,14 +2,12 @@ using Test
 
 
 @testset "characters construction" begin
-    @test Characters{3, UInt16}("abα") == "abα"
     @test Characters{2}("abc") == "ab"
     @test length(Characters{12}("12     ")) == 2
     @test length(Characters{3}("helloworld")) == 3
     @test String(Characters{12}(" abc  ")) == " abc"
     @test isequal(Characters(""), missing)
-    @test isequal(Characters{3, UInt16}.(["a", "b", "", missing]), ["a","b", missing, missing])
-    @test isequal(Characters{3, UInt8}.(["a", "b", "", missing]), ["a","b", missing, missing])
+    @test isequal(Characters{3}.(["a", "b", "", missing]), ["a","b", missing, missing])
 end
 
 @testset "characters comparison" begin
