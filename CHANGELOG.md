@@ -7,6 +7,9 @@
 ## Fixes
 
 * Fix an issue in `flatten/!` - columns with type `Any`.
+* Fix an issue with `IMD.create_sysimage` - [issue #59](https://github.com/sl-solution/InMemoryDatasets.jl/issues/59)
+* Improve `eachgroup`
+* Drop support of `UInt16` in `Characters` - `Characters` now only supports length
 
 # Version 0.7.3
 
