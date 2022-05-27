@@ -1,7 +1,7 @@
 function warmup()
     t1 = now()
     ds = Dataset(x1 = rand(1:2, 10000), x2 = rand(1:2, 10000), x3 = rand(1:2, 10000) * 1.1, x4 = rand([Date(1), Date(2)], 10000), x5 = string.(rand(1:2), 10000),
-                 x6 = PooledArray(Characters{5, UInt8}.(rand(1:2, 10000))), x7 = Int32.(rand(1:2, 10000)), x8 = Float32.(rand(1:2, 10000) * 1.1), x9 = PooledArray(Characters{3, UInt8}.(rand(1:2, 10000))), x10 = PooledArray(Characters{12, UInt8}.(rand(1:2, 10000))))
+                 x6 = PooledArray(Characters{5}.(rand(1:2, 10000))), x7 = Int32.(rand(1:2, 10000)), x8 = Float32.(rand(1:2, 10000) * 1.1), x9 = PooledArray(Characters{3}.(rand(1:2, 10000))), x10 = PooledArray(Characters{12}.(rand(1:2, 10000))))
     for i in 1:ncol(ds)
         sortperm(ds, i)
     end
