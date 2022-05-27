@@ -1,4 +1,4 @@
-# Dev
+# Version 0.7.4
 
 ## New features
 
