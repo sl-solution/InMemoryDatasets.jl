@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Joins · InMemoryDatasets</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.044/juliamono.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">InMemoryDatasets</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><a class="tocitem" href="../basics/">First Steps</a></li><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../missing/">Missing Values</a></li><li><a class="tocitem" href="../formats/">Formats</a></li><li><a class="tocitem" href="../map/">Call functions on each observation</a></li><li><a class="tocitem" href="../byrow/">Row-wise operations</a></li><li><a class="tocitem" href="../modify/">Transform columns</a></li><li><a class="tocitem" href="../filter/">Filter observations</a></li><li><a class="tocitem" href="../sorting/">Sort</a></li><li><a class="tocitem" href="../grouping/">Group observations</a></li><li><a class="tocitem" href="../aggregation/">Aggregation</a></li><li><a class="tocitem" href="../transpose/">Transpose data</a></li><li class="is-active"><a class="tocitem" href>Joins</a><ul class="internal"><li><a class="tocitem" href="#Introduction"><span>Introduction</span></a></li><li><a class="tocitem" href="#Database-like-joins"><span>Database like joins</span></a></li><li><a class="tocitem" href="#contains"><span><code>contains</code></span></a></li><li><a class="tocitem" href="#Close-match-join"><span>Close match join</span></a></li><li><a class="tocitem" href="#Inequality-kind-joins"><span>Inequality-kind joins</span></a></li><li><a class="tocitem" href="#Update-a-data-set-by-values-from-another-data-set"><span>Update a data set by values from another data set</span></a></li><li><a class="tocitem" href="#compare"><span><code>compare</code></span></a></li></ul></li></ul></li><li><a class="tocitem" href="../gallery/">Gallery</a></li><li><a class="tocitem" href="../performance/">Performance tips</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Joins</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Joins</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/sl-solution/InMemoryDatasets.jl/blob/master/docs/src/man/joins.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Joins-and-related-topics"><a class="docs-heading-anchor" href="#Joins-and-related-topics">Joins and related topics</a><a id="Joins-and-related-topics-1"></a><a class="docs-heading-anchor-permalink" href="#Joins-and-related-topics" title="Permalink"></a></h1><h2 id="Introduction"><a class="docs-heading-anchor" href="#Introduction">Introduction</a><a id="Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction" title="Permalink"></a></h2><p>In this section we give details of the functions that can be used to combined data sets in InMemoryDatasets. These functions are multi-threaded (unless <code>threads = false</code> i s passed to the functions) and thus are very performant for general use. By default, InMemoryDatasets uses the formatted values for joining observations, however, this can be controlled by the <code>mapformats</code> keyword argument.</p><h2 id="Database-like-joins"><a class="docs-heading-anchor" href="#Database-like-joins">Database like joins</a><a id="Database-like-joins-1"></a><a class="docs-heading-anchor-permalink" href="#Database-like-joins" title="Permalink"></a></h2><p>The main functions for combining two data sets are <code>leftjoin</code>, <code>innerjoin</code>, <code>outerjoin</code>, <code>semijoin</code>, and <code>antijoin</code>. The basic syntax for all of these functions is <code>*join(dsl, dsr, on = [...])</code>, where <code>dsl</code> is the left data set, <code>dsr</code> is the right data set, and the <code>on</code> keyword argument specifies the key(s) which will be used for matching observations between the left and the right data set. In general, the <code>on</code> key can be a single column name (either as <code>Symbol</code> or <code>String</code>) or a vector of column names. When the column names are not identical in both tables, a vector of pair of column names can be used instead.</p><ul><li><code>leftjoin</code>: joins two data sets and its output contains rows for values of the key(s) that exist in the left data set,   whether or not that value exists in the right data set.</li><li><code>innerjoin</code>: joins two data sets and its output contains rows for values of the key(s) that exist in both left and right data sets.</li><li><code>outerjoin</code>: joins two data sets and its output contains rows for values of the key(s) that exist in any of the left or the right data set.</li><li><code>semijoin</code>: Like an inner join, but its output is restricted to columns from the left table.</li><li><code>antijoin</code>: The output contains rows for values of the key(s) that exist in the left data set but not the right data set.   As with <code>semijoin</code>, output is restricted to columns from the left data set.</li></ul><p>See <a href="https://en.wikipedia.org/wiki/Join_(SQL)">the Wikipedia page on SQL joins</a> for more information.</p><p>By default (except for <code>semijoin</code> and <code>antijoin</code>), to match observations, InMemoryDatasets sorts the right data set and uses a binary search algorithm for finding the matches of each observation in the left data set in the right data set based on the passed key column(s), thus, it has better performance when the left data set is larger than the right data set. However, passing <code>method = :hash</code> changes the default. The matching is done based on the formatted values of the key column(s), however, using the <code>mapformats</code> keyword argument can change this behaviour, one may set it to <code>false</code> for one or both data sets.</p><p>For <code>method = :sort</code> and <code>leftjoin</code> and <code>innerjoin</code> the order of observations of the output data set is the same as their order in the left data set. However, the order of observations from the right table depends on the stability of the sort algorithm. User can set the <code>stable</code> keyword argument to <code>true</code> to guarantee a stable sort. For <code>outerjoin</code> the order of observations from the left data set in the output data set is also the same as their order in the original data set, however, for those observations which are from the right table when <code>method = :sort</code> there is no specific order.</p><p>By default, when <code>method = :sort</code>, the join functions use a hybrid <code>Heap Sort</code> algorithm to sort the observations in the right data set, however, setting <code>alg = QuickSort</code> change the default algorithm to a hybrid Quick Sort one.</p><p>For very large data sets, if the sorting of the first key is expensive, setting the <code>accelerate</code> keyword argument to <code>true</code> may improve the overall performance. By setting <code>accelerate = true</code>, InMemoryDatasets first divides all observations in the right data set into multiple parts (up to 1024 parts) based on the first passed key, and then for each observations in the left data set finds the corresponding part in the right data set and searches for the matching observations only within that part.</p><p>The <code>leftjoin</code>, <code>semijoin</code>, and <code>antijoin</code> functions have in-place version which are <code>leftjoin!</code>, <code>semijoin!</code>, and <code>antijoin!</code>, respectively. Instead of creating a new output dataset, these in-place versions of the functions replace the passed left table. Note that, for the <code>leftjoin!</code> there must be no more than one match for each observation from the right table, otherwise, the function raises an error.</p><h3 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; name = Dataset(ID = [1, 2, 3], Name = [&quot;John Doe&quot;, &quot;Jane Doe&quot;, &quot;Joe Blogs&quot;])
+3×2 Dataset
+ Row │ ID        Name      
+     │ identity  identity  
+     │ Int64?    String?   
+─────┼─────────────────────
+   1 │        1  John Doe
+   2 │        2  Jane Doe
+   3 │        3  Joe Blogs
+
+julia&gt; job = Dataset(ID = [1, 2, 2, 4],
+                     Job = [&quot;Lawyer&quot;, &quot;Doctor&quot;, &quot;Florist&quot;, &quot;Farmer&quot;])
+4×2 Dataset
+ Row │ ID        Job      
+     │ identity  identity
+     │ Int64?    String?  
+─────┼────────────────────
+   1 │        1  Lawyer
+   2 │        2  Doctor
+   3 │        2  Florist
+   4 │        4  Farmer
+
+julia&gt; leftjoin(name, job, on = :ID)
+4×3 Dataset
+ Row │ ID        Name       Job      
+     │ identity  identity   identity
+     │ Int64?    String?    String?  
+─────┼───────────────────────────────
+   1 │        1  John Doe   Lawyer
+   2 │        2  Jane Doe   Doctor
+   3 │        2  Jane Doe   Florist
+   4 │        3  Joe Blogs  missing  
+
+julia&gt; dsl = Dataset(year = [Date(&quot;2020-3-1&quot;), Date(&quot;2021-10-21&quot;), Date(&quot;2020-1-4&quot;), Date(&quot;2012-12-11&quot;)],
+                     leap_year = [true, false, true, true])
+4×2 Dataset
+ Row │ year        leap_year
+     │ identity    identity  
+     │ Date?       Bool?     
+─────┼───────────────────────
+   1 │ 2020-03-01       true
+   2 │ 2021-10-21      false
+   3 │ 2020-01-04       true
+   4 │ 2012-12-11       true
+
+julia&gt; dsr = Dataset(year = [2020, 2021], event = [&#39;A&#39;, &#39;B&#39;])
+2×2 Dataset
+ Row │ year      event    
+     │ identity  identity
+     │ Int64?    Char?    
+─────┼────────────────────
+   1 │     2020  A
+   2 │     2021  B
+
+julia&gt; setformat!(dsl, 1 =&gt; year);
+
+julia&gt; leftjoin(dsl, dsr, on = :year)
+4×3 Dataset
+ Row │ year   leap_year  event    
+     │ year   identity   identity
+     │ Date?  Bool?      Char?    
+─────┼────────────────────────────
+   1 │ 2020        true  A
+   2 │ 2021       false  B
+   3 │ 2020        true  A
+   4 │ 2012        true  missing  
+
+julia&gt; innerjoin(name, job, on = :ID)
+3×3 Dataset
+ Row │ ID        Name      Job      
+     │ identity  identity  identity
+     │ Int64?    String?   String?  
+─────┼──────────────────────────────
+   1 │        1  John Doe  Lawyer
+   2 │        2  Jane Doe  Doctor
+   3 │        2  Jane Doe  Florist
+
+julia&gt; outerjoin(name, job, on = :ID)
+5×3 Dataset
+ Row │ ID        Name       Job      
+     │ identity  identity   identity
+     │ Int64?    String?    String?  
+─────┼───────────────────────────────
+   1 │        1  John Doe   Lawyer
+   2 │        2  Jane Doe   Doctor
+   3 │        2  Jane Doe   Florist
+   4 │        3  Joe Blogs  missing  
+   5 │        4  missing    Farmer</code></pre><p>To demonstrate the use of the <code>accelerate</code> keyword, we generate two data sets and use the <code>@btime</code> macro from the <code>BenchmarkTools</code> package to benchmark the performance of the <code>innerjoin</code> function with and without acceleration.</p><pre><code class="language-julia-repl hljs">julia&gt; using BenchmarkTools
+
+julia&gt; using Random
+
+julia&gt; dsl = Dataset(x1 = [randstring(&#39;a&#39;:&#39;z&#39;, 6) for _ in 1:10^6],
+               x2 = rand(1:100, 10^6), x3 = rand(10^6));
+
+julia&gt; dsr = Dataset(y1 = [randstring(&#39;a&#39;:&#39;z&#39;, 6) for _ in 1:10^6],
+               y2 = rand(1:100, 10^6), y3 = rand(10^6));
+
+julia&gt; @btime innerjoin(dsl, dsr, on = [:x1=&gt;:y1, :x2=&gt;:y2]);
+  382.759 ms (1254 allocations: 55.40 MiB)
+
+julia&gt; @btime innerjoin(dsl, dsr, on = [:x1=&gt;:y1, :x2=&gt;:y2], accelerate = true);
+  155.306 ms (2160 allocations: 45.92 MiB)</code></pre><p>As it can be observed, using <code>accelerate = true</code> significantly reduces the joining time. The reason for this reduction is because currently sorting <code>String</code> type columns in InMemoryDatasets is relatively expensive, and using <code>accelerate = true</code> helps to reduce this by splitting the observations into multiple parts.</p><p>And of course for this example we can simply use the hash techniques for matching observations:</p><pre><code class="language-julia-repl hljs">julia&gt; @btime innerjoin(dsl, dsr, on = [:x1=&gt;:y1, :x2=&gt;:y2], method = :hash);
+ 86.323 ms (1095 allocations: 96.95 MiB)</code></pre><h2 id="contains"><a class="docs-heading-anchor" href="#contains"><code>contains</code></a><a id="contains-1"></a><a class="docs-heading-anchor-permalink" href="#contains" title="Permalink"></a></h2><p>The <code>contains</code> function is special function that can be used to enquiry observations of a data set which are contained in another data set. It returns a boolean vector where is true when the key for the corresponding row in the main data set is found in the transaction data set. The syntax of the function is the same as the <code>leftjoin</code> function. When a single column is used for matching observations, the function uses hashing techniques to find the matched observations, however, for multiple key columns, it uses the sorting algorithm to search for the matched observations.</p><p>Both <code>semijoin</code> and <code>antijoin</code> use the <code>contains</code> function behind the scene for filtering the left data set.</p><h2 id="Close-match-join"><a class="docs-heading-anchor" href="#Close-match-join">Close match join</a><a id="Close-match-join-1"></a><a class="docs-heading-anchor-permalink" href="#Close-match-join" title="Permalink"></a></h2><p>The <code>closejoin</code> function joins two data sets based on exact match on the key variable or the closest match (here, closest match depends on the <code>direction</code> keyword argument) when the exact match doesn&#39;t exist.</p><p>The <code>closejoin!</code> function does a close join in-place.</p><p>A tolerance for finding close matches can be passed via the <code>tol</code> keyword argument, and for the situations where the exact match is not allowed, user can pass <code>allow_exact_match = false</code>.</p><p><code>closejoin/!</code> support <code>method = :hash</code> however, for the last key column it uses the sorting method to find the closest match.</p><h3 id="Examples-2"><a class="docs-heading-anchor" href="#Examples-2">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-2" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; classA = Dataset(id = [&quot;id1&quot;, &quot;id2&quot;, &quot;id3&quot;, &quot;id4&quot;, &quot;id5&quot;],
+                        mark = [50, 69.5, 45.5, 88.0, 98.5])
+5×2 Dataset
+ Row │ id          mark
+     │ identity    identity
+     │ String?     Float64?
+─────┼──────────────────────
+   1 │ id1             50.0
+   2 │ id2             69.5
+   3 │ id3             45.5
+   4 │ id4             88.0
+   5 │ id5             98.5
+julia&gt; grades = Dataset(mark = [0, 49.5, 59.5, 69.5, 79.5, 89.5, 95.5],
+                        grade = [&quot;F&quot;, &quot;P&quot;, &quot;C&quot;, &quot;B&quot;, &quot;A-&quot;, &quot;A&quot;, &quot;A+&quot;])
+7×2 Dataset
+ Row │ mark      grade
+     │ identity  identity
+     │ Float64?  String?
+─────┼──────────────────────
+   1 │      0.0  F
+   2 │     49.5  P
+   3 │     59.5  C
+   4 │     69.5  B
+   5 │     79.5  A-
+   6 │     89.5  A
+   7 │     95.5  A+
+
+julia&gt; closejoin(classA, grades, on = :mark)
+5×3 Dataset
+ Row │ id          mark      grade
+     │ identity    identity  identity
+     │ String?     Float64?  String?
+─────┼──────────────────────────────────
+   1 │ id1             50.0  P
+   2 │ id2             69.5  B
+   3 │ id3             45.5  F
+   4 │ id4             88.0  A-
+   5 │ id5             98.5  A+</code></pre><p>Examples of using <code>closejoin</code> for financial data.</p><pre><code class="language-julia-repl hljs">julia&gt; trades = Dataset(
+                [[&quot;20160525 13:30:00.023&quot;,
+                  &quot;20160525 13:30:00.038&quot;,
+                  &quot;20160525 13:30:00.048&quot;,
+                  &quot;20160525 13:30:00.048&quot;,
+                  &quot;20160525 13:30:00.048&quot;],
+                [&quot;MSFT&quot;, &quot;MSFT&quot;,
+                 &quot;GOOG&quot;, &quot;GOOG&quot;, &quot;AAPL&quot;],
+                [51.95, 51.95,
+                 720.77, 720.92, 98.00],
+                [75, 155,
+                 100, 100, 100]],
+               [&quot;time&quot;, &quot;ticker&quot;, &quot;price&quot;, &quot;quantity&quot;]);
+
+julia&gt; modify!(trades, 1 =&gt; byrow(x -&gt; DateTime(x, dateformat&quot;yyyymmdd HH:MM:SS.s&quot;)))
+5×4 Dataset
+ Row │ time                     ticker      price     quantity
+     │ identity                 identity    identity  identity
+     │ DateTime?                String?      Float64?  Int64?
+─────┼─────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75
+   2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155
+   3 │ 2016-05-25T13:30:00.048  GOOG          720.77       100
+   4 │ 2016-05-25T13:30:00.048  GOOG          720.92       100
+   5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100
+
+julia&gt; quotes = Dataset(
+              [[&quot;20160525 13:30:00.023&quot;,
+                &quot;20160525 13:30:00.023&quot;,
+                &quot;20160525 13:30:00.030&quot;,
+                &quot;20160525 13:30:00.041&quot;,
+                &quot;20160525 13:30:00.048&quot;,
+                &quot;20160525 13:30:00.049&quot;,
+                &quot;20160525 13:30:00.072&quot;,
+                &quot;20160525 13:30:00.075&quot;],
+              [&quot;GOOG&quot;, &quot;MSFT&quot;, &quot;MSFT&quot;, &quot;MSFT&quot;,
+               &quot;GOOG&quot;, &quot;AAPL&quot;, &quot;GOOG&quot;, &quot;MSFT&quot;],
+              [720.50, 51.95, 51.97, 51.99,
+               720.50, 97.99, 720.50, 52.01],
+              [720.93, 51.96, 51.98, 52.00,
+               720.93, 98.01, 720.88, 52.03]],
+             [&quot;time&quot;, &quot;ticker&quot;, &quot;bid&quot;, &quot;ask&quot;]);
+
+julia&gt; modify!(quotes, 1 =&gt; byrow(x -&gt; DateTime(x, dateformat&quot;yyyymmdd HH:MM:SS.s&quot;)))
+8×4 Dataset
+ Row │ time                     ticker      bid       ask
+     │ identity                 identity    identity  identity
+     │ DateTime?                String?     Float64?  Float64?
+─────┼─────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  GOOG          720.5     720.93
+   2 │ 2016-05-25T13:30:00.023  MSFT           51.95     51.96
+   3 │ 2016-05-25T13:30:00.030  MSFT           51.97     51.98
+   4 │ 2016-05-25T13:30:00.041  MSFT           51.99     52.0
+   5 │ 2016-05-25T13:30:00.048  GOOG          720.5     720.93
+   6 │ 2016-05-25T13:30:00.049  AAPL           97.99     98.01
+   7 │ 2016-05-25T13:30:00.072  GOOG          720.5     720.88
+   8 │ 2016-05-25T13:30:00.075  MSFT           52.01     52.03
+
+julia&gt; closejoin(trades, quotes, on = :time, makeunique = true)
+5×7 Dataset
+ Row │ time                     ticker      price     quantity  ticker_1    bid       ask
+     │ identity                 identity    identity  identity  identity    identity  identity
+     │ DateTime?                String?     Float64?  Int64?    String?     Float64?  Float64?
+─────┼─────────────────────────────────────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75  MSFT           51.95     51.96
+   2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155  MSFT           51.97     51.98
+   3 │ 2016-05-25T13:30:00.048  GOOG          720.77       100  GOOG          720.5     720.93
+   4 │ 2016-05-25T13:30:00.048  GOOG          720.92       100  GOOG          720.5     720.93
+   5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100  GOOG          720.5     720.93</code></pre><p>In the above example, the <code>closejoin</code> for each <code>ticker</code> can be done by passing <code>ticker</code> as the first variable for the <code>on</code> keyword, i.e. when more than one key is used for <code>on</code> the last one will be used for &quot;close match&quot; and the rest are used for exact match.</p><p>When <code>border</code> is set to <code>:missing</code> (default value) for the <code>:backward</code> direction the value below the smallest value will be set to <code>missing</code>, and for the <code>:forward</code> direction the value above the largest value will be set to <code>missing</code>. And when <code>border = :nearest</code> the closest non-missing value will be fetched.</p><p>Passing <code>border = :none</code>, sets missing for values in left data set which are out of the right data set&#39;s range.</p><pre><code class="language-julia-repl hljs">julia&gt; closejoin(trades, quotes, on = [:ticker, :time], border = :missing)
+5×6 Dataset
+ Row │ time                     ticker       price     quantity  bid         ask
+     │ identity                 identity     identity  identity  identity    identity
+     │ DateTime?                String?      Float64?  Int64?    Float64?    Float64?
+─────┼─────────────────────────────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75       51.95       51.96
+   2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155       51.97       51.98
+   3 │ 2016-05-25T13:30:00.048  GOOG          720.77       100      720.5       720.93
+   4 │ 2016-05-25T13:30:00.048  GOOG          720.92       100      720.5       720.93
+   5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100  missing     missing
+
+julia&gt; closejoin(trades, quotes, on = [:ticker, :time], border = :nearest)
+5×6 Dataset
+ Row │ time                     ticker      price       quantity  bid       ask
+     │ identity                 identity    identity    identity  identity  identity
+     │ DateTime?                String?     Float64?    Int64?    Float64?  Float64?
+─────┼─────────────────────────────────────────────────────────────────────────────
+   1 │ 2016-05-25T13:30:00.023  MSFT           51.95        75     51.95     51.96
+   2 │ 2016-05-25T13:30:00.038  MSFT           51.95       155     51.97     51.98
+   3 │ 2016-05-25T13:30:00.048  GOOG          720.77       100    720.5     720.93
+   4 │ 2016-05-25T13:30:00.048  GOOG          720.92       100    720.5     720.93
+   5 │ 2016-05-25T13:30:00.048  AAPL           98.0        100     97.99     98.01
+</code></pre><h2 id="Inequality-kind-joins"><a class="docs-heading-anchor" href="#Inequality-kind-joins">Inequality-kind joins</a><a id="Inequality-kind-joins-1"></a><a class="docs-heading-anchor-permalink" href="#Inequality-kind-joins" title="Permalink"></a></h2><p>The <code>innerjoin</code>, <code>contains</code>, <code>semijoin</code>, <code>semijoin!</code>, <code>antijoin</code>, <code>antijoin!</code> functions can also use inequality comparisons to match observations from the left data set with the observations in the right data set. They can find all observations in the right data set that are <code>&lt;=</code>(<code>&lt;</code>) or <code>&gt;=</code>(<code>&gt;</code>) than a selected observation in the left data set. Additionally, if the user specifies two columns in the right table for a single key in the left table, they matche the observations in the left data set when they fall into the range specifies by the selected two key columns in the right data set. These conditional joins can be done within groups of observations if the user provide more than one key column for the left and the right data sets, i.e. the last key will be used for &quot;inequality-kind&quot; join and the rest will be used for the exact match.</p><p>For these kind of joins, the key columns for both data sets which are defined for grouping observation must be passed as pair of column names (similar to normal use of other joins), however, the key column from the left data set which is going to be used for conditional joining must be also passed as a column name, and the key column(s) for conditional joining from the right data set must be passed as a Tuple of column names. For example, if the key column for the left data set is <code>:l_key</code>, and there are two columns in the right table called, <code>:r_start</code> and <code>:r_end</code> the following demonstrates how a user can perform different kinds of conditional joining:</p><ul><li><code>:l_key =&gt; (:r_start, nothing)</code>, a match happens if the selected observation from the left data set is <code>&gt;= :r_start</code>.</li><li><code>:l_key =&gt; (nothing, :r_end)</code>, a match happens if the selected observation from the left data set is <code>&lt;= :r_end</code>.</li><li><code>:l_key =&gt; (:r_start, :r_end)</code>, a match happens if the selected observation from the left data set is <code>&gt;= :r_start</code> and <code>&lt;= :r_end</code>.</li></ul><p>To change inequalities to strict inequalities the <code>strict_inequality</code> keyword argument must be set to <code>true</code> for one or both sides, e.g. <code>strict_inequality = true</code>(both side), <code>strict_inequality = [false, true]</code>(only one side).</p><p>These joins also support the <code>method</code> keyword argument for all key columns which are not used for inequality like join. <code>contains</code> and its related functions use <code>method = :hash</code> by default.</p><h3 id="Examples-3"><a class="docs-heading-anchor" href="#Examples-3">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-3" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; store = Dataset([[Date(&quot;2019-10-01&quot;), Date(&quot;2019-10-02&quot;), Date(&quot;2019-10-05&quot;), Date(&quot;2019-10-04&quot;), Date(&quot;2019-10-03&quot;), Date(&quot;2019-10-03&quot;)],
+               [&quot;A&quot;, &quot;A&quot;, &quot;B&quot;, &quot;A&quot;, &quot;B&quot;, &quot;A&quot;]], [:date, :store])
+6×2 Dataset
+ Row │ date        store    
+     │ identity    identity
+     │ Date?       String?  
+─────┼──────────────────────
+   1 │ 2019-10-01  A
+   2 │ 2019-10-02  A
+   3 │ 2019-10-05  B
+   4 │ 2019-10-04  A
+   5 │ 2019-10-03  B
+   6 │ 2019-10-03  A
+
+julia&gt; roster = Dataset([[&quot;A&quot;, &quot;A&quot;, &quot;B&quot;, &quot;A&quot;],
+                    [4, 1, 8, 2 ],
+                    [Date(&quot;2019-10-04&quot;), Date(&quot;2019-09-30&quot;), Date(&quot;2019-10-04&quot;), Date(&quot;2019-10-02&quot;)],
+                    [Date(&quot;2019-10-06&quot;), Date(&quot;2019-10-04&quot;), Date(&quot;2019-10-06&quot;), Date(&quot;2019-10-04&quot;)]],
+                    [&quot;store&quot;, &quot;employee_ID&quot;, &quot;start_date&quot;, &quot;end_date&quot;])
+4×4 Dataset
+ Row │ store     employee_ID  start_date  end_date   
+     │ identity  identity     identity    identity   
+     │ String?   Int64?       Date?       Date?      
+─────┼───────────────────────────────────────────────
+   1 │ A                   4  2019-10-04  2019-10-06
+   2 │ A                   1  2019-09-30  2019-10-04
+   3 │ B                   8  2019-10-04  2019-10-06
+   4 │ A                   2  2019-10-02  2019-10-04
+
+julia&gt; innerjoin(store, roster, on = [:store =&gt; :store, :date =&gt; (:start_date, nothing)])
+9×4 Dataset
+ Row │ date        store     employee_ID  end_date   
+     │ identity    identity  identity     identity   
+     │ Date?       String?   Int64?       Date?      
+─────┼───────────────────────────────────────────────
+   1 │ 2019-10-01  A                   1  2019-10-04
+   2 │ 2019-10-02  A                   1  2019-10-04
+   3 │ 2019-10-02  A                   2  2019-10-04
+   4 │ 2019-10-05  B                   8  2019-10-06
+   5 │ 2019-10-04  A                   1  2019-10-04
+   6 │ 2019-10-04  A                   2  2019-10-04
+   7 │ 2019-10-04  A                   4  2019-10-06
+   8 │ 2019-10-03  A                   1  2019-10-04
+   9 │ 2019-10-03  A                   2  2019-10-04
+
+julia&gt; innerjoin(store, roster, on = [:store =&gt; :store, :date =&gt; (nothing, :end_date)])
+14×4 Dataset
+ Row │ date        store     employee_ID  start_date
+     │ identity    identity  identity     identity   
+     │ Date?       String?   Int64?       Date?      
+─────┼───────────────────────────────────────────────
+   1 │ 2019-10-01  A                   1  2019-09-30
+   2 │ 2019-10-01  A                   2  2019-10-02
+   3 │ 2019-10-01  A                   4  2019-10-04
+   4 │ 2019-10-02  A                   1  2019-09-30
+   5 │ 2019-10-02  A                   2  2019-10-02
+   6 │ 2019-10-02  A                   4  2019-10-04
+   7 │ 2019-10-05  B                   8  2019-10-04
+   8 │ 2019-10-04  A                   1  2019-09-30
+   9 │ 2019-10-04  A                   2  2019-10-02
+  10 │ 2019-10-04  A                   4  2019-10-04
+  11 │ 2019-10-03  B                   8  2019-10-04
+  12 │ 2019-10-03  A                   1  2019-09-30
+  13 │ 2019-10-03  A                   2  2019-10-02
+  14 │ 2019-10-03  A                   4  2019-10-04
+
+julia&gt; innerjoin(store, roster, on = [:store =&gt; :store, :date =&gt; (:start_date, :end_date)])
+9×3 Dataset
+ Row │ date        store     employee_ID
+     │ identity    identity  identity    
+     │ Date?       String?   Int64?      
+─────┼───────────────────────────────────
+   1 │ 2019-10-01  A                   1
+   2 │ 2019-10-02  A                   1
+   3 │ 2019-10-02  A                   2
+   4 │ 2019-10-05  B                   8
+   5 │ 2019-10-04  A                   1
+   6 │ 2019-10-04  A                   2
+   7 │ 2019-10-04  A                   4
+   8 │ 2019-10-03  A                   1
+   9 │ 2019-10-03  A                   2
+
+julia&gt; dsl = Dataset(x1 = [1,2,1,3], y = [-1.2,-3,2.1,-3.5])
+4×2 Dataset
+ Row │ x1        y        
+     │ identity  identity
+     │ Int64?    Float64?
+─────┼────────────────────
+   1 │        1      -1.2
+   2 │        2      -3.0
+   3 │        1       2.1
+   4 │        3      -3.5
+
+julia&gt; dsr = Dataset(x1 = [1,2,3], lower = [0, -3,1], upper = [3,0,2])
+3×3 Dataset
+ Row │ x1        lower     upper    
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         0         3
+   2 │        2        -3         0
+   3 │        3         1         2
+
+julia&gt; contains(dsl, dsr, on = [1=&gt;1, 2=&gt;(2,3)], strict_inequality = true)
+4-element Vector{Bool}:
+ 0
+ 0
+ 1
+ 0</code></pre><h2 id="Update-a-data-set-by-values-from-another-data-set"><a class="docs-heading-anchor" href="#Update-a-data-set-by-values-from-another-data-set">Update a data set by values from another data set</a><a id="Update-a-data-set-by-values-from-another-data-set-1"></a><a class="docs-heading-anchor-permalink" href="#Update-a-data-set-by-values-from-another-data-set" title="Permalink"></a></h2><p><code>update!</code> updates a data set values by using values from a transaction data set. The function uses the given keys (<code>on = ...</code>) to select rows for updating. By default, the missing values in transaction data set wouldn&#39;t replace the values in the main data set, however, using <code>allowmissing = true</code> changes this behaviour. If there are multiple rows in the main data set which match the key(s), using <code>mode = :all</code> causes all of them to be updated, <code>mode = :missings</code> causes only the ones which are missing in the main data set to be updated, and <code>mode = fun</code> updates the values which calling <code>fun</code> on them returns <code>true</code>. If there are multiple rows in the transaction data set which match the key, only the last one (given <code>stable = true</code> is passed) will be used to update the main data set.</p><p>By default, <code>update!</code> updates the old values by the new values from the transaction data set, however, user may pass any function via the <code>op</code> keyword argument to update the values in the main data set by the result of calling <code>op</code> on values on both data sets. In this case, <code>update!</code> updates values in the main data set by <code>op(old, new)</code>, where <code>old</code> is the value from the main data set and <code>new</code> is the value from the transaction data set.</p><p>The <code>update!</code> functions replace the main data set with the updated version, however, if a copy of the updated data set is required, the <code>update</code> function can be used instead.</p><p>Like other join functions, one may pass <code>method = :hash</code> for using hash techniques to match observations.</p><h3 id="Examples-4"><a class="docs-heading-anchor" href="#Examples-4">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-4" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; main = Dataset(group = [&quot;G1&quot;, &quot;G1&quot;, &quot;G1&quot;, &quot;G1&quot;, &quot;G2&quot;, &quot;G2&quot;, &quot;G2&quot;],
+                      id    = [ 1  ,  1  ,  2  ,  2  ,  1  ,  1  ,  2  ],
+                      x1    = [1.2, 2.3,missing,  2.3, 1.3, 2.1  , 0.0 ],
+                      x2    = [ 5  ,  4  ,  4  ,  2  , 1  ,missing, 2  ])
+7×4 Dataset
+ Row │ group         id        x1         x2
+     │ identity     identity  identity   identity
+     │ String?      Int64?   Float64?    Int64?
+─────┼───────────────────────────────────────────
+   1 │ G1                 1        1.2         5
+   2 │ G1                 1        2.3         4
+   3 │ G1                 2  missing           4
+   4 │ G1                 2        2.3         2
+   5 │ G2                 1        1.3         1
+   6 │ G2                 1        2.1   missing
+   7 │ G2                 2        0.0         2
+
+
+julia&gt; transaction = Dataset(group = [&quot;G1&quot;, &quot;G2&quot;], id = [2, 1],
+                        x1 = [2.5, missing], x2 = [missing, 3])
+2×4 Dataset
+ Row │ group       id        x1         x2
+     │ identity    identity  identity   identity
+     │ String?       Int64?    Float64?   Int64?
+─────┼───────────────────────────────────────────
+   1 │ G1                 2        2.5   missing
+   2 │ G2                 1  missing           3
+
+
+julia&gt; update(main, transaction, on = [:group, :id],
+               allowmissing = false, mode = :missings)
+7×4 Dataset
+ Row │ group        id        x1        x2
+     │ identity     identity  identity  identity
+     │ String?       Int64?    Float64?  Int64?
+─────┼──────────────────────────────────────────
+   1 │ G1                 1       1.2         5
+   2 │ G1                 1       2.3         4
+   3 │ G1                 2       2.5         4
+   4 │ G1                 2       2.3         2
+   5 │ G2                 1       1.3         1
+   6 │ G2                 1       2.1         3
+   7 │ G2                 2       0.0         2
+
+
+julia&gt; update(main, transaction, on = [:group, :id],
+               allowmissing = false, mode = :all)
+7×4 Dataset
+ Row │ group       id        x1        x2
+     │ identity    identity  identity  identity
+     │ String?       Int64?    Float64?  Int64?
+─────┼──────────────────────────────────────────
+   1 │ G1                 1       1.2         5
+   2 │ G1                 1       2.3         4
+   3 │ G1                 2       2.5         4
+   4 │ G1                 2       2.5         2
+   5 │ G2                 1       1.3         3
+   6 │ G2                 1       2.1         3
+   7 │ G2                 2       0.0         2
+
+julia&gt; update(main, transaction, on = [:group, :id],
+                              mode = isequal(2.3))
+7×4 Dataset
+ Row │ group     id        x1         x2       
+     │ identity  identity  identity   identity
+     │ String?   Int64?    Float64?   Int64?   
+─────┼─────────────────────────────────────────
+   1 │ G1               1        1.2         5
+   2 │ G1               1        2.3         4
+   3 │ G1               2  missing           4
+   4 │ G1               2        2.5         2
+   5 │ G2               1        1.3         1
+   6 │ G2               1        2.1   missing
+   7 │ G2               2        0.0         2
+
+julia&gt; update(main, transaction, on = [:group, :id], op = +) # add values of transaction to main, when op is set mode = :all is default
+7×4 Dataset
+ Row │ group     id        x1         x2       
+     │ identity  identity  identity   identity
+     │ String?   Int64?    Float64?   Int64?   
+─────┼─────────────────────────────────────────
+   1 │ G1               1        1.2         5
+   2 │ G1               1        2.3         4
+   3 │ G1               2  missing           4
+   4 │ G1               2        4.8         2
+   5 │ G2               1        1.3         4
+   6 │ G2               1        2.1   missing
+   7 │ G2               2        0.0         2</code></pre><h2 id="compare"><a class="docs-heading-anchor" href="#compare"><code>compare</code></a><a id="compare-1"></a><a class="docs-heading-anchor-permalink" href="#compare" title="Permalink"></a></h2><p>The <code>compare</code> function compares two data sets. When the columns which needed to be compared are specified via the <code>cols</code> keyword argument, <code>compare</code> compares the corresponding values in each row by calling <code>eq</code> on the actual or formatted values. By default, <code>compare</code> compares two values via the <code>isequal</code> function, however, users may pass any function via the <code>eq</code> keyword arguments. When the number of rows of two data sets are not matched, <code>compare</code> fills the output data set with <code>missing</code>. Users can pass key columns to perform comparing matched pairs of observations. The key columns can be passed via the <code>on</code> keyword argument. The <code>compare</code> function uses <code>outerjoin</code> to find the corresponding matches, this also means, the <code>compare</code> function can accept the arguments of <code>outerjoin</code>.</p><blockquote><p>To pass the <code>mapformats</code> keyword argument to <code>outerjoin</code> in <code>compare</code>, use the <code>on_mapformats</code> keyword argument, since the <code>mapformats</code> keyword argument in <code>compare</code> refers to how observations should be compared; based on actual values or formatted values.</p></blockquote><p>By default, the output data set contains observations id when users pass the <code>on</code> keyword argument. When an observation exists in only one of the passed data sets, the observation id will be missing for the other one.</p><h3 id="Examples-5"><a class="docs-heading-anchor" href="#Examples-5">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-5" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; old = Dataset(Insurance_Id=[1,2,3,5],Business_Id=[10,20,30,50],
+                     Amount=[100,200,300,missing],
+                     Account_Id=[&quot;x1&quot;,&quot;x10&quot;,&quot;x5&quot;,&quot;x5&quot;])
+4×4 Dataset
+ Row │ Insurance_Id  Business_Id  Amount    Account_Id
+     │ identity      identity     identity  identity   
+     │ Int64?        Int64?       Int64?    String?    
+─────┼─────────────────────────────────────────────────
+   1 │            1           10       100  x1
+   2 │            2           20       200  x10
+   3 │            3           30       300  x5
+   4 │            5           50   missing  x5
+
+julia&gt; new = Dataset(Ins_Id=[1,3,2,4,3,2],
+                     B_Id=[10,40,30,40,30,20],
+                     AMT=[100,200,missing,-500,350,700],
+                     Ac_Id=[&quot;x1&quot;,&quot;x1&quot;,&quot;x10&quot;,&quot;x10&quot;,&quot;x7&quot;,&quot;x5&quot;])
+6×4 Dataset
+ Row │ Ins_Id    B_Id      AMT       Ac_Id    
+     │ identity  identity  identity  identity
+     │ Int64?    Int64?    Int64?    String?  
+─────┼────────────────────────────────────────
+   1 │        1        10       100  x1
+   2 │        3        40       200  x1
+   3 │        2        30   missing  x10
+   4 │        4        40      -500  x10
+   5 │        3        30       350  x7
+   6 │        2        20       700  x5
+
+julia&gt; eq_fun(x::Number, y::Number) = abs(x - y) &lt;= 50
+eq_fun (generic function with 3 methods)
+
+julia&gt; eq_fun(x::AbstractString, y::AbstractString) = isequal(x,y)
+eq_fun (generic function with 2 methods)
+
+julia&gt; eq_fun(x,y) = missing
+eq_fun (generic function with 3 methods)
+
+julia&gt; compare(old, new,
+                  on = [1=&gt;1,2=&gt;2],
+                  cols = [:Amount=&gt;:AMT, :Account_Id=&gt;:Ac_Id],
+                  eq = eq_fun)
+7×6 Dataset
+ Row │ Insurance_Id  Business_Id  obs_id_left  obs_id_right  Amount=&gt;AMT  Account_Id=&gt;Ac_Id
+     │ identity      identity     identity     identity      identity     identity          
+     │ Int64?        Int64?       Int32?       Int32?        Bool?        Bool?             
+─────┼──────────────────────────────────────────────────────────────────────────────────────
+   1 │            1           10            1             1         true               true
+   2 │            2           20            2             6        false              false
+   3 │            3           30            3             5         true              false
+   4 │            5           50            4       missing      missing            missing
+   5 │            2           30      missing             3      missing            missing
+   6 │            3           40      missing             2      missing            missing
+   7 │            4           40      missing             4      missing            missing</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../transpose/">« Transpose data</a><a class="docs-footer-nextpage" href="../gallery/">Gallery »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Friday 27 May 2022 06:17">Friday 27 May 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
