@@ -625,7 +625,7 @@ end
 
 function row_argmin(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = multiple_getindex(index(ds), cols)
-    minvals = row_minimum(ds, f, cols)
+    minvals = row_minimum(ds, f, cols; threads = threads)
     colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, missing)
@@ -651,7 +651,7 @@ row_argmin(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); thread
 
 function row_argmax(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); threads = true)
     colsidx = multiple_getindex(index(ds), cols)
-    maxvals = row_maximum(ds, f, cols)
+    maxvals = row_maximum(ds, f, cols; threads = threads)
     colnames_pa = allowmissing(PooledArray(_names(ds)[colsidx]))
     push!(colnames_pa, missing)
     missref = get(colnames_pa.invpool, missing, missing)
