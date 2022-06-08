@@ -1,5 +1,5 @@
 """
-    Dataset.getmaxwidths(ds::AbstractDataset,
+    IMD.getmaxwidths(ds::AbstractDataset,
                             io::IO,
                             rowindices1::AbstractVector{Int},
                             rowindices2::AbstractVector{Int},
@@ -89,24 +89,24 @@ end
 """
     show(io::IO, mime::MIME, ds::AbstractDataset)
 
-Render a data frame to an I/O stream in MIME type `mime`.
+Render a data set to an I/O stream in MIME type `mime`.
 
 # Arguments
 - `io::IO`: The I/O stream to which `ds` will be printed.
 - `mime::MIME`: supported MIME types are: `"text/plain"`, `"text/html"`, `"text/latex"`,
   `"text/csv"`, `"text/tab-separated-values"` (the last two MIME types do not support
    showing `#undef` values)
-- `ds::AbstractDataset`: The data frame to print.
+- `ds::AbstractDataset`: The data set to print.
 
 Additionally selected MIME types support passing the following keyword arguments:
 - MIME type `"text/plain"` accepts all listed keyword arguments and therir behavior
   is identical as for `show(::IO, ::AbstractDataset)`
 - MIME type `"text/html"` accepts `summary` keyword argument which
-  allows to choose whether to print a brief string summary of the data frame.
+  allows to choose whether to print a brief string summary of the data set.
 
 # Examples
 ```jldoctest
-julia> show(stdout, MIME("text/latex"), DataFrame(A = 1:3, B = ["x", "y", "z"]))
+julia> show(stdout, MIME("text/latex"), Dataset(A = 1:3, B = ["x", "y", "z"]))
 \\begin{tabular}{r|cc}
 \t& A & B\\\\
 \t\\hline
@@ -118,7 +118,7 @@ julia> show(stdout, MIME("text/latex"), DataFrame(A = 1:3, B = ["x", "y", "z"]))
 \\end{tabular}
 14
 
-julia> show(stdout, MIME("text/csv"), DataFrame(A = 1:3, B = ["x", "y", "z"]))
+julia> show(stdout, MIME("text/csv"), Dataset(A = 1:3, B = ["x", "y", "z"]))
 "A","B"
 1,"x"
 2,"y"
@@ -454,6 +454,7 @@ function _show(io::IO, ::MIME"text/latex", ds::AbstractDataset;
         write(io, " \\\\\n")
     end
     write(io, "\\end{tabular}\n")
+    nothing
 end
 
 # function Base.show(io::IO, mime::MIME"text/latex", dsr::DataFrameRow; eltypes::Bool=true)

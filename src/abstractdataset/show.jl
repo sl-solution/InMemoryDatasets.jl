@@ -12,7 +12,7 @@ Base.summary(ds::SubDataset) =
 
 
 """
-    DataFrames.ourstrwidth(io::IO, x::Any, buffer::IOBuffer, truncstring::Int)
+    IMD.ourstrwidth(io::IO, x::Any, buffer::IOBuffer, truncstring::Int)
 
 Determine the number of characters that would be used to print a value.
 """
@@ -35,7 +35,7 @@ function truncatestring(s::AbstractString, truncstring::Int)
 end
 
 """
-    DataFrames.ourshow(io::IO, x::Any, truncstring::Int)
+    IMD.ourshow(io::IO, x::Any, truncstring::Int)
 
 Render a value to an `IO` object compactly using print.
 `truncstring` indicates the approximate number of text characters width to truncate
@@ -354,8 +354,6 @@ and `allrows`, `allcols` and `allgroups` default to `false`.
   If `truncate` is 0 or less, no truncation is applied.
 - `kwargs...`: Any keyword argument supported by the function `pretty_table` of
   PrettyTables.jl can be passed here to customize the output.
-
-```
 """
 function Base.show(io::IO,
           ds::AbstractDataset;
