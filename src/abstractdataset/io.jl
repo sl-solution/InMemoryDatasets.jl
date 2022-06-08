@@ -116,7 +116,6 @@ julia> show(stdout, MIME("text/latex"), Dataset(A = 1:3, B = ["x", "y", "z"]))
 \t2 & 2 & y \\\\
 \t3 & 3 & z \\\\
 \\end{tabular}
-14
 
 julia> show(stdout, MIME("text/csv"), Dataset(A = 1:3, B = ["x", "y", "z"]))
 "A","B"
