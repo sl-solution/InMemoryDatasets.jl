@@ -278,6 +278,7 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
     end
     write(io, "</tbody>")
     write(io, "</table>")
+    nothing
 end
 
 # function Base.show(io::IO, mime::MIME"text/html", dsr::DataFrameRow;
