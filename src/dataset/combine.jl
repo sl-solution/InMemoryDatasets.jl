@@ -618,7 +618,7 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false, thr
     # we will use new_lengths later for assigning the grouping info of the new ds
     if _first_vector_res == 0
         new_lengths = ones(Int, ngroups)
-        cumsum!(new_lengths, new_lengths)
+        our_cumsum!(new_lengths)
         total_lengths = ngroups
     else
         if ms[_first_vector_res].first isa Tuple
@@ -637,7 +637,7 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false, thr
             _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)
         end
         # special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
-        cumsum!(new_lengths, new_lengths)
+        our_cumsum!(new_lengths)
         total_lengths = new_lengths[end]
     end
     all_names = _names(ds)
@@ -715,7 +715,7 @@ function combine_ds(ds::AbstractDataset, @nospecialize(args...); threads = true)
     # we will use new_lengths later for assigning the grouping info of the new ds
     if _first_vector_res == 0
         new_lengths = ones(Int, ngroups)
-        cumsum!(new_lengths, new_lengths)
+        our_cumsum!(new_lengths)
         total_lengths = ngroups
     else
         if ms[_first_vector_res].first isa Tuple
@@ -734,7 +734,7 @@ function combine_ds(ds::AbstractDataset, @nospecialize(args...); threads = true)
             _compute_the_mutli_row_trans!(special_res, new_lengths, _columns(ds)[index(ds)[ms[_first_vector_res].first]], nrow(ds), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)
         end
         # special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
-        cumsum!(new_lengths, new_lengths)
+        our_cumsum!(new_lengths)
         total_lengths = new_lengths[end]
     end
     all_names = _names(ds)

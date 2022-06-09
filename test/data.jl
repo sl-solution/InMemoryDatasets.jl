@@ -365,6 +365,28 @@ end
     @test byrow(ds, all, :, by = [>(5), ==(10)], threads = false) == [falses(500);trues(500)]
     @test byrow(mask(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), [>(5), ==(10)], [2,1], threads = false), all, threads = false) == [trues(500);falses(500)]
     @test byrow(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), all, [2,1], by = [>(5), ==(10)], threads = false) == [trues(500);falses(500)]
+
+
+    ds = Dataset(x=[3, 1, 2, 1], y=["b", "c", "a", "b"])
+    @test delete(ds, 1, by = >(1)) == Dataset(x=[1, 1], y=["c", "b"])
+    @test delete!(ds, 1, by = >(1)) === ds == Dataset(x=[1, 1], y=["c", "b"])
+
+    ds = Dataset(x=[3, 1, 2, 1], y=["b", "c", "a", "b"])
+    @test delete(ds, :x, by = >(1)) == Dataset(x=[1, 1], y=["c", "b"])
+    @test delete!(ds, :x, by = >(1)) === ds == Dataset(x=[1, 1], y=["c", "b"])
+
+    ds = Dataset(x = [1,2,missing,1], y = ["a", "d", "c", "f"])
+    @test delete(ds, :, type = all, by = [isequal(1), >("a")]) == ds[[true, true, true, false],:]
+    setformat!(ds, 1=>isodd)
+    @test delete(ds, :, type = all, by = [isequal(1), >("a")]) == ds[[true, true, true, false],:]
+    @test delete(ds, :, type = all, by = [isequal(1), >("a")], mapformats = true) == ds[[true, true, true, false],:]
+    @test delete(ds, :, by = [isequal(1), ==("a")], mapformats = true) == ds[[false, true, true, true],:]
+    setformat!(ds, 1=>iseven)
+    @test delete(ds, 1, by = isequal(1), mapformats = true) == ds[[true, false, true, true],:]
+    
+    ds = Dataset(x = repeat(1:10, inner = 100), y = 10)
+    @test delete(ds, :, by = [>(5), ==(10)]) == ds[[trues(500);falses(500)],:]
+    @test delete(view(ds, nrow(ds):-1:1, ncol(ds):-1:1), [2,1], by = [>(5), ==(10)]) == view(ds, nrow(ds):-1:1, ncol(ds):-1:1)[[falses(500);trues(500)],:]
 end
 
 @testset "ffill, ffill!, bfill, bfill!" begin

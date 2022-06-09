@@ -814,7 +814,7 @@ function flatten!(ds::Dataset,
          sort_permute_idxcols = [1]
          idxcols_sorted = idxcols
      end
-     cumsum!(lengths, lengths)
+     our_cumsum!(lengths)
      for col in 1:length(idxcols_sorted)
          col_to_flatten = all_idxcols[sort_permute_idxcols[col]]
 
@@ -884,7 +884,7 @@ function flatten(ds::AbstractDataset,
          sort_permute_idxcols = [1]
          idxcols_sorted = idxcols
      end
-     cumsum!(lengths, lengths)
+     our_cumsum!(lengths)
      for col in 1:length(idxcols_sorted)
          col_to_flatten = all_idxcols[sort_permute_idxcols[col]]
 

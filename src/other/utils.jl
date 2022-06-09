@@ -93,6 +93,14 @@ function allocatecol(T, len)
     _our_vect_alloc(Union{Missing, T}, len)
 end
 
+function our_cumsum!(x)
+    @inbounds for i in 2:length(x)
+        x[i] += x[i-1]
+    end
+    x
+end
+
+
 function _generate_inverted_dict_pool(x)
     invp = DataAPI.invrefpool(x)
     if invp isa Dict
@@ -174,7 +182,7 @@ function _sortitout!(res, starts, x)
         starts[x[i] + 1] += 1
     end
 	starts_normalised = map(>(0), starts)
-    cumsum!(starts, starts)
+    our_cumsum!(starts)
     for i in 1:length(x)
         label = x[i]
         res[starts[label]] = i
@@ -226,7 +234,7 @@ function _calculate_ends(groups, ngroups, ::Val{T}) where T
     @inbounds for i = 1:length(groups)
         where[groups[i]] += 1
     end
-    START_END(false, length(groups), cumsum!(where, where))
+    START_END(false, length(groups), our_cumsum!(where))
 end
 
 

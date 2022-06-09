@@ -196,7 +196,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 	# we will use new_lengths later for assigning the grouping info of the new ds
 	if _first_vector_res == 0
 		new_lengths = ones(Int, ngroups)
-		cumsum!(new_lengths, new_lengths)
+		our_cumsum!(new_lengths)
 		total_lengths = ngroups
 	else
 		if ms[_first_vector_res].first isa Tuple
@@ -215,7 +215,7 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 			_compute_the_mutli_row_trans!(special_res, new_lengths, _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[_first_vector_res].first]], a[1], threads = threads), nrow(gds.parent), ms[_first_vector_res].second.first, _first_vector_res, starts, ngroups, threads)
 		end
 		# special_res, new_lengths = _compute_the_mutli_row_trans(ds, ms, _first_vector_res, starts, ngroups)
-		cumsum!(new_lengths, new_lengths)
+		our_cumsum!(new_lengths)
 		total_lengths = new_lengths[end]
 	end
 	all_names = _names(gds.parent)

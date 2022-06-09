@@ -209,7 +209,7 @@ function _join_left_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}
     _fill_ranges_for_dict_join!(ranges, dict, maxprob, _fl, _fr, _columns(dsl)[onleft[1]], _columns(dsr)[onright[1]], sz, type, threads = threads)
 
     new_ends = map(x -> max(1, length(x)), ranges)
-    cumsum!(new_ends, new_ends)
+    our_cumsum!(new_ends)
     total_length = new_ends[end]
 
     if check
@@ -292,7 +292,7 @@ function _join_left!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
         throw(ArgumentError("`leftjoin!` can only be used when each observation in left data set matches at most one observation from right data set"))
     end
     new_ends = map(x -> max(1, length(x)), ranges)
-    cumsum!(new_ends, new_ends)
+    our_cumsum!(new_ends)
     total_length = new_ends[end]
 
     if check
@@ -354,7 +354,7 @@ function _join_inner_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T
     _fill_ranges_for_dict_join!(ranges, dict, maxprob, _fl, _fr, _columns(dsl)[onleft[1]], _columns(dsr)[onright[1]], sz, type, threads = threads)
 
     new_ends = map(length, ranges)
-    cumsum!(new_ends, new_ends)
+    our_cumsum!(new_ends)
     total_length = new_ends[end]
 
     if check
@@ -430,7 +430,7 @@ function _join_outer_dict(dsl, dsr, ranges, onleft, onright, oncols_left, oncols
     _fill_ranges_for_dict_join!(ranges, dict, maxprob, _fl, _fr, _columns(dsl)[onleft[1]], _columns(dsr)[onright[1]], sz, type, threads = threads)
     new_ends = map(x -> max(1, length(x)), ranges)
     notinleft = _find_right_not_in_left(ranges, nrow(dsr), 1:nrow(dsr))
-    cumsum!(new_ends, new_ends)
+    our_cumsum!(new_ends)
     total_length = new_ends[end] + length(notinleft)
 
     if check

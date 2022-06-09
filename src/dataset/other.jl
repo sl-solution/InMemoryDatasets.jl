@@ -974,7 +974,7 @@ A convenient shortcut for `ds[byrow(ds, type, cols; ...), :]`.
 
 `type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
 
-See [`byrow`](@ref), [`filter!`](@ref)
+See [`byrow`](@ref), [`filter!`](@ref), [`delete!`](@ref), [`delete`](@ref)
 
 # Examples
 
@@ -1056,10 +1056,110 @@ It is a convenient shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...)]`.
 
 Refer to [`filter`](@ref) for exmaples.
 
-See [`byrow`](@ref), [`filter`](@ref)
+See [`byrow`](@ref), [`filter`](@ref), [`delete!`](@ref), [`delete`](@ref)
 """
 Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, kwargs...) = deleteat!(ds, .!byrow(ds, type, cols; kwargs...))
 
+# filter out `true`s
+"""
+    delete(ds::AbstractDataset, cols; [type = all,...])
+
+A convenient shortcut for `ds[.!byrow(ds, type, cols; ...), :]`.
+
+`type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+
+Compare to [`deleteat!`](@ref)
+
+See [`delete!`](@ref), [`byrow`](@ref), [`filter!`](@ref), [`filter`](@ref)
+
+# Examples
+
+```jldoctest
+julia> ds = Dataset(x = [1,2,3,4,5], y = [1.5,2.3,-1,0,2.0], z = Bool[1,0,1,0,1])
+5×3 Dataset
+ Row │ x         y         z
+     │ identity  identity  identity
+     │ Int64?    Float64?  Bool?
+─────┼──────────────────────────────
+   1 │        1       1.5      true
+   2 │        2       2.3     false
+   3 │        3      -1.0      true
+   4 │        4       0.0     false
+   5 │        5       2.0      true
+
+julia> delete(ds, :z)
+2×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Float64?  Bool?    
+─────┼──────────────────────────────
+   1 │        2       2.3     false
+   2 │        4       0.0     false
+
+julia> delete(ds, 1:2, by = [iseven, >(2.0)])
+4×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Float64?  Bool?    
+─────┼──────────────────────────────
+   1 │        1       1.5      true
+   2 │        3      -1.0      true
+   3 │        4       0.0     false
+   4 │        5       2.0      true
+
+julia> delete(ds, 1:2, type = any, by = [iseven, >(2.0)])
+3×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Float64?  Bool?    
+─────┼──────────────────────────────
+   1 │        1       1.5      true
+   2 │        3      -1.0      true
+   3 │        5       2.0      true
+
+julia> delete(ds, 1:3, type = issorted, rev = true)
+3×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Float64?  Bool?    
+─────┼──────────────────────────────
+   1 │        1       1.5      true
+   2 │        2       2.3     false
+   3 │        3      -1.0      true
+
+julia> delete(ds, 2:3, type = isless, with = :x)
+2×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Float64?  Bool?    
+─────┼──────────────────────────────
+   1 │        1       1.5      true
+   2 │        2       2.3     false
+```
+"""
+function delete(ds::AbstractDataset, cols::Union{ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...)
+    if view
+        Base.view(ds, .!byrow(ds, type, cols; kwargs...), :)
+    else
+        ds[.!byrow(ds, type, cols; kwargs...), :]
+    end
+end
+"""
+    delete!(ds::AbstractDataset, cols; [type = all, ...])
+
+Variant of `delete` which replaces the passed data set with the filtered one.
+
+It is a convenient shortcut for `deleteat![ds, byrow(ds, type, cols; ...)]`.
+
+`type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+
+Compare to [`deleteat!`](@ref)
+
+Refer to [`delete`](@ref) for exmaples.
+
+See [`delete`](@ref), [`byrow`](@ref), [`filter`](@ref), [`filter!`](@ref)
+"""
+Base.delete!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, kwargs...) = deleteat!(ds, byrow(ds, type, cols; kwargs...))
 
 """
     mapcols(ds::AbstractDataset, f, cols)

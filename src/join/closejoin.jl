@@ -336,7 +336,7 @@ function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, m
         ranges, a, idx, minval, reps, sz, right_cols_2= _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], onright[1:end-1], mapformats, true, Val(T), threads = threads)
         filter!(!=(0), reps)
         pushfirst!(reps, 1)
-        cumsum!(reps, reps)
+        our_cumsum!(reps)
         pop!(reps)
         grng = GIVENRANGE(idx, reps, Int[], length(reps))
         starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, oncols_right[end], stable, alg, mapformats, nsfpaj, grng, threads = threads)

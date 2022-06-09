@@ -420,7 +420,7 @@ function _mark_lt_part!(inbits, x_l, x_r, _fl::F1, _fr::F2, ranges, r_perms, en,
             ranges[i] = 1:0
         end
     end
-    cumsum!(revised_ends, revised_ends)
+    our_cumsum!(revised_ends)
 end
 
 function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, lmf, rmf, j; type = :both, nsfpaj = true, threads = true)
@@ -487,7 +487,7 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
         end
     end
     new_ends = map(x -> max(1, length(x)), ranges)
-    cumsum!(new_ends, new_ends)
+    our_cumsum!(new_ends)
     total_length = new_ends[end]
 
     if check
@@ -579,7 +579,7 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     end
 
     new_ends = map(x -> max(1, length(x)), ranges)
-    cumsum!(new_ends, new_ends)
+    our_cumsum!(new_ends)
     total_length = new_ends[end]
 
     if check
@@ -673,7 +673,7 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
             ranges, a, idx, minval, reps, sz, right_cols_2 = _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], oncols_right[1:end-1], mapformats, true, Val(T); threads = threads)
             filter!(!=(0), reps)
             pushfirst!(reps, 1)
-            cumsum!(reps, reps)
+            our_cumsum!(reps)
             pop!(reps)
             grng = GIVENRANGE(idx, reps, Int[], length(reps))
             starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, right_range_cols[1], stable, alg, mapformats, nsfpaj, grng; threads = threads)
@@ -700,7 +700,7 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
 
 
     new_ends = map(length, ranges)
-    cumsum!(new_ends, new_ends)
+    our_cumsum!(new_ends)
     total_length = new_ends[end]
 
     inbits = nothing
@@ -896,7 +896,7 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
     end
     new_ends = map(x -> max(1, length(x)), ranges)
     notinleft = _find_right_not_in_left(ranges, nrow(dsr), idx)
-    cumsum!(new_ends, new_ends)
+    our_cumsum!(new_ends)
     total_length = new_ends[end] + length(notinleft)
 
     if check
