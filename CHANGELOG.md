@@ -1,4 +1,15 @@
-# Version 0.7.4
+# Dev
+
+## New features
+
+* Two new functions: `delete` and `delete!`. They should be compared to `filter` and `filter!`, respectively - [issue #63](https://github.com/sl-solution/InMemoryDatasets.jl/issues/63)
+* Add `DLMReader` to `sysimage` in `IMD.create_sysimage`.
+
+## Fixes
+
+* Fix mistakes in `byrow(argmin)` and `byrow(argmax)` - [pull #62](https://github.com/sl-solution/InMemoryDatasets.jl/pull/62)
+
+# Version 0.7.4 - 0.7.5
 
 ## New features
 
