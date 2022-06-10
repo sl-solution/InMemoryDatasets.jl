@@ -28,8 +28,8 @@ function warmup()
         byrow(ds, op, 1:2)
     end
     combine(groupby(ds, [6,1]), (1,2)=>cor)
-    combine(groupby(ds,1), Ref([1,2,3,7,8]) .=> [sum, mean, length, maximum, minimum, var, std, median, median!, sort])
-    combine(groupby(ds,1), r"x1$" .=> [sum, mean, length, maximum, minimum, var, std, median, sort])
+    combine(groupby(ds,1), Ref([1,2,3,7,8]) .=> [IMD.sum, IMD.mean, length, IMD.maximum, IMD.minimum, var, std, median, median!, sort])
+    combine(groupby(ds,1), r"x1$" .=> [IMD.sum, IMD.mean, length, IMD.maximum, IMD.minimum, var, std, median, sort])
     ds2 = ds[1:2, [1,3]]
     combine(gatherby(ds,1), Ref([1,2,3,7,8]) .=> [median, sort])
     combine(gatherby(ds,1), Ref([1,2,3,7,8]) .=> [sum, mean, length, maximum, minimum, var, std])
