@@ -34,7 +34,7 @@ function create_sysimage(sysout::AbstractString, add_dlmreader::Bool = true; add
     close(fout)
     close(f)
     run(`$juliaCMD -e "using PackageCompiler;
-    create_sysimage(:InMemoryDatasets, sysimage_path=\"$(escape_string(sysout))\", precompile_execution_file=\"$(escape_string(tmpIMD_out[1]))\")"`)
+    create_sysimage([:InMemoryDatasets, :DLMReader], sysimage_path=\"$(escape_string(sysout))\", precompile_execution_file=\"$(escape_string(tmpIMD_out[1]))\")"`)
     println("Now exit julia and re-run it again using $(sysout) as `--sysimage`, e.g. in unix type OS you can use the following command:
     julia --sysimage $sysout")
 end
