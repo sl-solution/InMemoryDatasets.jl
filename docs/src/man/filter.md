@@ -21,6 +21,7 @@ The `filter` and `filter!` functions are two shortcuts which wrap the `byrow` an
 `filter(ds, cols; [view = false, type = all,...])` is the shortcut for `ds[byrow(ds, type, cols; ...), :]`, and `filter!(ds, cols; [type = all, ...])` is the shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...))`.
 
 > Note, by default `type` is set to `all`.
+> Users can use `delete` and `delete!` as shortcuts for `ds[.!byrow(ds, type, cols; ...), :]` and `deleteat![ds, byrow(ds, type, cols; ...))`, respectively.
 
 ### Examples
 
