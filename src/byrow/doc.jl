@@ -1238,8 +1238,9 @@ Return the result of calling `fun` on each row of `ds` selected by `cols`. The `
 
 When user passes a type as `fun` and a single column as `cols`,  `byrow` convert the corresponding column to the type specified by `fun`.
 
-For generic functions there are two special cases:
+For generic functions there are the below special cases:
 
 * When `cols` is a single column, `byrow(ds, fun, cols)` acts like `fun.(ds[:, cols])`
 * When `cols` is referring to exactly two columns and it is possible to pass two vectors as arguments of `fun`, `byrow` returns `fun.(ds[:, col1], ds[:, col2])` when possible.
+* When `cols` is a `Tuple` of column indices, `byrow(ds, fun, cols)` returns `fun.(ds[:, cols[1]], ds[:, cols[2]], ...)`, i.e. `fun` is a multivariate function which will be applied on each row of `cols`.
 """

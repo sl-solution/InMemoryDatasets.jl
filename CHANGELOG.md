@@ -2,6 +2,12 @@
 
 ## New features
 
+* A new functionality has been added to `byrow` for passing a Tuple of column indices. `byrow(ds, fun, cols)` calls `fun.(ds[:, cols[1]], ds[:, cols[2]], ...)` when `cols` is a NTuple of column indices.
+
+# Version 0.7.6
+
+## New features
+
 * Two new functions: `delete` and `delete!`. They should be compared to `filter` and `filter!`, respectively - [issue #63](https://github.com/sl-solution/InMemoryDatasets.jl/issues/63)
 * Add `DLMReader` to `sysimage` in `IMD.create_sysimage`.
 

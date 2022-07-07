@@ -612,5 +612,21 @@ end
 
 end
 
+@testset "byrow with tuple input" begin
+    ds = Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4)
+    res = modify(ds, (1,2) => byrow((x,y)-> x==1 && y<0 ? true : false))
+    @test res ==  Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4, function_x1_x2=[false, false, true, false])
+    res = modify(view(ds, [1,2,3,4], [1,2,3]), (1,2) => byrow((x,y)-> x==1 && y<0 ? true : false))
+    @test res ==  Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4, function_x1_x2=[false, false, true, false])
+    res = modify(groupby(ds, 3), (1,2) => byrow((x,y)-> x==1 && y<0 ? true : false))
+    @test res ==  Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4, function_x1_x2=[false, false, true, false])
+    res = modify(gatherby(ds, 3), (1,2) => byrow((x,y)-> x==1 && y<0 ? true : false))
+    @test res ==  Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4, function_x1_x2=[false, false, true, false])
+    res = modify(gatherby(ds, 3), (1,2) => byrow((x,y)-> x==1 && y<0 ? true : false)=>:newvar)
+    @test res ==  Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4, newvar=[false, false, true, false])
 
-
+    res = combine(groupby(ds, 1), 2 => IMD.minimum, :x3 => IMD.minimum, (:minimum_x2, :minimum_x3) => byrow((x,y)->x/y))
+    @test res == Dataset(x1 = [1,2], minimum_x2 = [-3,-2], minimum_x3 = [1,2], function_minimum_x2_minimum_x3 = [-3.0, -1.0]) 
+    res = combine(groupby(ds, 1), 2 => IMD.minimum, :x3 => IMD.minimum, (:minimum_x2, :minimum_x3) => byrow((x,y)->x/y) => :newvar)
+    @test res == Dataset(x1 = [1,2], minimum_x2 = [-3,-2], minimum_x3 = [1,2], newvar = [-3.0, -1.0]) 
+end

@@ -237,7 +237,9 @@ One special function that can be used as `fun` in the `byrow` function is `mapre
 
 ## User defined operations
 
-For user defined functions which return a single value, `byrow` treats each row as a vector of values, thus the user defined function must accept a vector and returns a single value. For instance to calculate `1 * col1 + 2 * col2 + 3 * col3` for each row in `ds` we can define the following function:
+For user defined functions which return a single value, `byrow` treats each row as a vector of values, thus the user defined function must accept a vector and returns a single value.
+However, when user defines a multivariate function and pass a Tuple of column indices as the `cols` argument of `byrow`, the `byrow` function simply calls `fun.(ds[:, cols[1]], ds[:, cols2], ...)`.
+For instance to calculate `1 * col1 + 2 * col2 + 3 * col3` for each row in `ds` we can define the following function:
 
 ```jldoctest
 julia> avg(x) = 1 * x[1] + 2 * x[2] + 3 * x[3]
@@ -257,6 +259,31 @@ julia> byrow(ds, avg, 1:3)
 ```
 
 Note that `avg` is missing if any of the values in `x` is missing.
+
+Below is an example of using `byrow` with a user defined multivariate function
+
+```jldoctest
+julia> ds = Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4)
+4×3 Dataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         1         1
+   2 │        2        -2         2
+   3 │        1        -3         3
+   4 │        2        10         4
+
+julia> fun(x,y,z)::Float64 = x == 1 ? y*z : y/z
+fun (generic function with 1 method)
+
+julia> byrow(ds, fun, (:x1, :x2, :x3))
+4-element Vector{Real}:
+  1.0
+ -1.0
+ -9.0
+  2.5
+```
 
 ## Special operations
 

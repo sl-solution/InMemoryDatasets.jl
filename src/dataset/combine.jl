@@ -27,6 +27,73 @@ function normalize_combine!(outidx::Index, idx,
     return ntuple(i -> _names(idx)[idx[src[i]]], N) => fun => Symbol(dst)
 end
 
+# this is add to support byrow for multivariate functions
+# (col1, col2) => byrow(fun) => dst, the job is to create (col1, col2) => byrow(fun) => :dst
+function normalize_combine!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                            <:Pair{<:Vector{Expr},
+                                <:Union{Symbol, AbstractString}}})
+                                ) where N
+    src = sel.first
+    if sel.second.first[1].head == :BYROW
+        _check_ind_and_add!(outidx, Symbol(sel.second.second))
+        return ntuple(i->outidx[src[i]], length(src)) => sel.second.first[1] => Symbol(sel.second.second)
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
+function normalize_combine!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                            <:Pair{<:Expr,
+                                <:Union{Symbol, AbstractString}}})
+                                ) where N
+    src = sel.first
+    if sel.second.first.head == :BYROW
+        _check_ind_and_add!(outidx, Symbol(sel.second.second))
+        return ntuple(i->outidx[src[i]], length(src)) => sel.second.first[1] => Symbol(sel.second.second)
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
+function normalize_combine!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                            <:Vector{Expr}})
+                                ) where N
+    src = sel.first
+    N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
+    col1, col2 = outidx[src[1]], outidx[src[2]]
+    var1, var2 = _names(outidx)[col1], _names(outidx)[col2]
+    if sel.second[1].head == :BYROW
+        if N > 2
+            nname = Symbol(funname(sel.second[1].args[1]), "_", var1, "_", var2, "_etc")
+        else
+            nname = Symbol(funname(sel.second[1].args[1]), "_", var1, "_", var2)
+        end
+        _check_ind_and_add!(outidx, nname)
+        return ntuple(i->outidx[src[i]], length(src)) => sel.second[1] => nname
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
+function normalize_combine!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                            <:Expr})
+                                ) where N
+    src = sel.first
+    N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
+    col1, col2 = outidx[src[1]], outidx[src[2]]
+    var1, var2 = _names(outidx)[col1], _names(outidx)[col2]
+    if sel.second.head == :BYROW
+        if N > 2
+            nname = Symbol(funname(sel.second.args[1]), "_", var1, "_", var2, "_etc")
+        else
+            nname = Symbol(funname(sel.second.args[1]), "_", var1, "_", var2)
+        end
+        _check_ind_and_add!(outidx, nname)
+        return ntuple(i->outidx[src[i]], length(src)) => sel.second => nname
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
+
+
+
 # col => fun, the job is to create col => fun => :colname
 function normalize_combine!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
@@ -244,8 +311,12 @@ function _is_byrow_valid(idx, ms)
     end
     for i in 1:length(ms)
         if (ms[i].second.first isa Expr) && ms[i].second.first.head == :BYROW
-
-            byrow_vars = idx[ms[i].first]
+            # if the input vars are supposed to be used in a multivariate function
+            if ms[i].first isa Tuple
+                byrow_vars = [idx[ms[i].first[j]] for j in 1:length(ms[i].first)]
+            else
+                byrow_vars = idx[ms[i].first]
+            end
             !all(byrow_vars .∈ Ref(righthands)) && return false
         end
         if haskey(idx, ms[i].second.second)
@@ -258,7 +329,7 @@ end
 function _check_mutliple_rows_for_each_group(ds, ms)
     for i in 1:length(ms)
         # byrow are not checked since they are not going to modify the number of rows
-        if ms[i].first isa Tuple
+        if ms[i].first isa Tuple && !(ms[i].second.first isa Expr)
             T = return_type(ms[i].second.first, ntuple(j-> ds[!, ms[i].first[j]].val, length(ms[i].first)))
             if T <: AbstractVector && T !== Union{}
                 return i
@@ -670,7 +741,7 @@ function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false, thr
                 _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
             end
         else
-            if ms[i].first isa Tuple
+            if ms[i].first isa Tuple && !(ms[i].second.first isa Expr)
                 _combine_f_barrier_tuple(ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
             else
                 _combine_f_barrier(haskey(index(ds).lookup, ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
@@ -753,7 +824,7 @@ function combine_ds(ds::AbstractDataset, @nospecialize(args...); threads = true)
                 _combine_f_barrier_special(special_res, ds[!, ms[i].first].val, newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
             end
         else
-            if ms[i].first isa Tuple
+            if ms[i].first isa Tuple && !(ms[i].second.first isa Expr)
                 _combine_f_barrier_tuple(ntuple(j->_columns(ds)[index(ds)[ms[i].first[j]]], length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
             else
                 _combine_f_barrier(haskey(index(ds), ms[i].first) ? _columns(ds)[index(ds)[ms[i].first]] : _columns(ds)[1], newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)

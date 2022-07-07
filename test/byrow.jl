@@ -407,3 +407,11 @@ end
     @test all(byrow(ds2, issorted, :))
     @test Matrix(ds2) == sort(Matrix(ds), dims = 2)
 end
+
+@testset "byrow with NTuple as cols" begin
+    ds = Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4)
+    fun123(x,y,z) = x == 1 ? y*z : y/z
+    @test byrow(ds, fun123, (1,2,3)) == [1,-1.0,-9,2.5]
+    fun123_2(x,y) = x == 1 && y < 0 ? true : false
+    @test byrow(ds, fun123_2, (:x1, :x2)) == [false, false, true, false]
+end

@@ -177,7 +177,6 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 	# if this is not the case, throw ArgumentError and ask user to use modify instead
 	newlookup, new_nm = _create_index_for_newds(gds.parent, ms, gds.groupcols)
 	!(_is_byrow_valid(Index(newlookup, new_nm, Dict{Int, Function}()), ms)) && throw(ArgumentError("`byrow` must be used for aggregated columns, use `modify` otherwise"))
-
 	if _fast_gatherby_reduction(gds, ms)
 		return _combine_fast_gatherby_reduction(gds, ms, newlookup, new_nm; dropgroupcols = dropgroupcols, threads = threads)
 	end
@@ -263,13 +262,13 @@ function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgrou
 		end
 
 		if i == _first_vector_res
-			if ms[i].first isa Tuple
+			if ms[i].first isa Tuple && !(ms[i].second.first isa Expr)
 				_combine_f_barrier_special_tuple(special_res, ntuple(j-> view(_columns(gds.parent)[index(gds.parent)[ms[i].first[j]]], a[1]), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
 			else
 				_combine_f_barrier_special(special_res, view(_columns(gds.parent)[index(gds.parent)[ms[i].first]], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, _first_vector_res,ngroups, new_lengths, total_lengths, threads)
 			end
 		else
-			if ms[i].first isa Tuple
+			if ms[i].first isa Tuple && !(ms[i].second.first isa Expr)
 				_combine_f_barrier_tuple(ntuple(j-> _threaded_permute_for_groupby(_columns(gds.parent)[index(gds.parent)[ms[i].first[j]]], a[1], threads = threads), length(ms[i].first)), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)
 			else
 				_combine_f_barrier(!(ms[i].second.first isa Expr) && haskey(index(gds.parent), ms[i].first) ? curr_x : view(_columns(gds.parent)[1], a[1]), newds, ms[i].first, ms[i].second.first, ms[i].second.second, newds_lookup, starts, ngroups, new_lengths, total_lengths, threads)

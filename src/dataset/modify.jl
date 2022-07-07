@@ -58,6 +58,71 @@ function normalize_modify!(outidx::Index, idx,
     return ntuple(i->outidx[src[i]], N) => fun => Symbol(dst)
 end
 
+# this is add to support byrow for multivariate functions
+# (col1, col2) => byrow(fun) => dst, the job is to create (col1, col2) => byrow(fun) => :dst
+function normalize_modify!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                            <:Pair{<:Vector{Expr},
+                                <:Union{Symbol, AbstractString}}})
+                                ) where N
+    src = sel.first
+    if sel.second.first[1].head == :BYROW
+        _check_ind_and_add!(outidx, Symbol(sel.second.second))
+        return ntuple(i->outidx[src[i]], length(src)) => sel.second.first[1] => Symbol(sel.second.second)
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
+function normalize_modify!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                            <:Pair{<:Expr,
+                                <:Union{Symbol, AbstractString}}})
+                                ) where N
+    src = sel.first
+    if sel.second.first.head == :BYROW
+        _check_ind_and_add!(outidx, Symbol(sel.second.second))
+        return ntuple(i->outidx[src[i]], length(src)) => sel.second.first[1] => Symbol(sel.second.second)
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
+function normalize_modify!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                            <:Vector{Expr}})
+                                ) where N
+    src = sel.first
+    N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
+    col1, col2 = outidx[src[1]], outidx[src[2]]
+    var1, var2 = _names(outidx)[col1], _names(outidx)[col2]
+    if sel.second[1].head == :BYROW
+        if N > 2
+            nname = Symbol(funname(sel.second[1].args[1]), "_", var1, "_", var2, "_etc")
+        else
+            nname = Symbol(funname(sel.second[1].args[1]), "_", var1, "_", var2)
+        end
+        _check_ind_and_add!(outidx, nname)
+        return ntuple(i->outidx[src[i]], length(src)) => sel.second[1] => nname
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
+function normalize_modify!(outidx::Index, idx,
+    @nospecialize(sel::Pair{<:NTuple{N, ColumnIndex},
+                            <:Expr})
+                                ) where N
+    src = sel.first
+    N < 2 && throw(ArgumentError("For multivariate functions (Tuple of column names), the number of input columns must be greater than 1"))
+    col1, col2 = outidx[src[1]], outidx[src[2]]
+    var1, var2 = _names(outidx)[col1], _names(outidx)[col2]
+    if sel.second.head == :BYROW
+        if N > 2
+            nname = Symbol(funname(sel.second.args[1]), "_", var1, "_", var2, "_etc")
+        else
+            nname = Symbol(funname(sel.second.args[1]), "_", var1, "_", var2)
+        end
+        _check_ind_and_add!(outidx, nname)
+        return ntuple(i->outidx[src[i]], length(src)) => sel.second => nname
+    end
+    throw(ArgumentError("only byrow is accepted when using expressions"))
+end
+
 # col => fun, the job is to create col => fun => :colname
 function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,

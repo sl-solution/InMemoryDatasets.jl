@@ -200,6 +200,13 @@ function byrow(ds::AbstractDataset, f::Function, cols::MultiColumnIndex; threads
 	length(colsidx) == 1 && return byrow(ds, f, colsidx[1]; threads = threads)
 	threads ?  hp_row_generic(ds, f, cols) : row_generic(ds, f, cols)
 end
+
+# TODO do we need to make sure that the result is Union of Missing?
+function byrow(ds::AbstractDataset, f::Function, cols::NTuple{N, ColumnIndex}) where N
+	cols_idx = [index(ds)[cols[i]] for i in 1:length(cols)]
+	f.(view(_columns(ds), cols_idx)...)
+end
+
 function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = nrow(ds)>1000, allowmissing::Bool = true)
 	if threads
 		T = Core.Compiler.return_type(f, Tuple{nonmissingtype(eltype(ds[!, col]))})
