@@ -629,4 +629,16 @@ end
     @test res == Dataset(x1 = [1,2], minimum_x2 = [-3,-2], minimum_x3 = [1,2], function_minimum_x2_minimum_x3 = [-3.0, -1.0]) 
     res = combine(groupby(ds, 1), 2 => IMD.minimum, :x3 => IMD.minimum, (:minimum_x2, :minimum_x3) => byrow((x,y)->x/y) => :newvar)
     @test res == Dataset(x1 = [1,2], minimum_x2 = [-3,-2], minimum_x3 = [1,2], newvar = [-3.0, -1.0]) 
+    res = combine(gatherby(ds, 1), 2 => IMD.minimum, :x3 => IMD.minimum, (:minimum_x2, :minimum_x3) => byrow((x,y)->x/y) => :newvar)
+    @test res == Dataset(x1 = [1,2], minimum_x2 = [-3,-2], minimum_x3 = [1,2], newvar = [-3.0, -1.0])
+
+    res = combine(groupby(ds, :x1), :x2 => (x->topk(x, 2)) => :topk_x2, :x3 => (x->topk(x, 2)) => :topk_x3, (:topk_x2, :topk_x3) => byrow((x,y)->x*y) => :row)
+    @test res == Dataset(x1 = [1,1,2,2], topk_x2 = [1,-3,10,-2], topk_x3 = [3,1,4,2], row = [3,-3,40,-4])
+
+    res = modify(groupby(ds, :x1), :x2 => (x->topk(x, 2)) => :topk_x2, :x3 => (x->topk(x, 2)) => :topk_x3, (:topk_x2, :topk_x3) => byrow((x,y)->x*y) => :row)
+    @test res == Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4, topk_x2 = [1,10,-3,-2], topk_x3 = [3,4,1,2], row = [3,40,-3,-4])
+
+    modify!(filter(ds, 1, by = ==(1), view = true), (2,3) => byrow((x,y)->x/y) => :z)
+    @test ds == Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4, z = [1.0, missing, -1.0, missing])
+
 end
