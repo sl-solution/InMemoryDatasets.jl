@@ -1058,7 +1058,7 @@ Refer to [`filter`](@ref) for exmaples.
 
 See [`byrow`](@ref), [`filter`](@ref), [`delete!`](@ref), [`delete`](@ref)
 """
-Base.filter!(ds::Dataset, cols::Union{Vector{T}, ColumnIndex, MultiColumnIndex}; type = all, kwargs...) = deleteat!(ds, .!byrow(ds, type, cols; kwargs...)) where T <: Union{<:Integer, Symbol, AbstractString}
+Base.filter!(ds::Dataset, cols::Union{Vector{T}, ColumnIndex, MultiColumnIndex}; type = all, kwargs...) where T <: Union{<:Integer, Symbol, AbstractString} = deleteat!(ds, .!byrow(ds, type, cols; kwargs...)) 
 
 # filter out `true`s
 """
