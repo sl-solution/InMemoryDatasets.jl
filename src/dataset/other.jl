@@ -1038,7 +1038,7 @@ julia> filter(ds, 2:3, type = isless, with = :x)
    3 │        5       2.0      true
 ```
 """
-function Base.filter(ds::AbstractDataset, cols::Union{Vector{T}, ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...) where T <: Union{<:Integer, Symbol, AbstractString}
+function Base.filter(ds::AbstractDataset, cols::Union{NTuple{N, ColumnIndex}, Vector{T}, ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...) where N where T <: Union{<:Integer, Symbol, AbstractString}
     if view
         Base.view(ds, byrow(ds, type, cols; kwargs...), :)
     else
@@ -1058,9 +1058,11 @@ Refer to [`filter`](@ref) for exmaples.
 
 See [`byrow`](@ref), [`filter`](@ref), [`delete!`](@ref), [`delete`](@ref)
 """
-_filter!(ds::Dataset, cols::Union{AbstractVector{T}, ColumnIndex, MultiColumnIndex}; type = all, kwargs...) where T <: Union{<:Integer, Symbol, AbstractString} = deleteat!(ds, .!byrow(ds, type, cols; kwargs...)) 
+_filter!(ds::Dataset, cols::Union{NTuple{N, ColumnIndex}, AbstractVector{T}, ColumnIndex, MultiColumnIndex}; type = all, kwargs...) where N where T <: Union{<:Integer, Symbol, AbstractString} = deleteat!(ds, .!byrow(ds, type, cols; kwargs...)) 
 Base.filter!(ds::Dataset, cols::AbstractVector; type = all, kwargs...) = _filter!(ds, cols; type = type, kwargs...)
 Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, kwargs...) = _filter!(ds, cols; type = type, kwargs...)
+Base.filter!(ds::Dataset, cols::NTuple{N, ColumnIndex}; kwargs...) where N = _filter!(ds, cols; kwargs...)
+
 
 # filter out `true`s
 """
@@ -1139,7 +1141,7 @@ julia> delete(ds, 2:3, type = isless, with = :x)
    2 │        2       2.3     false
 ```
 """
-function delete(ds::AbstractDataset, cols::Union{ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...)
+function delete(ds::AbstractDataset, cols::Union{NTuple{N, ColumnIndex}, ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...) where N
     if view
         Base.view(ds, .!byrow(ds, type, cols; kwargs...), :)
     else
@@ -1161,7 +1163,7 @@ Refer to [`delete`](@ref) for exmaples.
 
 See [`delete`](@ref), [`byrow`](@ref), [`filter`](@ref), [`filter!`](@ref)
 """
-Base.delete!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, kwargs...) = deleteat!(ds, byrow(ds, type, cols; kwargs...))
+Base.delete!(ds::Dataset, cols::Union{NTuple{N, ColumnIndex}, ColumnIndex, MultiColumnIndex}; type = all, kwargs...) where N = deleteat!(ds, byrow(ds, type, cols; kwargs...))
 
 """
     mapcols(ds::AbstractDataset, f, cols)
