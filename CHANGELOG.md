@@ -4,6 +4,10 @@
 
 * A new functionality has been added to `byrow` for passing a Tuple of column indices. `byrow(ds, fun, cols)` calls `fun.(ds[:, cols[1]], ds[:, cols[2]], ...)` when `cols` is a NTuple of column indices.
 
+## Fixes
+
+* Fix type ambiguity in `filter/!`
+
 # Version 0.7.6
 
 ## New features
