@@ -238,7 +238,8 @@ One special function that can be used as `fun` in the `byrow` function is `mapre
 ## User defined operations
 
 For user defined functions which return a single value, `byrow` treats each row as a vector of values, thus the user defined function must accept a vector and returns a single value.
-However, when user defines a multivariate function and pass a Tuple of column indices as the `cols` argument of `byrow`, the `byrow` function simply calls `fun.(ds[:, cols[1]], ds[:, cols2], ...)`.
+However, when user defines a multivariate function and pass a Tuple of column indices as the `cols` argument of `byrow`, the `byrow` function simply calls `fun.(ds[:, cols[1]], ds[:, cols2], ...)`. Currently, the `threads` keyword argument is not available for this case.
+
 For instance to calculate `1 * col1 + 2 * col2 + 3 * col3` for each row in `ds` we can define the following function:
 
 ```jldoctest
