@@ -408,7 +408,7 @@ end
 
 function _fill_outputmat_withoutid(T, in_cols, ds, starts, perms, new_col_names, row_names_length, threads; default_fill = missing)
 
-    @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data frame is huge and there is not enough resource to allocate it."
+    @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data set is huge and there is not enough resource, check the passed arguments."
     CT = promote_type(T, typeof(default_fill))
     # outputmat = [__fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
     outputmat = Vector{typeof(_our_vect_alloc(CT, 0))}(undef, length(new_col_names))
@@ -420,7 +420,7 @@ end
 
 function _fill_outputmat_withid(T, in_cols, ds, starts, perms, ids, new_col_names, row_names_length, threads; default_fill = missing)
 
-    @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data frame is huge and there is not enough resource to allocate it."
+    @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data set is huge and there is not enough resource, check the passed arguments."
     CT = promote_type(T, typeof(default_fill))
     # outputmat = [fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
     outputmat = Vector{typeof(_our_vect_alloc(CT, 0))}(undef, length(new_col_names))
