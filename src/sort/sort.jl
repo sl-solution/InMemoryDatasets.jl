@@ -131,6 +131,9 @@ function Base.sortperm(ds::SubDataset, cols; alg = HeapSortAlg(), rev = false, m
     _sortperm_v(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, threads = threads)[2]
 end
 
+Base.sort(ds::AbstractDataset; kwargs...) = throw(ArgumentError("pass the sorting columns as the second argument"))
+Base.sortperm(ds::AbstractDataset; kwargs...) = throw(ArgumentError("pass the sorting columns as the second argument"))
+
 
 function unsort!(ds::Dataset; threads = true)
     isempty(ds) && return ds
