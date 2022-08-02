@@ -83,19 +83,19 @@ julia> IMD.median(x)
 
 ### Some remarks
 
-`var` and `std` will return `missing` when `dof = true` and an `AbstractVector{Union{T, Missing}}` of length one is passed as their argument. This is different from the behaviour of these functions defined in the `Statistics` package.
+`var` and `std` will return `missing` when `dof = true` and an `AbstractVector` of length one is passed as their argument. This is different from the behaviour of these functions defined in the `Statistics` package.
 
 ```jldoctest
-julia> IMD.var(Union{Missing, Int}[1])
+julia> IMD.var([1])
 missing
 
-julia> IMD.std(Union{Missing, Int}[1])
+julia> IMD.std([1])
 missing
 
-julia> var([1]) # fallback to Statistics.var
+julia> Statistics.var([1])
 NaN
 
-julia> std([1]) # fallback to Statistics.std
+julia> Statistics.std([1])
 NaN
 ```
 
