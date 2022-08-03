@@ -905,17 +905,17 @@ Base.Array{T}(ds::AbstractDataset) where {T} = Matrix{T}(ds)
     duplicates(ds::AbstractDataset, cols; [mapformats = false, leave = :first, threads])
 
 Return a `Vector{Bool}` in which `true` entries indicate duplicate rows.
-A row is a duplicate if there exists a prior row (default behavior, see the `leave` keyword argument for other options) with all columns containing
+A row is a duplicate if there exists a prior row (default behaviour, see the `leave` keyword argument for other options) with all columns containing
 equal values (according to `isequal`).
 
 If `mapformats = true` the values are checked based on their formatted values.
 
-The `leave` keyword argument determines which occurance of duplicated rows should be indicated as non-duplicate rows.
+The `leave` keyword argument determines which occurrence of duplicated rows should be indicated as non-duplicate rows.
 
-* `leave = :first` means that everey occurance after the first one be marked as duplicate rows,
-* `leave = :last` means that every occurance before the last one be marked as duplicate rows,
-* `leave = :none` means that every occurance of duplicates rows be marked as duplicate rows,
-* `leave = :random` means that a random occurance of duplicate rows be marked as duplicate rows.
+* `leave = :first` means that every occurrence after the first one be marked as duplicate rows,
+* `leave = :last` means that every occurrence before the last one be marked as duplicate rows,
+* `leave = :none` means that non-duplicates rows be marked true (duplicates row be left out),
+* `leave = :random` means that a random occurrence of duplicate rows left out and the rest be marked as duplicate rows.
 
 See also [`unique`](@ref) and [`unique!`](@ref).
 
