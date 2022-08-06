@@ -1,7 +1,7 @@
 # internal function for easy accessing a view of a column
-__!(col1::DatasetColumn) =  col1.val
-__!(col1::SubDatasetColumn) =  view(col1.val, col1.selected_index)
-const SubOrDSCol = Union{SubDatasetColumn, DatasetColumn}
+__!(col1::DatasetColumn) = col1.val
+__!(col1::SubDatasetColumn) = view(col1.val, col1.selected_index)
+const SubOrDSCol = Union{SubDatasetColumn,DatasetColumn}
 
 # we treat DatasetColumn as a one-column data set. and we need to manage every thing ourselves
 # we don't encourage people to use ds[!, 1] syntax, manipulating a column of a data set should happen in modify/!
@@ -76,71 +76,72 @@ Base.:(*)(col2::SubOrDSCol, col1::SubOrDSCol) = *(__!(col2), __!(col1))
 Base.:(+)(col2::SubOrDSCol, col1::SubOrDSCol) = +(__!(col2), __!(col1))
 Base.:(/)(col2::SubOrDSCol, col1::SubOrDSCol) = /(__!(col2), __!(col1))
 Base.:(-)(col2::SubOrDSCol, col1::SubOrDSCol) = -(__!(col2), __!(col1))
-function Base.convert(::Type{T}, x::T) where T<:DatasetColumn
+function Base.convert(::Type{T}, x::T) where {T<:DatasetColumn}
     x
 end
-function Base.convert(::Type{T}, x::T) where T<:SubDatasetColumn
+function Base.convert(::Type{T}, x::T) where {T<:SubDatasetColumn}
     x
 end
 
 # threads is on for SubOrDSCol since it naturally shouldn't be used for unfavourable situations
-Base.maximum(f, col::SubOrDSCol; threads = true) = maximum(f, __!(col), threads = threads)
-Base.maximum(col::SubOrDSCol; threads = true) = maximum(identity, __!(col), threads = threads)
-Base.minimum(f, col::SubOrDSCol; threads = true) = minimum(f, __!(col), threads = threads)
-Base.minimum(col::SubOrDSCol; threads = true) = minimum(identity, __!(col), threads = threads)
-Base.sum(f, col::SubOrDSCol; threads = true) = sum(f, __!(col), threads = threads)
-Base.sum(col::SubOrDSCol; threads = true) = sum(identity, __!(col), threads = threads)
-Statistics.mean(f, col::SubOrDSCol) = mean(f, __!(col))
-Statistics.mean(col::SubOrDSCol) = mean(identity, __!(col))
-Statistics.var(f, col::SubOrDSCol, dof = true) = var(f, __!(col), dof)
-Statistics.var(col::SubOrDSCol, dof = true) = var(identity, __!(col), dof)
-Statistics.std(f, col::SubOrDSCol, dof = true) = std(f, __!(col), dof)
-Statistics.std(col::SubOrDSCol, dof = true) = std(identity, __!(col), dof)
-Statistics.median(col::SubOrDSCol) = median(__!(col))
-function Statistics.median!(col::SubOrDSCol)
+Base.maximum(f, col::SubOrDSCol; threads=true) = maximum(f, __!(col), threads=threads)
+Base.maximum(col::SubOrDSCol; threads=true) = maximum(identity, __!(col), threads=threads)
+Base.minimum(f, col::SubOrDSCol; threads=true) = minimum(f, __!(col), threads=threads)
+Base.minimum(col::SubOrDSCol; threads=true) = minimum(identity, __!(col), threads=threads)
+Base.sum(f, col::SubOrDSCol; threads=true) = sum(f, __!(col), threads=threads)
+Base.sum(col::SubOrDSCol; threads=true) = sum(identity, __!(col), threads=threads)
+mean(f, col::SubOrDSCol) = mean(f, __!(col))
+mean(col::SubOrDSCol) = mean(identity, __!(col))
+var(f, col::SubOrDSCol, dof=true) = var(f, __!(col), dof)
+var(col::SubOrDSCol, dof=true) = var(identity, __!(col), dof)
+std(f, col::SubOrDSCol, dof=true) = std(f, __!(col), dof)
+std(col::SubOrDSCol, dof=true) = std(identity, __!(col), dof)
+median(col::SubOrDSCol) = median(__!(col))
+function median!(col::SubOrDSCol)
     median!(__!(col))
     col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
     _modified(_attributes(parent(col.ds)))
     col
 end
-Base.extrema(f, col::SubOrDSCol; threads = true) = extrema(f, __!(col), threads = threads)
-Base.extrema(col::SubOrDSCol; threads = true) = extrema(identity, __!(col), threads = threads)
-Base.argmax(col::SubOrDSCol; by = identity) = argmax(__!(col), by = by)
-Base.argmin(col::SubOrDSCol; by = identity) = argmin(__!(col), by = by)
+Base.extrema(f, col::SubOrDSCol; threads=true) = extrema(f, __!(col), threads=threads)
+Base.extrema(col::SubOrDSCol; threads=true) = extrema(identity, __!(col), threads=threads)
+Base.argmax(col::SubOrDSCol; by=identity) = argmax(__!(col), by=by)
+Base.argmin(col::SubOrDSCol; by=identity) = argmin(__!(col), by=by)
 Base.findmax(f, col::SubOrDSCol) = findmax(f, __!(col))
 Base.findmax(col::SubOrDSCol) = findmax(identity, __!(col))
 Base.findmin(f, col::SubOrDSCol) = findmin(f, __!(col))
 Base.findmin(col::SubOrDSCol) = findmin(identity, __!(col))
-Base.cumsum(col::SubOrDSCol; missings = :ignore) = cumsum(__!(col), missings = missings)
-Base.cumprod(col::SubOrDSCol; missings = :ignore) = cumprod(__!(col), missings = missings)
-cummin(col::SubOrDSCol; missings = :ignore) = cummin(__!(col), missings = missings)
-cummax(col::SubOrDSCol; missings = :ignore) = cummax(__!(col), missings = missings)
+Base.cumsum(col::SubOrDSCol; missings=:ignore) = cumsum(__!(col), missings=missings)
+Base.cumprod(col::SubOrDSCol; missings=:ignore) = cumprod(__!(col), missings=missings)
+cummin(col::SubOrDSCol; missings=:ignore) = cummin(__!(col), missings=missings)
+cummax(col::SubOrDSCol; missings=:ignore) = cummax(__!(col), missings=missings)
 
-lag(col::SubOrDSCol; default = missing) = lag(__!(col), default = default)
-lag(col::SubOrDSCol, k; default = missing) = lag(__!(col), k, default = default)
-lead(col::SubOrDSCol; default = missing) = lead(__!(col), default = default)
-lead(col::SubOrDSCol, k; default = missing) = lead(__!(col), k, default = default)
+topk(col::SubOrDSCol, k; rev=false, output_indices = false) = topk(__!(col), k, rev=rev, output_indices = output_indices)
+lag(col::SubOrDSCol; default=missing) = lag(__!(col), default=default)
+lag(col::SubOrDSCol, k; default=missing) = lag(__!(col), k, default=default)
+lead(col::SubOrDSCol; default=missing) = lead(__!(col), default=default)
+lead(col::SubOrDSCol, k; default=missing) = lead(__!(col), k, default=default)
 
-function lag!(col::SubOrDSCol; default = missing)
-    lag!(__!(col), default = default)
+function lag!(col::SubOrDSCol; default=missing)
+    lag!(__!(col), default=default)
     _modified(_attributes(parent(col.ds)))
     col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
     col
 end
-function lag!(col::SubOrDSCol, k; default = missing)
-    lag!(__!(col), k, default = default)
+function lag!(col::SubOrDSCol, k; default=missing)
+    lag!(__!(col), k, default=default)
     _modified(_attributes(parent(col.ds)))
     col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
     col
 end
-function lead!(col::SubOrDSCol; default = missing)
-    lead!(__!(col), default = default)
+function lead!(col::SubOrDSCol; default=missing)
+    lead!(__!(col), default=default)
     _modified(_attributes(parent(col.ds)))
     col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
     col
 end
-function lead!(col::SubOrDSCol, k; default = missing)
-    lead!(__!(col), k, default = default)
+function lead!(col::SubOrDSCol, k; default=missing)
+    lead!(__!(col), k, default=default)
     _modified(_attributes(parent(col.ds)))
     col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
     col
@@ -150,15 +151,15 @@ end
 
 Base.Sort.defalg(col::SubOrDSCol) = Base.Sort.defalg(__!(col))
 function Base.sort!(col::SubOrDSCol; alg::Base.Sort.Algorithm=Base.Sort.defalg(col), lt=isless, by=identity, rev::Bool=false, order::Base.Order.Ordering=Base.Order.Forward)
-     sort!(__!(col), alg = alg, lt = lt, by = by, rev = rev, order = order)
-     _modified(_attributes(parent(col.ds)))
-     col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
-     col
+    sort!(__!(col), alg=alg, lt=lt, by=by, rev=rev, order=order)
+    _modified(_attributes(parent(col.ds)))
+    col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
+    col
 end
 function Base.sort(col::SubOrDSCol; alg::Base.Sort.Algorithm=Base.Sort.defalg(col), lt=isless, by=identity, rev::Bool=false, order::Base.Order.Ordering=Base.Order.Forward)
-     sort(__!(col), alg = alg, lt = lt, by = by, rev = rev, order = order)
+    sort(__!(col), alg=alg, lt=lt, by=by, rev=rev, order=order)
 end
 
 function Base.sortperm(col::SubOrDSCol; alg::Base.Sort.Algorithm=Base.Sort.DEFAULT_UNSTABLE, lt=isless, by=identity, rev::Bool=false, order::Base.Order.Ordering=Base.Order.Forward)
-     sortperm(__!(col), alg = alg, lt = lt, by = by, rev = rev, order = order)
+    sortperm(__!(col), alg=alg, lt=lt, by=by, rev=rev, order=order)
 end

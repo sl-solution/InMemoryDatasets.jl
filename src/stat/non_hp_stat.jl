@@ -21,11 +21,11 @@ _stat_max_fun(::Missing, ::Missing) = missing
 _stat_realXcY(x, y) = Statistics.realXcY(x, y)
 _stat_realXcY(x, ::Missing) = x
 _stat_realXcY(::Missing, y) = y
-_stat_realXcY(::Missing,::Missing) = missing
+_stat_realXcY(::Missing, ::Missing) = missing
 ISNAN(x::Any) = isnan(x)
 ISNAN(::Missing) = false
 
-_stat_bool(f) = x->f(x)::Bool
+_stat_bool(f) = x -> f(x)::Bool
 
 _stat_ismissing(x::Any)::Int = 0
 _stat_ismissing(::Missing)::Int = 1
@@ -44,9 +44,9 @@ same size as `x` (the input array).
 """
 (lag, lag!)
 
-function lag(x::AbstractVector, k; default = missing)
+function lag(x::AbstractVector, k; default=missing)
     @assert firstindex(x) == 1 "lag only supports 1-based indexing"
-    res = Vector{Union{promote_type(typeof(default), eltype(x)), Missing}}(undef, length(x))
+    res = Vector{Union{promote_type(typeof(default), eltype(x)),Missing}}(undef, length(x))
     for i in 1:k
         @inbounds res[i] = default
     end
@@ -56,9 +56,9 @@ function lag(x::AbstractVector, k; default = missing)
     res
 end
 
-lag(x::AbstractVector; default = missing) = lag(x,1; default = default)
+lag(x::AbstractVector; default=missing) = lag(x, 1; default=default)
 
-function lag!(x::AbstractVector, k; default = missing)
+function lag!(x::AbstractVector, k; default=missing)
     @assert firstindex(x) == 1 "lag! only supports 1-based indexing"
     @assert promote_type(typeof(default), eltype(x)) <: eltype(x) "`default` must be the same type as the element of the passed vector"
     for i in length(x):-1:(k+1)
@@ -69,7 +69,7 @@ function lag!(x::AbstractVector, k; default = missing)
     end
     x
 end
-lag!(x::AbstractVector; default = missing) = lag!(x,1; default = default)
+lag!(x::AbstractVector; default=missing) = lag!(x, 1; default=default)
 
 
 """
@@ -84,9 +84,9 @@ same size as `x` (the input array).
 """
 (lead, lead!)
 
-function lead(x::AbstractVector, k; default = missing)
+function lead(x::AbstractVector, k; default=missing)
     @assert firstindex(x) == 1 "lead only supports 1-based indexing"
-    res = Vector{Union{promote_type(typeof(default), eltype(x)), Missing}}(undef, length(x))
+    res = Vector{Union{promote_type(typeof(default), eltype(x)),Missing}}(undef, length(x))
     for i in 1:length(x)-k
         @inbounds res[i] = x[i+k]
     end
@@ -95,9 +95,9 @@ function lead(x::AbstractVector, k; default = missing)
     end
     res
 end
-lead(x::AbstractVector; default = missing) = lead(x, 1; default = default)
+lead(x::AbstractVector; default=missing) = lead(x, 1; default=default)
 
-function lead!(x::AbstractVector, k; default = missing)
+function lead!(x::AbstractVector, k; default=missing)
     @assert firstindex(x) == 1 "lead! only supports 1-based indexing"
     @assert promote_type(typeof(default), eltype(x)) <: eltype(x) "`default` must be the same type as the element of the passed vector"
     for i in 1:length(x)-k
@@ -108,19 +108,19 @@ function lead!(x::AbstractVector, k; default = missing)
     end
     x
 end
-lead!(x::AbstractVector; default = missing) = lead!(x, 1; default = default)
+lead!(x::AbstractVector; default=missing) = lead!(x, 1; default=default)
 
 """
     rescale(x,minx,maxx,minval,maxval)
 
 Rescale x to run from minval and maxval, given x originaly runs from minx to maxx.
 """
-function rescale(x,minx,maxx,minval,maxval)
-    -(-maxx*minval+minx*maxval)/(maxx-minx)+(-minval+maxval)*x/(maxx-minx)
+function rescale(x, minx, maxx, minval, maxval)
+    -(-maxx * minval + minx * maxval) / (maxx - minx) + (-minval + maxval) * x / (maxx - minx)
 end
-rescale(::Missing,minx,maxx,minval,maxval) = missing
-rescale(x::Vector,minx,maxx,minval,maxval) = rescale.(x,minx,maxx,minval,maxval)
-rescale(x,minx,maxx) = rescale(x,minx,maxx,0.0,1.0)
+rescale(::Missing, minx, maxx, minval, maxval) = missing
+rescale(x::Vector, minx, maxx, minval, maxval) = rescale.(x, minx, maxx, minval, maxval)
+rescale(x, minx, maxx) = rescale(x, minx, maxx, 0.0, 1.0)
 
 """
     stdze(x)
@@ -128,23 +128,23 @@ rescale(x,minx,maxx) = rescale(x,minx,maxx,0.0,1.0)
 Standardize an array. It returns missing for missing data points.
 """
 function stdze(x)
-    all(ismissing,x) && return x
+    all(ismissing, x) && return x
     meandata = mean(x)
     vardata = var(x)
     (x .- meandata) ./ sqrt(vardata)
 end
 
 # this is manual simd version for max(min) function
-function stat_maximum(f::typeof(identity), x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
+function stat_maximum(f::typeof(identity), x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T}
     all(ismissing, view(x, lo:hi)) && return missing
     _dmiss(x) = ismissing(x) ? typemin(nonmissingtype(T)) : x
     Base.mapreduce_impl(_dmiss, max, x, lo, hi)
 end
-function stat_maximum(f::F, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where {F, T}
+function stat_maximum(f::F, x::AbstractArray{T,1}; lo=1, hi=length(x)) where {F,T}
     all(ismissing, view(x, lo:hi)) && return missing
     Base.mapreduce_impl(f, _stat_max_fun, x, lo, hi)
 end
-stat_maximum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_maximum(identity, x; lo = lo, hi = hi)
+stat_maximum(x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T} = stat_maximum(identity, x; lo=lo, hi=hi)
 
 function _arg_minmax_barrier(x, minmaxval, f)::Int
     @inbounds for i in 1:length(x)
@@ -152,39 +152,39 @@ function _arg_minmax_barrier(x, minmaxval, f)::Int
     end
 end
 
-function stat_findmax(f, x::AbstractArray{T,1}) where T
+function stat_findmax(f, x::AbstractArray{T,1}) where {T}
     isempty(x) && throw(ArgumentError("input vector cannot be empty"))
     maxval = stat_maximum(f, x)
     ismissing(maxval) && return (missing, missing)
     (maxval, _arg_minmax_barrier(x, maxval, f))
 end
-stat_findmax(x::AbstractArray{T,1}) where T = stat_findmax(identity, x)
+stat_findmax(x::AbstractArray{T,1}) where {T} = stat_findmax(identity, x)
 
-function stat_minimum(f::typeof(identity), x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T
+function stat_minimum(f::typeof(identity), x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T}
     all(ismissing, view(x, lo:hi)) && return missing
     @inline _dmiss(x) = ismissing(x) ? typemax(nonmissingtype(T)) : x
     Base.mapreduce_impl(_dmiss, min, x, lo, hi)
 end
-function stat_minimum(f::F, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where {F,T}
+function stat_minimum(f::F, x::AbstractArray{T,1}; lo=1, hi=length(x)) where {F,T}
     all(ismissing, view(x, lo:hi)) && return missing
     Base.mapreduce_impl(f, _stat_min_fun, x, lo, hi)
 end
-stat_minimum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T = stat_minimum(identity, x; lo = lo, hi = hi)
+stat_minimum(x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T} = stat_minimum(identity, x; lo=lo, hi=hi)
 
-function stat_findmin(f, x::AbstractArray{T,1}) where T
+function stat_findmin(f, x::AbstractArray{T,1}) where {T}
     isempty(x) && throw(ArgumentError("input vector cannot be empty"))
     minval = stat_minimum(f, x)
     (minval, _arg_minmax_barrier(x, minval, f))
 end
-stat_findmin(x::AbstractArray{T,1}) where T = stat_findmin(identity, x)
+stat_findmin(x::AbstractArray{T,1}) where {T} = stat_findmin(identity, x)
 
 
-function stat_sum(f, x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: Union{Missing, INTEGERS, FLOATS}
+function stat_sum(f, x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T<:Union{Missing,INTEGERS,FLOATS}}
     all(ismissing, view(x, lo:hi)) && return f(first(x))
-    _dmiss(y) = ifelse(ismissing(f(y)),  zero(T), f(y))
+    _dmiss(y) = ifelse(ismissing(f(y)), zero(T), f(y))
     Base.mapreduce_impl(_dmiss, _stat_add_sum, x, lo, hi)
 end
-stat_sum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: Union{Missing, INTEGERS, FLOATS} = stat_sum(identity, x; lo = lo, hi = hi)
+stat_sum(x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T<:Union{Missing,INTEGERS,FLOATS}} = stat_sum(identity, x; lo=lo, hi=hi)
 
 # function stat_wsum(f, x::AbstractArray{Union{T,Missing},1}, w) where T
 #     all(ismissing, x) && return missing
@@ -192,20 +192,20 @@ stat_sum(x::AbstractArray{T,1}; lo = 1, hi = length(x)) where T <: Union{Missing
 #     mapreduce(_dmiss, _stat_add_sum, zip(x,w))
 # end
 # stat_wsum(x::AbstractArray{Union{T,Missing},1}, w) where T  = stat_wsum(identity, x, w)
-function stat_wsum(f, x::AbstractVector{T}, w::AbstractVector) where T
+function stat_wsum(f, x::AbstractVector{T}, w::AbstractVector) where {T}
     all(ismissing, x) && return missing
-    _dmiss(y) = ismissing(y[1])||ismissing(y[2]) ? missing : (f(y[1])*y[2])
-    mapreduce(_dmiss, _stat_add_sum, zip(x,w))
+    _dmiss(y) = ismissing(y[1]) || ismissing(y[2]) ? missing : (f(y[1]) * y[2])
+    mapreduce(_dmiss, _stat_add_sum, zip(x, w))
 end
-stat_wsum(x::AbstractVector{T}, w::AbstractVector) where T  = stat_wsum(identity, x, w)
+stat_wsum(x::AbstractVector{T}, w::AbstractVector) where {T} = stat_wsum(identity, x, w)
 
-function stat_mean(f, x::AbstractArray{T,1})::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
+function stat_mean(f, x::AbstractArray{T,1})::Union{Float64,Missing} where {T<:Union{Missing,INTEGERS,FLOATS}}
     length(x) == 1 && return f(first(x))
-    sval = stat_sum(y->f(y)*1.0, x)
-    n = mapreduce(!ismissing∘f, +, x)
-    n == 0 ? missing : sval/n
+    sval = stat_sum(y -> f(y) * 1.0, x)
+    n = mapreduce(!ismissing ∘ f, +, x)
+    n == 0 ? missing : sval / n
 end
-stat_mean(x::AbstractArray{T,1}) where T = stat_mean(identity, x)
+stat_mean(x::AbstractArray{T,1}) where {T} = stat_mean(identity, x)
 
 stat_cumsum_ignore(x::AbstractVector) = accumulate(_stat_add_sum, x)
 stat_cumsum!_ignore(outx, inx::AbstractVector) = accumulate!(_stat_add_sum, outx, inx)
@@ -219,7 +219,7 @@ stat_cummax!_ignore(outx, inx::AbstractVector) = accumulate!(_stat_max_fun, outx
 function stat_cumsum_skip(x::AbstractVector)
     locmiss = ismissing.(x)
     res = stat_cumsum_ignore(x)
-    if sum(locmiss)>0
+    if sum(locmiss) > 0
         res[locmiss] .= missing
     end
     res
@@ -228,7 +228,7 @@ end
 function stat_cumsum!_skip(outx, inx::AbstractVector)
     locmiss = ismissing.(inx)
     stat_cumsum!_ignore(outx, inx)
-    if sum(locmiss)>0
+    if sum(locmiss) > 0
         outx[locmiss] .= missing
     end
     outx
@@ -236,7 +236,7 @@ end
 function stat_cumprod_skip(x::AbstractVector)
     locmiss = ismissing.(x)
     res = stat_cumprod_ignore(x)
-    if sum(locmiss)>0
+    if sum(locmiss) > 0
         res[locmiss] .= missing
     end
     res
@@ -245,7 +245,7 @@ end
 function stat_cumprod!_skip(outx, inx::AbstractVector)
     locmiss = ismissing.(inx)
     stat_cumprod!_ignore(outx, inx)
-    if sum(locmiss)>0
+    if sum(locmiss) > 0
         outx[locmiss] .= missing
     end
     outx
@@ -254,7 +254,7 @@ end
 function stat_cummin_skip(x::AbstractVector)
     locmiss = ismissing.(x)
     res = stat_cummin_ignore(x)
-    if sum(locmiss)>0
+    if sum(locmiss) > 0
         res[locmiss] .= missing
     end
     res
@@ -263,7 +263,7 @@ end
 function stat_cummin!_skip(outx, inx::AbstractVector)
     locmiss = ismissing.(inx)
     stat_cummin!_ignore(outx, inx)
-    if sum(locmiss)>0
+    if sum(locmiss) > 0
         outx[locmiss] .= missing
     end
     outx
@@ -271,7 +271,7 @@ end
 function stat_cummax_skip(x::AbstractVector)
     locmiss = ismissing.(x)
     res = stat_cummax_ignore(x)
-    if sum(locmiss)>0
+    if sum(locmiss) > 0
         res[locmiss] .= missing
     end
     res
@@ -280,32 +280,32 @@ end
 function stat_cummax!_skip(outx, inx::AbstractVector)
     locmiss = ismissing.(inx)
     stat_cummax!_ignore(outx, inx)
-    if sum(locmiss)>0
+    if sum(locmiss) > 0
         outx[locmiss] .= missing
     end
     outx
 end
 
-function stat_wmean(f, x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S
+function stat_wmean(f, x::AbstractVector{T}, w::AbstractArray{S,1}) where {T} where {S}
     all(ismissing, x) && return missing
-    _dmiss(y) = ismissing(y[1])||ismissing(y[2]) ? zero(T) : (f(y[1])*y[2])
-    _dmiss2(y) = ismissing(y[1])||ismissing(y[2]) ? zero(S) : y[2]
-    _op(y1,y2) = _stat_add_sum.(y1, y2)
+    _dmiss(y) = ismissing(y[1]) || ismissing(y[2]) ? zero(T) : (f(y[1]) * y[2])
+    _dmiss2(y) = ismissing(y[1]) || ismissing(y[2]) ? zero(S) : y[2]
+    _op(y1, y2) = _stat_add_sum.(y1, y2)
     _f(y) = (_dmiss(y), _dmiss2(y))
-    sval, n = mapreduce(_f, _op, zip(x,w))
+    sval, n = mapreduce(_f, _op, zip(x, w))
     n == 0 ? missing : sval / n
 end
-stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where T where S = stat_wmean(identity, x, w)
+stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where {T} where {S} = stat_wmean(identity, x, w)
 
 
-function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
+function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64,Missing} where {T<:Union{Missing,INTEGERS,FLOATS}}
     all(ismissing, x) && return missing
     # any(ISNAN, x) && return convert(eltype(x), NaN)
     # meanval = stat_mean(f, x)
     # n = mapreduce(!ismissing∘f, +, x)
-    sval = stat_sum(y->f(y)*1.0, x)
-    n = mapreduce(!ismissing∘f, +, x)
-    meanval = n == 0 ? missing : sval/n
+    sval = stat_sum(y -> f(y) * 1.0, x)
+    n = mapreduce(!ismissing ∘ f, +, x)
+    meanval = n == 0 ? missing : sval / n
 
     ss = 0.0
     for i in 1:length(x)
@@ -321,37 +321,37 @@ function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64, Missing} w
     end
 end
 
-stat_var(x::AbstractArray{T,1}, dof=true) where T = stat_var(identity, x, dof)
+stat_var(x::AbstractArray{T,1}, dof=true) where {T} = stat_var(identity, x, dof)
 
-function stat_std(f , x::AbstractArray{T,1}, dof=true)::Union{Float64, Missing} where T <: Union{Missing, INTEGERS, FLOATS}
-    sqrt(stat_var(f, x,dof))
+function stat_std(f, x::AbstractArray{T,1}, dof=true)::Union{Float64,Missing} where {T<:Union{Missing,INTEGERS,FLOATS}}
+    sqrt(stat_var(f, x, dof))
 end
-stat_std(x::AbstractArray{T,1}, dof=true) where T = stat_std(identity, x, dof)
+stat_std(x::AbstractArray{T,1}, dof=true) where {T} = stat_std(identity, x, dof)
 
-function stat_median(v::AbstractArray{T,1}) where T
+function stat_median(v::AbstractArray{T,1}) where {T}
     isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))
     all(ismissing, v) && return missing
-    (nonmissingtype(eltype(v))<:AbstractFloat || nonmissingtype(eltype(v))>:AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
+    (nonmissingtype(eltype(v)) <: AbstractFloat || nonmissingtype(eltype(v)) >: AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
     nmis::Int = mapreduce(ismissing, +, v)
     n = length(v) - nmis
-    mid = div(1+n,2)
+    mid = div(1 + n, 2)
     if isodd(n)
-        return middle(partialsort(v,mid))
+        return middle(partialsort(v, mid))
     else
         m = partialsort(v, mid:mid+1)
         return middle(m[1], m[2])
     end
 end
 
-function stat_median!(v::AbstractArray{T,1}) where T
+function stat_median!(v::AbstractArray{T,1}) where {T}
     isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))
     all(ismissing, v) && return missing
-    (nonmissingtype(eltype(v))<:AbstractFloat || nonmissingtype(eltype(v))>:AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
+    (nonmissingtype(eltype(v)) <: AbstractFloat || nonmissingtype(eltype(v)) >: AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
     nmis::Int = mapreduce(ismissing, +, v)
     n = length(v) - nmis
-    mid = div(1+n,2)
+    mid = div(1 + n, 2)
     if isodd(n)
-        return middle(partialsort!(v,mid))
+        return middle(partialsort!(v, mid))
     else
         m = partialsort!(v, mid:mid+1)
         return middle(m[1], m[2])
@@ -359,7 +359,7 @@ function stat_median!(v::AbstractArray{T,1}) where T
 end
 
 # finding k largest in an array with missing values
-swap!(x,i,j)=x[i],x[j]=x[j],x[i]
+swap!(x, i, j) = x[i], x[j] = x[j], x[i]
 
 function insert_fixed_sorted!(x, item, ord)
     if ord((x[end]), (item))
@@ -369,8 +369,27 @@ function insert_fixed_sorted!(x, item, ord)
     end
     i = length(x) - 1
     while i > 0
-        if ord((x[i+1]),(x[i]))
-            swap!(x,i, i+1)
+        if ord((x[i+1]), (x[i]))
+            swap!(x, i, i + 1)
+            i -= 1
+        else
+            break
+        end
+    end
+end
+# TODO we do not need x, this is just easier to implement, later we may fix this
+function insert_fixed_sorted_perm!(perm, x, idx, item, ord)
+    if ord((x[end]), (item))
+        return
+    else
+        x[end] = item
+        perm[end] = idx
+    end
+    i = length(x) - 1
+    while i > 0
+        if ord((x[i+1]), (x[i]))
+            swap!(x, i, i + 1)
+            swap!(perm, i, i + 1)
             i -= 1
         else
             break
@@ -378,29 +397,29 @@ function insert_fixed_sorted!(x, item, ord)
     end
 end
 
-function k_largest(x::AbstractVector{T}, k::Int) where T
+function k_largest(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [maximum(identity, x)]
-    if k>length(x)
+    if k > length(x)
         k = length(x)
     end
-    res = Vector{T}(undef,k)
+    res = Vector{T}(undef, k)
     fill!(res, typemin(T))
     for i in 1:length(x)
-        insert_fixed_sorted!(res, x[i], (y1,y2)-> y1 > y2)
+        insert_fixed_sorted!(res, x[i], (y1, y2) -> y1 > y2)
     end
     res
 end
-function k_largest(x::AbstractVector{Union{T,Missing}}, k::Int) where T
+function k_largest(x::AbstractVector{Union{T,Missing}}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [maximum(identity, x)]
     all(ismissing, x) && return [missing]
-    res = Vector{T}(undef,k)
+    res = Vector{T}(undef, k)
     fill!(res, typemin(T))
     cnt = 0
     for i in 1:length(x)
         if !ismissing(x[i])
-            insert_fixed_sorted!(res, x[i], (y1,y2)-> y1 > y2)
+            insert_fixed_sorted!(res, x[i], (y1, y2) -> y1 > y2)
             cnt += 1
         end
     end
@@ -411,29 +430,29 @@ function k_largest(x::AbstractVector{Union{T,Missing}}, k::Int) where T
     end
 end
 
-function k_smallest(x::AbstractVector{T}, k::Int) where T
+function k_smallest(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [minimum(identity, x)]
-    if k>length(x)
+    if k > length(x)
         k = length(x)
     end
-    res = Vector{T}(undef,k)
+    res = Vector{T}(undef, k)
     fill!(res, typemax(T))
     for i in 1:length(x)
-        insert_fixed_sorted!(res, x[i], (y1,y2)-> y1 < y2)
+        insert_fixed_sorted!(res, x[i], (y1, y2) -> y1 < y2)
     end
     res
 end
-function k_smallest(x::AbstractVector{Union{T,Missing}}, k::Int) where T
+function k_smallest(x::AbstractVector{Union{T,Missing}}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [minimum(identity, x)]
     all(ismissing, x) && return [missing]
-    res = Vector{T}(undef,k)
+    res = Vector{T}(undef, k)
     fill!(res, typemax(T))
     cnt = 0
     for i in 1:length(x)
         if !ismissing(x[i])
-            insert_fixed_sorted!(res, x[i], (y1,y2)-> y1 < y2)
+            insert_fixed_sorted!(res, x[i], (y1, y2) -> y1 < y2)
             cnt += 1
         end
     end
@@ -445,20 +464,102 @@ function k_smallest(x::AbstractVector{Union{T,Missing}}, k::Int) where T
 end
 
 
-"""
-    topk(x, k; rev = false)
+# ktop permutation
+function k_largest_perm(x::AbstractVector{T}, k::Int) where {T}
+    k < 1 && throw(ArgumentError("k must be greater than 1"))
+    k == 1 && return [maximum(identity, x)], [argmax(x)]
+    if k > length(x)
+        k = length(x)
+    end
+    res = Vector{T}(undef, k)
+    perm = zeros(Int, k)
+    fill!(res, typemin(T))
+    for i in 1:length(x)
+        insert_fixed_sorted_perm!(perm, res, i, x[i], (y1, y2) -> y1 > y2)
+    end
+    res, perm
+end
+function k_largest_perm(x::AbstractVector{Union{T,Missing}}, k::Int) where {T}
+    k < 1 && throw(ArgumentError("k must be greater than 1"))
+    k == 1 && return [maximum(identity, x)], [argmax(x)]
+    all(ismissing, x) && return [missing], [missing]
+    res = Vector{T}(undef, k)
+    perm = zeros(Int, k)
+    fill!(res, typemin(T))
+    cnt = 0
+    for i in 1:length(x)
+        if !ismissing(x[i])
+            insert_fixed_sorted_perm!(perm, res, i, x[i], (y1, y2) -> y1 > y2)
+            cnt += 1
+        end
+    end
+    if cnt < k
+        res[1:cnt], perm[1:cnt]
+    else
+        res, perm
+    end
+end
+function k_smallest_perm(x::AbstractVector{T}, k::Int) where {T}
+    k < 1 && throw(ArgumentError("k must be greater than 1"))
+    k == 1 && return [minimum(identity, x)], [argmin(x)]
+    if k > length(x)
+        k = length(x)
+    end
+    res = Vector{T}(undef, k)
+    perm = zeros(Int, k)
+    fill!(res, typemax(T))
+    for i in 1:length(x)
+        insert_fixed_sorted_perm!(perm, res, i, x[i], (y1, y2) -> y1 < y2)
+    end
+    res, perm
+end
+function k_smallest_perm(x::AbstractVector{Union{T,Missing}}, k::Int) where {T}
+    k < 1 && throw(ArgumentError("k must be greater than 1"))
+    k == 1 && return [minimum(identity, x)], [argmin(x)]
+    all(ismissing, x) && return [missing], [missing]
+    res = Vector{T}(undef, k)
+    perm = zeros(Int, k)
+    fill!(res, typemax(T))
+    cnt = 0
+    for i in 1:length(x)
+        if !ismissing(x[i])
+            insert_fixed_sorted_perm!(perm, res, i, x[i], (y1, y2) -> y1 < y2)
+            cnt += 1
+        end
+    end
+    if cnt < k
+        res[1:cnt], perm[1:cnt]
+    else
+        res, perm
+    end
+end
 
-Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `missing`
+
 """
-function topk(x::AbstractVector, k::Int; rev = false)
+    topk(x, k; rev = false, output_indices = false)
+
+Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`.
+
+If `output_indices = true`, the function returns the values and their indices.
+
+> The `topk` function uses `<` for comparing values
+"""
+function topk(x::AbstractVector, k::Int; rev::Bool=false, output_indices::Bool = false)
     @assert firstindex(x) == 1 "topk only supports 1-based indexing"
     if rev
-        k_smallest(x, k)
+        if output_indices
+            k_smallest_perm(x, k)
+        else
+            k_smallest(x, k)
+        end
     else
-        k_largest(x, k)
+        if output_indices
+            k_largest_perm(x, k)
+        else
+            k_largest(x, k)
+        end
     end
 end
-
 
 """
     ffill(x; [by = ismissing])
@@ -467,10 +568,12 @@ end
 Replace those elements of `x` which returns `true` when `by` is called on them with the previous element which calling `by` on it returns `false`.
 
 `ffill!` modifies the input vector in-place
+
+See also [`bfill`](@ref) and [`bfill!`](@ref)
 """
 (ffill, ffill!)
 
-function ffill!(x::AbstractVector; by = ismissing)
+function ffill!(x::AbstractVector; by=ismissing)
     @assert firstindex(x) == 1 "ffill!/ffill only support 1-based indexing"
     for i in 2:length(x)
         if by(x[i])
@@ -479,7 +582,7 @@ function ffill!(x::AbstractVector; by = ismissing)
     end
     x
 end
-ffill(x; by = ismissing) = ffill!(copy(x), by = by)
+ffill(x; by=ismissing) = ffill!(copy(x), by=by)
 
 """
     bfill(x; [by = ismissing])
@@ -488,8 +591,10 @@ ffill(x; by = ismissing) = ffill!(copy(x), by = by)
 Replace those elements of `x` which returns `true` when `by` is called on them with the next element which calling `by` on it returns `false`.
 
 `bfill!` modifies the input vector in-place
+
+See also [`ffill`](@ref) and [`ffill!`](@ref)
 """
-function bfill!(x::AbstractVector; by = ismissing)
+function bfill!(x::AbstractVector; by=ismissing)
     @assert firstindex(x) == 1 "bfill!/bfill only support 1-based indexing"
     for i in length(x)-1:-1:1
         if by(x[i])
@@ -498,4 +603,4 @@ function bfill!(x::AbstractVector; by = ismissing)
     end
     x
 end
-bfill(x, by = ismissing) = bfill!(copy(x), by = by)
+bfill(x, by=ismissing) = bfill!(copy(x), by=by)
