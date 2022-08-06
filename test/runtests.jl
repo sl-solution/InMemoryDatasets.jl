@@ -26,7 +26,8 @@ my_tests = ["constructors.jl",
             "sort.jl",
             "grouping.jl",
             "join.jl",
-            "transpose.jl"
+            "transpose.jl",
+            "stats.jl"
             ]
 
 println("Running tests:")
