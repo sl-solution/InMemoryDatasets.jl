@@ -1,3 +1,13 @@
+# Dev
+
+## New features
+
+* `topk` has a new keyword argument that helps to output the indices of top(bottom) k values [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
+
+## Fixes
+
+* `topk` now works on `DatasetColumn` / `SubDatasetColumn`.
+
 # Version 0.7.7
 
 ## New features
