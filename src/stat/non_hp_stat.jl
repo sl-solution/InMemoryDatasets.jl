@@ -366,7 +366,7 @@ TOPK_ISLESS(::Missing, y) = true
 TOPK_ISLESS(x, ::Missing) = true
 TOPK_ISLESS(::Missing, ::Missing) = false
 
-function insert_fixed_sorted!(x, item, ord)
+Base.@propagate_inbounds function insert_fixed_sorted!(x, item, ord)
     if ord(item, x[end])
         x[end] = item
     else
@@ -383,7 +383,7 @@ function insert_fixed_sorted!(x, item, ord)
     end
 end
 # TODO we do not need x, this is just easier to implement, later we may fix this
-function insert_fixed_sorted_perm!(perm, x, idx, item, ord)
+Base.@propagate_inbounds function insert_fixed_sorted_perm!(perm, x, idx, item, ord)
     if ord(item, x[end])
         x[end] = item
         perm[end] = idx
@@ -403,7 +403,7 @@ function insert_fixed_sorted_perm!(perm, x, idx, item, ord)
 end
 
 
-function k_largest(x::AbstractVector{T}, k::Int) where {T}
+Base.@propagate_inbounds function k_largest(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [maximum(identity, x)]
     all(ismissing, x) && return [missing]
@@ -423,7 +423,7 @@ function k_largest(x::AbstractVector{T}, k::Int) where {T}
     end
 end
 
-function k_smallest(x::AbstractVector{T}, k::Int) where {T}
+Base.@propagate_inbounds function k_smallest(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [minimum(identity, x)]
     all(ismissing, x) && return [missing]
@@ -446,7 +446,7 @@ end
 
 # ktop permutation
 
-function k_largest_perm(x::AbstractVector{T}, k::Int) where {T}
+Base.@propagate_inbounds function k_largest_perm(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [maximum(identity, x)], [argmax(x)]
     all(ismissing, x) && return [missing], [missing]
@@ -467,7 +467,7 @@ function k_largest_perm(x::AbstractVector{T}, k::Int) where {T}
     end
 end
 
-function k_smallest_perm(x::AbstractVector{T}, k::Int) where {T}
+Base.@propagate_inbounds function k_smallest_perm(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     k == 1 && return [minimum(identity, x)], [argmin(x)]
     all(ismissing, x) && return [missing], [missing]
