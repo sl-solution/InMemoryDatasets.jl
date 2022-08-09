@@ -444,7 +444,7 @@ Base.@propagate_inbounds function k_largest(x::AbstractVector{T}, k::Int) where 
         end
     end
     if cnt < k
-        allowmissing(res[1:cnt])
+        allowmissing(view(res, 1:cnt))
     else
         allowmissing(res)
     end
@@ -464,7 +464,7 @@ Base.@propagate_inbounds function k_smallest(x::AbstractVector{T}, k::Int) where
         end
     end
     if cnt < k
-        allowmissing(res[1:cnt])
+        allowmissing(view(res, 1:cnt))
     else
         allowmissing(res)
     end
@@ -490,7 +490,7 @@ Base.@propagate_inbounds function k_largest_perm(x::AbstractVector{T}, k::Int) w
         end
     end
     if cnt < k
-        allowmissing(perm[1:cnt])
+        allowmissing(view(perm, 1:cnt))
     else
         allowmissing(perm)
     end
@@ -513,7 +513,7 @@ Base.@propagate_inbounds function k_smallest_perm(x::AbstractVector{T}, k::Int) 
         end
     end
     if cnt < k
-        allowmissing(perm[1:cnt])
+        allowmissing(view(perm, 1:cnt))
     else
         allowmissing(perm)
     end
