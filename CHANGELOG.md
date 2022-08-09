@@ -2,7 +2,8 @@
 
 ## New features
 
-* `topk` has a new keyword argument that helps to output the indices of top(bottom) k values [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
+* `topkperm` is a new function for outputting the indices of top(bottom) k values [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
+* `topk` now supports any `DataType`, see [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
 
 ## Fixes
 
