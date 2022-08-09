@@ -115,7 +115,8 @@ The following functions are also exported by InMemoryDatasets:
 * `lag!` : Replace its input with a lag-k values
 * `lead` : Create a lead-k of the provided vector
 * `lead!` : Replace its input with a lead-k values
-* `topk` : Return top(bottom) k values of a vector. It ignores `missing` values, unless all values are `missing` which it returns `[missing]`. It can also return the indices of the top(bottom) k values.
+* `topk` : Return top(bottom) k values of a vector. It ignores `missing` values, unless all values are `missing` which it returns `[missing]`.
+* `topkperm` :  Return the indices of top(bottom) k values of a vector. It ignores `missing` values, unless all values are `missing` which it returns `[missing]`.
 
 and the following functions are not exported but are available via `dot` notation:
 
