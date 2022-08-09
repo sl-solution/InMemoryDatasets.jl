@@ -94,6 +94,7 @@ export
       stdze!,
       rescale,
       topk,
+      topkperm,
       cummax,
       cummax!,
       cummin,
