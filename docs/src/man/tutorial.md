@@ -476,3 +476,82 @@ julia> @chain flights begin
 ```
 
 ![cancellation](https://raw.githubusercontent.com/sl-solution/InMemoryDatasetsTutorial/main/flights.svg)
+
+## Exporting your data
+
+You can use the `JLD2.jl` package to export the data set with meta information into a JLD2 file.
+
+```julia
+julia> using JLD2
+julia> content(flights)
+467402×17 Dataset
+   Created: 2022-08-09T16:04:51.122
+  Modified: 2022-08-09T16:05:03.822
+      Info: Reporting Carrier On-Time Performance for all flights in 2020 from CA. Downloaded from www.transtats.bts.gov
+-----------------------------------
+Columns information 
+┌─────┬──────────────────┬──────────┬─────────┐
+│ Row │ col              │ format   │ eltype  │
+├─────┼──────────────────┼──────────┼─────────┤
+│   1 │ FlightDate       │ month    │ Date    │
+│   2 │ IATA             │ identity │ String  │
+│   3 │ Tail_Number      │ identity │ String  │
+│   4 │ Flight_Number    │ identity │ Int64   │
+│   5 │ Origin           │ identity │ String  │
+│   6 │ Dest             │ identity │ String  │
+│   7 │ TaxiOut          │ identity │ Float64 │
+│   8 │ TaxiIn           │ identity │ Float64 │
+│   9 │ DepDelay         │ identity │ Float64 │
+│  10 │ ArrDelay         │ identity │ Float64 │
+│  11 │ DepTime          │ identity │ Int64   │
+│  12 │ ArrTime          │ identity │ Int64   │
+│  13 │ AirTime          │ identity │ Float64 │
+│  14 │ Cancelled        │ identity │ Float64 │
+│  15 │ CancellationCode │ identity │ String  │
+│  16 │ Distance         │ identity │ Float64 │
+│  17 │ Speed            │ identity │ Float64 │
+└─────┴──────────────────┴──────────┴─────────┘
+
+julia> @save "flights.jld2" flights
+julia> @load "flights.jld2" flights
+1-element Vector{Symbol}:
+ :flights
+
+julia> content(flights)
+467402×17 Dataset
+   Created: 2022-08-09T16:04:51.122
+  Modified: 2022-08-09T16:05:03.822
+      Info: Reporting Carrier On-Time Performance for all flights in 2020 from CA. Downloaded from www.transtats.bts.gov
+-----------------------------------
+Columns information 
+┌─────┬──────────────────┬──────────┬─────────┐
+│ Row │ col              │ format   │ eltype  │
+├─────┼──────────────────┼──────────┼─────────┤
+│   1 │ FlightDate       │ month    │ Date    │
+│   2 │ IATA             │ identity │ String  │
+│   3 │ Tail_Number      │ identity │ String  │
+│   4 │ Flight_Number    │ identity │ Int64   │
+│   5 │ Origin           │ identity │ String  │
+│   6 │ Dest             │ identity │ String  │
+│   7 │ TaxiOut          │ identity │ Float64 │
+│   8 │ TaxiIn           │ identity │ Float64 │
+│   9 │ DepDelay         │ identity │ Float64 │
+│  10 │ ArrDelay         │ identity │ Float64 │
+│  11 │ DepTime          │ identity │ Int64   │
+│  12 │ ArrTime          │ identity │ Int64   │
+│  13 │ AirTime          │ identity │ Float64 │
+│  14 │ Cancelled        │ identity │ Float64 │
+│  15 │ CancellationCode │ identity │ String  │
+│  16 │ Distance         │ identity │ Float64 │
+│  17 │ Speed            │ identity │ Float64 │
+└─────┴──────────────────┴──────────┴─────────┘
+```
+
+Also, you can use `DLMReader` package to write an `AbstractDataset` as text to a file using a given delimiter (which defaults to comma).
+
+```julia
+julia> using DLMReader
+julia> filewriter("flights.csv", flights)
+```
+
+To write the formatted values, you need to use `filwriter` with `mapformats = true` option. For more information, see `?filewriter`.
