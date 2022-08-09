@@ -479,10 +479,10 @@ julia> @chain flights begin
 
 ## Exporting your data
 
-You can use the [JLD2.jl](https://github.com/JuliaIO/JLD2.jl) package to export the data set with meta information into a JLD2 file.
+You can use the `JLD2.jl` package to export the data set with meta information into a JLD2 file.
 
 ```julia
-julia> using JLD2, FileIO
+julia> using JLD2
 julia> content(flights)
 467402×17 Dataset
    Created: 2022-08-09T16:04:51.122
@@ -554,4 +554,4 @@ julia> using DLMReader
 julia> filewriter("flights.csv", flights)
 ```
 
-To write the formatted values, you need to use `filwriter` with `mapformats = true` option. For more information, see `?DLMReader.filewriter`.
+To write the formatted values, you need to use `filwriter` with `mapformats = true` option. For more information, see `?filewriter`.
