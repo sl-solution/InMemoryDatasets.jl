@@ -169,7 +169,6 @@ end
     leftjoin!(dsl::Dataset, dsr::AbstractDataset; on=nothing, makeunique=false, mapformats=true, alg=HeapSort, stable=false, accelerate = false, method = :sort, threads = true)
 
 Variant of `leftjoin` that performs `leftjoin` in place for special case that the number of matching rows from the right data set is at most one.
-```
 """
 function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool=false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
