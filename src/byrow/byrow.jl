@@ -31,7 +31,7 @@ function expand_Base_Fix(f, f2)
 	end
 end
 
-function byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; by = isequal(true), threads = nrow(ds) > Threads.nthreads()*10, mapformats = false)
+function byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; missings = missing, by = isequal(true), threads = nrow(ds) > Threads.nthreads()*10, mapformats = false)
 	colsidx = multiple_getindex(index(ds), cols)
 	if by isa AbstractVector
 		if mapformats
@@ -42,13 +42,20 @@ function byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; b
 			by = map(y->expand_Base_Fix(by, getformat(ds, y)), colsidx)
 		end
 	end
+	if !ismissing(missings)
+		if by isa AbstractVector
+			by = map(y -> x -> ismissing(x) ? missings : y(x), by)
+		else
+			by = first(map(y -> x -> ismissing(x) ? missings : y(x), [by]))
+		end
+	end
 	row_any(ds, by, colsidx, threads = threads)
 
 end
 
-byrow(ds::AbstractDataset, ::typeof(any), col::ColumnIndex; by = isequal(true), threads = nrow(ds) > Threads.nthreads()*10, mapformats = false) = byrow(ds, any, [col]; by = by, threads = threads, mapformats = mapformats)
+byrow(ds::AbstractDataset, ::typeof(any), col::ColumnIndex; missings = missing, by = isequal(true), threads = nrow(ds) > Threads.nthreads()*10, mapformats = false) = byrow(ds, any, [col]; missings = missings, by = by, threads = threads, mapformats = mapformats)
 
-function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; by = isequal(true), threads = nrow(ds) > Threads.nthreads()*10, mapformats = false)
+function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; missings = missing, by = isequal(true), threads = nrow(ds) > Threads.nthreads()*10, mapformats = false)
 	colsidx =  multiple_getindex(index(ds), cols)
 	if by isa AbstractVector
 		if mapformats
@@ -59,9 +66,16 @@ function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; b
 			by = map(y->expand_Base_Fix(by, getformat(ds, y)), colsidx)
 		end
 	end
+	if !ismissing(missings)
+		if by isa AbstractVector
+			by = map(y -> x -> ismissing(x) ? missings : y(x), by)
+		else
+			by = first(map(y -> x -> ismissing(x) ? missings : y(x), [by]))
+		end
+	end
 	row_all(ds, by, colsidx, threads = threads)
 end
-byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; by = isequal(true), threads = nrow(ds) > Threads.nthreads()*10, mapformats = false) = byrow(ds, all, [col]; by = by, threads = threads, mapformats = mapformats)
+byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; missings = missing, by = isequal(true), threads = nrow(ds) > Threads.nthreads()*10, mapformats = false) = byrow(ds, all, [col]; missings = missings, by = by, threads = threads, mapformats = mapformats)
 
 byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; with = nothing, threads = nrow(ds) > Threads.nthreads()*10) = row_isequal(ds, cols, by = with, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(isequal), cols::ColumnIndex; with = nothing, threads = nrow(ds) > Threads.nthreads()*10) = row_isequal(ds, cols, by = with, threads = threads)

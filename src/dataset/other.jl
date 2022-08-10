@@ -968,11 +968,13 @@ nmissing(x) = count(ismissing, x)
 n(x) = count(!ismissing, x)
 
 """
-    filter(ds::AbstractDataset, cols; [type = all,...])
+    filter(ds::AbstractDataset, cols; [missings = missing, type = all,...])
 
 A convenient shortcut for `ds[byrow(ds, type, cols; ...), :]`.
 
 `type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+
+The `missings` keyword argument controls how the missing values should be treated in `filter`. Setting `missings = false` treats missing values as `false` and setting it as `true` treats missing values as `true`.
 
 See [`byrow`](@ref), [`filter!`](@ref), [`delete!`](@ref), [`delete`](@ref)
 
@@ -1036,17 +1038,63 @@ julia> filter(ds, 2:3, type = isless, with = :x)
    1 │        3      -1.0      true
    2 │        4       0.0     false
    3 │        5       2.0      true
+
+julia> ds = Dataset(x = [1,2,missing,4,5], y = [missing,missing,-1,0,2.0], z = [true,missing,true,false,true])
+5×3 Dataset
+ Row │ x         y          z        
+     │ identity  identity   identity 
+     │ Int64?    Float64?   Bool?    
+─────┼───────────────────────────────
+   1 │        1  missing        true
+   2 │        2  missing     missing 
+   3 │  missing       -1.0      true
+   4 │        4        0.0     false
+   5 │        5        2.0      true
+
+julia> filter(ds, :z, missings = true) # treat missing values as true
+4×3 Dataset
+ Row │ x         y          z        
+     │ identity  identity   identity 
+     │ Int64?    Float64?   Bool?    
+─────┼───────────────────────────────
+   1 │        1  missing        true
+   2 │        2  missing     missing 
+   3 │  missing       -1.0      true
+   4 │        5        2.0      true
+
+julia> filter(ds, :z, missings = false) # treat missing values as false
+3×3 Dataset
+ Row │ x         y          z        
+     │ identity  identity   identity 
+     │ Int64?    Float64?   Bool?    
+─────┼───────────────────────────────
+   1 │        1  missing        true
+   2 │  missing       -1.0      true
+   3 │        5        2.0      true
+
 ```
 """
-function Base.filter(ds::AbstractDataset, cols::Union{NTuple{N, ColumnIndex}, Vector{T}, ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...) where N where T <: Union{<:Integer, Symbol, AbstractString}
-    if view
-        Base.view(ds, byrow(ds, type, cols; kwargs...), :)
+function Base.filter(ds::AbstractDataset, cols::Union{NTuple{N, ColumnIndex}, Vector{T}, ColumnIndex, MultiColumnIndex}; missings::Union{Missing, Bool} = missing, view = false, type= all, kwargs...) where N where T <: Union{<:Integer, Symbol, AbstractString}
+    if type in (all, any)
+        idx = byrow(ds, type, cols; missings = missings, kwargs...)
+        idx_val = _findall(idx)
     else
-        ds[byrow(ds, type, cols; kwargs...), :]
+        idx = byrow(ds, type, cols; kwargs...)
+        if !ismissing(missings)
+            replace!(idx, missing => missings)
+            idx_val = _findall(disallowmissing(idx))
+        else
+            idx_val = _findall(idx)
+        end
+    end
+    if view
+       Base.view(ds, idx_val, :)
+    else
+        ds[idx_val, :]
     end
 end
 """
-    filter!(ds::AbstractDataset, cols; [type = all, ...])
+    filter!(ds::AbstractDataset, cols; [missings = missing, type = all, ...])
 
 Variant of `filter` which replaces the passed data set with the filtered one.
 
@@ -1054,23 +1102,41 @@ It is a convenient shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...)]`.
 
 `type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
 
+The `missings` keyword argument controls how the missing values should be treated in `filter!`. Setting `missings = false` treats missing values as `false` and setting it as `true` treats missing values as `true`.
+
 Refer to [`filter`](@ref) for exmaples.
 
 See [`byrow`](@ref), [`filter`](@ref), [`delete!`](@ref), [`delete`](@ref)
 """
-_filter!(ds::Dataset, cols::Union{NTuple{N, ColumnIndex}, AbstractVector{T}, ColumnIndex, MultiColumnIndex}; type = all, kwargs...) where N where T <: Union{<:Integer, Symbol, AbstractString} = deleteat!(ds, .!byrow(ds, type, cols; kwargs...)) 
-Base.filter!(ds::Dataset, cols::AbstractVector; type = all, kwargs...) = _filter!(ds, cols; type = type, kwargs...)
-Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; type = all, kwargs...) = _filter!(ds, cols; type = type, kwargs...)
-Base.filter!(ds::Dataset, cols::NTuple{N, ColumnIndex}; kwargs...) where N = _filter!(ds, cols; kwargs...)
+function _filter!(ds::Dataset, cols::Union{NTuple{N, ColumnIndex}, AbstractVector{T}, ColumnIndex, MultiColumnIndex}; missings = missing, type = all, kwargs...) where N where T <: Union{<:Integer, Symbol, AbstractString} 
+    if type in (all, any)
+        idx = byrow(ds, type, cols; missings = missings, kwargs...)
+        idx_val = _findall(.!idx)
+    else
+        idx = byrow(ds, type, cols; kwargs...)
+        if !ismissing(missings)
+            replace!(idx, missing => missings)
+            idx_val = _findall(.!disallowmissing(idx))
+        else
+            idx_val = _findall(.!idx)
+        end
+    end
+    deleteat!(ds, idx_val)
+end 
+Base.filter!(ds::Dataset, cols::AbstractVector; missings::Union{Missing, Bool} = missing, type = all, kwargs...) = _filter!(ds, cols; missings = missings, type = type, kwargs...)
+Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; missings::Union{Missing, Bool} = missing, type = all, kwargs...) = _filter!(ds, cols; missings = missings, type = type, kwargs...)
+Base.filter!(ds::Dataset, cols::NTuple{N, ColumnIndex}; missings::Union{Missing, Bool} = missing, kwargs...) where N = _filter!(ds, cols; missings = missings, kwargs...)
 
 
 # filter out `true`s
 """
-    delete(ds::AbstractDataset, cols; [type = all,...])
+    delete(ds::AbstractDataset, cols; [missings = missing, type = all,...])
 
 A convenient shortcut for `ds[.!byrow(ds, type, cols; ...), :]`.
 
 `type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+
+The `missings` keyword argument controls how the missing values should be treated in `delete`. Setting `missings = false` treats missing values as `false` and setting it as `true` treats missing values as `true`.
 
 Compare to [`deleteat!`](@ref)
 
@@ -1139,17 +1205,59 @@ julia> delete(ds, 2:3, type = isless, with = :x)
 ─────┼──────────────────────────────
    1 │        1       1.5      true
    2 │        2       2.3     false
+
+julia> ds = Dataset(x = [1,2,missing,4,5], y = [missing,missing,-1,0,2.0], z = [true,missing,true,false,true])
+5×3 Dataset
+ Row │ x         y          z        
+     │ identity  identity   identity 
+     │ Int64?    Float64?   Bool?    
+─────┼───────────────────────────────
+   1 │        1  missing        true
+   2 │        2  missing     missing 
+   3 │  missing       -1.0      true
+   4 │        4        0.0     false
+   5 │        5        2.0      true
+
+julia> delete(ds, :z, missings = true) # treat missing values as true
+1×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Float64?  Bool?    
+─────┼──────────────────────────────
+   1 │        4       0.0     false
+
+julia> delete(ds, :z, missings = false) # treat missing values as false
+2×3 Dataset
+ Row │ x         y          z        
+     │ identity  identity   identity 
+     │ Int64?    Float64?   Bool?    
+─────┼───────────────────────────────
+   1 │        2  missing     missing 
+   2 │        4        0.0     false
+
 ```
 """
-function delete(ds::AbstractDataset, cols::Union{NTuple{N, ColumnIndex}, ColumnIndex, MultiColumnIndex}; view = false, type= all, kwargs...) where N
-    if view
-        Base.view(ds, .!byrow(ds, type, cols; kwargs...), :)
+function delete(ds::AbstractDataset, cols::Union{NTuple{N, ColumnIndex}, ColumnIndex, MultiColumnIndex}; missings::Union{Missing, Bool} = missing, view = false, type= all, kwargs...) where N
+    if type in (all, any)
+        idx = byrow(ds, type, cols; missings = missings, kwargs...)
+        idx_val = _findall(.!idx)
     else
-        ds[.!byrow(ds, type, cols; kwargs...), :]
+        idx = byrow(ds, type, cols; kwargs...)
+        if !ismissing(missings)
+            replace!(idx, missing => missings)
+            idx_val = _findall(.!disallowmissing(idx))
+        else
+            idx_val = _findall(.!idx)
+        end
+    end
+    if view
+        Base.view(ds, idx_val, :)
+    else
+        ds[idx_val, :]
     end
 end
 """
-    delete!(ds::AbstractDataset, cols; [type = all, ...])
+    delete!(ds::AbstractDataset, cols; [missings = missing, type = all, ...])
 
 Variant of `delete` which replaces the passed data set with the filtered one.
 
@@ -1157,13 +1265,29 @@ It is a convenient shortcut for `deleteat![ds, byrow(ds, type, cols; ...)]`.
 
 `type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
 
+The `missings` keyword argument controls how the missing values should be treated in `delete!`. Setting `missings = false` treats missing values as `false` and setting it as `true` treats missing values as `true`.
+
 Compare to [`deleteat!`](@ref)
 
 Refer to [`delete`](@ref) for exmaples.
 
 See [`delete`](@ref), [`byrow`](@ref), [`filter`](@ref), [`filter!`](@ref)
 """
-Base.delete!(ds::Dataset, cols::Union{NTuple{N, ColumnIndex}, ColumnIndex, MultiColumnIndex}; type = all, kwargs...) where N = deleteat!(ds, byrow(ds, type, cols; kwargs...))
+function Base.delete!(ds::Dataset, cols::Union{NTuple{N, ColumnIndex}, ColumnIndex, MultiColumnIndex}; missings::Union{Missing, Bool} = missing, type = all, kwargs...) where N
+    if type in (all, any)
+        idx = byrow(ds, type, cols; missings = missings, kwargs...)
+        idx_val = _findall(idx)
+    else
+        idx = byrow(ds, type, cols; kwargs...)
+        if !ismissing(missings)
+            replace!(idx, missing => missings)
+            idx_val = _findall(disallowmissing(idx))
+        else
+            idx_val = _findall(idx)
+        end
+    end
+    deleteat!(ds, idx_val)
+end
 
 """
     mapcols(ds::AbstractDataset, f, cols)
