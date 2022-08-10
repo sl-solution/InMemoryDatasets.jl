@@ -18,10 +18,12 @@ Naturally, other `fun`s supported by `byrow` which return a `Vector{Bool}` or `B
 
 The `filter` and `filter!` functions are two shortcuts which wrap the `byrow` and `getindex`/`deleteat!` operations in a function.
 
-`filter(ds, cols; [view = false, type = all,...])` is the shortcut for `ds[byrow(ds, type, cols; ...), :]`, and `filter!(ds, cols; [type = all, ...])` is the shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...))`.
+`filter(ds, cols; [missings = missing, view = false, type = all,...])` is the shortcut for `ds[byrow(ds, type, cols; ...), :]`, and `filter!(ds, cols; [missings = missing, type = all, ...])` is the shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...))`.
+
+The `missings` keyword argument can be used to control how the missing values should be treated, e.g. setting `missings = true` means that the function treats missings values as `true`.
 
 > Note, by default `type` is set to `all`.
-> Users can use `delete` and `delete!` as shortcuts for `ds[.!byrow(ds, type, cols; ...), :]` and `deleteat![ds, byrow(ds, type, cols; ...))`, respectively.
+> Users can use `delete` and `delete!` as shortcuts for `ds[.!byrow(ds, type, cols; ...), :]` and `deleteat![ds, byrow(ds, type, cols; ...))`, respectively. The `delete` and `delete!` functions also support the `missings` keyword argument.
 
 ### Examples
 
@@ -111,6 +113,38 @@ julia> byrow(ds, all, 2:3, by = [>(5), isodd])
  0
 ```
 
+In the next example we pass the `missings` keyword argument:
+
+```jldoctest
+julia> ds = Dataset(x = [2, 4, 6, missing], y = [1, 2, 3, 4])
+4×2 Dataset
+ Row │ x         y        
+     │ identity  identity 
+     │ Int64?    Int64?   
+─────┼────────────────────
+   1 │        2         1
+   2 │        4         2
+   3 │        6         3
+   4 │  missing         4
+
+julia> filter(ds, [:x, :y], by = iseven, missings = false)
+1×2 Dataset
+ Row │ x         y        
+     │ identity  identity 
+     │ Int64?    Int64?   
+─────┼────────────────────
+   1 │        4         2
+
+julia> filter(ds, [:x, :y], by = iseven, missings = true)
+2×2 Dataset
+ Row │ x         y        
+     │ identity  identity 
+     │ Int64?    Int64?   
+─────┼────────────────────
+   1 │        4         2
+   2 │  missing         4
+```
+
 We can use the combination of `modify!/modify` and `byrow` to filter observations based on all values in a column, e.g. in the following example we filter all rows which `:x2` and `:x3` are larger than their means:
 
 ```jldoctest
@@ -179,7 +213,7 @@ julia> filter(ds, :, type = isequal)
 
 however, unlike `map`, the function doesn't return the whole modified dataset, it returns a boolean data set with the same number of rows as `ds` and the same number of columns as the length of `cols`, while `fun` has been called on each observation. The return value of `fun` must be `true`, `false`, or `missing`. The combination of `mask` and `byrow` can be used to filter observations.
 
- Compared to `byrow`, the `mask` function has some useful features which are handy in some scenarios:
+ Compared to `filter/!` (`delete/!`), the `mask` function has the following default behaviour:
 
 * `mask` returns a boolean data set which shows exactly which observation will be selected when `fun` is called on it.
 * By default, the `mask` function filters observations based on their formatted values. And to change this we should pass `mapformats = false`.
