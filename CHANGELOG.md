@@ -4,6 +4,7 @@
 
 * `topkperm` is a new function for outputting the indices of top(bottom) k values [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
 * `topk` now supports any `DataType`, see [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
+* `filter`, `filter!`, `delete` and `delete!` have a new keyword argument for controlling how the missing values should be interpreted [issue #69](https://github.com/sl-solution/InMemoryDatasets.jl/issues/69)
 
 ## Fixes
 
