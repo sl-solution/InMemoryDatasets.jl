@@ -151,7 +151,7 @@ Perform a row-wise operation specified by `fun` on selected columns `cols`. Gene
 Sum results of calling function `by` on each element of each row of `ds`. If `cols` is not specified, `byrow`
 computes sum for all numeric columns in `ds`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
 
@@ -180,7 +180,7 @@ julia> byrow(ds, sum, :)
 Compute mean of the results of calling function `by` on each element of each row of `ds`. If `cols` is not specified, `byrow`
 computes mean for all numeric columns in `ds`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
 
@@ -213,9 +213,9 @@ change this to the formatted values.
 
 Each columns in `cols` may have its own `by`. This may be achieved by passing a vector of predicates to `by`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
-See [`filter`](@ref) or [`filter!`](@ref)
+See [`filter`](@ref), [`filter!`](@ref), [`delete`](@ref), [`delete!`](@ref)
 
 ## Example
 
@@ -246,9 +246,9 @@ change this to the formatted values.
 
 Each columns in `cols` may have its own `by`. This may be achieved by passing a vector of predicates to `by`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
-See [`filter`](@ref) or [`filter!`](@ref)
+See [`filter`](@ref), [`filter!`](@ref), [`delete`](@ref), [`delete!`](@ref)
 
 ## Example
 
@@ -274,7 +274,7 @@ julia> byrow(ds, any, :, by = [==(2), >(1)])
 
 Count the number of elements in each row for selected columns which the function `by` returns `true`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 ## Example
 
@@ -301,7 +301,7 @@ julia> byrow(ds, count, :, by = isodd)
 Return the product of the results of calling function `by` on each element of each row of `ds`. If `cols` is not specified, `byrow`
 computes product for all numeric columns in `ds`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
 
@@ -331,7 +331,7 @@ Returns a boolean vector which is `true` if all values in the corresponding row 
  Optionally, a vector of values can be passed view the `with` keyword argument to compare values in selected
  columns with the passed vector.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(isless)`](@ref), [`byrow(in)`](@ref), [`byrow(issorted)`](@ref)
 
@@ -378,7 +378,7 @@ Passing `rev = true` returns true if all values are greater than passed values v
 
 By default, the comparison is done via `isless` function, however, user may change it by passing a function via the `lt` keyword argument. The function passed to `lt` must accept two arguments where it takes its first argument from `cols` and its second argument from `with`. However, if `rev = true` the function passed as `lt` will take its first argument from `with` and its second argument from `cols`. The function passed as `lt` must return `true` or `false`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(isequal)`](@ref), [`byrow(in)`](@ref), [`byrow(issorted)`](@ref)
 
@@ -446,7 +446,7 @@ Return a boolean vector which its elements are true if in a row the value of `it
 
 The function passed as `eq` must accept two arguments where it takes its first argument from `item` and its second argument from `cols`. The function passed as `eq` must return `true` or `false`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(isequal)`](@ref), [`byrow(isless)`](@ref), [`byrow(issorted)`](@ref)
 
@@ -497,7 +497,7 @@ julia> byrow(ds, in, r"x", item = [5,4,5,4,5,4], eq = (x,y) -> x+y == 11)
 
 Return the column name of the first `true` value in `cols` or for which `by` returns `true`. If no such value is found, it returns `missing`. User can pass a vector of values or a column name to `item` to find the column name of the first time that the value of `item` is equal to the value of the column. User may use a customised function for checking the equlity of `item` and `columns` by passing it to the `eq` keyword argument. The function passed as `eq` must be a binary function where its first argument is from `item` and its second argument is from `col`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(findlast)`](@ref), [`byrow(select)`](@ref)
 
@@ -557,7 +557,7 @@ julia> byrow(ds, select, :, with = byrow(ds, findfirst, :, by = isodd))
 
 Return the column name of the last `true` value in `cols` or for which `by` returns `true`. If no such value is found, it returns `missing`. User can pass a vector of values or a column name to `item` to find the column name of the last time that the value of `item` is equal to the value of the column. User may use a customised function for checking the equlity of `item` and `columns` by passing it to the `eq` keyword argument. The function passed as `eq` must be a binary function where its first argument is from `item` and its second argument is from `col`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(findfirst)`](@ref), [`byrow(select)`](@ref)
 
@@ -619,7 +619,7 @@ Select value of `with` among `cols`. The `with` must be a vector of column names
 
 For heterogeneous column types, `byrow` use `promote_type` for the output. If the column select doesn't exist among `cols`, `byrow` returns `missing`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(findfirst)`](@ref), [`byrow(findlast)`](@ref)
 
@@ -685,7 +685,7 @@ Fill missing (default behaviour) values in `cols` with values from `with`. User 
 
 When `rolling = true`, `byrow` uses `with` to fill the missing values in the first column among `cols` and replace `with` with the updated values in the first column and uses these values to fill the missing values in the second column among `cols` and replace `with` with the updated values in the second column, and continues this process.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 `fill!` is a special `byrow` operations, because it changes the input data set rather than producing a vector.
 
@@ -764,7 +764,7 @@ See [`byrow(fill!)`](@ref)
 
 Return the first value in each row of `cols` which is not equal to `missing`, if any. Otherwise return `missing`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(select)`](@ref), [`byrow(findfirst)`](@ref), [`byrow(findlast)`](@ref)
 
@@ -800,7 +800,7 @@ returns maximum for all numeric columns in `ds`.
 
 Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(minimum)`](@ref), [`byrow(argmax)`](@ref), [`byrow(argmin)`](@ref)
 
@@ -837,7 +837,7 @@ returns minimum for all numeric columns in `ds`.
 
 Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(maximum)`](@ref), [`byrow(argmax)`](@ref), [`byrow(argmin)`](@ref)
 
@@ -874,7 +874,7 @@ passes all numeric columns in `ds`.
 
 Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(maximum)`](@ref), [`byrow(minimum)`](@ref), [`byrow(argmin)`](@ref)
 
@@ -910,7 +910,7 @@ passes all numeric columns in `ds`.
 
 Missing values are removed from the calculation. When all values in a row are missing, it returns `missing`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(maximum)`](@ref), [`byrow(minimum)`](@ref), [`byrow(argmax)`](@ref)
 
@@ -945,7 +945,7 @@ Test whether the values in rows (in selected `cols`) are in sorted order. Passin
 
 Missing values are larger than any other values. User may pass a customised funtion to `lt` to skip missing values.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(isequal)`](@ref), [`byrow(isless)`](@ref), [`byrow(in)`](@ref)
 
@@ -990,13 +990,13 @@ julia> byrow(ds, issorted, :, lt = !isequal)
 
 For each row and selected columns convert values to string and join them into a single string, inserting the given delimiter (if any) between adjacent strings. If `last` is given, it will be used instead of `delim` between the last two strings. Missing values are converted to empty string and `true` and `false` converted to `1` and `0`, respectively.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 @@@@hash@@@@
     byrow(ds::AbstractDataset, hash, cols; [by = identity, threads])
 
 Compute an integer hash code of result of calling `by` on each values in each row of selected `cols`. When `cols` is not specified `byrow` compute hash code for all columns in `ds`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 @@@@nunique@@@@
     byrow(ds::AbstractDataset, nunique, cols; [by = identity, count_missing = true])
 
@@ -1012,7 +1012,7 @@ Compute the variance of result of calling `by` on each value in each row of `ds`
 
 Missing values are droped from calculations, and when all values in a row are `missing` it returns `missing`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 # Examples
 ```jldoctest
@@ -1045,7 +1045,7 @@ Compute the standard deviation of result of calling `by` on each value in each r
 
 Missing values are droped from calculations, and when all values in a row are `missing` it returns `missing`.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 # Examples
 ```jldoctest
@@ -1076,7 +1076,7 @@ julia> byrow(ds, std, :, dof = false)
 
 Replace each value in `cols` by the result of `cumsum` on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(cumsum)`](@ref), [`byrow(cumprod!)`](@ref), [`byrow(cummax!)`](@ref), [`byrow(cummin!)`](@ref)
 
@@ -1132,7 +1132,7 @@ Variant of `byrow(cumsum!)` which pass a copy of `ds` and leave `ds` untouched.
 
 Replace each value in `cols` by the result of `cumprod` on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(cumprod)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cummax!)`](@ref), [`byrow(cummin!)`](@ref)
 @@@@cumprod@@@@
@@ -1145,7 +1145,7 @@ Variant of `byrow(cumprod!)` which pass a copy of `ds` and leave `ds` untouched.
 
 Replace each value in `cols` by the result of cumulative maximum on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(cummax)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref), [`byrow(cummin!)`](@ref)
 @@@@cummax@@@@
@@ -1157,7 +1157,7 @@ Variant of `byrow(cummax!)` which pass a copy of `ds` and leave `ds` untouched.
 
 Replace each value in `cols` by the result of cumulative minimum on each row. When `cols` is not specified `byrow` replaces every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(cummin)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref), [`byrow(cummax!)`](@ref)
 @@@@cummin@@@@
@@ -1169,7 +1169,7 @@ Variant of `byrow(cummin!)` which pass a copy of `ds` and leave `ds` untouched.
 
 Update `ds` in place with sorted values in each row of selected `cols`. When `cols` is not specified `byrow` uses every numeric columns. User can pass any keyword argument support by Julia `sort` function. Columns in `cols` will be promoted to be able to contain the new sorted values.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(sort)`](@ref), [`sort!`](@ref)
 
@@ -1224,7 +1224,7 @@ Variant of `byrow(sort!)` which pass a copy of `ds` and leave `ds` untouched.
 
 Replace each value in each row of `ds` for selected `cols` by its standardised values.
 
-Passing `threads = false` disables multitrheaded computations.
+Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(stdze)`](@ref)
 @@@@stdze@@@@
