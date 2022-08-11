@@ -391,12 +391,9 @@ Dataset(column_eltypes::AbstractVector{<:Type}, cnames::AbstractVector{<:Abstrac
 
 
 """
-    copy(ds::Dataset; copycols::Bool=true)
+    copy(ds::Dataset)
 
 Copy data set `ds`.
-If `copycols=true` (the default), return a new  `Dataset` holding
-copies of column vectors in `ds`.
-If `copycols=false`, return a new `Dataset` sharing column vectors with `ds`.
 
 > This function uses `copy` rather than `deepcopy` internally, thus, it is not safe to use it when observations are mutable.
 """
