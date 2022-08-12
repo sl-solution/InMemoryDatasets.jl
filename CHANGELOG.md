@@ -10,6 +10,8 @@
 
 * `topk` now works on `DatasetColumn` / `SubDatasetColumn`.
 
+## Performance
+
 # Version 0.7.7
 
 ## New features
