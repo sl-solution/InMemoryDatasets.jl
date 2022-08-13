@@ -970,11 +970,25 @@ n(x) = count(!ismissing, x)
 """
     filter(ds::AbstractDataset, cols; [missings = missing, type = all,...])
 
-A convenient shortcut for `ds[byrow(ds, type, cols; ...), :]`.
+The `filter` function exploits the `byrow` function to filter a data set. Basically, it calls `byrow(ds, type, cols; ...)`
+to return a boolean vector which its true elements indicate the filtered rows, and subsequently, calls `findall` and `getindex` to extract those filtered rows.
+Thus, user must pass a value to `type` which `byrow(ds, type, cols; ...)` returns a boolean vector (or a `BitVector`). 
 
-`type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+The `missings` keyword argument controls how the missing values should be interpreted by `filter`. By default, 
+they are left as `missing`, however, user can set it as `false` or `true` to force `filter` to interpret the missing values as
+`false` or `true`, respectively.
 
-The `missings` keyword argument controls how the missing values should be treated in `filter`. Setting `missings = false` treats missing values as `false` and setting it as `true` treats missing values as `true`.
+Beside `type` and `missings`, any passed keyword arguments to `filter` will be passed to the corresponding `byrow` function. For a list of keyword arguments supported by a given `type`, see the help of `byrow` for that specific type, e.g. in Julia REPL type `?byrow(type)` for a given `type` to see the documentation of the selected `type`.
+
+The following provides more details about `type = all` and `type = any`.
+
+# `type = all` and `type = any`
+
+When `type = all` (`type = any`), `filter` filters each row that all (any) of its values are `true` (testing by `isequal`). User can pass the keyword argument `by` to replace `isequal` with any other predicators. The `by` keyword argument can be a single function or a vector of functions. When a single function is passed to the `by` keyword argument, all columns use it as predicator, however, by passing a vector of functions, user can pass a separate predicator to each column. 
+
+By default, when `type` is `all` or `any`, the `filter` function uses the actual values of each row, however, by passing `mapformats = true`, the formatted values will be used instead.
+
+Note that, multithreading is on by default for types `all` and `any`, thus, `filter` exploits all the cores available to `Julia` for performing the computations. User can pass `threads = false` to disable this feature.
 
 See [`byrow`](@ref), [`filter!`](@ref), [`delete!`](@ref), [`delete`](@ref)
 
@@ -1093,21 +1107,7 @@ function Base.filter(ds::AbstractDataset, cols::Union{NTuple{N, ColumnIndex}, Ve
         ds[idx_val, :]
     end
 end
-"""
-    filter!(ds::AbstractDataset, cols; [missings = missing, type = all, ...])
 
-Variant of `filter` which replaces the passed data set with the filtered one.
-
-It is a convenient shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...)]`.
-
-`type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
-
-The `missings` keyword argument controls how the missing values should be treated in `filter!`. Setting `missings = false` treats missing values as `false` and setting it as `true` treats missing values as `true`.
-
-Refer to [`filter`](@ref) for exmaples.
-
-See [`byrow`](@ref), [`filter`](@ref), [`delete!`](@ref), [`delete`](@ref)
-"""
 function _filter!(ds::Dataset, cols::Union{NTuple{N, ColumnIndex}, AbstractVector{T}, ColumnIndex, MultiColumnIndex}; missings = missing, type = all, kwargs...) where N where T <: Union{<:Integer, Symbol, AbstractString} 
     if type in (all, any)
         idx = byrow(ds, type, cols; missings = missings, kwargs...)
@@ -1123,6 +1123,15 @@ function _filter!(ds::Dataset, cols::Union{NTuple{N, ColumnIndex}, AbstractVecto
     end
     deleteat!(ds, idx_val)
 end 
+"""
+    filter!(ds::AbstractDataset, cols; [missings = missing, type = all, ...])
+
+Variant of `filter` which replaces the passed data set with the filtered one.
+
+Refer to [`filter`](@ref) for examples.
+
+See [`byrow`](@ref), [`filter`](@ref), [`delete!`](@ref), [`delete`](@ref)
+"""
 Base.filter!(ds::Dataset, cols::AbstractVector; missings::Union{Missing, Bool} = missing, type = all, kwargs...) = _filter!(ds, cols; missings = missings, type = type, kwargs...)
 Base.filter!(ds::Dataset, cols::Union{ColumnIndex, MultiColumnIndex}; missings::Union{Missing, Bool} = missing, type = all, kwargs...) = _filter!(ds, cols; missings = missings, type = type, kwargs...)
 Base.filter!(ds::Dataset, cols::NTuple{N, ColumnIndex}; missings::Union{Missing, Bool} = missing, kwargs...) where N = _filter!(ds, cols; missings = missings, kwargs...)
@@ -1132,11 +1141,15 @@ Base.filter!(ds::Dataset, cols::NTuple{N, ColumnIndex}; missings::Union{Missing,
 """
     delete(ds::AbstractDataset, cols; [missings = missing, type = all,...])
 
-A convenient shortcut for `ds[.!byrow(ds, type, cols; ...), :]`.
+The `delete` function exploits the `byrow` function to filter a data set. Basically, it calls `byrow(ds, type, cols; ...)`
+to return a boolean vector which its true elements indicate the rows that should be deleted, and subsequently, calls `findall` and `getindex` to extract rest of rows.
+Thus, user must pass a value to `type` which `byrow(ds, type, cols; ...)` returns a boolean vector (or a `BitVector`). 
 
-`type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
+The `missings` keyword argument controls how the missing values should be interpreted by `delete`. By default, 
+they are left as `missing`, however, user can set it as `false` or `true` to force `delete` to interpret them as
+`false` or `true`, respectively.
 
-The `missings` keyword argument controls how the missing values should be treated in `delete`. Setting `missings = false` treats missing values as `false` and setting it as `true` treats missing values as `true`.
+For more information about the keyword arguments acceptable by `delete`, refer to `filter`.
 
 Compare to [`deleteat!`](@ref)
 
@@ -1261,15 +1274,9 @@ end
 
 Variant of `delete` which replaces the passed data set with the filtered one.
 
-It is a convenient shortcut for `deleteat![ds, byrow(ds, type, cols; ...)]`.
-
-`type` can be any function supported by `byrow` which returns a Vector{Bool} or BitVector.
-
-The `missings` keyword argument controls how the missing values should be treated in `delete!`. Setting `missings = false` treats missing values as `false` and setting it as `true` treats missing values as `true`.
-
 Compare to [`deleteat!`](@ref)
 
-Refer to [`delete`](@ref) for exmaples.
+Refer to [`delete`](@ref) for examples.
 
 See [`delete`](@ref), [`byrow`](@ref), [`filter`](@ref), [`filter!`](@ref)
 """
