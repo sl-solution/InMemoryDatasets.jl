@@ -220,42 +220,41 @@ function _base!(a, pos, base::Integer, x::Integer, pad::Int, neg::Bool)
     a
 end
 
-function _op_for_row_join!(buffer, currentpos, y, f, delim, quotechar, idx, p, lo, hi)
-    idx[] += 1
-    if quotechar === nothing
-        if idx[] < p
+function _op_for_row_join_barrier!(buffer, currentpos, y, f, delim, quotechar, idx, p, lo, hi)
+        if quotechar === nothing
+        if idx < p
             for i in lo:hi
-                currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f[idx[]](y[i]))
+                currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f(y[i]))
                 currentpos[i] = write_delim!(view(buffer, :, i), currentpos[i], delim)
             end
         else
             for i in lo:hi
-                currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f[idx[]](y[i]))
+                currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f(y[i]))
                 currentpos[i] = write_eol!(view(buffer, :, i), currentpos[i])
             end
         end
     else
-        if nonmissingtype(eltype(y)) <: AbstractString
-            quotecharval = UInt8(quotechar)
-        else
-            quotecharval = nothing
-        end
-        if idx[]<p
+        quotecharval = UInt8(quotechar)
+        if idx<p
             for i in lo:hi
                 currentpos[i] = write_quotechar!(view(buffer, :, i), currentpos[i], quotecharval)
-                currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f[idx[]](y[i]))
+                currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f(y[i]))
                 currentpos[i] = write_quotechar!(view(buffer, :, i), currentpos[i], quotecharval)
                 currentpos[i] = write_delim!(view(buffer, :, i), currentpos[i], delim)
             end
         else
             for i in lo:hi
                 currentpos[i] = write_quotechar!(view(buffer, :, i), currentpos[i], quotecharval)
-                currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f[idx[]](y[i]))
+                currentpos[i] = write_vals!(view(buffer, :, i), currentpos[i], f(y[i]))
                 currentpos[i] = write_quotechar!(view(buffer, :, i), currentpos[i], quotecharval)
                 currentpos[i] = write_eol!(view(buffer, :, i), currentpos[i])
             end
         end
     end
+                        
+function _op_for_row_join!(buffer, currentpos, y, f, delim, quotechar, idx, p, lo, hi)
+    idx[] += 1
+   _op_for_row_join_barrier!(buffer, currentpos, y, f[idx[]], delim, quotechar, idx[], p, lo, hi)
     currentpos
 end
 
