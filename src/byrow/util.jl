@@ -251,6 +251,7 @@ function _op_for_row_join_barrier!(buffer, currentpos, y, f, delim, quotechar, i
             end
         end
     end
+end
                         
 function _op_for_row_join!(buffer, currentpos, y, f, delim, quotechar, idx, p, lo, hi)
     idx[] += 1
