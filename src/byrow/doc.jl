@@ -1222,11 +1222,69 @@ Variant of `byrow(sort!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@stdze!@@@@
     byrow(ds::AbstractDataset, stdze!, cols; [threads])
 
-Replace each value in each row of `ds` for selected `cols` by its standardised values.
+Replace each value in each row of `ds` for selected `cols` by its standardised values. After Standardization, each row have a mean of 0 and a variance of 1.
+
+Missing values are skipped from the calculation. When all values in a row are missing, it returns `missing`.
 
 Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(stdze)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x=[1,2,5], y=[3.7,-2.4,5.5], z=[9, 4, 3])
+3×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Float64?  Int64?   
+─────┼──────────────────────────────
+   1 │        1       3.7         9
+   2 │        2      -2.4         4
+   3 │        5       5.5         3
+
+julia> byrow(ds,stdze!,:)
+3×3 Dataset
+ Row │ x          y          z         
+     │ identity   identity   identity  
+     │ Float64    Float64    Float64   
+─────┼─────────────────────────────────
+   1 │ -0.876372  -0.21295    1.08932
+   2 │  0.244339  -1.09952    0.855186
+   3 │  0.377964   0.755929  -1.13389
+
+julia> byrow(ds,mean,:)
+3-element Vector{Float64}:
+  1.4802973661668753e-16
+-3.700743415417188e-17
+  0.0
+  
+julia> byrow(ds,var,:)
+3-element Vector{Union{Missing, Float64}}:
+  1.0000000000000004
+  1.0
+  0.9999999999999989
+
+julia> ds = Dataset(x=[missing,2,missing], y=[3.7,-2.4,missing], z=[9, 4, missing])
+3×3 Dataset
+ Row │ x         y          z        
+     │ identity  identity   identity 
+     │ Int64?    Float64?   Int64?   
+─────┼───────────────────────────────
+   1 │  missing        3.7         9
+   2 │        2       -2.4         4
+   3 │  missing  missing     missing 
+
+julia> byrow(ds,stdze!,:)
+3×3 Dataset
+Row │ x               y               z              
+    │ identity        identity        identity       
+    │ Float64?        Float64?        Float64?       
+─────┼────────────────────────────────────────────────
+  1 │ missing              -0.707107        0.707107
+  2 │       0.244339       -1.09952         0.855186
+  3 │ missing         missing         missing  
+```
+
 @@@@stdze@@@@
     byrow(ds::AbstractDataset, stdze, cols; [threads])
 
