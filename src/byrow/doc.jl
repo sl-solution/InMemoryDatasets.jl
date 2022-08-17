@@ -1220,7 +1220,7 @@ julia> byrow(ds, sort!, :, rev = true)
 
 Variant of `byrow(sort!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@stdze!@@@@
-    byrow(ds::AbstractDataset, stdze!, cols; [threads])
+    byrow(ds::Dataset, stdze!, cols; [threads])
 
 Replace each value in each row of `ds` for selected `cols` by its standardised values. After Standardization, each row have a mean of 0 and a variance of 1.
 
@@ -1276,13 +1276,13 @@ julia> ds = Dataset(x=[missing,2,missing], y=[3.7,-2.4,missing], z=[9, 4, missin
 
 julia> byrow(ds,stdze!,:)
 3×3 Dataset
-Row │ x               y               z              
-    │ identity        identity        identity       
-    │ Float64?        Float64?        Float64?       
+ Row │ x               y               z              
+     │ identity        identity        identity       
+     │ Float64?        Float64?        Float64?       
 ─────┼────────────────────────────────────────────────
-  1 │ missing              -0.707107        0.707107
-  2 │       0.244339       -1.09952         0.855186
-  3 │ missing         missing         missing  
+   1 │ missing              -0.707107        0.707107
+   2 │       0.244339       -1.09952         0.855186
+   3 │ missing         missing         missing 
 ```
 
 @@@@stdze@@@@
