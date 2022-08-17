@@ -679,7 +679,7 @@ julia> byrow(ds, select, :, with = byrow(ds, findfirst, :, by = isodd))
  7
 ```
 @@@@fill!@@@@
-    byrow(ds::Dataset, fill!, cols; [with, by = ismissing, rolling = false, threads])
+    byrow(ds::AbstractDataset, fill!, cols; [with, by = ismissing, rolling = false, threads])
 
 Fill missing (default behaviour) values in `cols` with values from `with`. User can pass a vector of values or a column name to `with`. `byrow` fills the values in-place, so the type of `cols` and `with` must match. By default, `byrow` fills only missing values in `cols`, but, user can pass any function to `by` which `byrow` fills only the values that returns `true` when `by` is called on them.
 
