@@ -679,7 +679,7 @@ julia> byrow(ds, select, :, with = byrow(ds, findfirst, :, by = isodd))
  7
 ```
 @@@@fill!@@@@
-    byrow(ds::AbstractDataset, fill!, cols; [with, by = ismissing, rolling = false, threads])
+    byrow(ds::Dataset, fill!, cols; [with, by = ismissing, rolling = false, threads])
 
 Fill missing (default behaviour) values in `cols` with values from `with`. User can pass a vector of values or a column name to `with`. `byrow` fills the values in-place, so the type of `cols` and `with` must match. By default, `byrow` fills only missing values in `cols`, but, user can pass any function to `by` which `byrow` fills only the values that returns `true` when `by` is called on them.
 
@@ -1072,7 +1072,7 @@ julia> byrow(ds, std, :, dof = false)
   missing
 ```
 @@@@cumsum!@@@@
-    byrow(ds::AbstractDataset, cumsum!, cols; [missings = :ignore, threads])
+    byrow(ds::Dataset, cumsum!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of `cumsum` on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1127,8 +1127,7 @@ julia> byrow(ds, cumsum!, missings = :skip)
 
 Variant of `byrow(cumsum!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@cumprod!@@@@
-
-    byrow(ds, cumprod!, cols; [missings = :ignore, threads])
+    byrow(ds::Dataset, cumprod!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of `cumprod` on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1136,12 +1135,11 @@ Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(cumprod)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cummax!)`](@ref), [`byrow(cummin!)`](@ref)
 @@@@cumprod@@@@
-
-    byrow(ds, cumprod!, cols; [missings = :ignore, threads])
+    byrow(ds::AbstractDataset, cumprod, cols; [missings = :ignore, threads])
 
 Variant of `byrow(cumprod!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@cummax!@@@@
-    byrow(ds::AbstractDataset, cummax!, cols; [missings = :ignore, threads])
+    byrow(ds::Dataset, cummax!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of cumulative maximum on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1153,7 +1151,7 @@ See [`byrow(cummax)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref)
 
 Variant of `byrow(cummax!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@cummin!@@@@
-    byrow(ds::AbstractDataset, cummin!, cols; [missings = :ignore, threads])
+    byrow(ds::Dataset, cummin!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of cumulative minimum on each row. When `cols` is not specified `byrow` replaces every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1165,7 +1163,7 @@ See [`byrow(cummin)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref)
 
 Variant of `byrow(cummin!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@sort!@@@@
-    byrow(ds::AbstractDataset, sort!, cols; [threads, kwargs...])
+    byrow(ds::Dataset, sort!, cols; [threads, kwargs...])
 
 Update `ds` in place with sorted values in each row of selected `cols`. When `cols` is not specified `byrow` uses every numeric columns. User can pass any keyword argument support by Julia `sort` function. Columns in `cols` will be promoted to be able to contain the new sorted values.
 
