@@ -1072,7 +1072,7 @@ julia> byrow(ds, std, :, dof = false)
   missing
 ```
 @@@@cumsum!@@@@
-    byrow(ds::AbstractDataset, cumsum!, cols; [missings = :ignore, threads])
+    byrow(ds::Dataset, cumsum!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of `cumsum` on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1127,8 +1127,7 @@ julia> byrow(ds, cumsum!, missings = :skip)
 
 Variant of `byrow(cumsum!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@cumprod!@@@@
-
-    byrow(ds, cumprod!, cols; [missings = :ignore, threads])
+    byrow(ds::Dataset, cumprod!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of `cumprod` on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1136,12 +1135,11 @@ Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(cumprod)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cummax!)`](@ref), [`byrow(cummin!)`](@ref)
 @@@@cumprod@@@@
-
-    byrow(ds, cumprod!, cols; [missings = :ignore, threads])
+    byrow(ds::AbstractDataset, cumprod, cols; [missings = :ignore, threads])
 
 Variant of `byrow(cumprod!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@cummax!@@@@
-    byrow(ds::AbstractDataset, cummax!, cols; [missings = :ignore, threads])
+    byrow(ds::Dataset, cummax!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of cumulative maximum on each row. When `cols` is not specified `byrow` replace every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1153,7 +1151,7 @@ See [`byrow(cummax)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref)
 
 Variant of `byrow(cummax!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@cummin!@@@@
-    byrow(ds::AbstractDataset, cummin!, cols; [missings = :ignore, threads])
+    byrow(ds::Dataset, cummin!, cols; [missings = :ignore, threads])
 
 Replace each value in `cols` by the result of cumulative minimum on each row. When `cols` is not specified `byrow` replaces every numeric columns. The type of selected column will be promoted to be able to contain the result of computations. By default missing values are filled with the result of preceding calculations, and passing `missings = :skip` leaves `missing` values untouched.
 
@@ -1165,7 +1163,7 @@ See [`byrow(cummin)`](@ref), [`byrow(cumsum!)`](@ref), [`byrow(cumprod!)`](@ref)
 
 Variant of `byrow(cummin!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@sort!@@@@
-    byrow(ds::AbstractDataset, sort!, cols; [threads, kwargs...])
+    byrow(ds::Dataset, sort!, cols; [threads, kwargs...])
 
 Update `ds` in place with sorted values in each row of selected `cols`. When `cols` is not specified `byrow` uses every numeric columns. User can pass any keyword argument support by Julia `sort` function. Columns in `cols` will be promoted to be able to contain the new sorted values.
 
@@ -1220,13 +1218,71 @@ julia> byrow(ds, sort!, :, rev = true)
 
 Variant of `byrow(sort!)` which pass a copy of `ds` and leave `ds` untouched.
 @@@@stdze!@@@@
-    byrow(ds::AbstractDataset, stdze!, cols; [threads])
+    byrow(ds::Dataset, stdze!, cols; [threads])
 
-Replace each value in each row of `ds` for selected `cols` by its standardised values.
+Replace each value in each row of `ds` for selected `cols` by its standardised values. After Standardization, each row have a mean of 0 and a variance of 1.
+
+Missing values are skipped from the calculation. When all values in a row are missing, it returns `missing`.
 
 Passing `threads = false` disables multithreaded computations.
 
 See [`byrow(stdze)`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(x=[1,2,5], y=[3.7,-2.4,5.5], z=[9, 4, 3])
+3×3 Dataset
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Float64?  Int64?   
+─────┼──────────────────────────────
+   1 │        1       3.7         9
+   2 │        2      -2.4         4
+   3 │        5       5.5         3
+
+julia> byrow(ds,stdze!,:)
+3×3 Dataset
+ Row │ x          y          z         
+     │ identity   identity   identity  
+     │ Float64    Float64    Float64   
+─────┼─────────────────────────────────
+   1 │ -0.876372  -0.21295    1.08932
+   2 │  0.244339  -1.09952    0.855186
+   3 │  0.377964   0.755929  -1.13389
+
+julia> byrow(ds,mean,:)
+3-element Vector{Float64}:
+  1.4802973661668753e-16
+-3.700743415417188e-17
+  0.0
+  
+julia> byrow(ds,var,:)
+3-element Vector{Union{Missing, Float64}}:
+  1.0000000000000004
+  1.0
+  0.9999999999999989
+
+julia> ds = Dataset(x=[missing,2,missing], y=[3.7,-2.4,missing], z=[9, 4, missing])
+3×3 Dataset
+ Row │ x         y          z        
+     │ identity  identity   identity 
+     │ Int64?    Float64?   Int64?   
+─────┼───────────────────────────────
+   1 │  missing        3.7         9
+   2 │        2       -2.4         4
+   3 │  missing  missing     missing 
+
+julia> byrow(ds,stdze!,:)
+3×3 Dataset
+ Row │ x               y               z              
+     │ identity        identity        identity       
+     │ Float64?        Float64?        Float64?       
+─────┼────────────────────────────────────────────────
+   1 │ missing              -0.707107        0.707107
+   2 │       0.244339       -1.09952         0.855186
+   3 │ missing         missing         missing 
+```
+
 @@@@stdze@@@@
     byrow(ds::AbstractDataset, stdze, cols; [threads])
 
