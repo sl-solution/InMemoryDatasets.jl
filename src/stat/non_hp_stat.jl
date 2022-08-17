@@ -359,12 +359,46 @@ function stat_median!(v::AbstractArray{T,1}) where {T}
 end
 
 # finding k largest in an array with missing values
-swap!(x, i, j) = x[i], x[j] = x[j], x[i]
+function topk_sort!(v::AbstractVector, lo::Integer, hi::Integer, lt_fun)
+    @inbounds for i = lo+1:hi
+        j = i
+        x = v[i]
+        while j > lo
+            if lt_fun(x, v[j-1])
+                v[j] = v[j-1]
+                j -= 1
+                continue
+            end
+            break
+        end
+        v[j] = x
+    end
+    return v
+end
+function topk_sort_permute!(v::AbstractVector, perm::AbstractVector, lo::Integer, hi::Integer, lt_fun)
+    @inbounds for i = lo+1:hi
+        j = i
+        x = v[i]
+        y = perm[i]
+        while j > lo
+            if lt_fun(x, v[j-1])
+                v[j] = v[j-1]
+                perm[j] = perm[j-1]
+                j -= 1
+                continue
+            end
+            break
+        end
+        v[j] = x
+        perm[j] = y
+    end
+    return v
+end
 
 function initiate_topk_res!(res, x)
     cnt = 1
     idx = 1
-    for i in 1:length(x)
+    @inbounds for i in 1:length(x)
         idx = i
         if !ismissing(x[i])
             res[cnt] = x[i]
@@ -379,7 +413,7 @@ end
 function initiate_topk_res_perm!(perm, res, x)
     cnt = 1
     idx = 1
-    for i in 1:length(x)
+    @inbounds for i in 1:length(x)
         idx = i
         if !ismissing(x[i])
             res[cnt] = x[i]
@@ -393,53 +427,53 @@ function initiate_topk_res_perm!(perm, res, x)
     idx, cnt-1
 end
     
-Base.@propagate_inbounds function insert_fixed_sorted!(x, item, ord)
-    if ord(item, x[end])
-        x[end] = item
-    else
-       return
-    end
-    i = length(x) - 1
-    while i > 0
-        if ord((x[i+1]), (x[i]))
-            swap!(x, i, i + 1)
-            i -= 1
-        else
-            break
-        end
-    end
-end
-# TODO we do not need x, this is just easier to implement, later we may fix this
-Base.@propagate_inbounds function insert_fixed_sorted_perm!(perm, x, idx, item, ord)
-    if ord(item, x[end])
-        x[end] = item
-        perm[end] = idx
-    else
+Base.@propagate_inbounds function insert_fixed_sorted!(x, item, lt_fun)
+    if !lt_fun(item, x[end])
         return
     end
-    i = length(x) - 1
-    while i > 0
-        if ord((x[i+1]), (x[i]))
-            swap!(x, i, i + 1)
-            swap!(perm, i, i + 1)
-            i -= 1
-        else
-            break
+    x[end] = item
+    j = length(x)
+    while j > 1
+        if lt_fun(item, x[j-1])
+            x[j] = x[j-1]
+            j -= 1
+            continue
         end
+        break
     end
+    x[j] = item
+    nothing
 end
-
-
-Base.@propagate_inbounds function k_largest(x::AbstractVector{T}, k::Int) where {T}
+# TODO we do not need x, this is just easier to implement, later we may fix this
+Base.@propagate_inbounds function insert_fixed_sorted_perm!(perm, x, idx, item, lt_fun)
+    if !lt_fun(item, x[end])
+        return
+    end
+    x[end] = item
+    perm[end] = idx
+    j = length(x)
+    while j > 1
+        if lt_fun(item, x[j-1])
+            x[j] = x[j-1]
+            perm[j] = perm[j-1]
+            j -= 1
+            continue
+        end
+        break
+    end
+    x[j] = item
+    perm[j] = idx
+    nothing
+end
+Base.@propagate_inbounds function topk_vals(x::AbstractVector{T}, k::Int, lt_fun::F) where T where F
     k < 1 && throw(ArgumentError("k must be greater than 1"))
-    k == 1 && return Union{Missing, T}[maximum(identity, x)]
     all(ismissing, x) && return Union{Missing, T}[missing]
     res = Vector{nonmissingtype(T)}(undef, k)
     idx, cnt = initiate_topk_res!(res, x)
-    sort!(view(res,1:cnt), rev = true)
+    topk_sort!(res, 1, cnt, lt_fun)
     for i in idx+1:length(x)
         if !ismissing(x[i])
-            insert_fixed_sorted!(res, x[i], (y1, y2) -> isless(y2, y1))
+            insert_fixed_sorted!(res, x[i], lt_fun)
             cnt += 1
         end
     end
@@ -449,43 +483,19 @@ Base.@propagate_inbounds function k_largest(x::AbstractVector{T}, k::Int) where 
         allowmissing(res)
     end
 end
-
-Base.@propagate_inbounds function k_smallest(x::AbstractVector{T}, k::Int) where {T}
-    k < 1 && throw(ArgumentError("k must be greater than 1"))
-    k == 1 && return Union{Missing, T}[minimum(identity, x)]
-    all(ismissing, x) && return Union{Missing, T}[missing]
-    res = Vector{nonmissingtype(T)}(undef, k)
-    idx, cnt = initiate_topk_res!(res, x)
-    sort!(view(res,1:cnt))
-    for i in idx+1:length(x)
-        if !ismissing(x[i])
-            insert_fixed_sorted!(res, x[i], (y1, y2) -> isless(y1, y2))
-            cnt += 1
-        end
-    end
-    if cnt < k
-        allowmissing(view(res, 1:cnt))
-    else
-        allowmissing(res)
-    end
-end
-
 
 # ktop permutation
 
-Base.@propagate_inbounds function k_largest_perm(x::AbstractVector{T}, k::Int) where {T}
+Base.@propagate_inbounds function topk_perm(x::AbstractVector{T}, k::Int, lt_fun::F) where T where F
     k < 1 && throw(ArgumentError("k must be greater than 1"))
-    k == 1 && return Union{Missing, Int}[argmax(x)]
     all(ismissing, x) && return Union{Missing, Int}[missing]
     res = Vector{nonmissingtype(T)}(undef, k)
     perm = zeros(Int, k)
     idx, cnt = initiate_topk_res_perm!(perm, res, x)
-    sort_perm = sortperm(view(res,1:cnt), rev = true)
-    permute!(view(res,1:cnt), sort_perm)
-    permute!(view(perm,1:cnt), sort_perm)
+    topk_sort_permute!(res, perm, 1, cnt, lt_fun)
     for i in idx+1:length(x)
         if !ismissing(x[i])
-            insert_fixed_sorted_perm!(perm, res, i, x[i], (y1, y2) -> isless(y2, y1))
+            insert_fixed_sorted_perm!(perm, res, i, x[i], lt_fun)
             cnt += 1
         end
     end
@@ -495,30 +505,6 @@ Base.@propagate_inbounds function k_largest_perm(x::AbstractVector{T}, k::Int) w
         allowmissing(perm)
     end
 end
-
-Base.@propagate_inbounds function k_smallest_perm(x::AbstractVector{T}, k::Int) where {T}
-    k < 1 && throw(ArgumentError("k must be greater than 1"))
-    k == 1 && return Union{Missing, Int}[argmin(x)]
-    all(ismissing, x) && return Union{Missing, Int}[missing]
-    res = Vector{nonmissingtype(T)}(undef, k)
-    perm = zeros(Int, k)
-    idx, cnt = initiate_topk_res_perm!(perm, res, x)
-    sort_perm = sortperm(view(res,1:cnt))
-    permute!(view(res,1:cnt), sort_perm)
-    permute!(view(perm,1:cnt), sort_perm)
-    for i in idx+1:length(x)
-        if !ismissing(x[i])
-            insert_fixed_sorted_perm!(perm, res, i, x[i], (y1, y2) -> isless(y1, y2))
-            cnt += 1
-        end
-    end
-    if cnt < k
-        allowmissing(view(perm, 1:cnt))
-    else
-        allowmissing(perm)
-    end
-end
-
 
 """
     topk(x, k; rev = false)
@@ -529,12 +515,12 @@ Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns
 
 Also see [`topkperm`](@ref)
 """
-function topk(x::AbstractVector, k::Int; rev::Bool=false)
+function topk(x::AbstractVector, k::Int; rev::Bool=false, lt = isless, by = identity)
     @assert firstindex(x) == 1 "topk only supports 1-based indexing"
     if rev
-        k_smallest(x, k)
+        topk_vals(x, k, (y1, y2) -> lt(by(y1), by(y2)))
     else
-        k_largest(x, k)
+        topk_vals(x, k, (y1, y2) -> lt(by(y2), by(y1)))
     end
 end
 """
@@ -546,12 +532,12 @@ Return the indices of upto `k` largest nonmissing elements of `x`. When `rev = t
 
 Also see [`topk`](@ref)
 """
-function topkperm(x::AbstractVector, k::Int; rev::Bool=false)
+function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt = isless, by = identity)
     @assert firstindex(x) == 1 "topkperm only supports 1-based indexing"
     if rev
-        k_smallest_perm(x, k)
+        topk_perm(x, k, (y1, y2) -> lt(by(y1), by(y2)))
     else
-        k_largest_perm(x, k)
+        topk_perm(x, k, (y1, y2) -> lt(by(y2), by(y1)))
     end
 end
 
