@@ -395,38 +395,38 @@ function topk_sort_permute!(v::AbstractVector, perm::AbstractVector, lo::Integer
     return v
 end
 
-function initiate_topk_res!(res, x)
+function initiate_topk_res!(res, x, by)
     cnt = 1
     idx = 1
     @inbounds for i in 1:length(x)
         idx = i
-        if !ismissing(x[i])
+        if !ismissing(by(x[i]))
             res[cnt] = x[i]
             cnt += 1
             if cnt > length(res)
                 break
             end
-        end        
+        end
     end
-    idx, cnt-1
+    idx, cnt - 1
 end
-function initiate_topk_res_perm!(perm, res, x)
+function initiate_topk_res_perm!(perm, res, x, by)
     cnt = 1
     idx = 1
     @inbounds for i in 1:length(x)
         idx = i
-        if !ismissing(x[i])
+        if !ismissing(by(x[i]))
             res[cnt] = x[i]
             perm[cnt] = i
             cnt += 1
             if cnt > length(res)
                 break
             end
-        end        
+        end
     end
-    idx, cnt-1
+    idx, cnt - 1
 end
-    
+
 Base.@propagate_inbounds function insert_fixed_sorted!(x, item, lt_fun)
     if !lt_fun(item, x[end])
         return
@@ -465,14 +465,14 @@ Base.@propagate_inbounds function insert_fixed_sorted_perm!(perm, x, idx, item, 
     perm[j] = idx
     nothing
 end
-Base.@propagate_inbounds function topk_vals(x::AbstractVector{T}, k::Int, lt_fun::F) where T where F
+Base.@propagate_inbounds function topk_vals(x::AbstractVector{T}, k::Int, lt_fun::F, by) where {T} where {F}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
-    all(ismissing, x) && return Union{Missing, T}[missing]
+    all(ismissing, x) && return Union{Missing,T}[missing]
     res = Vector{nonmissingtype(T)}(undef, k)
-    idx, cnt = initiate_topk_res!(res, x)
+    idx, cnt = initiate_topk_res!(res, x, by)
     topk_sort!(res, 1, cnt, lt_fun)
     for i in idx+1:length(x)
-        if !ismissing(x[i])
+        if !ismissing(by(x[i]))
             insert_fixed_sorted!(res, x[i], lt_fun)
             cnt += 1
         end
@@ -486,15 +486,15 @@ end
 
 # ktop permutation
 
-Base.@propagate_inbounds function topk_perm(x::AbstractVector{T}, k::Int, lt_fun::F) where T where F
+Base.@propagate_inbounds function topk_perm(x::AbstractVector{T}, k::Int, lt_fun::F, by) where {T} where {F}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
-    all(ismissing, x) && return Union{Missing, Int}[missing]
+    all(ismissing, x) && return Union{Missing,Int}[missing]
     res = Vector{nonmissingtype(T)}(undef, k)
     perm = zeros(Int, k)
-    idx, cnt = initiate_topk_res_perm!(perm, res, x)
+    idx, cnt = initiate_topk_res_perm!(perm, res, x, by)
     topk_sort_permute!(res, perm, 1, cnt, lt_fun)
     for i in idx+1:length(x)
-        if !ismissing(x[i])
+        if !ismissing(by(x[i]))
             insert_fixed_sorted_perm!(perm, res, i, x[i], lt_fun)
             cnt += 1
         end
@@ -507,37 +507,33 @@ Base.@propagate_inbounds function topk_perm(x::AbstractVector{T}, k::Int, lt_fun
 end
 
 """
-    topk(x, k; rev = false)
+    topk(x, k; rev = false, lt = <, by = identity)
 
-Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`.
-
-> The `topk` function uses `isless` for comparing values
+Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
 
 Also see [`topkperm`](@ref)
 """
-function topk(x::AbstractVector, k::Int; rev::Bool=false, lt = isless, by = identity)
+function topk(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity)
     @assert firstindex(x) == 1 "topk only supports 1-based indexing"
     if rev
-        topk_vals(x, k, (y1, y2) -> lt(by(y1), by(y2)))
+        topk_vals(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
     else
-        topk_vals(x, k, (y1, y2) -> lt(by(y2), by(y1)))
+        topk_vals(x, k, (y1, y2) -> lt(by(y2), by(y1)), by)
     end
 end
 """
-    topkperm(x, k; rev = false)
+    topkperm(x, k; rev = false, lt = <, by = identity)
 
-Return the indices of upto `k` largest nonmissing elements of `x`. When `rev = true` it returns the indices of upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`.
-
-> The `topkperm` function uses `isless` for comparing values
+Return the indices of upto `k` largest nonmissing elements of `x`. When `rev = true` it returns the indices of upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
 
 Also see [`topk`](@ref)
 """
-function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt = isless, by = identity)
+function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity)
     @assert firstindex(x) == 1 "topkperm only supports 1-based indexing"
     if rev
-        topk_perm(x, k, (y1, y2) -> lt(by(y1), by(y2)))
+        topk_perm(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
     else
-        topk_perm(x, k, (y1, y2) -> lt(by(y2), by(y1)))
+        topk_perm(x, k, (y1, y2) -> lt(by(y2), by(y1)), by)
     end
 end
 
