@@ -468,7 +468,7 @@ end
 Base.@propagate_inbounds function topk_vals(x::AbstractVector{T}, k::Int, lt_fun::F, by) where {T} where {F}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     all(ismissing, x) && return Union{Missing,T}[missing]
-    res = Vector{nonmissingtype(T)}(undef, k)
+    res = Vector{T}(undef, k)
     idx, cnt = initiate_topk_res!(res, x, by)
     topk_sort!(res, 1, cnt, lt_fun)
     for i in idx+1:length(x)
@@ -489,7 +489,7 @@ end
 Base.@propagate_inbounds function topk_perm(x::AbstractVector{T}, k::Int, lt_fun::F, by) where {T} where {F}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     all(ismissing, x) && return Union{Missing,Int}[missing]
-    res = Vector{nonmissingtype(T)}(undef, k)
+    res = Vector{T}(undef, k)
     perm = zeros(Int, k)
     idx, cnt = initiate_topk_res_perm!(perm, res, x, by)
     topk_sort_permute!(res, perm, 1, cnt, lt_fun)
@@ -507,33 +507,49 @@ Base.@propagate_inbounds function topk_perm(x::AbstractVector{T}, k::Int, lt_fun
 end
 
 """
-    topk(x, k; rev = false, lt = <, by = identity)
+    topk(x, k; rev = false, lt = <, by = identity, threads = false)
 
 Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
 
 Also see [`topkperm`](@ref)
 """
-function topk(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity)
+function topk(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads = false)
     @assert firstindex(x) == 1 "topk only supports 1-based indexing"
-    if rev
-        topk_vals(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
+    if threads && length(x) > Threads.nthreads()
+        if rev
+            hp_topk_vals(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
+        else
+            hp_topk_vals(x, k, (y1, y2) -> lt(by(y2), by(y1)), by)
+        end
     else
-        topk_vals(x, k, (y1, y2) -> lt(by(y2), by(y1)), by)
+        if rev
+            topk_vals(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
+        else
+            topk_vals(x, k, (y1, y2) -> lt(by(y2), by(y1)), by)
+        end
     end
 end
 """
-    topkperm(x, k; rev = false, lt = <, by = identity)
+    topkperm(x, k; rev = false, lt = <, by = identity, threads = false)
 
 Return the indices of upto `k` largest nonmissing elements of `x`. When `rev = true` it returns the indices of upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
 
 Also see [`topk`](@ref)
 """
-function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity)
+function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads = false)
     @assert firstindex(x) == 1 "topkperm only supports 1-based indexing"
-    if rev
-        topk_perm(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
+    if threads && Threads.nthreads() > length(x)
+        if rev
+            hp_topk_perm(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
+        else
+            hp_topk_perm(x, k, (y1, y2) -> lt(by(y2), by(y1)), by)
+        end
     else
-        topk_perm(x, k, (y1, y2) -> lt(by(y2), by(y1)), by)
+        if rev
+            topk_perm(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
+        else
+            topk_perm(x, k, (y1, y2) -> lt(by(y2), by(y1)), by)
+        end
     end
 end
 
