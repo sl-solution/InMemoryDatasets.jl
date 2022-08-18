@@ -107,7 +107,7 @@ Base.@propagate_inbounds function hp_topk_perm(x::AbstractVector{T}, k::Int, lt_
         th_x = view(x, lo:hi)
         th_res_out = view(res_out, (i-1)*k+1:i*k)
         th_perm_out = view(perm_out, (i-1)*k+1:i*k)
-        idx, cnt = initiate_topk_res_perm!(th_perm, th_res, th_x, by)
+        idx, cnt = initiate_topk_res_perm!(th_perm, th_res, th_x, by, offset = lo - 1)
         topk_sort_permute!(th_res, th_perm, 1, cnt, lt_fun)
         for i in idx+1:length(th_x)
             if !ismissing(by(th_x[i]))

@@ -410,14 +410,14 @@ function initiate_topk_res!(res, x, by)
     end
     idx, cnt - 1
 end
-function initiate_topk_res_perm!(perm, res, x, by)
+function initiate_topk_res_perm!(perm, res, x, by; offset = 0)
     cnt = 1
     idx = 1
     @inbounds for i in 1:length(x)
         idx = i
         if !ismissing(by(x[i]))
             res[cnt] = x[i]
-            perm[cnt] = i
+            perm[cnt] = i+offset
             cnt += 1
             if cnt > length(res)
                 break
@@ -478,7 +478,7 @@ Base.@propagate_inbounds function topk_vals(x::AbstractVector{T}, k::Int, lt_fun
         end
     end
     if cnt < k
-        allowmissing(view(res, 1:cnt))
+        allowmissing(resize!(res, cnt))
     else
         allowmissing(res)
     end
@@ -500,7 +500,7 @@ Base.@propagate_inbounds function topk_perm(x::AbstractVector{T}, k::Int, lt_fun
         end
     end
     if cnt < k
-        allowmissing(view(perm, 1:cnt))
+        allowmissing(resize!(perm, cnt))
     else
         allowmissing(perm)
     end
