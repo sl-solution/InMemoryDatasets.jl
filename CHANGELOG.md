@@ -12,6 +12,7 @@
 
 ## Performance
 
+* `row_join!` allocates less when `mapformats=true`, thus, perform better. This directly affects `filewriter` performance in `DLMReader`.
 # Version 0.7.7
 
 ## New features
