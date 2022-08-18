@@ -16,14 +16,29 @@ Naturally, other `fun`s supported by `byrow` which return a `Vector{Bool}` or `B
 
 ### `filter` and `filter!`
 
-The `filter` and `filter!` functions are two shortcuts which wrap the `byrow` and `getindex`/`deleteat!` operations in a function.
+The `filter` function exploits the `byrow` function to filter a data set. Basically, it calls `byrow(ds, type, cols; ...)`
+to return a boolean vector which its true elements indicate the filtered rows, and subsequently, it calls `findall` and `getindex` to extract those filtered rows.
+Thus, user must pass a value to `type` which `byrow(ds, type, cols; ...)` returns a boolean vector (or a `BitVector`). 
 
-`filter(ds, cols; [missings = missing, view = false, type = all,...])` is the shortcut for `ds[byrow(ds, type, cols; ...), :]`, and `filter!(ds, cols; [missings = missing, type = all, ...])` is the shortcut for `deleteat![ds, .!byrow(ds, type, cols; ...))`.
+The `missings` keyword argument controls how the missing values should be interpreted by `filter`. By default, 
+the missing values are left as `missing`, however, user can set it as `false` or `true` to force `filter` to interpret the missing values as
+`false` or `true`, respectively.
 
-The `missings` keyword argument can be used to control how the missing values should be treated, e.g. setting `missings = true` means that the function treats missings values as `true`.
+Beside `type` and `missings`, any passed keyword arguments to `filter` will be passed to the corresponding `byrow` function. For a list of keyword arguments supported by a given `type`, see the help of `byrow` for that specific type, e.g. in Julia REPL type `?byrow(type)` for a given `type` to see the documentation of the selected `type`.
 
-> Note, by default `type` is set to `all`.
-> Users can use `delete` and `delete!` as shortcuts for `ds[.!byrow(ds, type, cols; ...), :]` and `deleteat![ds, byrow(ds, type, cols; ...))`, respectively. The `delete` and `delete!` functions also support the `missings` keyword argument.
+The following provides more details about `type = all` and `type = any`.
+
+**`type = all` and `type = any`**
+
+When `type = all` (`type = any`), `filter` filters each row that all (any) of its values are `true` (testing by `isequal`). User can pass the keyword argument `by` to replace `isequal` with any other predicators. The `by` keyword argument can be a single function or a vector of functions. When a single function is passed to the `by` keyword argument, all columns use it as predicator, however, by passing a vector of functions, user can pass a separate predicator to each column. 
+
+By default, when `type` is `all` or `any`, the `filter` function uses the actual values of each row, however, by passing `mapformats = true`, the formatted values will be used instead.
+
+Note that, multithreading is on by default for types `all` and `any`, thus, `filter` exploits all the cores available to `Julia` for performing the computations. User can pass `threads = false` to disable this feature.
+
+### `delete` and `delete!`
+
+The `delete` and `delete!` functions are the similar to the `filter` and `filter!` functions, respectivley, however, instead of filtering rows, these functions remove the filtered rows.
 
 ### Examples
 

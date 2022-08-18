@@ -31,24 +31,46 @@ function expand_Base_Fix(f, f2)
 	end
 end
 
+_check_missing(x, missings) = ismissing(x) ? missings : x
+
+function expand_Base_Fix(f, f2, missings)
+	if f isa Base.Fix2
+		return _bool(x->_check_missing(f.f(f2(x), f.x), missings))
+	elseif f isa Base.Fix1
+		return _bool(x->_check_missing(f.f(f.x,f2(x)), missings))
+	else
+		return x->_check_missing(f(f2(x)), missings)
+	end
+end
+
 function byrow(ds::AbstractDataset, ::typeof(any), cols::MultiColumnIndex = :; missings = missing, by = isequal(true), threads = nrow(ds) > Threads.nthreads()*10, mapformats = false)
 	colsidx = multiple_getindex(index(ds), cols)
 	if by isa AbstractVector
 		if mapformats
-			by = map((x,y)->expand_Base_Fix(x, getformat(ds, y)), by, colsidx)
+			if !ismissing(missings)
+				by = map((x,y)->expand_Base_Fix(x, getformat(ds, y), missings), by, colsidx)
+			else
+				by = map((x,y)->expand_Base_Fix(x, getformat(ds, y)), by, colsidx)
+			end
+		else
+			if !ismissing(missings)
+			    by = map(y -> x -> ismissing(x) ? missings : y(x), by)
+			end
 		end
 	else
 		if mapformats
-			by = map(y->expand_Base_Fix(by, getformat(ds, y)), colsidx)
-		end
-	end
-	if !ismissing(missings)
-		if by isa AbstractVector
-			by = map(y -> x -> ismissing(x) ? missings : y(x), by)
+			if !ismissing(missings)
+				by = map(y->expand_Base_Fix(by, getformat(ds, y), missings), colsidx)
+			else
+				by = map(y->expand_Base_Fix(by, getformat(ds, y)), colsidx)
+			end
 		else
-			by = first(map(y -> x -> ismissing(x) ? missings : y(x), [by]))
+			if !ismissing(missings)
+				by = first(map(y -> x -> ismissing(x) ? missings : y(x), [by]))
+			end
 		end
 	end
+	
 	row_any(ds, by, colsidx, threads = threads)
 
 end
@@ -59,18 +81,27 @@ function byrow(ds::AbstractDataset, ::typeof(all), cols::MultiColumnIndex = :; m
 	colsidx =  multiple_getindex(index(ds), cols)
 	if by isa AbstractVector
 		if mapformats
-			by = map((x,y)->expand_Base_Fix(x, getformat(ds, y)), by, colsidx)
+			if !ismissing(missings)
+				by = map((x,y)->expand_Base_Fix(x, getformat(ds, y), missings), by, colsidx)
+			else
+				by = map((x,y)->expand_Base_Fix(x, getformat(ds, y)), by, colsidx)
+			end
+		else
+			if !ismissing(missings)
+				by = map(y -> x -> ismissing(x) ? missings : y(x), by)
+			end
 		end
 	else
 		if mapformats
-			by = map(y->expand_Base_Fix(by, getformat(ds, y)), colsidx)
-		end
-	end
-	if !ismissing(missings)
-		if by isa AbstractVector
-			by = map(y -> x -> ismissing(x) ? missings : y(x), by)
+			if !ismissing(missings)
+				by = map(y->expand_Base_Fix(by, getformat(ds, y), missings), colsidx)
+			else
+				by = map(y->expand_Base_Fix(by, getformat(ds, y)), colsidx)
+			end
 		else
-			by = first(map(y -> x -> ismissing(x) ? missings : y(x), [by]))
+			if !ismissing(missings)
+				by = first(map(y -> x -> ismissing(x) ? missings : y(x), [by]))
+			end
 		end
 	end
 	row_all(ds, by, colsidx, threads = threads)
