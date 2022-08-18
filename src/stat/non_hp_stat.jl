@@ -538,7 +538,7 @@ Also see [`topk`](@ref)
 """
 function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads = false)
     @assert firstindex(x) == 1 "topkperm only supports 1-based indexing"
-    if threads && Threads.nthreads() > length(x)
+    if threads && length(x) > Threads.nthreads() 
         if rev
             hp_topk_perm(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
         else
