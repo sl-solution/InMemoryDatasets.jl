@@ -554,4 +554,4 @@ julia> using DLMReader
 julia> filewriter("flights.csv", flights)
 ```
 
-To write the formatted values, you need to use `filwriter` with `mapformats = true` option. For more information, see `?filewriter`.
+To write the formatted values, you need to use `filewriter` with `mapformats = true` option. For more information, see `?filewriter`.
