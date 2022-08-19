@@ -116,8 +116,8 @@ Base.cumprod(col::SubOrDSCol; missings=:ignore) = cumprod(__!(col), missings=mis
 cummin(col::SubOrDSCol; missings=:ignore) = cummin(__!(col), missings=missings)
 cummax(col::SubOrDSCol; missings=:ignore) = cummax(__!(col), missings=missings)
 
-topk(col::SubOrDSCol, k; rev=false) = topk(__!(col), k, rev=rev)
-topkperm(col::SubOrDSCol, k; rev=false) = topkperm(__!(col), k, rev=rev)
+topk(col::SubOrDSCol, k; rev=false, lt = <, by = identity, threads = true) = topk(__!(col), k, rev=rev, lt = lt, by = by, threads = threads)
+topkperm(col::SubOrDSCol, k; rev=false, lt = <, by = identity, threads = true) = topkperm(__!(col), k, rev=rev, lt = lt, by = by, threads = threads)
 lag(col::SubOrDSCol; default=missing) = lag(__!(col), default=default)
 lag(col::SubOrDSCol, k; default=missing) = lag(__!(col), k, default=default)
 lead(col::SubOrDSCol; default=missing) = lead(__!(col), default=default)
