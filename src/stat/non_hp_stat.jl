@@ -372,9 +372,9 @@ function initiate_topk_res!(res, x)
             if cnt > length(res)
                 break
             end
-        end
+        end        
     end
-    idx, cnt - 1
+    idx, cnt-1
 end
 function initiate_topk_res_perm!(perm, res, x)
     cnt = 1
@@ -388,16 +388,16 @@ function initiate_topk_res_perm!(perm, res, x)
             if cnt > length(res)
                 break
             end
-        end
+        end        
     end
-    idx, cnt - 1
+    idx, cnt-1
 end
-
+    
 Base.@propagate_inbounds function insert_fixed_sorted!(x, item, ord)
     if ord(item, x[end])
         x[end] = item
     else
-        return
+       return
     end
     i = length(x) - 1
     while i > 0
@@ -432,11 +432,11 @@ end
 
 Base.@propagate_inbounds function k_largest(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
-    k == 1 && return Union{Missing,T}[maximum(identity, x)]
-    all(ismissing, x) && return Union{Missing,T}[missing]
+    k == 1 && return Union{Missing, T}[maximum(identity, x)]
+    all(ismissing, x) && return Union{Missing, T}[missing]
     res = Vector{nonmissingtype(T)}(undef, k)
     idx, cnt = initiate_topk_res!(res, x)
-    sort!(view(res, 1:cnt), rev=true)
+    sort!(view(res,1:cnt), rev = true)
     for i in idx+1:length(x)
         if !ismissing(x[i])
             insert_fixed_sorted!(res, x[i], (y1, y2) -> isless(y2, y1))
@@ -452,11 +452,11 @@ end
 
 Base.@propagate_inbounds function k_smallest(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
-    k == 1 && return Union{Missing,T}[minimum(identity, x)]
-    all(ismissing, x) && return Union{Missing,T}[missing]
+    k == 1 && return Union{Missing, T}[minimum(identity, x)]
+    all(ismissing, x) && return Union{Missing, T}[missing]
     res = Vector{nonmissingtype(T)}(undef, k)
     idx, cnt = initiate_topk_res!(res, x)
-    sort!(view(res, 1:cnt))
+    sort!(view(res,1:cnt))
     for i in idx+1:length(x)
         if !ismissing(x[i])
             insert_fixed_sorted!(res, x[i], (y1, y2) -> isless(y1, y2))
@@ -475,14 +475,14 @@ end
 
 Base.@propagate_inbounds function k_largest_perm(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
-    k == 1 && return Union{Missing,Int}[argmax(x)]
-    all(ismissing, x) && return Union{Missing,Int}[missing]
+    k == 1 && return Union{Missing, Int}[argmax(x)]
+    all(ismissing, x) && return Union{Missing, Int}[missing]
     res = Vector{nonmissingtype(T)}(undef, k)
     perm = zeros(Int, k)
     idx, cnt = initiate_topk_res_perm!(perm, res, x)
-    sort_perm = sortperm(view(res, 1:cnt), rev=true)
-    permute!(view(res, 1:cnt), sort_perm)
-    permute!(view(perm, 1:cnt), sort_perm)
+    sort_perm = sortperm(view(res,1:cnt), rev = true)
+    permute!(view(res,1:cnt), sort_perm)
+    permute!(view(perm,1:cnt), sort_perm)
     for i in idx+1:length(x)
         if !ismissing(x[i])
             insert_fixed_sorted_perm!(perm, res, i, x[i], (y1, y2) -> isless(y2, y1))
@@ -498,14 +498,14 @@ end
 
 Base.@propagate_inbounds function k_smallest_perm(x::AbstractVector{T}, k::Int) where {T}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
-    k == 1 && return Union{Missing,Int}[argmin(x)]
-    all(ismissing, x) && return Union{Missing,Int}[missing]
+    k == 1 && return Union{Missing, Int}[argmin(x)]
+    all(ismissing, x) && return Union{Missing, Int}[missing]
     res = Vector{nonmissingtype(T)}(undef, k)
     perm = zeros(Int, k)
     idx, cnt = initiate_topk_res_perm!(perm, res, x)
-    sort_perm = sortperm(view(res, 1:cnt))
-    permute!(view(res, 1:cnt), sort_perm)
-    permute!(view(perm, 1:cnt), sort_perm)
+    sort_perm = sortperm(view(res,1:cnt))
+    permute!(view(res,1:cnt), sort_perm)
+    permute!(view(perm,1:cnt), sort_perm)
     for i in idx+1:length(x)
         if !ismissing(x[i])
             insert_fixed_sorted_perm!(perm, res, i, x[i], (y1, y2) -> isless(y1, y2))
@@ -588,8 +588,6 @@ Replace those elements of `x` which returns `true` when `by` is called on them w
 
 See also [`ffill`](@ref) and [`ffill!`](@ref)
 """
-(bfill, bfill!)
-
 function bfill!(x::AbstractVector; by=ismissing)
     @assert firstindex(x) == 1 "bfill!/bfill only support 1-based indexing"
     for i in length(x)-1:-1:1
