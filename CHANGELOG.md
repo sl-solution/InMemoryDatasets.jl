@@ -2,7 +2,7 @@
 
 ## New features
 
-* The `topk` and `topkperm` functions supports two extra arguments: `lt` and `by` which are by default are set as `<` and `identity`, respectively
+* The `topk` and `topkperm` functions supports two extra arguments: `lt` and `by` which by default are set as `<` and `identity`, respectively
 * `topkperm` is a new function for outputting the indices of top(bottom) k values [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
 * `topk` now supports any `DataType`, see [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
 * `filter`, `filter!`, `delete` and `delete!` have a new keyword argument for controlling how the missing values should be interpreted [issue #69](https://github.com/sl-solution/InMemoryDatasets.jl/issues/69)
