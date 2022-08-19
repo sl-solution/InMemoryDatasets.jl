@@ -38,7 +38,7 @@ Note that, multithreading is on by default for types `all` and `any`, thus, `fil
 
 ### `delete` and `delete!`
 
-The `delete` and `delete!` functions are the similar to the `filter` and `filter!` functions, respectivley, however, instead of filtering rows, these functions remove the filtered rows.
+The `delete` and `delete!` functions are similar to the `filter` and `filter!` functions, respectivley, however, instead of filtering rows, these functions remove the filtered rows.
 
 ### Examples
 
