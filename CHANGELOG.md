@@ -4,7 +4,6 @@
 
 * `topkperm` is a new function for outputting the indices of top(bottom) k values [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
 * `topk` now supports any `DataType`, see [issue #67](https://github.com/sl-solution/InMemoryDatasets.jl/issues/67).
-* The `topk` and `topkperm` supports two extra keyword arugments: `lt` and `by`, they are by default set as `<` and `identity`, respectively.
 * `filter`, `filter!`, `delete` and `delete!` have a new keyword argument for controlling how the missing values should be interpreted [issue #69](https://github.com/sl-solution/InMemoryDatasets.jl/issues/69)
 
 ## Fixes
@@ -13,8 +12,7 @@
 
 ## Performance
 
-* `topk` and `topkperm` can exploits multiple threads when `threads=true` is passed as their arguments.
-* `row_join!` allocates less when `mapformats=true`, thus, performs better. This directly affects `filewriter` performance in `DLMReader`.
+* `row_join!` allocates less when `mapformats=true`, thus, perform better. This directly affects `filewriter` performance in `DLMReader`.
 # Version 0.7.7
 
 ## New features
