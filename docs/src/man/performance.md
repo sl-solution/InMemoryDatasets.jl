@@ -65,6 +65,8 @@ This is because every single change in a data set will trigger multiple function
 
 Beside the order of the output, note that `groupby` and `gatherby` use very different approaches for grouping observations. `groupby/!` utilises the multithreading efficiently however, `gatherby` exploits the fast path of computations for some specific operations and usually has lower memory footprint.
 
+> InMemoryDatasets passes a copy of columns to `combine` when users pass a groupped data set created by `groupby` or `gatherby` as its first argument, thus, it is safe to mutate the columns in-place. However, when a groupped data set is created by `groupby!` then mutating in-place inside the `combine` function is not safe, because in this case, InMemoryDatasets passes the columns directly to `combine`.
+
 ## Beware that every column must support `missings`
 
 Every columns in InMemoryDatasets will be converted to support `missing`. Thus, it is wise to create the vectors in that way. For example, if you load an `Arrow` file which its columns don't support missing values, InMemoryDatasets materialises the whole file, but if they already support missing values, InMemoryDatasets uses the memory map for accessing values.
