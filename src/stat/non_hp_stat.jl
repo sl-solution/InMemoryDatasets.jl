@@ -659,6 +659,8 @@ Replace those elements of `x` which returns `true` when `by` is called on them w
 
 See also [`ffill`](@ref) and [`ffill!`](@ref)
 """
+(bfill, bfill!)
+
 function bfill!(x::AbstractVector; by=ismissing)
     @assert firstindex(x) == 1 "bfill!/bfill only support 1-based indexing"
     for i in length(x)-1:-1:1
