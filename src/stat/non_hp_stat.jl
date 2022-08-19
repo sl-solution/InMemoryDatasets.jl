@@ -410,14 +410,14 @@ function initiate_topk_res!(res, x, by)
     end
     idx, cnt - 1
 end
-function initiate_topk_res_perm!(perm, res, x, by; offset = 0)
+function initiate_topk_res_perm!(perm, res, x, by; offset=0)
     cnt = 1
     idx = 1
     @inbounds for i in 1:length(x)
         idx = i
         if !ismissing(by(x[i]))
             res[cnt] = x[i]
-            perm[cnt] = i+offset
+            perm[cnt] = i + offset
             cnt += 1
             if cnt > length(res)
                 break
@@ -512,8 +512,37 @@ end
 Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
 
 Also see [`topkperm`](@ref)
+
+# Example
+```jldoctest
+julia> x = [10, -11, missing, 1, 0]
+5-element Vector{Union{Missing, Int64}}:
+  10
+ -11
+    missing
+   1
+   0
+
+julia> topk(x, 3)
+3-element Vector{Union{Missing, Int64}}:
+ 10
+  1
+  0
+
+julia> topk(x, 3, by = abs)
+3-element Vector{Union{Missing, Int64}}:
+ -11
+  10
+   1
+
+julia> topk(x, 3, by = abs, rev = true)
+3-element Vector{Union{Missing, Int64}}:
+  0
+  1
+ 10
+```
 """
-function topk(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads = false)
+function topk(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads=false)
     @assert firstindex(x) == 1 "topk only supports 1-based indexing"
     if threads && length(x) > Threads.nthreads()
         if rev
@@ -535,10 +564,54 @@ end
 Return the indices of upto `k` largest nonmissing elements of `x`. When `rev = true` it returns the indices of upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
 
 Also see [`topk`](@ref)
+
+# Examples
+```jldoctest
+julia> x = rand(1000);
+
+julia> topkperm(x, 10)
+10-element Vector{Union{Missing, Int64}}:
+ 711
+ 470
+ 291
+ 401
+ 927
+ 124
+ 949
+ 164
+ 216
+ 948
+
+julia> topkperm(x, 10, threads = true)
+10-element Vector{Union{Missing, Int64}}:
+ 711
+ 470
+ 291
+ 401
+ 927
+ 124
+ 949
+ 164
+ 216
+ 948
+
+julia> topkperm(x, 10, threads = true, rev = true)
+10-element Vector{Union{Missing, Int64}}:
+ 207
+ 351
+ 497
+ 768
+ 135
+ 599
+ 608
+ 798
+ 675
+ 648
+```
 """
-function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads = false)
+function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads=false)
     @assert firstindex(x) == 1 "topkperm only supports 1-based indexing"
-    if threads && length(x) > Threads.nthreads() 
+    if threads && length(x) > Threads.nthreads()
         if rev
             hp_topk_perm(x, k, (y1, y2) -> lt(by(y1), by(y2)), by)
         else
