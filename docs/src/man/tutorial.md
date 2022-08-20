@@ -476,7 +476,7 @@ julia> @chain flights begin
 
 ![cancellation](https://raw.githubusercontent.com/sl-solution/InMemoryDatasetsTutorial/main/flights.svg)
 
-## Exporting your data
+## Exporting data
 
 You can use the `JLD2.jl` package to export the data set with meta information into a JLD2 file.
 
