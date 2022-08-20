@@ -511,7 +511,7 @@ end
 
 Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
 
-Also see [`topkperm`](@ref)
+Also see [`topkperm`](@ref), [`partialsort`](@ref)
 
 # Example
 ```jldoctest
@@ -563,7 +563,7 @@ end
 
 Return the indices of upto `k` largest nonmissing elements of `x`. When `rev = true` it returns the indices of upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
 
-Also see [`topk`](@ref)
+Also see [`topk`](@ref), [`partialsortperm`](@ref)
 
 # Examples
 ```jldoctest
