@@ -485,7 +485,7 @@ Base.@propagate_inbounds function topk_vals(x::AbstractVector{T}, k::Int, lt_fun
 end
 
 # ktop permutation
-
+#TODO should we return [missing] or Int[] when all elements are missings?
 Base.@propagate_inbounds function topk_perm(x::AbstractVector{T}, k::Int, lt_fun::F, by) where {T} where {F}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     all(ismissing, x) && return Union{Missing,Int}[missing]
