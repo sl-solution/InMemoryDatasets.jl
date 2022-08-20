@@ -117,15 +117,14 @@ julia> select(flights, Between(:FlightDate, :Dest), r"Taxi|Delay")
 
 There are several packages in `Julia` to apply several operations one after the other, here we demonstrate the `Chain` package.
 
-Let's assume we want to select `:IATA` and `:DepDelay` columns and filter for delays over 60 minutes. Since the `:DepDelay` column has missing data, we may want to filter out `missing` values via `dropmissing`.  Here we assume we want a copy of the result (compared to view of the result). Note that `dropmissing` is not making extra copy of data, since we set `view = true`, and by passing a view of `flights` we reduce memory usage. The `@chain` macro automatically fills the first argument of the chained functions, thus, `flights` becomes the first argument of `dropmissing`, the output of `dropmissing` becomes the first argument of `view`, and the output of `view` becomes the first argument of `filter`.
+Let's assume we want to select `:IATA` and `:DepDelay` columns and filter for delays over 60 minutes.  Here we assume we want a copy of the result (compared to view of the result). The `@chain` macro automatically fills the first argument of the chained functions, thus, `flights` becomes the first argument `view`, and the output of `view` becomes the first argument of `filter`. We passed `missings = false` to `filter` to drop those rows in `flights` where `:DepDelay` is missing.
 
 ```julia
 julia> using Chain
 
 julia> delayed =  @chain flights begin
-                     dropmissing(:DepDelay, view = true)
                      view(:, [:IATA, :DepDelay])
-                     filter(2, by = >(60))
+                     filter(:DepDelay, by = >(60), missings = false)
                    end
 10614×2 Dataset
    Row │ IATA      DepDelay
@@ -215,7 +214,7 @@ To get the average delay for each destination, we `groupby` our data set by `:De
 
 
 ```julia
-julia> combine(groupby(flights, :Dest), :ArrDelay => mean)
+julia> combine(groupby(flights, :Dest), :ArrDelay => IMD.mean)
 120×2 Dataset
  Row │ Dest      mean_ArrDelay
      │ identity  identity      
@@ -383,11 +382,11 @@ julia> @chain flights begin
 
 In the previous section, we always applied functions that reduced a vector to a single value.
 Non-reduction functions instead take a vector and return a vector. For example we can rank, within each `:IATA`, how much
-delay a given flight had and figure out the day and month with the two greatest delays: (Note that for using a multivariate function in `combine`, the input columns must pass as `Tuple`)
+delay a given flight had and figure out the day and month with the two greatest delays: (Note that for using a multivariate function in `combine`, the input columns must be passed as `Tuple`)
 
 
 ```julia
-julia> most_delay(x, y) = x[first(sortperm(y, by = -),2)]
+julia> most_delay(x, y) = x[topkperm(y, 2)]
 julia> @chain flights begin
          groupby(:IATA)
          combine((:FlightDate, :DepDelay) => most_delay => :Most_Delay)
