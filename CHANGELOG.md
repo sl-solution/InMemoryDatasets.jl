@@ -11,11 +11,14 @@
 
 * `topk` now works on `DatasetColumn` / `SubDatasetColumn`.
 
+* Stats functions throw `ArgumentError` when an empty vector is passed to them.
+
 ## Performance
 
 * The `topk` and `topkperm` functions are multithreaded ready, i.e. users can pass `threads = true` to these functions.
 * `row_join!` allocates less when `mapformats=true`, thus, performs better. This directly affects `filewriter` performance in `DLMReader`.
-# Version 0.7.7
+  
+  # Version 0.7.7
 
 ## New features
 
