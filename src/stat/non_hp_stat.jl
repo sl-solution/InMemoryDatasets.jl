@@ -543,6 +543,7 @@ julia> topk(x, 3, by = abs, rev = true)
 ```
 """
 function topk(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads=false)
+    isempty(x) && throw(ArgumentError("empty arrays are not allowed"))
     @assert firstindex(x) == 1 "topk only supports 1-based indexing"
     if threads && length(x) > Threads.nthreads()
         if rev
@@ -610,6 +611,7 @@ julia> topkperm(x, 10, threads = true, rev = true)
 ```
 """
 function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads=false)
+    isempty(x) && throw(ArgumentError("empty arrays are not allowed"))
     @assert firstindex(x) == 1 "topkperm only supports 1-based indexing"
     if threads && length(x) > Threads.nthreads()
         if rev
