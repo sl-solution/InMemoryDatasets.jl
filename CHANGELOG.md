@@ -16,6 +16,9 @@
 ## Performance
 
 * The `topk` and `topkperm` functions are multithreaded ready, i.e. users can pass `threads = true` to these functions.
+  
+  * Now we use binary search for large values of k. This improves the performance of the functions in the worst case scenarios.
+
 * `row_join!` allocates less when `mapformats=true`, thus, performs better. This directly affects `filewriter` performance in `DLMReader`.
   
   # Version 0.7.7
