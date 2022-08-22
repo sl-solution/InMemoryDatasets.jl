@@ -1,4 +1,4 @@
-# Dev
+# Version 0.7.8
 
 ## New features
 
@@ -20,8 +20,8 @@
   * Now we use binary search for large values of k. This improves the performance of the functions in the worst case scenarios.
 
 * `row_join!` allocates less when `mapformats=true`, thus, performs better. This directly affects `filewriter` performance in `DLMReader`.
-  
-  # Version 0.7.7
+
+* # Version 0.7.7
 
 ## New features
 
