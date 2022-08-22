@@ -426,34 +426,21 @@ function initiate_topk_res_perm!(perm, res, x, by; offset=0)
     end
     idx, cnt - 1
 end
-function shift_insert!(x::Vector{T}, i, item) where {T<:Union{Missing,FLOATS,INTEGERS}}
+# it is unsafe because x must be continuous in memory
+function unsafe_shift_insert!(x::AbstractVector{T}, i, item) where T<:Union{Missing, FLOATS, INTEGERS}
     n = length(x)
     ccall(:memmove, Ptr{Cvoid}, (Ptr{Cvoid}, Ptr{Cvoid}, Csize_t), pointer(x, i + 1), pointer(x, i), (n - i) * Base.aligned_sizeof(T))
     x[i] = item
     x
 end
-Base.@propagate_inbounds function insert_fixed_sorted!(x::Vector{T}, item, lt_fun) where {T<:Union{Missing,FLOATS,INTEGERS}}
+Base.@propagate_inbounds function insert_fixed_sorted_binary!(x, item, lt_fun)
     if !lt_fun(item, x[end])
         return
     end
-    if length(x) < 21
-        x[end] = item
-        j = length(x)
-        while j > 1
-            if lt_fun(item, x[j-1])
-                x[j] = x[j-1]
-                j -= 1
-                continue
-            end
-            break
-        end
-        x[j] = item
-        nothing
-    else
-        idx = searchsortedlast(x, item, lt=lt_fun)
-        shift_insert!(x, idx + 1, item)
-        nothing
-    end
+    idx = searchsortedlast(x, item, lt=lt_fun)
+    unsafe_shift_insert!(x, idx + 1, item)
+    nothing
+    
 end
 Base.@propagate_inbounds function insert_fixed_sorted!(x, item, lt_fun)
     if !lt_fun(item, x[end])
@@ -473,32 +460,14 @@ Base.@propagate_inbounds function insert_fixed_sorted!(x, item, lt_fun)
     nothing
 end
 # TODO we do not need x, this is just easier to implement, later we may fix this
-Base.@propagate_inbounds function insert_fixed_sorted_perm!(perm, x::Vector{T}, idx, item, lt_fun) where T <: Union{Missing, FLOATS, INTEGERS}
+Base.@propagate_inbounds function insert_fixed_sorted_perm_binary!(perm, x, idx, item, lt_fun)
     if !lt_fun(item, x[end])
         return
     end
-    if length(x) < 21
-        x[end] = item
-        perm[end] = idx
-        j = length(x)
-        while j > 1
-            if lt_fun(item, x[j-1])
-                x[j] = x[j-1]
-                perm[j] = perm[j-1]
-                j -= 1
-                continue
-            end
-            break
-        end
-        x[j] = item
-        perm[j] = idx
-        nothing
-    else
-        i = searchsortedlast(x, item, lt=lt_fun)
-        shift_insert!(x, i + 1, item)
-        shift_insert!(perm, i + 1, idx)
-        nothing
-    end
+    i = searchsortedlast(x, item, lt=lt_fun)
+    unsafe_shift_insert!(x, i + 1, item)
+    unsafe_shift_insert!(perm, i + 1, idx)
+    nothing
 end
 
 Base.@propagate_inbounds function insert_fixed_sorted_perm!(perm, x, idx, item, lt_fun)
@@ -524,6 +493,7 @@ end
 Base.@propagate_inbounds function topk_vals(x::AbstractVector{T}, k::Int, lt_fun::F, by) where {T} where {F}
     k < 1 && throw(ArgumentError("k must be greater than 1"))
     all(ismissing, x) && return Union{Missing,T}[missing]
+    # TODO should we use similar() here?
     res = Vector{T}(undef, k)
     idx, cnt = initiate_topk_res!(res, x, by)
     topk_sort!(res, 1, cnt, lt_fun)
@@ -531,6 +501,35 @@ Base.@propagate_inbounds function topk_vals(x::AbstractVector{T}, k::Int, lt_fun
         if !ismissing(by(x[i]))
             insert_fixed_sorted!(res, x[i], lt_fun)
             cnt += 1
+        end
+    end
+    if cnt < k
+        allowmissing(resize!(res, cnt))
+    else
+        allowmissing(res)
+    end
+end
+
+#if k is greater than 20 (15 in topkperm) we switch to binary search - 21 and 16 are selected based on simulation study
+Base.@propagate_inbounds function topk_vals(x::Union{Vector{T}, SubArray{T, N, Vector{T}, Tuple{I}, L}}, k::Int, lt_fun::F, by) where {T<:Union{Missing, FLOATS, INTEGERS}} where {F} where N where I <: UnitRange{Int} where L
+    k < 1 && throw(ArgumentError("k must be greater than 1"))
+    all(ismissing, x) && return Union{Missing,T}[missing]
+    res = Vector{T}(undef, k)
+    idx, cnt = initiate_topk_res!(res, x, by)
+    topk_sort!(res, 1, cnt, lt_fun)
+    if k < 21
+        for i in idx+1:length(x)
+            if !ismissing(by(x[i]))
+                insert_fixed_sorted!(res, x[i], lt_fun)
+                cnt += 1
+            end
+        end
+    else
+        for i in idx+1:length(x)
+            if !ismissing(by(x[i]))
+                insert_fixed_sorted_binary!(res, x[i], lt_fun)
+                cnt += 1
+            end
         end
     end
     if cnt < k
@@ -553,6 +552,34 @@ Base.@propagate_inbounds function topk_perm(x::AbstractVector{T}, k::Int, lt_fun
         if !ismissing(by(x[i]))
             insert_fixed_sorted_perm!(perm, res, i, x[i], lt_fun)
             cnt += 1
+        end
+    end
+    if cnt < k
+        allowmissing(resize!(perm, cnt))
+    else
+        allowmissing(perm)
+    end
+end
+Base.@propagate_inbounds function topk_perm(x::Union{Vector{T}, SubArray{T, N, Vector{T}, Tuple{I}, L}}, k::Int, lt_fun::F, by) where {T<:Union{Missing, FLOATS, INTEGERS}} where {F} where N where I <: UnitRange{Int} where L
+    k < 1 && throw(ArgumentError("k must be greater than 1"))
+    all(ismissing, x) && return Union{Missing,Int}[missing]
+    res = Vector{T}(undef, k)
+    perm = zeros(Int, k)
+    idx, cnt = initiate_topk_res_perm!(perm, res, x, by)
+    topk_sort_permute!(res, perm, 1, cnt, lt_fun)
+    if k < 16
+        for i in idx+1:length(x)
+            if !ismissing(by(x[i]))
+                insert_fixed_sorted_perm!(perm, res, i, x[i], lt_fun)
+                cnt += 1
+            end
+        end
+    else
+        for i in idx+1:length(x)
+            if !ismissing(by(x[i]))
+                insert_fixed_sorted_perm_binary!(perm, res, i, x[i], lt_fun)
+                cnt += 1
+            end
         end
     end
     if cnt < k
