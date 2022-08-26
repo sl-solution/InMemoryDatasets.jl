@@ -968,17 +968,19 @@ nmissing(x) = count(ismissing, x)
 n(x) = count(!ismissing, x)
 
 """
-    filter(ds::AbstractDataset, cols; [missings = missing, type = all,...])
+    filter(ds::AbstractDataset, cols; [view = false, missings = missing, type = all,...])
 
 The `filter` function exploits the `byrow` function to filter a data set. Basically, it calls `byrow(ds, type, cols; ...)`
 to return a boolean vector which its true elements indicate the filtered rows, and subsequently, it calls `findall` and `getindex` to extract those filtered rows.
 Thus, user must pass a value to `type` which `byrow(ds, type, cols; ...)` returns a boolean vector (or a `BitVector`). 
 
+If `view = false` a freshly allocated `Dataset` is returned, otherwise, a `SubDataset` view into `ds` is returned.
+
 The `missings` keyword argument controls how the missing values should be interpreted by `filter`. By default, 
 the missing values are left as `missing`, however, user can set it as `false` or `true` to force `filter` to interpret the missing values as
 `false` or `true`, respectively.
 
-Beside `type` and `missings`, any passed keyword arguments to `filter` will be passed to the corresponding `byrow` function. For a list of keyword arguments supported by a given `type`, see the help of `byrow` for that specific type, e.g. in Julia REPL type `?byrow(type)` for a given `type` to see the documentation of the selected `type`.
+Beside `view`, `type` and `missings`, any passed keyword arguments to `filter` will be passed to the corresponding `byrow` function. For a list of keyword arguments supported by a given `type`, see the help of `byrow` for that specific type, e.g. in Julia REPL type `?byrow(type)` for a given `type` to see the documentation of the selected `type`.
 
 The following provides more details about `type = all` and `type = any`.
 

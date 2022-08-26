@@ -20,6 +20,8 @@ The `filter` function exploits the `byrow` function to filter a data set. Basica
 to return a boolean vector which its true elements indicate the filtered rows, and subsequently, it calls `findall` and `getindex` to extract those filtered rows.
 Thus, user must pass a value to `type` which `byrow(ds, type, cols; ...)` returns a boolean vector (or a `BitVector`). 
 
+If `view = false` a freshly allocated `Dataset` is returned, otherwise, a `SubDataset` view into `ds` is returned.
+
 The `missings` keyword argument controls how the missing values should be interpreted by `filter`. By default, 
 the missing values are left as `missing`, however, user can set it as `false` or `true` to force `filter` to interpret the missing values as
 `false` or `true`, respectively.
