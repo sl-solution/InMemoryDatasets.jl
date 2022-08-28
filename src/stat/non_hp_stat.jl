@@ -590,9 +590,11 @@ Base.@propagate_inbounds function topk_perm(x::Union{Vector{T}, SubArray{T, N, V
 end
 
 """
-    topk(x, k; rev = false, lt = <, by = identity, threads = false)
+    topk(x, k; rev = false, lt = isless, by = identity, threads = false)
 
 Return upto `k` largest nonmissing elements of `x`. When `rev = true` it returns upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
+
+> When it is safe, passing `lt = <` improves the performance.
 
 Also see [`topkperm`](@ref), [`partialsort`](@ref)
 
@@ -625,7 +627,7 @@ julia> topk(x, 3, by = abs, rev = true)
  10
 ```
 """
-function topk(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads=false)
+function topk(x::AbstractVector, k::Int; rev::Bool=false, lt=isless, by=identity, threads=false)
     isempty(x) && throw(ArgumentError("empty arrays are not allowed"))
     @assert firstindex(x) == 1 "topk only supports 1-based indexing"
     if threads && length(x) > Threads.nthreads()
@@ -643,9 +645,11 @@ function topk(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, thr
     end
 end
 """
-    topkperm(x, k; rev = false, lt = <, by = identity, threads = false)
+    topkperm(x, k; rev = false, lt = isless, by = identity, threads = false)
 
 Return the indices of upto `k` largest nonmissing elements of `x`. When `rev = true` it returns the indices of upto `k` smallest nonmissing elements of `x`. When all elements are missing, the function returns `[missing]`. The `by` keyword lets you provide a function that will be applied to each element before comparison; the `lt` keyword allows providing a custom "less than" function (note that for every x and y, only one of `lt(x,y)` and `lt(y,x)` can return true)
+
+> When it is safe, passing `lt = <` improves the performance.
 
 Also see [`topk`](@ref), [`partialsortperm`](@ref)
 
@@ -693,7 +697,7 @@ julia> topkperm(x, 10, threads = true, rev = true)
  648
 ```
 """
-function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt=<, by=identity, threads=false)
+function topkperm(x::AbstractVector, k::Int; rev::Bool=false, lt=isless, by=identity, threads=false)
     isempty(x) && throw(ArgumentError("empty arrays are not allowed"))
     @assert firstindex(x) == 1 "topkperm only supports 1-based indexing"
     if threads && length(x) > Threads.nthreads()

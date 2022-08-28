@@ -124,4 +124,9 @@ using Random,PooledArrays,CategoricalArrays
     x=CategoricalArray(rand(1000))
     # TODO categorical array is not thread safe - fortunately, it throws Errors - however, in future we may need to fix it
     @test_throws UndefRefError topk(x,10,lt=isless,threads=true)
+
+    @test isequal(topk([NaN,NaN,NaN,3],2,rev=true), [3.0, NaN])
+    @test isequal(topk([NaN,NaN,NaN,3],2,rev=false), [NaN, NaN])
+    @test isequal(topk([missing, NaN,NaN,NaN,3, missing],2,rev=true), [3.0, NaN])
+    @test isequal(topk([NaN,missing, missing, missing,NaN,NaN,3, missing],2,rev=false), [NaN, NaN])
 end
