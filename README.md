@@ -100,7 +100,7 @@ julia> ds = Dataset(g1 = g1, g2 = g2, y = y)
   23 │        6         3     YP
   24 │        6         4   YP   YP
 
-julia> sort(ds, 2)
+julia> sort(ds, :g2)
 24×3 Sorted Dataset
  Sorted by: g2
  Row │ g1        g2        y         
@@ -132,7 +132,7 @@ julia> sort(ds, 2)
   23 │        5         4   88   88
   24 │        6         4   YP   YP
 
-julia> tds = transpose(groupby(ds, 1), :y)
+julia> tds = transpose(groupby(ds, :g1), :y)
 6×6 Dataset
  Row │ g1        _variables_  _c1        _c2        _c3        _c4       
      │ identity  identity     identity   identity   identity   identity  
