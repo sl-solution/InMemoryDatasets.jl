@@ -21,7 +21,7 @@ function create_sysimage(sysout::AbstractString, add_dlmreader::Bool = true; add
     f = open(tmpIMD[1])
     fout = open(tmpIMD_out[1], "w")
     # TODO should make this part less hard coding
-    write(fout, "using REPL, Pkg, InMemoryDatasets, InMemoryDatasets.PooledArrays, InMemoryDatasets.DataAPI, InMemoryDatasets.PrettyTables, InMemoryDatasets.Tables, PackageCompiler, TOML, Logging, SuiteSparse
+    write(fout, "using REPL, Pkg, InMemoryDatasets, InMemoryDatasets.PooledArrays, InMemoryDatasets.DataAPI, InMemoryDatasets.PrettyTables, InMemoryDatasets.Tables, PackageCompiler, TOML, Logging, SuiteSparse, Random, Printf
     ")
     if add_dlmreader
         write(fout, "; using DLMReader, DLMReader.InlineStrings, DLMReader.InlineStrings.Parsers
