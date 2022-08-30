@@ -333,9 +333,9 @@ Columns information
 
 The `content` function shows that the data set has been created on `2021-08-04T13:18:51.185`, and the last time that it has been modified is on `2021-08-04T13:24:33.086`.
 
-### Adding a new column
+### Adding and removing columns
 
-To add a new column (variable) to a data set use the `insertcols!` function,
+To add a new column (variable) to a data set use the `insertcols!` function. The `select` function and its in-place counterpart `select!` can be used to drop columns from a data set. The `select`(`select!`) function is used to rearange columns, however, using `Not(cols)` can be used to select all columns except those which are wrapped in `Not`.
 
 ```jldoctest
 julia> ds = Dataset(var1 = [1, 2, 3])
@@ -367,6 +367,16 @@ julia> insertcols!(ds, :var3 => [3.5, 4.6, 32.0])
    1 │        1  val1             3.5
    2 │        2  val2             4.6
    3 │        3  val3            32.0
+
+julia> select!(ds, Not(:var2))
+3×2 Dataset
+ Row │ var1      var3     
+     │ identity  identity 
+     │ Int64?    Float64? 
+─────┼────────────────────
+   1 │        1       3.5
+   2 │        2       4.6
+   3 │        3      32.0
 ```
 
 ### Converting the columns' type
