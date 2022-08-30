@@ -1,3 +1,8 @@
+# Dev
+
+## Fixes
+
+* `topk` and `topkperm` use `isless` by default for comparing values.
 # Version 0.7.8
 
 ## New features
