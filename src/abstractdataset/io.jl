@@ -45,7 +45,7 @@ function getmaxwidths(ds::AbstractDataset,
                       show_eltype::Bool,
                       buffer::IOBuffer,
                       truncstring::Int)
-    maxwidths = Vector{Int}(undef, size(ds, 2) + 1)
+    maxwidths = zeros(Int, size(ds, 2) + 1)
 
     undefstrwidth = ourstrwidth(io, "#undef", buffer, truncstring)
 
