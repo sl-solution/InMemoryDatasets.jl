@@ -45,11 +45,13 @@ function getmaxwidths(ds::AbstractDataset,
                       show_eltype::Bool,
                       buffer::IOBuffer,
                       truncstring::Int)
-    maxwidths = Vector{Int}(undef, size(ds, 2) + 1)
+    maxwidths = zeros(Int, size(ds, 2) + 1)
 
     undefstrwidth = ourstrwidth(io, "#undef", buffer, truncstring)
 
     ct = show_eltype ? batch_compacttype(Any[eltype(c) for c in eachcol(ds)]) : String[]
+    tty_cols = displaysize(io)[2]
+    maxwidthsum = 0
     j = 1
     for (col_idx, (name, col)) in enumerate(pairs(eachcol(ds)))
         # (1) Consider length of column name
@@ -70,7 +72,12 @@ function getmaxwidths(ds::AbstractDataset,
         else
             maxwidths[j] = maxwidth
         end
+        maxwidthsum += (maxwidths[j] + 2)
         j += 1
+        # If the sum of column widths is already larger than COLUMNS, do not need calculate max width for the rest columns
+        if maxwidthsum >= tty_cols
+            break
+        end
     end
 
     # do not truncate rowlabel
