@@ -57,7 +57,9 @@ function getmaxwidths(ds::AbstractDataset,
         # (1) Consider length of column name
         # do not truncate column name
         maxwidth = ourstrwidth(io, name, buffer, 0)
-
+        # Apply the format before calculating max width since format will affect the max width of columns
+        f = getformat(ds, col_idx)
+        col = f.(col)
         # (2) Consider length of longest entry in that column
         for indices in (rowindices1, rowindices2), i in indices
             if isassigned(col, i)
