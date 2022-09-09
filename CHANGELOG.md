@@ -4,6 +4,9 @@
 
 * `topk` and `topkperm` use `isless` by default for comparing values.
 
+## Performance
+
+* Now `Jupyter` shows very wide data sets much faster, [issue #82](https://github.com/sl-solution/InMemoryDatasets.jl/issues/82)
 # Version 0.7.8
 
 ## New features
