@@ -146,6 +146,22 @@ function _fill_val_join!(x, r2, val, inbits, r)
         end
     end
 end
+
+function left_fill_val_join!(x, val, inbits, r)
+    cnt = 1
+    lo = r.start
+    for i in r
+        if inbits[i]
+            x[cnt+lo-1] = val
+        else
+            if cnt == 1
+                x[cnt+lo-1] = val
+            end
+        end
+        cnt += 1
+    end
+end
+
 # F1 and F2 are here for type stability when threads = false
 function _find_ranges_for_join!(ranges, x, y, _fl::F1, _fr::F2, ::Val{T1}, ::Val{T2}; type = :both, threads = true) where {T1, T2, F1, F2}
     if type == :both
@@ -226,11 +242,21 @@ function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl::F1, _fr::F2, ::Va
 end
 
 
-function _fill_oncols_left_table_left!(_res, x, ranges, en, total, fill_val; threads = true)
-    @_threadsfor threads for i in 1:length(x)
-        i == 1 ? lo = 1 : lo = en[i - 1] + 1
-        hi = en[i]
-        _fill_val_join!(_res, lo:hi, x[i])
+function _fill_oncols_left_table_left!(_res, x, ranges, en, total, fill_val;inbits = nothing, en2 = nothing, threads = true)
+    if inbits === nothing
+        @_threadsfor threads for i in 1:length(x)
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            _fill_val_join!(_res, lo:hi, x[i])
+        end
+    else
+        @_threadsfor threads for i in 1:length(x)
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            # @show sum(view(inbits, lo:hi))
+            # sum(view(inbits, lo:hi)) == 0 && continue
+            left_fill_val_join!(_res, x[i], inbits, lo:hi)
+        end
     end
     @_threadsfor threads for i in en[length(x)]+1:total
         _res[i] = fill_val
@@ -273,11 +299,19 @@ function _fill_oncols_left_table_anti!(_res, x, ranges, en, total; threads = tru
     end
 end
 
-function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val; threads = true)
-    @_threadsfor threads for i in 1:length(ranges)
-        i == 1 ? lo = 1 : lo = en[i - 1] + 1
-        hi = en[i]
-        length(ranges[i]) == 0 ? _fill_val_join!(_res, lo:hi, fill_val) : copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
+function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val; inbits = nothing, en2 = nothing, threads = true)
+    if inbits === nothing
+        @_threadsfor threads for i in 1:length(ranges)
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            length(ranges[i]) == 0 ? _fill_val_join!(_res, lo:hi, fill_val) : copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
+        end
+    else
+        @_threadsfor threads for i in 1:length(ranges)
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            left_fill_right_col_range!(_res, x, ranges[i], inbits, lo:hi)
+        end
     end
 end
 
@@ -288,6 +322,22 @@ function _fill_right_col_range!(_res, r2, x, ranges, inbits, r)
     for i in r
         if inbits[i]
             _res[lo+cnt-1] = x[ranges[cnt_r]]
+            cnt += 1
+        end
+        cnt_r += 1
+    end
+end
+
+function left_fill_right_col_range!(_res, x, ranges, inbits, r)
+    cnt = 1
+    cnt_r = 1
+    lo = r.start
+    for i in r
+        if inbits[i]
+            _res[lo+cnt-1] = x[ranges[cnt_r]]
+            cnt += 1
+        else
+            _res[lo+cnt-1] = missing
             cnt += 1
         end
         cnt_r += 1
@@ -569,9 +619,9 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuniqu
         _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
             # fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, missing;  threads = threads)
+            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends,  threads = threads)
         else
-            _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing; threads = threads)
+            _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends,threads = threads)
         end
         push!(res, _res)
     end
@@ -585,9 +635,9 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuniqu
         _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val, threads = threads)
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val,inbits = inbits, en2 = revised_ends, threads = threads)
         else
-            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing, threads = threads)
+            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing,inbits = inbits, en2 = revised_ends, threads = threads)
         end
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
@@ -602,16 +652,21 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuniqu
     if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
         obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
-        _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; threads = threads)
+        _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing;inbits = inbits, en2 = revised_ends, threads = threads)
         insertcols!(dsnewdsl, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[2]
         obs_id_name2 = Symbol(obs_id_name, "_right")
         obs_id_right = allocatecol(T, total_length)
-        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
+        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, inbits = inbits, en2 = revised_ends, threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false, makeunique = makeunique)
     end
-    newds
+    
+    if length(right_range_cols) == 2
+        filter(newds,:,by = !ismissing, type = any)
+    else
+        newds
+    end
 
 end
 

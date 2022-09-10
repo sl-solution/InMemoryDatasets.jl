@@ -1903,6 +1903,23 @@ end
     @test inn_r1_a == inn_r1_t
     @test inn_r1_v_a == inn_r1_t
 
+    left_r1 =  leftjoin(store, roster, on = [:date => (:start_date, nothing)], makeunique = true, stable = true)
+    left_r1_v =  leftjoin(store, view(roster, :, :), on = [:date => (:start_date, nothing)], makeunique = true, stable = true)
+    left_r1_a =  leftjoin(store, roster, on = [:date => (:start_date, nothing)], makeunique = true, stable = true, accelerate = true)
+    left_r1_v_a =  leftjoin(store, view(roster, :, :), on = [:date => (:start_date, nothing)], makeunique = true, stable = true, accelerate = true)
+
+    @test left_r1 ==  leftjoin(store, roster, on = [:date => (:start_date, nothing)], makeunique = true, stable = true, method = :hash)
+    @test left_r1_v ==  leftjoin(store, view(roster, :, :), on = [:date => (:start_date, nothing)], makeunique = true, stable = true, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:date => (:start_date, nothing)], makeunique = true, stable = true, accelerate = true, method = :hash)
+    @test left_r1_v_a ==  leftjoin(store, view(roster, :, :), on = [:date => (:start_date, nothing)], makeunique = true, stable = true, accelerate = true, method = :hash)
+
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "B", "B", "A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "B", "A", "A", "A", "A", "A", "A", "B", "B", "B", "B", "B", "B"], Union{Missing, String}["A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B", "A", "B"], Union{Missing, Int64}[1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 2, 6, 1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 1, 5, 2, 6, 1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 2, 6, 3, 7, 4, 8, 1, 5, 2, 6, 3, 7, 1, 5, 2, 6, 3, 7], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-05")]], ["date", "store", "store_1", "employee_ID", "end_date"])
+    @test left_r1 == left_r1_t
+    @test left_r1_v == left_r1_t
+    @test left_r1_a == left_r1_t
+    @test left_r1_v_a == left_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, nothing)], stable = true)
     inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, nothing)], stable = true)
     inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, nothing)], stable = true, accelerate = true)
@@ -1918,6 +1935,23 @@ end
     @test inn_r1_v == inn_r1_t
     @test inn_r1_a == inn_r1_t
     @test inn_r1_v_a == inn_r1_t
+    
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, nothing)], stable = true)
+    left_r1_v =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, nothing)], stable = true)
+    left_r1_a =  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, nothing)], stable = true, accelerate = true)
+    left_r1_v_a =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, nothing)], stable = true, accelerate = true)
+
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, nothing)], stable = true, method = :hash)
+    @test left_r1_v ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, nothing)], stable = true, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, nothing)], stable = true, accelerate = true, method = :hash)
+    @test left_r1_v_a ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, nothing)], stable = true, accelerate = true, method = :hash)
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "A", "A", "A", "B", "B", "A", "A", "A", "A", "B", "A", "A", "B", "B", "B", "B", "B", "B", "B", "B", "A", "A", "A", "B", "B", "B"], Union{Missing, Int64}[1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 1, 2, 3, 4, 5, 1, 2, 5, 6, 7, 8, 5, 6, 7, 8, 1, 2, 3, 5, 6, 7], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-05")]], ["date", "store", "employee_ID", "end_date"])
+    @test left_r1 == left_r1_t
+    @test left_r1_v == left_r1_t
+    @test left_r1_a == left_r1_t
+    @test left_r1_v_a == left_r1_t
+
 
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true)
     inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true)
@@ -1934,6 +1968,8 @@ end
     @test inn_r1_v == inn_r1_t
     @test inn_r1_a == inn_r1_t
     @test inn_r1_v_a == inn_r1_t
+
+    #
 
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
     inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
