@@ -6,13 +6,15 @@
                             rowlabel::Symbol,
                             rowid::Union{Integer, Nothing},
                             show_eltype::Bool,
-                            buffer::IOBuffer)
+                            buffer::IOBuffer,
+                            truncstring::Int;
+                            mapformats::Bool = true)
 
 Calculate, for each column of an AbstractDataset, the maximum
 string width used to render the name of that column, its type, and the
 longest entry in that column -- among the rows of the data frame
-will be rendered to IO. The widths for all columns are returned as a
-vector.
+will be rendered to IO. The widths for the columns that will be displayed 
+are returned as a vector.
 
 Return a `Vector{Int}` giving the maximum string widths required to render
 each column, including that column's name and type.
@@ -35,6 +37,10 @@ implicit row ID column contained in every `AbstractDataset`.
 - `show_eltype`: Whether to print the column type
    under the column name in the heading.
 - `buffer`: buffer passed around to avoid reallocations in `ourstrwidth`
+- `truncstring`: The length of the string to be truncated. The string will
+   not be truncated if it is equal to 0.
+- `mapformats`: Whether to calculate the max widths after mapping format 
+   for each column.
 """
 function getmaxwidths(ds::AbstractDataset,
                       io::IO,
@@ -44,8 +50,8 @@ function getmaxwidths(ds::AbstractDataset,
                       rowid::Union{Integer, Nothing},
                       show_eltype::Bool,
                       buffer::IOBuffer,
-                      truncstring::Int,
-                      mapformats::Bool)
+                      truncstring::Int;
+                      mapformats::Bool = true)
     maxwidths = zeros(Int, size(ds, 2) + 1)
 
     undefstrwidth = ourstrwidth(io, "#undef", buffer, truncstring)
@@ -194,7 +200,7 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
     if get(io, :limit, false)
         tty_rows, tty_cols = displaysize(io)
         mxrow = min(mxrow, tty_rows)
-        maxwidths = getmaxwidths(ds, io, 1:mxrow, 0:-1, :X, nothing, true, buffer, 0, mapformats) .+ 2
+        maxwidths = getmaxwidths(ds, io, 1:mxrow, 0:-1, :X, nothing, true, buffer, 0, mapformats = mapformats) .+ 2
         mxcol = min(mxcol, searchsortedfirst(cumsum(maxwidths), tty_cols))
     end
 
