@@ -54,57 +54,34 @@ function getmaxwidths(ds::AbstractDataset,
     tty_cols = displaysize(io)[2]
     maxwidthsum = 0
     j = 1
-    if mapformats
-        # Calculates max widths after mapping formats if mapformats = true
-        for (col_idx, (name, col)) in enumerate(pairs(eachcol(ds)))
-            # (1) Consider length of column name
-            # do not truncate column name
-            maxwidth = ourstrwidth(io, name, buffer, 0)
-            # Apply the format before calculating max width since format will affect the max width of columns
+    for (col_idx, (name, col)) in enumerate(pairs(eachcol(ds)))
+        # (1) Consider length of column name
+        # do not truncate column name
+        maxwidth = ourstrwidth(io, name, buffer, 0)
+        # Calculates max widths after mapping formats if mapformats = true, because formats may affact the max widths
+        if mapformats
             f = getformat(ds, col_idx)
             col = f.(col)
-            # (2) Consider length of longest entry in that column
-            for indices in (rowindices1, rowindices2), i in indices
-                if isassigned(col, i)
-                    maxwidth = max(maxwidth, ourstrwidth(io, col[i], buffer, truncstring))
-                else
-                    maxwidth = max(maxwidth, undefstrwidth)
-                end
-            end
-            if show_eltype
-                # do not truncate eltype name
-                maxwidths[j] = max(maxwidth, ourstrwidth(io, ct[col_idx], buffer, 0))
+        end
+        # (2) Consider length of longest entry in that column
+        for indices in (rowindices1, rowindices2), i in indices
+            if isassigned(col, i)
+                maxwidth = max(maxwidth, ourstrwidth(io, col[i], buffer, truncstring))
             else
-                maxwidths[j] = maxwidth
-            end
-            maxwidthsum += (maxwidths[j] + 2)
-            j += 1
-            # If the sum of column widths is already larger than COLUMNS, do not need calculate max width for the rest columns
-            if maxwidthsum >= tty_cols
-                break
+                maxwidth = max(maxwidth, undefstrwidth)
             end
         end
-    else
-        # Calculates max widths based on the actual values if mapformats = false
-        for (col_idx, (name, col)) in enumerate(pairs(eachcol(ds)))
-            maxwidth = ourstrwidth(io, name, buffer, 0)
-            for indices in (rowindices1, rowindices2), i in indices
-                if isassigned(col, i)
-                    maxwidth = max(maxwidth, ourstrwidth(io, col[i], buffer, truncstring))
-                else
-                    maxwidth = max(maxwidth, undefstrwidth)
-                end
-            end
-            if show_eltype
-                maxwidths[j] = max(maxwidth, ourstrwidth(io, ct[col_idx], buffer, 0))
-            else
-                maxwidths[j] = maxwidth
-            end
-            maxwidthsum += (maxwidths[j] + 2)
-            j += 1
-            if maxwidthsum >= tty_cols
-                break
-            end
+        if show_eltype
+            # do not truncate eltype name
+            maxwidths[j] = max(maxwidth, ourstrwidth(io, ct[col_idx], buffer, 0))
+        else
+            maxwidths[j] = maxwidth
+        end
+        maxwidthsum += (maxwidths[j] + 2)
+        j += 1
+        # If the sum of column widths is already larger than COLUMNS, do not need calculate max width for the rest columns
+        if maxwidthsum >= tty_cols
+            break
         end
     end
 
