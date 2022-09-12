@@ -1969,7 +1969,21 @@ end
     @test inn_r1_a == inn_r1_t
     @test inn_r1_v_a == inn_r1_t
 
-    #
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true)
+    left_r1_v =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true)
+    left_r1_a =  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, accelerate = true)
+    left_r1_v_a =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, accelerate = true)
+
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, method = :hash)
+    @test left_r1_v == leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, accelerate = true, method = :hash)
+    @test left_r1_v_a ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, accelerate = true, method = :hash)
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"),Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "A", "B", "B", "A", "B", "A", "A", "B", "B", "B", "B", "B", "B", "A", "A", "A", "B", "B", "B"], Union{Missing, Int64}[3, 4, 1, 2, 3, 4, 5, 6, missing, 5, 1, 2, 7, 8, 5, 6, 7, 8, 1, 2, 3, 5, 6, 7]], ["date", "store", "employee_ID"])
+    @test left_r1 == left_r1_t
+    @test left_r1_v == left_r1_t
+    @test left_r1_a == left_r1_t
+    @test left_r1_v_a == left_r1_t
 
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
     inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
@@ -1988,6 +2002,22 @@ end
     @test inn_r1_a == inn_r1_t
     @test inn_r1_v_a == inn_r1_t
 
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
+    left_r1_v =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
+    left_r1_a =  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true)
+    left_r1_v_a =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true)
+
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, method = :hash)
+    @test left_r1_v ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true, method = :hash)
+    @test left_r1_v_a ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true, method = :hash)
+
+    left_r1_t = Dataset(date=Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")], store=Union{Missing, String}["A", "A", "B", "A", "B", "A", "B", "B", "A", "B"], employee_ID=Union{Missing, Int}[missing,missing,missing,missing,missing,missing,missing,missing,missing,missing])
+    @test left_r1 == left_r1_t
+    @test left_r1_v == left_r1_t
+    @test left_r1_a == left_r1_t
+    @test left_r1_v_a == left_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true)
     inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true)
 
@@ -1997,6 +2027,17 @@ end
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "B", "B", "B", "B", "B", "B", "A", "A", "A", "B", "A", "A", "B", "B"], Union{Missing, Int64}[4, 6, 7, 8, 6, 7, 8, 2, 3, 4, 8, 3, 4, 7, 8], Union{Missing, Date}[Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06")]], ["date", "store", "employee_ID", "end_date"])
     @test inn_r1 == inn_r1_t
     @test inn_r1_a == inn_r1_t
+
+
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true)
+    left_r1_a =  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true)
+
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true, method = :hash)
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"),Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-01"),Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"),Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B", "B", "B", "A", "B", "B", "B", "A", "A", "A","B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[missing,4, 6, 7, 8,missing, 6, 7, 8, 2, 3, 4, missing, 8, 3, 4, 7, 8], Union{Missing, Date}[missing, Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), missing, Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), missing, Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06")]], ["date", "store", "employee_ID", "end_date"])
+    @test left_r1 == left_r1_t
+    @test left_r1_a == left_r1_t
 
     inn_r2 = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true)
     inn_r2_a = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, accelerate = true)
@@ -2008,22 +2049,52 @@ end
     @test inn_r2 == inn_r2_t
     @test inn_r2_a == inn_r2_t
 
+    left_r2 = leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true)
+    left_r2_a = leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, accelerate = true)
+
+    @test left_r2 == leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, method = :hash)
+    @test left_r2_a == leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, accelerate = true, method = :hash)
+
+    left_r2_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"),Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B","A", "B", "A", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[4, 3, 5,missing, 5, 1, 8, 7, 1, 2, 5, 6]], ["date", "store", "employee_ID"])
+    @test left_r2 == left_r2_t
+    @test left_r2_a == left_r2_t
+
     inn_r2 = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, droprangecols = false)
     @test inn_r2 == innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, droprangecols = false, method = :hash)
 
     inn_r2_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B", "B", "A", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[4, 3, 5, 5, 1, 8, 7, 1, 2, 5, 6], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-03"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-09-30"), Date("2019-10-02"), Date("2019-09-30"), Date("2019-10-02")], Union{Missing, Date}[Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04")]], ["date", "store", "employee_ID", "start_date", "end_date"])
     @test inn_r2 == inn_r2_t
+
+    left_r2 = leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, droprangecols = false)
+    @test left_r2 == leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = true, droprangecols = false, method = :hash)
+
+    left_r2_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"),Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B","A", "B", "A", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[4, 3, 5,missing, 5, 1, 8, 7, 1, 2, 5, 6], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-03"), Date("2019-09-30"),missing, Date("2019-09-30"), Date("2019-09-30"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-09-30"), Date("2019-10-02"), Date("2019-09-30"), Date("2019-10-02")], Union{Missing, Date}[Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-04"),missing, Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04")]], ["date", "store", "employee_ID", "start_date", "end_date"])
+    @test left_r2 == left_r2_t
+
     inn_r2 = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = [true, false], droprangecols = true)
     @test inn_r2 == innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = [true, false], droprangecols = true, method = :hash)
 
     inn_r2_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "B", "B", "A", "B", "B", "B", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[3, 4, 1, 2, 3, 5, 5, 1, 7, 8, 5, 6, 7, 1, 2, 5, 6]],["date", "store", "employee_ID"])
     @test inn_r2 == inn_r2_t
+
+    left_r2 = leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = [true, false], droprangecols = true)
+    @test left_r2 == leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], makeunique = true, stable = true, strict_inequality = [true, false], droprangecols = true, method = :hash)
+
+    left_r2_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"),Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "B", "A", "B", "A", "B", "B", "B", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[3, 4, 1, 2, 3, 5, missing, 5, 1, 7, 8, 5, 6, 7, 1, 2, 5, 6]],["date", "store", "employee_ID"])
+    @test left_r2 == left_r2_t
+
     push!(roster, ["C", 9, Date(2020), Date(2020)])
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true)
     @test inn_r1 ==  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, method = :hash)
 
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "B", "B", "B", "B", "B", "B", "A", "A", "A", "B", "A", "A", "B", "B"], Union{Missing, Int64}[4, 6, 7, 8, 6, 7, 8, 2, 3, 4, 8, 3, 4, 7, 8], Union{Missing, Date}[Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06")]], ["date", "store", "employee_ID", "end_date"])
     @test inn_r1 == inn_r1_t
+
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true)
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, method = :hash)
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"),Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-01"),Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"),Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B", "B", "B", "A", "B", "B", "B", "A", "A", "A","B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[missing,4, 6, 7, 8,missing, 6, 7, 8, 2, 3, 4, missing, 8, 3, 4, 7, 8], Union{Missing, Date}[missing, Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), missing, Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-05"), Date("2019-10-06"), missing, Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06"), Date("2019-10-05"), Date("2019-10-06")]], ["date", "store", "employee_ID", "end_date"])
+    @test left_r1 == left_r1_t
 
     roster[4,3] = missing
     roster[6,4] = missing
@@ -2039,6 +2110,15 @@ end
     @test inn_r1 == inn_r1_t
     @test inn_r1_a == inn_r1_t
 
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true)
+    left_r1_a =  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true)
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, accelerate = true, method = :hash)
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "B", "B", "B", "A", "B", "B", "B", "A", "A", "A", "B", "B", "B", "A", "A", "A", "B", "B"], Union{Missing, Int64}[2, 4, 2, 6, 8, 7, 2, 6, 8, 7, 3, 4, 2, 7, 8, 7, 3, 4, 2, 8, 7], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), missing, Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), missing, missing, Date("2019-10-06"), Date("2019-10-04"), missing, Date("2019-10-06"), missing, missing, Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-06"), missing]], ["date", "store", "employee_ID", "end_date"])
+    @test left_r1 == left_r1_t
+    @test left_r1_a == left_r1_t
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
     inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true)
 
@@ -2048,32 +2128,69 @@ end
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2020-01-01")], Union{Missing, String}["A", "A", "A"], Union{Missing, Int64}[2, 2, 2]], ["date", "store", "employee_ID"])
     @test inn_r1 == inn_r1_t
     @test inn_r1_a == inn_r1_t
+    
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true)
+    left_r1_a =  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true)
+
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, accelerate = true, method = :hash)
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"),Date("2019-10-02"), Date("2020-01-01"),Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B", "A", "B", "A", "B", "B", "A", "B"], Union{Missing, Int64}[2, 2,missing, 2, missing, missing, missing, missing, missing, missing]], ["date", "store", "employee_ID"])
+    @test left_r1 == left_r1_t
+    @test left_r1_a == left_r1_t
 
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true)
     @test inn_r1 ==  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, method = :hash)
-
     inn_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "B", "B", "A", "B", "A", "B", "B", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[3, 4, 1, 3, 4, 5, 6, 3, 5, 1, 8, 5, 6, 8, 1, 3, 5, 6]], ["date", "store", "employee_ID"])
     @test inn_r1 == inn_r1_t
+    
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true)
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, method = :hash)
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "B", "B", "A", "B", "A", "B", "B", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[3, 4, 1, 3, 4, 5, 6, 3, 5, 1, 8, 5, 6, 8, 1, 3, 5, 6]], ["date", "store", "employee_ID"])
+    @test left_r1 == left_r1_t
+
     MONTH(x) = month(x)
     MONTH(::Missing) = missing
 
     setformat!(store, 1=>MONTH)
     setformat!(roster, r"date"=>MONTH)
+
     inn_r3 = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, false])
     @test inn_r3 == innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, false], method = :hash)
 
     inn_r3_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B", "B", "A", "B", "B", "A", "B"], Union{Missing, Int64}[1, 1, 5, 5, 1, 5, 5, 1, 5], Union{Missing, Date}[Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30")], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04")]], ["date", "store", "employee_ID", "start_date", "end_date"])
     @test inn_r3 == inn_r3_t
+    
+    left_r3 = leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, false])
+    @test left_r3 == leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, false], method = :hash)
+
+    left_r3_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"),Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B","A", "B", "A", "B", "B", "A", "B"], Union{Missing, Int64}[1, 1, 5,missing, 5, 1, 5, 5, 1, 5], Union{Missing, Date}[Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"),missing, Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30"), Date("2019-09-30")], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"),missing, Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04")]], ["date", "store", "employee_ID", "start_date", "end_date"])
+    @test left_r3 == left_r3_t
+    
     inn_r3 = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [false, true])
     @test inn_r3 == innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [false, true], method = :hash)
 
     inn_r3_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A"], Union{Missing, Int64}[3, 3, 3, 3], Union{Missing, Date}[Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, Date}[missing, missing, missing, missing]], ["date", "store", "employee_ID", "start_date", "end_date"])
     @test inn_r3 == inn_r3_t
+    
+    left_r3 = leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [false, true])
+    @test left_r3 == leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [false, true], method = :hash)
+
+    left_r3_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A","B","A","B", "A","B","B", "A","B"], Union{Missing, Int64}[3, 3,missing,missing,missing, 3,missing,missing, 3,missing], Union{Missing, Date}[Date("2019-10-03"), Date("2019-10-03"),missing,missing,missing, Date("2019-10-03"),missing,missing, Date("2019-10-03"),missing], Union{Missing, Date}[missing, missing, missing, missing,missing,missing,missing,missing,missing,missing]], ["date", "store", "employee_ID", "start_date", "end_date"])
+    @test left_r3 == left_r3_t
+    
     inn_r3 = innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, true])
     @test inn_r3 == innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, true], method = :hash)
 
     inn_r3_t = Dataset([Union{Missing, Date}[], Union{Missing, String}[], Union{Missing, Int64}[], Union{Missing, Date}[], Union{Missing, Date}[]], ["date", "store", "employee_ID", "start_date", "end_date"])
     @test inn_r3 == inn_r3_t
+
+    left_r3 = leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, true])
+    @test left_r3 == leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], droprangecols = false, strict_inequality = [true, true], method = :hash)
+
+    left_r3_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A","B","A","B", "A","B","B", "A","B"], Union{Missing, Int64}[missing, missing,missing,missing,missing, missing,missing,missing, missing,missing], Union{Missing, Date}[missing, missing,missing,missing,missing, missing,missing,missing, missing,missing], Union{Missing, Date}[missing, missing, missing, missing,missing,missing,missing,missing,missing,missing]], ["date", "store", "employee_ID", "start_date", "end_date"])
+    @test left_r3 == left_r3_t
+
 
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false)
     inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false)
@@ -2092,6 +2209,25 @@ end
     @test inn_r1_a == inn_r1_t
     @test inn_r1_v_a == inn_r1_t
 
+
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false)
+    left_r1_v =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false)
+    left_r1_a =  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false, accelerate = true)
+    left_r1_v_a =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false, accelerate = true)
+
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false, method = :hash)
+    @test left_r1_v ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false, accelerate = true, method = :hash)
+    @test left_r1_v_a ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (nothing, :start_date)], stable = true, mapformats = false, accelerate = true, method = :hash)
+
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "B", "B", "B", "A", "B", "B", "B", "A", "A", "A", "B", "B", "B", "A", "A", "A", "B", "B"], Union{Missing, Int64}[2, 4, 2, 6, 8, 7, 2, 6, 8, 7, 3, 4, 2, 7, 8, 7, 3, 4, 2, 8, 7], Union{Missing, Date}[Date("2019-10-04"), Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), missing, Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-06"), missing, missing, Date("2019-10-06"), Date("2019-10-04"), missing, Date("2019-10-06"), missing, missing, Date("2019-10-06"), Date("2019-10-04"), Date("2019-10-06"), missing]], ["date", "store", "employee_ID", "end_date"])
+    @test left_r1 == left_r1_t
+    @test left_r1_v == left_r1_t
+    @test left_r1_a == left_r1_t
+    @test left_r1_v_a == left_r1_t
+
+
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false)
     inn_r1_v =  innerjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false)
     inn_r1_a =  innerjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false, accelerate = true)
@@ -2107,6 +2243,23 @@ end
     @test inn_r1_v == inn_r1_t
     @test inn_r1_a == inn_r1_t
     @test inn_r1_v_a == inn_r1_t
+
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false)
+    left_r1_v =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false)
+    left_r1_a =  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false, accelerate = true)
+    left_r1_v_a =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false, accelerate = true)
+
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false, method = :hash)
+    @test left_r1_v ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false, accelerate = true, method = :hash)
+    @test left_r1_v_a ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:end_date, :start_date)], stable = true, mapformats = false, accelerate = true, method = :hash)
+
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "B", "A", "B", "A", "B", "B", "A", "B"], Union{Missing, Int64}[2, 2,missing, 2, missing, missing, missing, missing, missing, missing]], ["date", "store", "employee_ID"])
+    @test left_r1 == left_r1_t
+    @test left_r1_v == left_r1_t
+    @test left_r1_a == left_r1_t
+    @test left_r1_v_a == left_r1_t
 
     inn_r1 =  innerjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false)
     inn_r1_v =  innerjoin(store, view(roster, :, [1,2, 4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false)
@@ -2124,6 +2277,22 @@ end
     @test inn_r1_a == inn_r1_t
     @test inn_r1_v_a == inn_r1_t
 
+    left_r1 =  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false)
+    left_r1_v =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false)
+    left_r1_a =  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false, accelerate = true)
+    left_r1_v_a =  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false, accelerate = true)
+
+    @test left_r1 ==  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false, method = :hash)
+    @test left_r1_v ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false, method = :hash)
+    @test left_r1_a ==  leftjoin(store, roster, on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false, accelerate = true, method = :hash)
+    @test left_r1_v_a ==  leftjoin(store, view(roster, :, [1,2,4,3]), on = [:store => :store, :date => (:start_date, :end_date)], stable = true, mapformats = false, accelerate = true, method = :hash)
+
+
+    left_r1_t = Dataset([Union{Missing, Date}[Date("2019-10-05"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-02"), Date("2019-10-02"), Date("2020-01-01"), Date("2019-10-01"), Date("2019-10-02"), Date("2019-10-05"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-04"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03"), Date("2019-10-03")], Union{Missing, String}["A", "A", "A", "A", "A", "B", "B", "A", "B", "A", "B", "B", "B", "B", "A", "A", "B", "B"], Union{Missing, Int64}[3, 4, 1, 3, 4, 5, 6, 3, 5, 1, 8, 5, 6, 8, 1, 3, 5, 6]], ["date", "store", "employee_ID"])
+    @test left_r1 == left_r1_t
+    @test left_r1_v == left_r1_t
+    @test left_r1_a == left_r1_t
+    @test left_r1_v_a == left_r1_t
 
     dsl = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
     dsr = Dataset(x = [2,1,2], y1 = PooledArray([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
@@ -2137,6 +2306,17 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+
     dsl = Dataset(x = [1,2,1,2], y = ([1.0, 5.0, 2.0, 1.0]))
     dsr = Dataset(x = [2,1,2], y1 = PooledArray([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
@@ -2149,6 +2329,16 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+    
     dsl = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
     dsr = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
@@ -2161,6 +2351,16 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
     dsl = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
     dsr = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = ([5,2,2]), z=[111,222,333])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
@@ -2173,6 +2373,16 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
     dsl = Dataset(x = [1,2,1,2], y = ([1.0, 5.0, 2.0, 1.0]))
     dsr = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = ([5,2,2]), z=[111,222,333])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
@@ -2184,6 +2394,16 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
     #views
 
@@ -2201,6 +2421,16 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true, method = :hash) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false, method = :hash) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
     dsl1 = Dataset(x = [1,2,1,2], y = ([1.0, 5.0, 2.0, 1.0]))
     dsr1 = Dataset(x = [2,1,2], y1 = PooledArray([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
     dsl = view(dsl1, [1,2,3,4], [1,2])
@@ -2214,6 +2444,16 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true, method = :hash) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true, method = :hash) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false, method = :hash) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
     dsl1 = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
     dsr1 = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
@@ -2227,6 +2467,16 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true, method = :hash) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false, method = :hash) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
     dsl1 = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
     dsr1 = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = ([5,2,2]), z=[111,222,333])
     dsl = view(dsl1, [1,2,3,4], [1,2])
@@ -2240,6 +2490,16 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true, method = :hash) == Dataset(x = [1,2,2], y = [1.0,1,1], y1 = [-1,1,0], y2 = [2,2,5], z= [222,333,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true, method = :hash) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false, method = :hash) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
     dsl1 = Dataset(x = [1,2,1,2], y = ([1.0, 5.0, 2.0, 1.0]))
     dsr1 = Dataset(x = [2,1,2], y1 = ([0, -1,1]), y2 = ([5,2,2]), z=[111,222,333])
@@ -2255,6 +2515,16 @@ end
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true, method = :hash) == Dataset(x = [1,2], y = [1.0,1], y1 = [-1,0], y2 = [2,5], z= [222,111])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false, method = :hash) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
 
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false) == Dataset(x = [1,2,1,2,2], y = [1.0, 5,2,1,1], y1 = [-1,0,-1,1,0], y2 = [2,5,2,2,5], z= [222,111,222,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2,2], y = [1.0,5,2,1,1], y1 = [-1,missing,missing,1,0], y2 = [2,missing,missing,2,5], z= [222,missing,missing,333,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, :y2)], method = :hash, droprangecols = false, strict_inequality = true) == Dataset(x = [1,2,1,2], y = [1.0,5,2,1], y1 = [-1,missing,missing,0], y2 = [2,missing,missing,5], z= [222,missing,missing,111])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(:y1, nothing)], method = :hash, droprangecols = false) == Dataset(x = [1,2,2,1,2,2], y=[1.0, 5,5,2,1,1], y1 = [-1,0,1,-1,0,1], y2=[2,5,2,2,5,2], z = [222,111,333,222,111,333])
+
 
     dsl1 = Dataset(x = [1,2,1,2], y = PooledArray([1.0, 5.0, 2.0, 1.0]))
     dsr1 = Dataset(x = [2,1,2], y1 = PooledArray([0, -1,1]), y2 = PooledArray([5,2,2]), z=[111,222,333])
@@ -2262,14 +2532,20 @@ end
     dsr = view(dsr1, [3,1,2,2], [4,1,3,2])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, method = :hash) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, method = :hash) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
+    
     dsr = Dataset(view(dsr1, [3,1,2,2], [4,1,3,2]))
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, method = :hash) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, method = :hash) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
     dsl = Dataset(view(dsl1, [4,4,4,1,1,2,2], [2,1]))
     dsr = view(dsr1, [3,1,2,2], [4,1,3,2])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
     @test innerjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, method = :hash) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
-
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
+    @test leftjoin(dsl, dsr, on = [:x=>:x, :y=>(nothing, :y2)], droprangecols = false, method = :hash) == Dataset(y = [fill(1.0, 10); fill(5,2)], x = [fill(2,6);fill(1,4);fill(2,2)], z = [repeat([333,111], 3); fill(222,4); fill(111,2)], y2 = [2,5,2,5,2,5,2,2,2,2,5,5], y1 = [1,0,1,0,1,0, -1,-1,-1,-1, 0, 0])
 
     dsl = Dataset(rand(1:10, 10, 3), [:x1,:x2, :x3])
     dsr = Dataset(rand(1:10, 4,3), [:x1, :x2, :y])
@@ -2297,6 +2573,26 @@ end
     @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true, method = :hash) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true, stable = true)
     @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, method = :hash) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, stable = true)
     @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, method = :hash) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, stable = true)
+
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, stable = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true, stable = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, stable = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, stable=true)
+
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, stable = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true, stable = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, stable = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, stable = true)
 
     dsl = Dataset(rand(1:10, 10, 3), [:x1,:x2, :x3])
     dsr = Dataset(rand(1:10, 4,3), [:x1, :x2, :y])
@@ -2329,6 +2625,26 @@ end
     @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true, method = :hash) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
     @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, method = :hash) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
     @test innerjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, method = :hash) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
+
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, nothing)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(nothing, :y)], droprangecols = false, makeunique = true)
+    @test leftjoin(view(dsl, l_ridx, l_cidx), view(dsr, r_ridx, r_cidx), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true, method = :hash) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), Dataset(view(dsr, r_ridx, r_cidx)), on = [:x1=>:x1, :x2=>(:x2, :y)], droprangecols = false, makeunique = true, strict_inequality = true)
 
     dsl = Dataset(x1 = [1,2,1,3], y = [-1.2,-3,2.1,-3.5])
     dsr = Dataset(x1 = [1,2,3], lower = [0, -3,1], upper = [1,0,2])

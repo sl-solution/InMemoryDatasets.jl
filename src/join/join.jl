@@ -274,7 +274,7 @@ function _fill_oncols_left_table_anti!(_res, x, ranges, en, total; threads = tru
     end
 end
 
-function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val; inbits = nothing, en2 = nothing, threads = true)
+function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val; ra = nothing, inbits = nothing, en2 = nothing, threads = true)
     if inbits === nothing
         @_threadsfor threads for i in 1:length(ranges)   
             i == 1 ? lo = 1 : lo = en[i - 1] + 1
@@ -283,26 +283,25 @@ function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val; inbi
         end
     else
         @_threadsfor threads for i in 1:length(ranges)
-            if i == 1
-                lo2 = 1
-            else
-                lo2 = en2[i-1] + 1
-            end
+            i == 1 ? lo2 = 1 : lo2 = en2[i-1] + 1
             hi2 = en2[i]
-            left_fill_right_col_range!(_res, lo2:hi2, x, ranges[i], en[i])
+            left_fill_right_col_range!(_res, lo2:hi2, x, ranges[i], en[i], ra[i], inbits)
         end
     end
 end
 
-function left_fill_right_col_range!(_res, r2, x, ranges, r)
+function left_fill_right_col_range!(_res, r2, x, ranges, r, ra, inbits)
     cnt = 1
     cnt_r = 1
     if length(r2) == 0
+        _res = allowmissing(_res)
         _res[r] = missing
     else
-        for i in r2
-            _res[r-length(r2)+1+cnt-1] = x[ranges[cnt_r]]
-            cnt += 1
+        for i in ra
+            if inbits[i]
+                _res[r-length(r2)+1+cnt-1] = x[ranges[cnt_r]]
+                cnt += 1
+            end
             cnt_r += 1
         end
     end
@@ -593,6 +592,7 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuniqu
 
     inbits = nothing
     revised_ends = nothing
+    ra = nothing
     if length(right_range_cols) == 2
         inbits = zeros(Bool, total_length)
         # TODO any optimisation is needed for pa?
@@ -604,16 +604,20 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuniqu
         if mapformats[2]
             _fr = getformat(dsr, right_range_cols[2])
         end
-        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], _fl, _fr, ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64); strict = strict_inequality[2], threads = threads)
+        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], _fl, _fr, ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64); strict = strict_inequality[2], threads = threads)   
         inbit_ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-
+        ra = Vector{UnitRange{T}}(undef, nrow(dsl))
         @_threadsfor threads for i in 1:length(ranges)
             if i == 1
+                lo = 1
                 lo2 = 1
             else
+                lo = new_ends[i-1] + 1
                 lo2 = revised_ends[i-1] + 1
             end
+            hi = new_ends[i]
             hi2 = revised_ends[i]
+            ra[i] = lo:hi
             inbit_ranges[i] = lo2:hi2
         end
         
@@ -649,12 +653,22 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuniqu
     end
 
     for j in 1:length(right_cols)
-        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
+        if dsr isa SubDataset
+            _res = allocatecol(_columns(copy(dsr))[right_cols[j]], total_length, addmissing = true)
+        else
+            _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = true)
+        end
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val; inbits = inbits, en2 = revised_ends, threads = threads)
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val; ra = ra, inbits = inbits, en2 = revised_ends, threads = threads)
+            # Solve the #undef problem. There has to be a better way
+            for i in 1:length(_res)
+                if !isassigned(_res,i)
+                    _res[i] = missing
+                end
+            end
         else
-            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends, threads = threads)
+            _fill_right_cols_table_left!(_res, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, missing; ra = ra, inbits = inbits, en2 = revised_ends, threads = threads)
         end
         push!(_columns(newds), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
@@ -675,7 +689,7 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuniqu
     if obs_id[2]
         obs_id_name2 = Symbol(obs_id_name, "_right")
         obs_id_right = allocatecol(T, total_length)
-        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends,  threads = threads)
+        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing; ra = ra, inbits = inbits, en2 = revised_ends,  threads = threads)
         insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false, makeunique = makeunique)
     end
     newds
@@ -763,6 +777,7 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
 
     inbits = nothing
     revised_ends = nothing
+    ra = nothing
     if length(right_range_cols) == 2
         inbits = zeros(Bool, total_length)
         # TODO any optimisation is needed for pa?
@@ -774,16 +789,20 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
         if mapformats[2]
             _fr = getformat(dsr, right_range_cols[2])
         end
-        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], _fl, _fr, ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64); strict = strict_inequality[2], threads = threads)
+        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], _fl, _fr, ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64); strict = strict_inequality[2], threads = threads)   
         inbit_ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-
+        ra = Vector{UnitRange{T}}(undef, nrow(dsl))
         @_threadsfor threads for i in 1:length(ranges)
             if i == 1
+                lo = 1
                 lo2 = 1
             else
+                lo = new_ends[i-1] + 1
                 lo2 = revised_ends[i-1] + 1
             end
+            hi = new_ends[i]
             hi2 = revised_ends[i]
+            ra[i] = lo:hi
             inbit_ranges[i] = lo2:hi2
         end
         
@@ -805,12 +824,21 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     end
 
     for j in 1:length(right_cols)
-        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
+        if dsr isa SubDataset
+            _res = allocatecol(_columns(copy(dsr))[right_cols[j]], total_length, addmissing = true)
+        else
+            _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = true)
+        end
         if DataAPI.refpool(_res) !== nothing
             fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val; inbits = inbits, en2 = revised_ends, threads = threads)
+            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val;ra=ra, inbits = inbits, en2 = revised_ends, threads = threads)
+            for x in 1:length(_res)
+                if !isassigned(_res,x)
+                    _res[x] = missing
+                end
+            end
         else
-            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends, threads = threads)
+            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing;ra=ra, inbits = inbits, en2 = revised_ends, threads = threads)
         end
         push!(_columns(dsl), _res)
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
@@ -829,7 +857,7 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     if obs_id[2]
         obs_id_name2 = Symbol(obs_id_name, "_right")
         obs_id_right = allocatecol(T, total_length)
-        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends, threads = threads)
+        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing;ra=ra, inbits = inbits, en2 = revised_ends, threads = threads)
         insertcols!(dsl, ncol(dsl)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false, makeunique = makeunique)
     end
 
