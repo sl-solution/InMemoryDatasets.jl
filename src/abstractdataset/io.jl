@@ -52,6 +52,7 @@ function getmaxwidths(ds::AbstractDataset,
                       buffer::IOBuffer,
                       truncstring::Int;
                       mapformats::Bool = true)
+
     maxwidths = zeros(Int, size(ds, 2) + 1)
 
     undefstrwidth = ourstrwidth(io, "#undef", buffer, truncstring)
