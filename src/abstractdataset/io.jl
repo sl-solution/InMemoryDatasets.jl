@@ -6,13 +6,15 @@
                             rowlabel::Symbol,
                             rowid::Union{Integer, Nothing},
                             show_eltype::Bool,
-                            buffer::IOBuffer)
+                            buffer::IOBuffer,
+                            truncstring::Int;
+                            mapformats::Bool = true)
 
 Calculate, for each column of an AbstractDataset, the maximum
 string width used to render the name of that column, its type, and the
 longest entry in that column -- among the rows of the data frame
-will be rendered to IO. The widths for all columns are returned as a
-vector.
+will be rendered to IO. The widths for the columns that will be displayed 
+are returned as a vector.
 
 Return a `Vector{Int}` giving the maximum string widths required to render
 each column, including that column's name and type.
@@ -35,6 +37,10 @@ implicit row ID column contained in every `AbstractDataset`.
 - `show_eltype`: Whether to print the column type
    under the column name in the heading.
 - `buffer`: buffer passed around to avoid reallocations in `ourstrwidth`
+- `truncstring`: The length of the string to be truncated. The string will
+   not be truncated if it is equal to 0.
+- `mapformats`: Whether to calculate the max widths after mapping format 
+   for each column.
 """
 function getmaxwidths(ds::AbstractDataset,
                       io::IO,
@@ -44,18 +50,26 @@ function getmaxwidths(ds::AbstractDataset,
                       rowid::Union{Integer, Nothing},
                       show_eltype::Bool,
                       buffer::IOBuffer,
-                      truncstring::Int)
-    maxwidths = Vector{Int}(undef, size(ds, 2) + 1)
+                      truncstring::Int;
+                      mapformats::Bool = true)
+
+    maxwidths = zeros(Int, size(ds, 2) + 1)
 
     undefstrwidth = ourstrwidth(io, "#undef", buffer, truncstring)
 
     ct = show_eltype ? batch_compacttype(Any[eltype(c) for c in eachcol(ds)]) : String[]
+    tty_cols = displaysize(io)[2]
+    maxwidthsum = 0
     j = 1
     for (col_idx, (name, col)) in enumerate(pairs(eachcol(ds)))
         # (1) Consider length of column name
         # do not truncate column name
         maxwidth = ourstrwidth(io, name, buffer, 0)
-
+        # Calculates max widths after mapping formats if mapformats = true, because formats may affact the max widths
+        if mapformats
+            f = getformat(ds, col_idx)
+            col = f.(col)
+        end
         # (2) Consider length of longest entry in that column
         for indices in (rowindices1, rowindices2), i in indices
             if isassigned(col, i)
@@ -70,7 +84,12 @@ function getmaxwidths(ds::AbstractDataset,
         else
             maxwidths[j] = maxwidth
         end
+        maxwidthsum += (maxwidths[j] + 2)
         j += 1
+        # If the sum of column widths is already larger than COLUMNS, do not need calculate max width for the rest columns
+        if maxwidthsum >= tty_cols
+            break
+        end
     end
 
     # do not truncate rowlabel
@@ -126,10 +145,10 @@ julia> show(stdout, MIME("text/csv"), Dataset(A = 1:3, B = ["x", "y", "z"]))
 """
 Base.show(io::IO, mime::MIME, ds::AbstractDataset)
 Base.show(io::IO, mime::MIME"text/html", ds::AbstractDataset;
-          summary::Bool=true, eltypes::Bool=true) =
-    _show(io, mime, ds, summary=summary, eltypes=eltypes)
-Base.show(io::IO, mime::MIME"text/latex", ds::AbstractDataset; eltypes::Bool=true, mapformats = true, formats = true) =
-    _show(io, mime, ds, eltypes=eltypes, mapformats = mapformats, formats = formats)
+          summary::Bool = true, eltypes::Bool = true, mapformats = true) =
+    _show(io, mime, ds, summary = summary, eltypes = eltypes, mapformats = mapformats)
+Base.show(io::IO, mime::MIME"text/latex", ds::AbstractDataset; eltypes::Bool = true, mapformats = true, formats = true) =
+    _show(io, mime, ds, eltypes = eltypes, mapformats = mapformats, formats = formats)
 Base.show(io::IO, mime::MIME"text/csv", ds::AbstractDataset; mapformats = true) =
     printtable(io, ds, header = true, separator = ',', mapformats = mapformats)
 Base.show(io::IO, mime::MIME"text/tab-separated-values", ds::AbstractDataset; mapformats = true) =
@@ -164,7 +183,7 @@ function html_escape(cell::AbstractString)
 end
 
 function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
-               summary::Bool=true, eltypes::Bool=true, rowid::Union{Int, Nothing}=nothing)
+               summary::Bool=true, eltypes::Bool=true, rowid::Union{Int, Nothing}=nothing, mapformats = true)
     _check_consistency(ds)
 
     # we will pass around this buffer to avoid its reallocation in ourstrwidth
@@ -182,7 +201,7 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
     if get(io, :limit, false)
         tty_rows, tty_cols = displaysize(io)
         mxrow = min(mxrow, tty_rows)
-        maxwidths = getmaxwidths(ds, io, 1:mxrow, 0:-1, :X, nothing, true, buffer, 0) .+ 2
+        maxwidths = getmaxwidths(ds, io, 1:mxrow, 0:-1, :X, nothing, true, buffer, 0, mapformats = mapformats) .+ 2
         mxcol = min(mxcol, searchsortedfirst(cumsum(maxwidths), tty_cols))
     end
 
