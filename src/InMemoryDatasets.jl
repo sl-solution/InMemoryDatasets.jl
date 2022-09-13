@@ -194,10 +194,10 @@ include("missings/missings.jl")
 # ds stat
 include("stat/ds_stat.jl")
 # precompile
-# include("precompile/precompile.jl")
+include("precompile/precompile.jl")
 include("precompile/warmup.jl")
 include("precompile/create_sysimage.jl")
-# _precompile_()
+_precompile()
 
 function __init__()
    if Threads.nthreads() == 1
