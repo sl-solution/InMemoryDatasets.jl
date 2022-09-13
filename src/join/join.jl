@@ -573,7 +573,7 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuniqu
     else
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && type == :both && nrow(dsr)>1
-            success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
+            success, result =  _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
             if success
                 return result
             end
@@ -684,7 +684,7 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuniqu
         obs_id_name1 = Symbol(obs_id_name, "_left")
         obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
         _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; threads = threads)
-        insertcols!(dsnewdsl, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false, makeunique = makeunique)
+        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[2]
         obs_id_name2 = Symbol(obs_id_name, "_right")
@@ -758,7 +758,7 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     else
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
         if length(oncols_left) == 1 && type == :both && nrow(dsr)>1
-            success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
+            success, result =  _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
             if success
                 return result
             end
