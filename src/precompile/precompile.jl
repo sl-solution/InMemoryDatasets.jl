@@ -506,6 +506,14 @@
 # precompile(Tuple{typeof(Base.getindex), Array{Union{Base.Missing, Dates.Millisecond}, 1}, Int64})
 # precompile(Tuple{typeof(PrettyTables._flush_buffer!), Base.IOContext{Base.TTY}, Base.GenericIOBuffer{Array{UInt8, 1}}, Bool, Bool, Int64})
 
+# The precompile contains precompilation directives for methods that compilation is 
+# triggered by running `warmup.jl` and takes more than threshold of 0.1.
+# `precompile.jl` is gernerated by SnoopCompile via:
+#   using SnoopCompile
+#   inf_timing = @snoopi tmin=0.1 include("src/precompile/warmup/jl")
+#   pc = SnoopCompile.parcel(inf_timing)
+#   SnoopCompile.write("src/other/precompile_tmp.jl", pc[:InMemoryDatasets], always=true)
+
 function _precompile()
     VERSION >= v"1.8" || return nothing
     
