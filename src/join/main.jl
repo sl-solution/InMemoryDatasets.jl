@@ -131,7 +131,7 @@ julia> leftjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols::Bool = true, strict_inequality = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
+function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, onlyreturnrange = false, droprangecols::Bool = true, strict_inequality = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -174,7 +174,7 @@ function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
-    _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, stable = stable, strict_inequality = strict_inequality, makeunique = makeunique, mapformats = mapformats,accelerate = accelerate, check = false,droprangecols = droprangecols, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
+    _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, stable = stable, onlyreturnrange = onlyreturnrange, strict_inequality = strict_inequality, makeunique = makeunique, mapformats = mapformats,accelerate = accelerate, check = false,droprangecols = droprangecols, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
 
 end
 """
