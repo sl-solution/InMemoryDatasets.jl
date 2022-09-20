@@ -29,6 +29,8 @@ _names(ds::GroupBy) = _names(ds.parent)
 _columns(ds::GroupBy) = _columns(ds.parent)
 index(ds::GroupBy) = index(ds.parent)
 Base.parent(ds::GroupBy) = ds.parent
+Base.size(ds::GroupBy) = size(ds.parent)
+Base.size(ds::GroupBy, i::Integer) = size(ds.parent, i)
 
 function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
 	_check_consistency(ds)

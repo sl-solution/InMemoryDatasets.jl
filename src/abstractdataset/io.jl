@@ -42,10 +42,10 @@ implicit row ID column contained in every `AbstractDataset`.
 - `mapformats`: Whether to calculate the max widths after mapping format 
    for each column.
 """
-function getmaxwidths(ds::AbstractDataset,
+function getmaxwidths(ds::Union{AbstractDataset, GroupBy, GatherBy},
                       io::IO,
-                      rowindices1::AbstractVector{Int},
-                      rowindices2::AbstractVector{Int},
+                      rowindices1::Union{AbstractVector{Int64}, AbstractVector{Int32}},
+                      rowindices2::Union{AbstractVector{Int64}, AbstractVector{Int32}},
                       rowlabel::Symbol,
                       rowid::Union{Integer, Nothing},
                       show_eltype::Bool,
@@ -57,11 +57,12 @@ function getmaxwidths(ds::AbstractDataset,
 
     undefstrwidth = ourstrwidth(io, "#undef", buffer, truncstring)
 
-    ct = show_eltype ? batch_compacttype(Any[eltype(c) for c in eachcol(ds)]) : String[]
+    ct = show_eltype ? batch_compacttype(ds isa AbstractDataset ? Any[eltype(c) for c in eachcol(ds)] : Any[eltype(c) for c in eachcol(ds.parent)]) : String[]
     tty_cols = displaysize(io)[2]
     maxwidthsum = 0
     j = 1
-    for (col_idx, (name, col)) in enumerate(pairs(eachcol(ds)))
+    cols = ds isa AbstractDataset ? eachcol(ds) : eachcol(ds.parent)
+    for (col_idx, (name, col)) in enumerate(pairs(cols))
         # (1) Consider length of column name
         # do not truncate column name
         maxwidth = ourstrwidth(io, name, buffer, 0)
@@ -144,7 +145,7 @@ julia> show(stdout, MIME("text/csv"), Dataset(A = 1:3, B = ["x", "y", "z"]))
 ```
 """
 Base.show(io::IO, mime::MIME, ds::AbstractDataset)
-Base.show(io::IO, mime::MIME"text/html", ds::AbstractDataset;
+Base.show(io::IO, mime::MIME"text/html", ds::Union{AbstractDataset, GroupBy, GatherBy};
           summary::Bool = true, eltypes::Bool = true, mapformats = true) =
     _show(io, mime, ds, summary = summary, eltypes = eltypes, mapformats = mapformats)
 Base.show(io::IO, mime::MIME"text/latex", ds::AbstractDataset; eltypes::Bool = true, mapformats = true, formats = true) =
@@ -182,9 +183,14 @@ function html_escape(cell::AbstractString)
     return cell
 end
 
-function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
+function _show(io::IO, ::MIME"text/html", ds::Union{AbstractDataset, GroupBy, GatherBy};
                summary::Bool=true, eltypes::Bool=true, rowid::Union{Int, Nothing}=nothing, mapformats = true)
-    _check_consistency(ds)
+    # Define a Boolean variable here since we have to determine whether ds is a AbstractDataset for many times
+    isadataset = false
+    if ds isa AbstractDataset
+        _check_consistency(ds)
+        isadataset = true
+    end
 
     # we will pass around this buffer to avoid its reallocation in ourstrwidth
     buffer = IOBuffer(Vector{UInt8}(undef, 80), read=true, write=true)
@@ -201,7 +207,7 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
     if get(io, :limit, false)
         tty_rows, tty_cols = displaysize(io)
         mxrow = min(mxrow, tty_rows)
-        maxwidths = getmaxwidths(ds, io, 1:mxrow, 0:-1, :X, nothing, true, buffer, 0, mapformats = mapformats) .+ 2
+        maxwidths = getmaxwidths(ds, io, _get_perms(ds)[1:mxrow], 0:-1, :X, nothing, true, buffer, 0, mapformats = mapformats) .+ 2
         mxcol = min(mxcol, searchsortedfirst(cumsum(maxwidths), tty_cols))
     end
 
@@ -225,7 +231,7 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
         # We put a longer string for the type into the title argument of the <th> element,
         # which the users can hover over. The limit of 256 characters is arbitrary, but
         # we want some maximum limit, since the types can sometimes get really-really long.
-        types = Any[eltype(ds[!, idx]) for idx in 1:mxcol]
+        types = isadataset ? Any[eltype(ds[!, idx]) for idx in 1:mxcol] : Any[eltype(ds.parent[!, idx]) for idx in 1:mxcol]
         ct, ct_title = batch_compacttype(types), batch_compacttype(types, 256)
         for j in 1:mxcol
             s = html_escape(ct[j])
@@ -244,6 +250,12 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
                   end
         if ds isa SubDataset
             mainmsg = "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> SubDataset (view of Dataset)</p>"
+        elseif !isadataset
+            mainmsg = if ds isa GroupBy
+                    "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> View of Grouped Dataset </p><p> Grouped by: $(join(_names(ds)[ds.groupcols],", ")) </p>"
+                elseif ds isa GatherBy
+                    "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> View of GatherBy Dataset </p><p> Gathered by: $(join(_names(ds)[ds.groupcols],", ")) </p>"
+                end
         else
             mainmsg = if !isempty(index(ds).sortedcols) && index(ds).grouped[]
                     "<p>$(digitsep(nrow(ds))) rows × $(digitsep(ncol(ds))) columns$omitmsg</p><p><b> Grouped Dataset with $(index(ds).ngroups[]) groups </p><p> Grouped by: $(join(_names(ds)[index(ds).sortedcols],", ")) </p>"
@@ -256,7 +268,7 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
         write(io, mainmsg)
 
     end
-    for row in 1:mxrow
+    for row in _get_perms(ds)[1:mxrow]
         write(io, "<tr>")
         if rowid === nothing
             write(io, "<th>$row</th>")
@@ -264,8 +276,8 @@ function _show(io::IO, ::MIME"text/html", ds::AbstractDataset;
             write(io, "<th>$rowid</th>")
         end
         for column_name in cnames
-            if isassigned(ds[!, column_name], row)
-                cell_val = getformat(ds, column_name)(ds[row, column_name])
+            if isassigned(isadataset ? ds[!, column_name] : ds.parent[!, column_name], row)
+                cell_val = isadataset ? getformat(ds, column_name)(ds[row, column_name]) : getformat(ds.parent, column_name)(ds.parent[row, column_name])
                 if ismissing(cell_val)
                     write(io, "<td><em>missing</em></td>")
                 elseif cell_val isa Markdown.MD

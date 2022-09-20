@@ -50,6 +50,9 @@ _names(ds::GatherBy) = _names(ds.parent)
 _columns(ds::GatherBy) = _columns(ds.parent)
 index(ds::GatherBy) = index(ds.parent)
 Base.parent(ds::GatherBy) = ds.parent
+Base.size(ds::GatherBy) = size(ds.parent)
+Base.size(ds::GatherBy, i::Integer) = size(ds.parent, i)
+getformat(ds::GatherBy, i) = getformat(ds.parent, i)
 
 
 Base.summary(gds::GatherBy) =
