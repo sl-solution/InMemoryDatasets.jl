@@ -268,7 +268,7 @@ function _show(io::IO, ::MIME"text/html", ds::Union{AbstractDataset, GroupBy, Ga
         write(io, mainmsg)
 
     end
-    for (row, i) in zip(_get_perms(ds)[1:mxrow], 1:mxrow)
+    for (i, row) in enumerate(_get_perms(ds)[1:mxrow])
         write(io, "<tr>")
         if rowid === nothing
             write(io, "<th>$i</th>")
