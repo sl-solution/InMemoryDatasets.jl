@@ -268,10 +268,10 @@ function _show(io::IO, ::MIME"text/html", ds::Union{AbstractDataset, GroupBy, Ga
         write(io, mainmsg)
 
     end
-    for row in _get_perms(ds)[1:mxrow]
+    for (row, i) in zip(_get_perms(ds)[1:mxrow], 1:mxrow)
         write(io, "<tr>")
         if rowid === nothing
-            write(io, "<th>$row</th>")
+            write(io, "<th>$i</th>")
         else
             write(io, "<th>$rowid</th>")
         end
