@@ -3,10 +3,15 @@
 ## Fixes
 
 * `topk` and `topkperm` use `isless` by default for comparing values.
+* Fix a bug in `show` which causes ignoring format of a column when calculating the max width.
+* Better `show` for `GroupBy/GatherBy` in Jupyter
+* `hcat!` keeps the format of the second data set.
+
 
 ## Performance
 
 * Now `Jupyter` shows very wide data sets much faster, [issue #82](https://github.com/sl-solution/InMemoryDatasets.jl/issues/82)
+* Add precompilation for Julia > 1.8
 # Version 0.7.8
 
 ## New features
