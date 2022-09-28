@@ -13,6 +13,9 @@ function hcat!(ds1::Dataset, ds2::AbstractDataset;
     for i in 1:length(u)
         ds1[!, u[i]] = ds2[:, i]
     end
+    for i in 1:length(u)
+        setformat!(ds1, u[i]=>getformat(ds2, i))
+    end
     _modified(_attributes(ds1))
     return ds1
 end
