@@ -220,6 +220,7 @@ function _show(io::IO, ::MIME"text/html", ds::Union{AbstractDataset, GroupBy, Ga
         write(io, "<th>$(html_escape(String(column_name)))</th>")
     end
     write(io, "</tr>")
+    write(io, "<tr>")
     write(io, "<th></th>")
     for column_name in cnames
         write(io, "<th>$(getformat(ds, column_name))</th>")
