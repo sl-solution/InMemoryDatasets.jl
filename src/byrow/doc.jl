@@ -1292,7 +1292,7 @@ Variant of `byrow(stdze!)` which pass a copy of `ds` and leave `ds` untouched.
 
 Return the result of calling `fun` on each row of `ds` selected by `cols`. The `fun` function must accept one argument which contains the values of each row as a vector of values and return a scalar.
 
-When user passes a type as `fun` and a single column as `cols`,  `byrow` convert the corresponding column to the type specified by `fun`.
+When user passes a "Type" as `fun` and a single column as `cols`,  `byrow` converts the corresponding column to the type specified by `fun` using the `convert` function in Base Julia.
 
 For generic functions there are the below special cases:
 
