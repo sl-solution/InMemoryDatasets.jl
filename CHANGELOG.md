@@ -6,6 +6,7 @@
 * Fix a bug in `show` which causes ignoring format of a column when calculating the max width.
 * Better `show` for `GroupBy/GatherBy` in Jupyter
 * `hcat!` keeps the format of the second data set.
+* Fix an issue in show with HTML MIME, [issue #91](https://github.com/sl-solution/InMemoryDatasets.jl/issues/91)
 
 
 ## Performance
