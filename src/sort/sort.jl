@@ -8,7 +8,7 @@ end
 function Base.sort!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
     _check_consistency(ds)
     colsidx = index(ds)[cols]
-    if length(rev) == 1
+    if rev isa Bool
         revs = repeat([rev], length(colsidx))
     else
         revs = rev
@@ -67,7 +67,7 @@ function Base.sort(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev
     isempty(ds) && return copy(ds)
     _check_consistency(ds)
     colsidx = index(ds)[cols]
-    if length(rev) == 1
+    if rev isa Bool
         revs = repeat([rev], length(colsidx))
     else
         revs = rev
