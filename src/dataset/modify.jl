@@ -623,7 +623,7 @@ function _check_the_output_type(ds::Dataset, ms)
     # * AbstractVector{T} where T
     # * Vector{T}
     # * not a Vector
-    CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(ms.second.first)` on `:$(_names(ds)[ms.first])`, you may want to try using `byrow`"))
+    CT == Union{} && throw(ArgumentError("compiler cannot assess the return type of calling `$(ms.second.first)` on `:$(_names(ds)[[(ms.first)...]])`, you may want to try using `byrow`"))
     if CT <: AbstractVector
         if hasproperty(CT, :var)
             T = Union{Missing, CT.var.ub}
