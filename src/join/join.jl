@@ -147,20 +147,6 @@ function _fill_val_join!(x, r2, val, inbits, r)
     end
 end
 
-function _fill_val_join!(x, r2, val, inbits, r, ranges)
-    cnt = 1
-    lo = r2.start
-    for i in r
-        if inbits[i]
-            x[cnt+lo-1] = val
-            cnt += 1
-        end
-        if !inbits[i] && length(ranges) === 0
-            x[cnt+lo-1] = val
-        end
-    end
-end
-
 # F1 and F2 are here for type stability when threads = false
 function _find_ranges_for_join!(ranges, x, y, _fl::F1, _fr::F2, ::Val{T1}, ::Val{T2}; type = :both, threads = true) where {T1, T2, F1, F2}
     if type == :both
@@ -261,7 +247,7 @@ function _fill_oncols_left_table_left!(_res, x, ranges, en, total, fill_val; inb
             # @show sum(view(inbits, lo:hi))
             # sum(view(inbits, lo:hi)) == 0 && continue
             hi2 = en2[i]
-            _fill_val_join!(_res, lo2:hi2, x[i], inbits, lo:hi, ranges[i])
+            length(ranges[i]) ===0 ? _fill_val_join!(_res, lo2:hi2, x[i]) : _fill_val_join!(_res, lo2:hi2, x[i], inbits, lo:hi)
             
         end
     end
@@ -325,7 +311,7 @@ function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val; inbi
             end
             hi = en[i]
             hi2 = en2[i]
-            _fill_right_col_range!(_res, lo2:hi2, x, ranges[i], inbits, lo:hi)
+            _fill_right_col_range!(_res, lo2:hi2, x, ranges[i], inbits, lo:hi, fill_val)
         end
     end
 end
@@ -342,6 +328,23 @@ function _fill_right_col_range!(_res, r2, x, ranges, inbits, r)
         cnt_r += 1
     end
 end
+
+function _fill_right_col_range!(_res, r2, x, ranges, inbits, r, fill_val)
+    cnt = 1
+    cnt_r = 1
+    lo = r2.start
+    for i in r
+        if inbits[i]
+            _res[lo+cnt-1] = x[ranges[cnt_r]]
+            cnt += 1
+        end
+        if !inbits[i] && length(ranges) === 0
+            _res[cnt+lo-1] = fill_val
+        end
+        cnt_r += 1
+    end
+end
+
 
 function _fill_right_cols_table_inner!(_res, x, ranges, en, total; inbits = nothing, en2 = nothing, threads = true)
     if inbits === nothing
@@ -467,38 +470,55 @@ ISLE(::Missing, ::Missing) = false
 
 function _mark_lt_part!(inbits, x_l, x_r, _fl::F1, _fr::F2, ranges, r_perms, en, ::Val{T}; strict = false, threads = true, join_type) where {T, F1, F2}
     revised_ends = zeros(T, length(en))
-    @_threadsfor threads for i in 1:length(ranges)
-        if join_type === :left
+    if join_type === :left
+        @_threadsfor threads for i in 1:length(ranges)
             if length(ranges[i]) == 0
                 revised_ends[i] = 1
                 continue
             end
-        else
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            total = 0
+            cnt = 1
+            for j in ranges[i]
+                if strict
+                    inbits[lo + cnt - 1] = isless(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+                else
+                    inbits[lo + cnt - 1] = ISLE(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+                end
+                total += inbits[lo + cnt - 1]
+                cnt += 1
+            end
+            revised_ends[i] = total
+            if total == 0
+                ranges[i] = 1:0
+                revised_ends[i] += 1
+            end
+        end
+    else
+        @_threadsfor threads for i in 1:length(ranges)
             if length(ranges[i]) == 0
                 if i !== 1
                     revised_ends[i] = 0
                 end
                 continue
             end
-        end
-        i == 1 ? lo = 1 : lo = en[i - 1] + 1
-        hi = en[i]
-        total = 0
-        cnt = 1
-        for j in ranges[i]
-            if strict
-                inbits[lo + cnt - 1] = isless(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
-            else
-                inbits[lo + cnt - 1] = ISLE(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            total = 0
+            cnt = 1
+            for j in ranges[i]
+                if strict
+                    inbits[lo + cnt - 1] = isless(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+                else
+                    inbits[lo + cnt - 1] = ISLE(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+                end
+                total += inbits[lo + cnt - 1]
+                cnt += 1
             end
-            total += inbits[lo + cnt - 1]
-            cnt += 1
-        end
-        revised_ends[i] = total
-        if total == 0
-            ranges[i] = 1:0
-            if join_type === :left
-                revised_ends[i] += 1
+            revised_ends[i] = total
+            if total == 0
+                ranges[i] = 1:0
             end
         end
     end
@@ -704,12 +724,6 @@ function _ranges_join(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeuni
             if join_type === :left
                 fill_val = DataAPI.invrefpool(_res)[missing]
                 _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val; inbits = inbits, en2 = revised_ends, threads = threads)
-                # Solve the #undef problem. There has to be a better way
-                for i in 1:length(_res)
-                    if !isassigned(_res,i)
-                        _res[i] = missing
-                    end
-                end
             else
                 _fill_right_cols_table_inner!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
             end
@@ -768,30 +782,20 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     elseif method == :sort
         oncols_left = onleft
         oncols_right = onright
-        # Inverse selection of the right table
         right_cols = setdiff(1:length(index(dsr)), oncols_right)
-        # check unique
         if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
             throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
         end
-        # init ranges
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-        # if oncols_left has only one column.
         if length(oncols_left) == 1 && nrow(dsr)>1
-            # if the key in dsr is unique, success is true.
-            # for row in left, must be one to one.
             success, result = _join_left!_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
             if success
                 return result
             end
         end
         
-        # idx is the order of dsr by hashed value.
-        # uniquemode is true, means that no repeat
         idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, threads = threads)
         
-        # This function will find ranges. if ranges has elements like 2:1, the first number is larger than second
-        # which means that this row in dsl has no matched row in dsr.
         for j in 1:length(oncols_left)
             _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, threads = threads)
         end
