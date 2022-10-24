@@ -384,7 +384,7 @@ Dataset(column_eltypes::AbstractVector{T}, cnames::AbstractVector{Symbol},
 
 # Create Dataset
 Dataset(column_eltypes::AbstractVector{<:Type}, cnames::AbstractVector{<:AbstractString},
-          nrows::Integer=0; makeunique::Bool=false) where T<:Type =
+          nrows::Integer=0; makeunique::Bool=false) =
     throw(ArgumentError("`Dataset` constructor with passed eltypes is " *
                         "not supported. Pass explicitly created columns to a " *
                         "`Dataset` constructor instead."))

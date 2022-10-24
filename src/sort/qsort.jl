@@ -1,11 +1,21 @@
 
-midpoint(lo::T, hi::T) where T<:Integer = lo + ((hi - lo) >>> 0x01)
+midpoint(lo::T, hi::T) where {T<:Integer} = lo + ((hi - lo) >>> 0x01)
 midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
-struct HeapSortAlg  <: Base.Sort.Algorithm end
+import Base.Sort.Algorithm
+struct HeapSortAlg <: Algorithm end
+
+if VERSION >= v"1.9.0-DEV.1635"
+    struct QuickSortAlg <: Algorithm end # we define it here because Julia 1.9.0-DEV.1635 dropped it / QuickSort = PartialQuickSort{Missing, Missing}
+      # fall back to QuickSortAlg -
+    ds_sort!(v, idx::Vector{<:Integer}, lo::Integer, hi::Integer, a::PartialQuickSort{Missing, Missing}, o::Ordering) = ds_sort!(v, idx, lo::Integer, hi, QuickSortAlg(), o)
+else
+    import Base.Sort.QuickSortAlg
+end
+
 const DEFAULT_UNSTABLE = QuickSort
 # const DEFAULT_STABLE   = MergeSort
-const SMALL_ALGORITHM  = InsertionSort
-const SMALL_THRESHOLD  = 20
+const SMALL_ALGORITHM = InsertionSort
+const SMALL_THRESHOLD = 20
 const HeapSort = HeapSortAlg()
 
 
@@ -65,9 +75,14 @@ function _partition!(v, idx::Vector{<:Integer}, lo::Integer, hi::Integer, o::Ord
     # pivot == v[lo], v[hi] > pivot
     i, j = lo, hi
     @inbounds while true
-        i += 1; j -= 1
-        while lt(o, v[i], pivot); i += 1; end;
-        while lt(o, pivot, v[j]); j -= 1; end;
+        i += 1
+        j -= 1
+        while lt(o, v[i], pivot)
+            i += 1
+        end
+        while lt(o, pivot, v[j])
+            j -= 1
+        end
         i >= j && break
         v[i], v[j] = v[j], v[i]
         idx[i], idx[j] = idx[j], idx[i]
@@ -83,17 +98,17 @@ end
 
 function ds_sort!(v, idx::Vector{<:Integer}, lo::Integer, hi::Integer, a::QuickSortAlg, o::Ordering)
     @inbounds while lo < hi
-        hi-lo <= SMALL_THRESHOLD && return ds_sort!(v, idx, lo, hi, SMALL_ALGORITHM, o)
+        hi - lo <= SMALL_THRESHOLD && return ds_sort!(v, idx, lo, hi, SMALL_ALGORITHM, o)
         j = _partition!(v, idx, lo, hi, o)
-        if j-lo < hi-j
+        if j - lo < hi - j
             # recurse on the smaller chunk
             # this is necessary to preserve O(log(n))
             # stack space in the worst case (rather than O(n))
-            lo < (j-1) && ds_sort!(v, idx, lo, j-1, a, o)
-            lo = j+1
+            lo < (j - 1) && ds_sort!(v, idx, lo, j - 1, a, o)
+            lo = j + 1
         else
-            j+1 < hi && ds_sort!(v, idx, j+1, hi, a, o)
-            hi = j-1
+            j + 1 < hi && ds_sort!(v, idx, j + 1, hi, a, o)
+            hi = j - 1
         end
     end
 end
@@ -102,10 +117,10 @@ end
 # the assumption is that x[lo:mid] is sorted and x[mid+1:hi] is also sorted,
 # the function uses this information to sort x[lo:hi]
 # x_cpy is a copy of the x, idx_cpy is a copy of idx
-function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, mid, hi, o; cpy_offset = 0)
+function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, mid, hi, o; cpy_offset=0)
     st1 = lo
     en1 = mid
-    st2 = mid+1
+    st2 = mid + 1
     en2 = hi
     cnt = lo
     @inbounds while true
@@ -141,21 +156,21 @@ function _sort_two_sorted_half!(x, x_cpy, idx::Vector{<:Integer}, idx_cpy, lo, m
 end
 
 # to simplify the problem we assume number_of_chunks is 2^n for some n
-function _sort_chunks!(x, idx::Vector{<:Integer}, lo, hi, number_of_chunks, a::Base.Sort.Algorithm, o::Ordering)
+function _sort_chunks!(x, idx::Vector{<:Integer}, lo, hi, number_of_chunks, a::Algorithm, o::Ordering)
     rangelen = hi - lo + 1
     st_offset = lo - 1
     cz = div(rangelen, number_of_chunks)
     en = hi
     Threads.@threads for i in 1:number_of_chunks
-        ds_sort!(x, idx, (i-1)*cz+1+st_offset, i*cz+st_offset, a, o)
+        ds_sort!(x, idx, (i - 1) * cz + 1 + st_offset, i * cz + st_offset, a, o)
     end
     # take care of the last few observations
-    if number_of_chunks*div(rangelen, number_of_chunks)+st_offset < en
-        ds_sort!(x, idx, number_of_chunks*div(rangelen, number_of_chunks)+1+st_offset, en, a, o)
+    if number_of_chunks * div(rangelen, number_of_chunks) + st_offset < en
+        ds_sort!(x, idx, number_of_chunks * div(rangelen, number_of_chunks) + 1 + st_offset, en, a, o)
     end
 end
 
-function _sort_multi_sorted_chunk!(x, idx::Vector{<:Integer}, lo, hi, number_of_chunks, a::Base.Sort.Algorithm, o::Ordering)
+function _sort_multi_sorted_chunk!(x, idx::Vector{<:Integer}, lo, hi, number_of_chunks, a::Algorithm, o::Ordering)
     rangelen = hi - lo + 1
     st_offset = lo - 1
     cz = div(rangelen, number_of_chunks)
@@ -165,29 +180,29 @@ function _sort_multi_sorted_chunk!(x, idx::Vector{<:Integer}, lo, hi, number_of_
     idx_cpy = idx[lo:hi]
     while true
         Threads.@threads for i in 1:2:current_numberof_chunks
-            _sort_two_sorted_half!(x, x_cpy, idx, idx_cpy, (i-1)*cz+1+st_offset, i*cz+st_offset, (i+1)*cz+st_offset, o; cpy_offset = lo-1)
+            _sort_two_sorted_half!(x, x_cpy, idx, idx_cpy, (i - 1) * cz + 1 + st_offset, i * cz + st_offset, (i + 1) * cz + st_offset, o; cpy_offset=lo - 1)
         end
         cz *= 2
-        current_numberof_chunks = current_numberof_chunks  >> 1
+        current_numberof_chunks = current_numberof_chunks >> 1
         current_numberof_chunks < 2 && break
         copyto!(x_cpy, 1, x, lo, rangelen)
         copyto!(idx_cpy, 1, idx, lo, rangelen)
     end
     # take care of the last few (less than number_of_chunks) observations
-    if number_of_chunks*div(rangelen, number_of_chunks)+st_offset < en
+    if number_of_chunks * div(rangelen, number_of_chunks) + st_offset < en
         copyto!(x_cpy, 1, x, lo, rangelen)
         copyto!(idx_cpy, 1, idx, lo, rangelen)
-        _sort_two_sorted_half!(x, x_cpy, idx, idx_cpy, lo, number_of_chunks*div(rangelen, number_of_chunks)+st_offset, en, o; cpy_offset = lo-1)
+        _sort_two_sorted_half!(x, x_cpy, idx, idx_cpy, lo, number_of_chunks * div(rangelen, number_of_chunks) + st_offset, en, o; cpy_offset=lo - 1)
     end
 end
 
 # sorting a vector using parallel quick sort
 # it uses a simple algorithm for doing this, and to make it even simpler the number of threads must be in the form of 2^n
-function hp_ds_sort!(x, idx, a::Base.Sort.Algorithm, o::Ordering; lo = 1, hi = length(x))
+function hp_ds_sort!(x, idx, a::Algorithm, o::Ordering; lo=1, hi=length(x))
     cpucnt = Threads.nthreads()
     @assert cpucnt >= 2 "we need at least 2 cpus for parallel sorting"
-    cpucnt = 2 ^ floor(Int, log2(cpucnt))
-    _sort_chunks!(x , idx, lo, hi, cpucnt, a, o)
+    cpucnt = 2^floor(Int, log2(cpucnt))
+    _sort_chunks!(x, idx, lo, hi, cpucnt, a, o)
     _sort_multi_sorted_chunk!(x, idx, lo, hi, cpucnt, a, o)
 end
 
@@ -200,7 +215,7 @@ heapright(i::Integer) = 2i + 1
 heapparent(i::Integer) = div(i, 2)
 
 # Binary min-heap percolate down.
-function percolate_down!(xs::AbstractArray, idx, i::Integer, x=xs[i], idval = idx[i], o::Ordering=Forward, len::Integer=length(xs))
+function percolate_down!(xs::AbstractArray, idx, i::Integer, x=xs[i], idval=idx[i], o::Ordering=Forward, len::Integer=length(xs))
     @inbounds while (l = heapleft(i)) <= len
         r = heapright(i)
         j = r > len || lt(o, xs[l], xs[r]) ? l : r
@@ -226,7 +241,7 @@ function heapify!(xs::AbstractArray, idx, o::Ordering=Forward)
 end
 
 function ds_sort!(v::AbstractVector, idx::AbstractVector{<:Integer}, lo::Integer, hi::Integer, a::HeapSortAlg, o::Ordering)
-    hi-lo <= SMALL_THRESHOLD && return ds_sort!(v, idx, lo, hi, SMALL_ALGORITHM, o)
+    hi - lo <= SMALL_THRESHOLD && return ds_sort!(v, idx, lo, hi, SMALL_ALGORITHM, o)
     if lo > 1 || hi < length(v)
         return ds_sort!(view(v, lo:hi), view(idx, lo:hi), 1, length(v), a, o)
     end
@@ -240,7 +255,7 @@ function ds_sort!(v::AbstractVector, idx::AbstractVector{<:Integer}, lo::Integer
         idx[i] = idx[1]
         # The heap portion now ends at position i-1, but needs fixing up
         # starting with the root
-        percolate_down!(v, idx, 1, x, idxval, r, i-1)
+        percolate_down!(v, idx, 1, x, idxval, r, i - 1)
     end
     v
 end
@@ -269,8 +284,8 @@ function heapify2!(xs::AbstractArray, o::Ordering=Forward)
     return xs
 end
 
-function Base.sort!(v::AbstractVector, lo::Integer, hi::Integer, a::HeapSortAlg, o::Ordering = Forward)
-    hi-lo <= SMALL_THRESHOLD && return sort!(v, lo, hi, SMALL_ALGORITHM, o)
+function Base.sort!(v::AbstractVector, lo::Integer, hi::Integer, a::HeapSortAlg, o::Ordering=Forward)
+    hi - lo <= SMALL_THRESHOLD && return sort!(v, lo, hi, SMALL_ALGORITHM, o)
     if lo > 1 || hi < length(v)
         return sort!(view(v, lo:hi), 1, length(v), a, o)
     end
@@ -282,7 +297,7 @@ function Base.sort!(v::AbstractVector, lo::Integer, hi::Integer, a::HeapSortAlg,
         v[i] = v[1]
         # The heap portion now ends at position i-1, but needs fixing up
         # starting with the root
-        percolate_down2!(v, 1, x, r, i-1)
+        percolate_down2!(v, 1, x, r, i - 1)
     end
     v
 end
