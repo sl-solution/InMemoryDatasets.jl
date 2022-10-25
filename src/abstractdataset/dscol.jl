@@ -150,17 +150,11 @@ end
 
 
 
-Base.Sort.defalg(col::SubOrDSCol) = Base.Sort.defalg(__!(col))
-function Base.sort!(col::SubOrDSCol; alg::Base.Sort.Algorithm=Base.Sort.defalg(col), lt=isless, by=identity, rev::Bool=false, order::Base.Order.Ordering=Base.Order.Forward)
-    sort!(__!(col), alg=alg, lt=lt, by=by, rev=rev, order=order)
+function Base.sort!(col::SubOrDSCol; kws...)
+    sort!(__!(col); kws...)
     _modified(_attributes(parent(col.ds)))
     col.col ∈ index(parent(col.ds)).sortedcols && _reset_grouping_info!(parent(col.ds))
     col
 end
-function Base.sort(col::SubOrDSCol; alg::Base.Sort.Algorithm=Base.Sort.defalg(col), lt=isless, by=identity, rev::Bool=false, order::Base.Order.Ordering=Base.Order.Forward)
-    sort(__!(col), alg=alg, lt=lt, by=by, rev=rev, order=order)
-end
-
-function Base.sortperm(col::SubOrDSCol; alg::Base.Sort.Algorithm=Base.Sort.DEFAULT_UNSTABLE, lt=isless, by=identity, rev::Bool=false, order::Base.Order.Ordering=Base.Order.Forward)
-    sortperm(__!(col), alg=alg, lt=lt, by=by, rev=rev, order=order)
-end
+Base.sort(col::SubOrDSCol; kws...) = sort(__!(col); kws...)
+Base.sortperm(col::SubOrDSCol; kws...) = sortperm(__!(col); kws...)
