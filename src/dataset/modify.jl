@@ -430,7 +430,7 @@ julia> body = Dataset(weight = [78.5, 59, 80], height = [160, 171, 183])
    2 │     59.0       171
    3 │     80.0       183
 
-julia> modify!(body, :height => byrow(x -> (x/100)^2) => :BMI, [1, 3] => byrow(/) => :BMI)
+julia> modify!(body, :height => byrow(x -> (x/100)^2) => :BMI, (1, 3) => byrow(/) => :BMI)
 3×3 Dataset
  Row │ weight    height    BMI
      │ identity  identity  identity
