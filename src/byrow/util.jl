@@ -110,7 +110,7 @@ __CODEUNIT(x) = Base.CodeUnits(__STRING(x))
 
 # some experimental ideas
 
-function write_vals!(a, pos, x::Integer)
+function write_vals!(a, pos, x::T) where T <: Union{Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64}
     n_positive, neg = Base.split_sign(x)
     #always we assume base = 10
     needed_space = neg + ndigits(x)
