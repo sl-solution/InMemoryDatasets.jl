@@ -1,5 +1,17 @@
 # Dev
 
+## Features
+
+* Update to `PrettyTables` version 2
+
+## Fixes
+
+* Fix a but in `byrow` for writing values of type `BigInt`
+* Update for `Julia` VERSION >= v"1.9.0-DEV.1635"
+* Fix a bug in `modify` which causes an error to show an error!
+* Fix a bug in `sort` which causes to treat `Bool` as a vector with length 1
+# Version 0.7.10
+
 ## Fixes
 
 * `topk` and `topkperm` use `isless` by default for comparing values.
