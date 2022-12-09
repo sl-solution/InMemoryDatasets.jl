@@ -76,7 +76,7 @@ function cumsum(x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where
         throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
     end
 end
-cumsum(x) = Base.cumsum(x)
+cumsum(x; missings = :ignore) = Base.cumsum(x)
 function cumsum!(outx::AbstractVector, x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS}
     if missings == :ignore
         stat_cumsum!_ignore(outx, x)
@@ -86,7 +86,7 @@ function cumsum!(outx::AbstractVector, x::AbstractArray{Union{Missing, T},1}; mi
         throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
     end
 end
-cumsum!(x,y) = Base.cumsum!(x,y)
+cumsum!(x,y; missings = :ignore) = Base.cumsum!(x,y)
 function cumprod(x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS}
     if missings == :ignore
         stat_cumprod_ignore(x)
@@ -96,7 +96,7 @@ function cumprod(x::AbstractArray{Union{Missing, T},1}; missings = :ignore) wher
         throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
     end
 end
-cumprod(x)=Base.cumprod(x)
+cumprod(x; missings = :ignore)=Base.cumprod(x)
 function cumprod!(outx::AbstractVector, x::AbstractArray{Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS}
     if missings == :ignore
         stat_cumprod!_ignore(outx, x)
@@ -106,7 +106,7 @@ function cumprod!(outx::AbstractVector, x::AbstractArray{Union{Missing, T},1}; m
         throw(ArgumentError("`missings` must be either `:ignore` or `:skip`"))
     end
 end
-cumprod!(x,y) = Base.cumprod!(x,y)
+cumprod!(x, y; missings=:ignore) = Base.cumprod!(x,y)
 function cummin(x::AbstractArray{<:Union{Missing, T},1}; missings = :ignore) where T <: Union{INTEGERS, FLOATS, TimeType}
     if missings == :ignore
         stat_cummin_ignore(x)
