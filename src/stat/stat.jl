@@ -1,12 +1,12 @@
 maximum(f, x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS, TimeType} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : threads ? hp_maximum(f, x) : stat_maximum(f, x)
-maximum(f, x) = Base.maximum(f, x)
+maximum(f, x; threads = false) = Base.maximum(f, x)
 maximum(x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS, TimeType}  = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : threads ? hp_maximum(identity, x) : stat_maximum(identity, x)
-maximum(x) = Base.maximum(x)
+maximum(x; threads = false) = Base.maximum(x)
 
 minimum(f, x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS, TimeType} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : threads ? hp_minimum(f, x) : stat_minimum(f, x)
-minimum(f, x) = Base.minimum(f, x)
+minimum(f, x; threads = false) = Base.minimum(f, x)
 minimum(x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS, TimeType}= isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : threads ? hp_minimum(identity, x) : stat_minimum(identity, x)
-minimum(x) = Base.minimum(x)
+minimum(x; threads = false) = Base.minimum(x)
 # TODO not optimised for simd - threads option is useless here / it is here because we have it for other types of data
 maximum(f, x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = mapreduce(f, _stat_max_fun, x)
 minimum(f, x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = mapreduce(f, _stat_min_fun, x)
@@ -14,9 +14,9 @@ maximum(x::AbstractVector{Union{Missing, T}}; threads = false) where T <: Abstra
 minimum(x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = minimum(identity, x)
 
 sum(f, x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : threads ? hp_sum(f, x) : stat_sum(f, x)
-sum(f, x)=Base.sum(f, x)
+sum(f, x; threads = false)=Base.sum(f, x)
 sum(x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS} =isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) :  threads ? hp_sum(identity, x) : stat_sum(identity, x)
-sum(x) = Base.sum(x)
+sum(x; threads = false) = Base.sum(x)
 
 mean(f, x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : stat_mean(f, x)
 mean(x::AbstractArray{Union{T,Missing},1}) where T <: Union{INTEGERS, FLOATS} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : stat_mean(x)
@@ -48,14 +48,14 @@ median!(x) = Statistics.median!(x)
 
 
 extrema(f, x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS, TimeType} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : threads ? (hp_minimum(f, x), hp_maximum(f, x)) : (stat_minimum(f, x), stat_maximum(f, x))
-extrema(f, x) = Base.extrema(f, x)
+extrema(f, x; threads = false) = Base.extrema(f, x)
 extrema(x::AbstractArray{Union{Missing, T},1}; threads = false) where T  <: Union{INTEGERS, FLOATS, TimeType}= isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : threads ? (hp_minimum(identity, x), hp_maximum(identity, x)) : (stat_minimum(identity, x), stat_maximum(identity, x))
-extrema(x) = Base.extrema(x)
+extrema(x; threads = false) = Base.extrema(x)
 
 # when by is a function the following functions find argmax/min(by.(x))
-argmax(x::AbstractArray{Union{Missing, T},1}; by = identity) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : stat_findmax(by, x)[2]
+argmax(x::AbstractArray{<:Union{Missing, T},1}; by = identity) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : stat_findmax(by, x)[2]
 argmax(x) = Base.argmax(x)
-argmin(x::AbstractArray{Union{Missing, T},1}; by = identity) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : stat_findmin(by, x)[2]
+argmin(x::AbstractArray{<:Union{Missing, T},1}; by = identity) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : stat_findmin(by, x)[2]
 argmin(x) = Base.argmin(x)
 
 findmax(f, x::AbstractArray{Union{Missing, T},1}) where T <: Union{INTEGERS, FLOATS, TimeType, AbstractString} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : stat_findmax(f, x)
