@@ -1,6 +1,11 @@
 MIT License
 
 Copyright (c) 2021 sl-solution <github.sl.solution@icloud.com> and contributors
+
+Some code inspired by other packages:
+Copyright (c) 2016 Julia Computing, Inc and other FixedSizeStrings.jl contributors.
+Copyright (c) 2017: Julia Computing, Inc and other JuliaDB.jl contributors.
+Copyright (c) 2013-2014: Kevin Squire, Stefan Karpinski, Jeff Bezanson and other SortingAlgorithms.jl contributors.
 Copyright (c) 2012-2022: Harlan Harris, EPRI (Tom Short's code), Chris DuBois,
 John Myles White, Milan Bouchet-Valat, Bogumił Kamiński and other DataFrames.jl
 contributors
