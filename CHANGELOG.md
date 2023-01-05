@@ -1,3 +1,12 @@
+# Dev
+
+## Features
+
+* Users can use `resize!` to resize a data set
+
+## Fixes
+
+* Fix function signature for some stat functions
 # Version 0.7.11
 
 ## Features
