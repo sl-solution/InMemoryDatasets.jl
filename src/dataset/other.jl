@@ -1389,3 +1389,29 @@ function _permute_ds_after_sort!(ds, perm; check = true, cols = :, threads = tru
     end
     _modified(_attributes(ds))
 end
+
+"""
+    resize!(ds::Dataset, n::Integer)
+
+Resize `ds` to contain `n` elements. If `n` is smaller than the number of rows in `ds`, the first `n` elements will be retained. If `n` is larger, the new elements are initialized with missing.
+"""
+function Base.resize!(ds::Dataset, n::Integer)
+    nrows = nrow(ds)
+    ncols = ncol(ds)
+    current_col=0
+    try
+        for j in 1:ncols
+            resize!(_columns(ds)[j], n)
+            _columns(ds)[j][nrows+1:n] .= missing # new rows must be initialised by missing
+            current_col += 1
+        end
+        _reset_grouping_info!(ds)
+        _modified(_attributes(ds))
+    catch err
+        for j in 1:current_col
+            resize!(_columns(ds)[j], nrows)
+        end
+        rethrow(err)
+    end
+    ds
+end
