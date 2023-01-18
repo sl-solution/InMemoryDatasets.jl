@@ -4,7 +4,7 @@ midpoint(lo::Integer, hi::Integer) = midpoint(promote(lo, hi)...)
 import Base.Sort.Algorithm
 struct HeapSortAlg <: Algorithm end
 
-if VERSION >= v"1.9.0-DEV.1635"
+if false #VERSION >= v"1.9.0-DEV.1635" - it seems julia dropped this, we keep it in case
     struct QuickSortAlg <: Algorithm end # we define it here because Julia 1.9.0-DEV.1635 dropped it / QuickSort = PartialQuickSort{Missing, Missing}
       # fall back to QuickSortAlg -
     ds_sort!(v, idx::Vector{<:Integer}, lo::Integer, hi::Integer, a::PartialQuickSort{Missing, Missing}, o::Ordering) = ds_sort!(v, idx, lo::Integer, hi, QuickSortAlg(), o)
