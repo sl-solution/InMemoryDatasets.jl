@@ -297,3 +297,43 @@ end
               SubDataset(sds, [1, 1, 1], :)
     end
 end
+@testset "subdataset with no columns" begin # from DF.jl
+    ds = Dataset(a=1:3, b=4:6)
+    vds = @view ds[[3, 1], 2:1]
+    @test nrow(SubDataset(vds, Int[], :)) == 0
+    @test nrow(SubDataset(vds, Bool[], :)) == 0
+    @test nrow(SubDataset(vds, :, :)) == 0
+    @test nrow(SubDataset(vds, Not(:), :)) == 0
+    @test nrow(SubDataset(vds, Int[], [])) == 0
+    @test nrow(SubDataset(vds, Bool[], [])) == 0
+    @test nrow(SubDataset(vds, :, [])) == 0
+    @test nrow(SubDataset(vds, Not(:), [])) == 0
+    @test_throws BoundsError SubDataset(vds, [1, 2], :)
+
+    @test nrow(view(vds, Int[], :)) == 0
+    @test nrow(view(vds, Bool[], :)) == 0
+    @test nrow(view(vds, :, :)) == 0
+    @test nrow(view(vds, !, :)) == 0
+    @test nrow(view(vds, Not(:), :)) == 0
+    @test nrow(view(vds, Int[], [])) == 0
+    @test nrow(view(vds, Bool[], [])) == 0
+    @test nrow(view(vds, :, [])) == 0
+    @test nrow(view(vds, !, [])) == 0
+    @test nrow(view(vds, Not(:), [])) == 0
+    @test_throws BoundsError view(vds, [1, 2], :)
+
+    @test_throws BoundsError vds[1, 1]
+    @test_throws BoundsError vds[[1, 2], 1]
+
+    @test nrow(getindex(vds, Int[], :)) == 0
+    @test nrow(getindex(vds, Bool[], :)) == 0
+    @test nrow(getindex(vds, :, :)) == 0
+    @test nrow(getindex(vds, !, :)) == 0
+    @test nrow(getindex(vds, Not(:), :)) == 0
+    @test nrow(getindex(vds, Int[], [])) == 0
+    @test nrow(getindex(vds, Bool[], [])) == 0
+    @test nrow(getindex(vds, :, [])) == 0
+    @test nrow(getindex(vds, !, [])) == 0
+    @test nrow(getindex(vds, Not(:), [])) == 0
+    @test_throws BoundsError getindex(vds, [1, 2], :)
+end

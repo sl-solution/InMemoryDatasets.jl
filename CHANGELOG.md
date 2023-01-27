@@ -1,5 +1,12 @@
 # Dev
 
+## Fixes
+
+* Fix issue with `QuickSortAlg` in future version of Julia
+* Empty the rows of a `SubDataset` without columns
+
+# Version 0.7.12
+
 ## Features
 
 * Users can use `resize!` to resize a data set
@@ -7,6 +14,7 @@
 ## Fixes
 
 * Fix function signature for some stat functions
+
 # Version 0.7.11
 
 ## Features

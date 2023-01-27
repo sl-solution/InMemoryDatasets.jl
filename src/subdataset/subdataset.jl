@@ -108,7 +108,13 @@ Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVect
     @boundscheck if !checkindex(Bool, axes(parent, 1), rows)
         throw(BoundsError(parent, (rows, cols)))
     end
-    SubDataset(parent, SubIndex(index(parent), cols), rows)
+    sindex = SubIndex(index(parent), cols)
+    # SubDataset without columns should not have any row
+    if all(==(0), sindex.remap)
+        SubDataset(parent, sindex, Int[])
+    else
+        SubDataset(parent,sindex , rows)
+    end
 end
 Base.@propagate_inbounds SubDataset(parent::Dataset, ::Colon, cols) =
     SubDataset(parent, axes(parent, 1), cols)
