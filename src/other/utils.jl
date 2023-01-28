@@ -30,10 +30,11 @@ end
 # modified return_type to suit for our purpose
 function return_type(f::Function, x)
 	eltype(x) == Missing && return Missing
-    CT = nonmissingtype(eltype(x))
-    if CT <: AbstractVector
+    
+    if eltype(x) <: AbstractVector
         return return_type_tuple(f, x)
     end
+    CT = nonmissingtype(eltype(x))
     T = Core.Compiler.return_type(f, Tuple{Vector{CT}})
     # workaround for SubArray type
     if T <: SubArray

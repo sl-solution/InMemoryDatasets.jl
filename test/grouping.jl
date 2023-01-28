@@ -642,3 +642,21 @@ end
     @test ds == Dataset(x1 = [1,2,1,2], x2 = [1,-2,-3,10], x3 = 1:4, z = [1.0, missing, -1.0, missing])
 
 end
+
+@testset "combine and modify with Vector{Vector}" begin
+    ds = Dataset(x=[[1,2],[2,3]])
+    @test modify(ds, :x=>length=>:y) == Dataset(x=[[1,2],[2,3]], y=2)
+    @test combine(ds, :x=>sum) == Dataset(sum_x=[3,5])
+
+    ds = Dataset(x=[[1.0,2.0,missing],[2.0,3.0,1.0]])
+    @test modify(ds, :x=>length=>:y) == Dataset(x=[[1.0,2.0,missing],[2.0,3.0,1.0]], y=2)
+    @test combine(ds, :x=>(x->sum(x)::Vector{Union{Float64, Missing}})) == Dataset(function_x=[3.0,5.0,missing])
+
+    function _f_12345667(x, y)
+        map(z->z[1], x) .+ y
+    end
+
+    ds = Dataset(x=[[1,2],[2,3]], y=2)
+    @test modify(ds, (:x,:y)=>_f_12345667) == Dataset(x=[[1,2],[2,3]], y=2,_f_12345667_x_y = [3,4])
+
+end

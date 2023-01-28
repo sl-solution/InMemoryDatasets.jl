@@ -4,6 +4,7 @@
 
 * Fix issue with `QuickSortAlg` in future version of Julia
 * Empty the rows of a `SubDataset` without columns
+* Fix a bug which causes `modify/combine` throw errors on columns with Vector{Vector} type
 
 # Version 0.7.12
 
