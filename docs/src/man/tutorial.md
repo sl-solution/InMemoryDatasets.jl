@@ -457,24 +457,23 @@ julia> @chain flights begin
 
 The [StatsPlots](https://github.com/JuliaPlots/StatsPlots.jl), [VegaLite](https://github.com/queryverse/VegaLite.jl), [Makie](https://github.com/JuliaPlots/Makie.jl) packages (among others) make a rich set of visualisations possible with an intuitive syntax.
 
-Here we use `VegaLite` to visualise the cancellation rate in busiest airports for each month:
+Here we use [`StatisticalGraphics.jl`](https://github.com/sl-solution/StatisticalGraphics.jl) to visualise the cancellation rate in busiest airports for each month:
 
 ```julia
-julia> using VegaLite
+julia> using StatisticalGraphics
 julia> @chain flights begin
-         groupby([:FlightDate, :Origin])
-         combine(:Cancelled => mean => :rate)
-         filter!(:Origin, by = in(["LAX", "SFO", "SAN"]))
-         map(monthabbr, 1)
-          _ |> @vlplot(:bar,
-                        x = {"FlightDate:o", title = "Month", sort = false},
-                        y = "rate",
-                        column = "Origin:n",
-                      )
+          filter!(:Origin, by = in(["LAX", "SFO", "SAN"]))
+      
+          sgplot(
+                Bar(y=:FlightDate, response=:Cancelled, stat=IMD.mean,
+                        group=:Origin, groupdisplay=:cluster),
+                yaxis=Axis(title="Month", order=:ascending),
+                xaxis=Axis(title="Rate", d3format="%", grid=true, gridcolor=:white, domain=false),
+                wallcolor=:lightgray)
        end
 ```
 
-![cancellation](https://raw.githubusercontent.com/sl-solution/InMemoryDatasetsTutorial/main/flights.svg)
+![cancellation](../assets/flights.svg)
 
 ## Exporting data
 
