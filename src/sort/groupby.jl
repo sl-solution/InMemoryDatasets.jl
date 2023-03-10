@@ -1,3 +1,152 @@
+"""
+    groupby(ds, cols;
+		alg = HeapSortAlg(),
+		rev = false,
+		mapformats::Bool = true,
+		stable = true,
+		threads = true)
+
+Return a `GroupBy` representing a view of a `sorted` data set which each group of observation are next to each other.
+
+# Arguments
+- `ds` : an `AbstractDataset` or the output of `groupby`.
+- `cols` : data set columns to group by. Can be any column selector
+  ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR). 
+- `alg` : The sorting algorithm for creating `grouped` data set. By default Heap algorithm is used, however, user can pass `Quicksort` too.
+- `rev` : A `Bool` value or a Vector of `Bool` which indicate which column should be sorted in descending order.
+- `mapforamts`: Whether the formated values should be used or not.
+- `stable`: Whether the sorting alogrithm should be stable or not. Setting this to `false` often improve the performance.
+- `threads`: By default multi threaded algorithm will be used to group observations, however, user can change this by passing `false` to this keyword. 
+
+# See also
+
+[`groupby!`](@ref), [`gatherby`](@ref), [`combine`](@ref), [`modify`](@ref), [`modify!`](@ref), [`eachgroup`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(a=repeat([1, 2, 3, 4], outer=[2]),
+                      b=repeat([2, 1], outer=[4]),
+                      c=1:8);
+
+julia> groupby(ds, :a)
+8×3 View of Grouped Dataset, Grouped by: a
+ a         b         c        
+ identity  identity  identity 
+ Int64?    Int64?    Int64?   
+──────────────────────────────
+        1         2         1
+        1         2         5
+        2         1         2
+        2         1         6
+        3         2         3
+        3         2         7
+        4         1         4
+        4         1         8
+
+julia> groupby(ds, [:a, :c], rev=[true, false])
+8×3 View of Grouped Dataset, Grouped by: a ,c
+ a         b         c        
+ identity  identity  identity 
+ Int64?    Int64?    Int64?   
+──────────────────────────────
+        4         1         4
+        4         1         8
+        3         2         3
+        3         2         7
+        2         1         2
+        2         1         6
+        1         2         1
+        1         2         5
+
+julia> collect(eachgroup(groupby(ds, [:b])))
+2-element Vector{SubDataset}:
+ 4×3 SubDataset
+ Row │ a         b         c        
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        2         1         2
+   2 │        4         1         4
+   3 │        2         1         6
+   4 │        4         1         8
+ 4×3 SubDataset
+ Row │ a         b         c        
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         2         1
+   2 │        3         2         3
+   3 │        1         2         5
+   4 │        3         2         7
+		
+```
+"""
+groupby
+
+"""
+    groupby!(ds, cols;
+		alg = HeapSortAlg(),
+		rev = false,
+		mapformats::Bool = true,
+		stable = true,
+		threads = true)
+
+Repace a data set by its sorted version and tag the data set as a grouped data set, i.e. when the data set is used as the argument for other functions it will be seen as a grouped data set.
+
+# Arguments
+- `ds` : a `Dataset`.
+- `cols` : data set columns to group by. Can be any column selector
+  ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR). 
+- `alg` : The sorting algorithm for creating `grouped` data set. By default Heap algorithm is used, however, user can pass `Quicksort` too.
+- `rev` : A `Bool` value or a Vector of `Bool` which indicate which column should be sorted in descending order.
+- `mapforamts`: Whether the formated values should be used or not.
+- `stable`: Whether the sorting alogrithm should be stable or not. Setting this to `false` often improve the performance.
+- `threads`: By default multi threaded algorithm will be used to group observations, however, user can change this by passing `false` to this keyword. 
+
+# See also
+
+[`ungroup!`](@ref), [`groupby`](@ref), [`gatherby`](@ref), [`combine`](@ref), [`modify`](@ref), [`modify!`](@ref), [`eachgroup`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(a=repeat([1, 2, 3, 4], outer=[2]),
+                      b=repeat([2, 1], outer=[4]),
+                      c=1:8);
+
+julia> groupby!(ds, :a)
+8×3 Grouped Dataset with 4 groups
+Grouped by: a
+ Row │ a         b         c        
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         2         1
+   2 │        1         2         5
+   3 │        2         1         2
+   4 │        2         1         6
+   5 │        3         2         3
+   6 │        3         2         7
+   7 │        4         1         4
+   8 │        4         1         8
+
+julia>groupby!(ds, [:a, :c], rev=[true, false])
+8×3 Grouped Dataset with 8 groups
+Grouped by: a, c
+ Row │ a         b         c        
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        4         1         4
+   2 │        4         1         8
+   3 │        3         2         3
+   4 │        3         2         7
+   5 │        2         1         2
+   6 │        2         1         6
+   7 │        1         2         1
+   8 │        1         2         5
+
+```
+"""
 function groupby!(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true)
 	sort!(ds, cols, alg = alg, rev = rev,  mapformats = mapformats, stable = stable, threads = threads)
 	index(ds).grouped[] = true
@@ -304,7 +453,11 @@ Base.show(io::IO, mime::MIME"text/plain", gds::GroupBy;
 kwargs...) =
 show(io, gds; title = summary(gds), kwargs...)
 
+"""
+	ungroup!(ds)
 
+Remove the grouping information of a grouped data set created by `groupby!`, however, the function leaves the data sorted.
+"""
 function ungroup!(ds::Dataset)
 	if index(ds).grouped[]
 		index(ds).grouped[] = false
