@@ -1,5 +1,91 @@
 using .Base: sub_with_overflow, add_with_overflow, mul_with_overflow
 
+
+"""
+    gatherby(ds, cols;
+		mapformats::Bool = true,
+		stable::Bool = true,
+		isgathered::Bool = false,
+		eachrow::Bool = false,
+		threads = true)
+
+Return a `Gatherby` representing a view of a `gathered` data set which each group of observation are next to each other.
+
+# Arguments
+- `ds` : an `AbstractDataset`.
+- `cols` : data set columns to gather by. Can be any column selector
+  ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR). 
+- `mapforamts`: Whether the formated values should be used or not.
+- `stable`: Whether the stable alogrithm should be used or not. Setting this to `false` may improve the performance for data set with many groups.
+- `isgathered`: If `true` the function assumes that the observation are grouped based on some predefined rules and it only find the start and the end of each group.
+- `eachrow`: If `true` the function assumes that each row of the input data set is a group. This is very useful for reshaping data. See `transpose`. 
+- `threads`: By default multi threaded algorithm will be used to gather observations, however, uses can change this by passing `false` to this keyword. 
+
+# See also
+
+[`groupby!`](@ref), [`groupby`](@ref), [`combine`](@ref), [`modify`](@ref), [`modify!`](@ref), [`eachgroup`](@ref)
+
+# Examples
+```jldoctest
+julia> ds = Dataset(a=repeat([1, 2, 3, 4], outer=[2]),
+                      b=repeat([2, 1], outer=[4]),
+                      c=1:8);
+
+julia> gatherby(ds, :a)
+8×3 View of GatherBy Dataset, Gathered by: a
+ a         b         c        
+ identity  identity  identity 
+ Int64?    Int64?    Int64?   
+──────────────────────────────
+        1         2         1
+        1         2         5
+        2         1         2
+        2         1         6
+        3         2         3
+        3         2         7
+        4         1         4
+        4         1         8
+
+julia> gatherby(ds, [:b, :c])
+8×3 View of GatherBy Dataset, Gathered by: b ,c
+ a         b         c        
+ identity  identity  identity 
+ Int64?    Int64?    Int64?   
+──────────────────────────────
+        1         2         1
+        2         1         2
+        3         2         3
+        4         1         4
+        1         2         5
+        2         1         6
+        3         2         7
+        4         1         8
+
+julia> collect(eachgroup(gatherby(ds, [:b])))
+2-element Vector{SubDataset}:
+ 4×3 SubDataset
+ Row │ a         b         c        
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         2         1
+   2 │        3         2         3
+   3 │        1         2         5
+   4 │        3         2         7
+ 4×3 SubDataset
+ Row │ a         b         c        
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        2         1         2
+   2 │        4         1         4
+   3 │        2         1         6
+   4 │        4         1         8
+
+```
+"""
+gatherby
+
 function _findstarts_for_indices(x)
     _tmp = zeros(Bool, length(x))
     _tmp[1] = true
