@@ -658,6 +658,19 @@ julia> combine(groupby(ds,1), (:x, :y)=>(x1,x2)->IMD.maximum(x1)-IMD.minimum(x2)
    1 │        1             3
    2 │        2             5
 
+julia> setformat!(ds, :x=>ispow2)
+
+julia> combine(groupby(ds, [:g, :x]), :y=>[IMD.maximum, length])
+4×4 Dataset
+ Row │ g         x       maximum_y  length_y 
+     │ identity  ispow2  identity   identity 
+     │ Int64?    Int64?  Int64?     Int64?   
+─────┼───────────────────────────────────────
+   1 │        1   false          4         2
+   2 │        1    true          6         1
+   3 │        2   false          1         1
+   4 │        2    true          5         2
+
 ```
 """
 function combine(ds::Dataset, @nospecialize(args...); dropgroupcols = false, threads = true)

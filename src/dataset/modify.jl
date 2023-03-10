@@ -459,6 +459,46 @@ julia> modify!(body, (:weight, :height)=> cor)
    1 │     78.5       160          0.0890411
    2 │     59.0       171          0.0890411
    3 │     80.0       183          0.0890411
+
+julia> ds = Dataset(g = [1,2,1,2,1,2], x = 1:6, y = 6:-1:1)
+6×3 Dataset
+ Row │ g         x         y        
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         1         6
+   2 │        2         2         5
+   3 │        1         3         4
+   4 │        2         4         3
+   5 │        1         5         2
+   6 │        2         6         1
+
+julia> setformat!(ds, :x=>ispow2)
+6×3 Dataset
+ Row │ g         x       y        
+     │ identity  ispow2  identity 
+     │ Int64?    Int64?  Int64?   
+─────┼────────────────────────────
+   1 │        1    true         6
+   2 │        2    true         5
+   3 │        1   false         4
+   4 │        2    true         3
+   5 │        1   false         2
+   6 │        2   false         1
+
+julia>  modify!(groupby(ds, [:g, :x]), :y=>lag=>:lag_y, :y=>IMD.sum=>:sum_y)
+6×5 Dataset
+ Row │ g         x       y         lag_y     sum_y    
+     │ identity  ispow2  identity  identity  identity 
+     │ Int64?    Int64?  Int64?    Int64?    Int64?   
+─────┼────────────────────────────────────────────────
+   1 │        1    true         6   missing         6
+   2 │        2    true         5   missing         8
+   3 │        1   false         4   missing         6
+   4 │        2    true         3         5         8
+   5 │        1   false         2         4         6
+   6 │        2   false         1   missing         1
+
 ```
 """
 function modify!(ds::AbstractDataset, @nospecialize(args...); threads::Bool = true)
