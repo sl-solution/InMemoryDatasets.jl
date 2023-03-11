@@ -660,3 +660,15 @@ end
     @test modify(ds, (:x,:y)=>_f_12345667) == Dataset(x=[[1,2],[2,3]], y=2,_f_12345667_x_y = [3,4])
 
 end
+
+@testset "bug in gatheby with stable=true" begin
+    x = string.([1,2,3,1,1,2,4,2,1])
+    y = copy(x)
+    frequency = [1000; fill(1, 8)]
+    ds = Dataset(x=x, y=y, frequency=frequency)
+    @test combine(gatherby(ds, 1:2, stable = true), 1 => first => :f) == Dataset(x = unique(x), y = unique(y), f = unique(x))
+    @test combine(gatherby(ds, 1:2, stable = false), 1 => first => :f) == Dataset(x = string.([3,4,1,2]), y = string.([3,4,1,2]), f = string.([3,4,1,2]))
+    repeat!(ds, freq=:frequency)
+    @test combine(gatherby(ds, 1:2, stable = true), 1 => first => :f) == Dataset(x = unique(x), y = unique(y), f = unique(x))
+    @test combine(gatherby(ds, 1:2, stable = false), 1 => first => :f) == Dataset(x = unique(x), y = unique(y), f = unique(x))
+end
