@@ -1,8 +1,12 @@
-# Dev
+# Version 0.7.14
 
 ## Fixes
 
 * Fix a bug which caused `stable=true` being ignored in `gatherby`, [issue #100](https://github.com/sl-solution/InMemoryDatasets.jl/issues/100)
+
+## Documentation
+
+* Add docstring for `groupby!`, `groupby`, and `gatherby`.
 
 # Version 0.7.13
 
