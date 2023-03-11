@@ -2,6 +2,12 @@
 
 ## Fixes
 
+* Fix a bug which caused `stable=true` being ignored in `gatherby`, [issue #100](https://github.com/sl-solution/InMemoryDatasets.jl/issues/100)
+
+# Version 0.7.13
+
+## Fixes
+
 * Fix issue with `QuickSortAlg` in future version of Julia
 * Empty the rows of a `SubDataset` without columns
 * Fix a bug which causes `modify/combine` throw errors on columns with Vector{Vector} type
