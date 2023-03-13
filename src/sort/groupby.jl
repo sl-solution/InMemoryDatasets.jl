@@ -12,7 +12,7 @@ Return a `GroupBy` representing a view of a `sorted` data set which each group o
 - `ds` : an `AbstractDataset` or the output of `groupby`.
 - `cols` : data set columns to group by. Can be any column selector
   ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR). 
-- `alg` : The sorting algorithm for creating `grouped` data set. By default Heap algorithm is used, however, user can pass `Quicksort` too.
+- `alg` : The sorting algorithm for creating `grouped` data set. By default Heap algorithm is used, however, user can pass `QuickSort` too.
 - `rev` : A `Bool` value or a Vector of `Bool` which indicate which column should be sorted in descending order.
 - `mapforamts`: Whether the formated values should be used or not.
 - `stable`: Whether the sorting alogrithm should be stable or not. Setting this to `false` often improve the performance.
@@ -97,7 +97,7 @@ Repace a data set by its sorted version and tag the data set as a grouped data s
 - `ds` : a `Dataset`.
 - `cols` : data set columns to group by. Can be any column selector
   ($COLUMNINDEX_STR; $MULTICOLUMNINDEX_STR). 
-- `alg` : The sorting algorithm for creating `grouped` data set. By default Heap algorithm is used, however, user can pass `Quicksort` too.
+- `alg` : The sorting algorithm for creating `grouped` data set. By default Heap algorithm is used, however, user can pass `QuickSort` too.
 - `rev` : A `Bool` value or a Vector of `Bool` which indicate which column should be sorted in descending order.
 - `mapforamts`: Whether the formated values should be used or not.
 - `stable`: Whether the sorting alogrithm should be stable or not. Setting this to `false` often improve the performance.
