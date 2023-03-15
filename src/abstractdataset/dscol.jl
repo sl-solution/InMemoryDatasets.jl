@@ -160,3 +160,8 @@ function Base.sort!(col::SubOrDSCol; kws...)
 end
 Base.sort(col::SubOrDSCol; kws...) = sort(__!(col); kws...)
 Base.sortperm(col::SubOrDSCol; kws...) = sortperm(__!(col); kws...)
+
+Base.searchsortedfirst(col::SubOrDSCol, x; kws...) = searchsortedfirst(__!(col), x; kws...)
+Base.searchsortedlast(col::SubOrDSCol, x; kws...) = searchsortedlast(__!(col), x; kws...)
+Base.searchsorted(col::SubOrDSCol, x; kws...) = searchsorted(__!(col), x; kws...)
+
