@@ -415,3 +415,11 @@ end
     fun123_2(x,y) = x == 1 && y < 0 ? true : false
     @test byrow(ds, fun123_2, (:x1, :x2)) == [false, false, true, false]
 end
+
+@testset "byrow - nunique" begin
+    ds = Dataset(x=2.1, y=4611911198408756429, z=missing, k=-2.1)
+    @test byrow(ds, nunique, :)[1] == 4
+    @test byrow(ds, nunique, :, count_missing = false)[1] == 3
+    @test byrow(ds, nunique, :, by = abs)[1] == 3
+    @test byrow(ds, nunique, :, by = abs, count_missing=false)[1] == 2
+end

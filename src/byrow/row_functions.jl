@@ -1077,25 +1077,26 @@ function _fill_dict_and_add!(init0, dict, prehashed, n, p)
     end
 end
 
-function row_nunique(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); count_missing = true)
-    colsidx = multiple_getindex(index(ds), cols)
-    prehashed = Matrix{_Prehashed}(undef, size(ds,1), length(colsidx))
-    allcols = view(_columns(ds),colsidx)
+# This is not working - because we only the hash values and in many cases like 2.1 and 4611911198408756429 the hash is the same
+# function row_nunique(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missing, Number}); count_missing = true)
+#     colsidx = multiple_getindex(index(ds), cols)
+#     prehashed = Matrix{_Prehashed}(undef, size(ds,1), length(colsidx))
+#     allcols = view(_columns(ds),colsidx)
 
-    for j in 1:size(prehashed,2)
-        _fill_prehashed!(prehashed, allcols[j], f, size(ds,1), j)
-    end
+#     for j in 1:size(prehashed,2)
+#         _fill_prehashed!(prehashed, allcols[j], f, size(ds,1), j)
+#     end
 
-    init0 = zeros(Int32, size(ds,1))
-    dict = Dict{_Prehashed, Nothing}()
-    _fill_dict_and_add!(init0, dict, prehashed, size(ds,1), length(colsidx))
-    if count_missing
-        return init0
-    else
-        return init0 .- row_any(ds, ismissing, cols)
-    end
-end
-row_nunique(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); count_missing = true) = row_nunique(ds, identity, cols; count_missing = count_missing)
+#     init0 = zeros(Int32, size(ds,1))
+#     dict = Dict{_Prehashed, Nothing}()
+#     _fill_dict_and_add!(init0, dict, prehashed, size(ds,1), length(colsidx))
+#     if count_missing
+#         return init0
+#     else
+#         return init0 .- row_any(ds, ismissing, cols)
+#     end
+# end
+# row_nunique(ds::AbstractDataset, cols = names(ds, Union{Missing, Number}); count_missing = true) = row_nunique(ds, identity, cols; count_missing = count_missing)
 
 Base.@propagate_inbounds function _op_for_hash!(x, y, f, lo, hi)
     @simd for i in lo:hi

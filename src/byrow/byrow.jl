@@ -167,7 +167,14 @@ byrow(ds::AbstractDataset, ::typeof(var), col::ColumnIndex; by = identity, dof =
 byrow(ds::AbstractDataset, ::typeof(std), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, dof = true, threads = nrow(ds) > Threads.nthreads()*10) = row_std(ds, by, cols; dof = dof, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(std), col::ColumnIndex; by = identity, dof = true, threads = nrow(ds) > Threads.nthreads()*10) = byrow(ds, std, [col]; by = by, dof = dof, threads = threads)
 
-byrow(ds::AbstractDataset, ::typeof(nunique), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, count_missing = true) = row_nunique(ds, by, cols; count_missing = count_missing)
+function byrow(ds::AbstractDataset, ::typeof(nunique), cols::MultiColumnIndex = names(ds, Union{Missing, Number}); by = identity, count_missing = true, threads=nrow(ds)>1000) 
+	res = byrow(ds, x->length(Set(Base.Generator(by, x))), cols, threads=threads)
+	if count_missing
+		return res
+	else
+		return res .- row_any(ds, ismissing, cols)
+	end
+end
 byrow(ds::AbstractDataset, ::typeof(nunique), col::ColumnIndex; by = identity, count_missing = true) = byrow(ds, nunique, [col]; by = by, count_missing = count_missing)
 
 
