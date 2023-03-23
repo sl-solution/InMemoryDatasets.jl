@@ -1,6 +1,6 @@
 function hp_row_sort!(ds::Dataset, cols = names(ds, Union{Missing, Number}); kwargs...)
     colsidx = index(ds)[cols]
-    T = mapreduce(eltype, promote_type, eachcol(ds)[colsidx])
+    T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     m = Matrix{T}(ds[!, colsidx])
     Threads.@threads for i in 1:size(m, 1)
         @views sort!(m[i, :]; kwargs...)
