@@ -1,3 +1,10 @@
+# Version 0.7.15
+
+## Fixes
+
+* Functions `searchsorted`, `searchsortedfirst`, and `searchsortedlast` now works with `DatasetColumn`
+* Fix a bug which in `byrow(nunique)`
+
 # Version 0.7.14
 
 ## Fixes
