@@ -125,8 +125,9 @@ mutable struct GatherBy
     mapformats::Bool
     perm
     starts
+	created::DateTime
 end
-Base.copy(gds::GatherBy) = GatherBy(copy(gds.parent), copy(gds.groupcols), copy(gds.groups), gds.lastvalid, gds.mapformats, gds.perm === nothing ? nothing : copy(gds.perm), gds.starts === nothing ? nothing : copy(gds.starts))
+Base.copy(gds::GatherBy) = GatherBy(copy(gds.parent), copy(gds.groupcols), copy(gds.groups), gds.lastvalid, gds.mapformats, gds.perm === nothing ? nothing : copy(gds.perm), gds.starts === nothing ? nothing : copy(gds.starts), gds.created)
 
 
 nrow(ds::GatherBy) = nrow(ds.parent)
@@ -176,28 +177,28 @@ end
 function gatherby(ds::AbstractDataset, cols::MultiColumnIndex; mapformats::Bool = true, stable::Bool = true, isgathered::Bool = false, eachrow::Bool = false, threads = true)
     colsidx = index(ds)[cols]
 	if isempty(ds)
-		return GatherBy(ds, colsidx, Int[], 0, mapformats, nothing, nothing)
+		return GatherBy(ds, colsidx, Int[], 0, mapformats, nothing, nothing, _get_lastmodified(_attributes(ds)))
 	end
 
 	T = nrow(ds) < typemax(Int32) ? Int32 : Int64
 	_check_consistency(ds)
 	if isgathered
 		if eachrow
-			return GatherBy(ds, colsidx, 1:nrow(ds), nrow(ds), mapformats, 1:nrow(ds), 1:nrow(ds))
+			return GatherBy(ds, colsidx, 1:nrow(ds), nrow(ds), mapformats, 1:nrow(ds), 1:nrow(ds), _get_lastmodified(_attributes(ds)))
 		else
 			colindex, ranges, last_valid_index = _find_starts_of_groups(ds, colsidx, Val(T); mapformats = mapformats, threads = threads)
 		 	groups = Vector{T}(undef, nrow(ds))
 		 	_group_creator!(groups, ranges, last_valid_index)
-		 	return GatherBy(ds, colindex, groups, last_valid_index, mapformats, 1:nrow(ds), ranges)
+		 	return GatherBy(ds, colindex, groups, last_valid_index, mapformats, 1:nrow(ds), ranges, _get_lastmodified(_attributes(ds)))
 		end
 	else
 		if eachrow
 			a = _gather_groups(ds, colsidx, Val(T), mapformats = mapformats, stable = stable, threads = threads)
 			b = compute_indices(a[1], a[3], nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64); threads = threads)
-			return GatherBy(ds, colsidx, 1:nrow(ds), nrow(ds), mapformats, b[1], 1:nrow(ds))
+			return GatherBy(ds, colsidx, 1:nrow(ds), nrow(ds), mapformats, b[1], 1:nrow(ds), _get_lastmodified(_attributes(ds)))
 		else
 			a = _gather_groups(ds, colsidx, Val(T), mapformats = mapformats, stable = stable, threads = threads)
-			return GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing)
+			return GatherBy(ds, colsidx, a[1], a[3], mapformats, nothing, nothing, _get_lastmodified(_attributes(ds)))
 		end
 	end
 end
@@ -215,7 +216,7 @@ function hm_gatherby(ds::AbstractDataset, cols::MultiColumnIndex; mapformats = f
 	gds = groupby(ds, [:___tmp___cols8934_2, :___tmp___cols8934], stable = false, threads = threads)
 	grpcols, ranges, last_valid_index = _find_starts_of_groups(view(ds, gds.perm, cols), cols, nrow(ds) < typemax(Int32) ? Val(Int32) : Val(Int64); mapformats = mapformats, threads = threads)
 	select!(ds, Not([:___tmp___cols8934, :___tmp___cols8934_2]))
-	GatherBy(ds, grpcols, nothing, last_valid_index, mapformats, gds.perm, ranges)
+	GatherBy(ds, grpcols, nothing, last_valid_index, mapformats, gds.perm, ranges, _get_lastmodified(_attributes(ds)))
 end
 
 function _fill_mapreduce_col!(x, f, op, y, loc)

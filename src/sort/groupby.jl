@@ -167,9 +167,10 @@ mutable struct GroupBy
 	starts
 	lastvalid
 	mapformats::Bool
+	created::DateTime
 end
 
-Base.copy(gds::GroupBy) = GroupBy(copy(gds.parent), copy(gds.groupcols), copy(gds.rev), copy(gds.perm), copy(gds.starts), gds.lastvalid, gds.mapformats)
+Base.copy(gds::GroupBy) = GroupBy(copy(gds.parent), copy(gds.groupcols), copy(gds.rev), copy(gds.perm), copy(gds.starts), gds.lastvalid, gds.mapformats, gds.created)
 
 nrow(ds::GroupBy) = nrow(ds.parent)
 ncol(ds::GroupBy) = ncol(ds.parent)
@@ -185,10 +186,10 @@ function groupby(ds::Dataset, cols::MultiColumnIndex; alg = HeapSortAlg(), rev =
 	_check_consistency(ds)
 	colsidx = index(ds)[cols]
 	if isempty(ds)
-		return GroupBy(parent(ds), colsidx, rev, Int[], Int[], 0, mapformats)
+		return GroupBy(parent(ds), colsidx, rev, Int[], Int[], 0, mapformats, _get_lastmodified(_attributes(ds)))
 	end
 	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, threads = threads)
-	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats)
+	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats, _get_lastmodified(_attributes(ds)))
 end
 
 groupby(ds::Dataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable, threads = threads)
@@ -209,7 +210,7 @@ function groupby(ds::GroupBy, cols::MultiColumnIndex; alg = HeapSortAlg(), rev =
 	colsidx = index(ds)[cols]
 	grng = GIVENRANGE(copy(_get_perms(ds)),copy(_group_starts(ds)), nothing, _ngroups(ds))
 	a = _sortperm(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, givenrange = grng, skipcol = -1, threads = threads)
-	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats)
+	GroupBy(parent(ds),colsidx, rev, a[2], a[1], a[3], mapformats, _get_lastmodified(_attributes(parent(ds))))
 end
 groupby(ds::GroupBy, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable, threads = threads)
 
@@ -589,6 +590,15 @@ function groupby(ds::SubDataset, cols::MultiColumnIndex; alg = HeapSortAlg(), re
 	_check_consistency(ds)
 	colsidx = index(ds)[cols]
 	a = _sortperm_v(ds, cols, rev, a = alg, mapformats = mapformats, stable = stable, threads = threads)
-	GroupBy(ds, colsidx, rev, a[2], a[1], a[3], mapformats)
+	GroupBy(ds, colsidx, rev, a[2], a[1], a[3], mapformats, _get_lastmodified(_attributes(ds)))
 end
 groupby(ds::SubDataset, col::ColumnIndex; alg = HeapSortAlg(), rev = false, mapformats::Bool = true, stable = true, threads = true) = groupby(ds, [col], alg = alg, rev = rev, mapformats = mapformats, stable = stable, threads = threads)
+
+
+### check consistency of grouped data - GroupBy, GatherBy
+
+function _check_consistency(ds::Union{GroupBy, GatherBy})
+    lmd=ds.created
+    lmp=_get_lastmodified(_attributes(parent(ds)))
+    @assert lmd == lmp "The parent data set which the grouped data set is based on has been modified. To fix the issue regroup data."
+end
