@@ -170,7 +170,10 @@ mutable struct GroupBy
 	created::DateTime
 end
 
-Base.copy(gds::GroupBy) = GroupBy(copy(gds.parent), copy(gds.groupcols), copy(gds.rev), copy(gds.perm), copy(gds.starts), gds.lastvalid, gds.mapformats, gds.created)
+function Base.copy(gds::GroupBy)
+	ds_cp = copy(gds.parent)
+	GroupBy(ds_cp, copy(gds.groupcols), copy(gds.rev), copy(gds.perm), copy(gds.starts), gds.lastvalid, gds.mapformats, _get_lastmodified(_attributes(ds_cp)))
+end
 
 nrow(ds::GroupBy) = nrow(ds.parent)
 ncol(ds::GroupBy) = ncol(ds.parent)
@@ -234,6 +237,7 @@ end
 
 modify(origninal_gds::Union{GroupBy, GatherBy}, @nospecialize(args...); threads::Bool = true) = modify!(copy(origninal_gds), args..., threads = threads)
 function modify!(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); threads::Bool = true)
+	_check_consistency(gds)
 	if parent(gds) isa SubDataset
 		idx_cpy = copy(index(parent(gds)))
 	else
@@ -316,6 +320,7 @@ end
 
 
 function combine(gds::Union{GroupBy, GatherBy}, @nospecialize(args...); dropgroupcols = false, threads = true)
+	_check_consistency(gds)
 	idx_cpy::Index = Index(Dict{Symbol, Int}(), Symbol[], Dict{Int, Function}())
 	if !dropgroupcols
         for i in gds.groupcols
@@ -442,6 +447,7 @@ Base.summary(gds::GroupBy) =
 function Base.show(io::IO, gds::GroupBy;
 
 	kwargs...)
+	_check_consistency(gds)
 	#TODO pretty_table is very slow for large views, temporary workaround, later we should fix this
 	if length(gds.perm) > 200
 		_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)

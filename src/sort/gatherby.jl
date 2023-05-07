@@ -127,7 +127,10 @@ mutable struct GatherBy
     starts
 	created::DateTime
 end
-Base.copy(gds::GatherBy) = GatherBy(copy(gds.parent), copy(gds.groupcols), copy(gds.groups), gds.lastvalid, gds.mapformats, gds.perm === nothing ? nothing : copy(gds.perm), gds.starts === nothing ? nothing : copy(gds.starts), gds.created)
+function Base.copy(gds::GatherBy)
+	ds_cpy = copy(gds.parent)
+	GatherBy(copy(gds.parent), copy(gds.groupcols), copy(gds.groups), gds.lastvalid, gds.mapformats, gds.perm === nothing ? nothing : copy(gds.perm), gds.starts === nothing ? nothing : copy(gds.starts), _get_lastmodified(_attributes(ds_cpy)))
+end
 
 
 nrow(ds::GatherBy) = nrow(ds.parent)
@@ -149,6 +152,7 @@ Base.summary(gds::GatherBy) =
 function Base.show(io::IO, gds::GatherBy;
 
 	kwargs...)
+	_check_consistency(gds)
 	if length(_get_perms(gds)) > 200
 		_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
 	else

@@ -1,5 +1,5 @@
 """
-    SubDataset{<:Dataset, <:AbstractIndex, <:AbstractVector{Int}} <: Dataset
+    SubDataset{<:Dataset, <:AbstractIndex, <:AbstractVector{Int}, DateTime} <: Dataset
 
 A view of a `Dataset`. It is returned by a call to the `view` function
 on an `Dataset` if a collections of rows and columns are specified.
@@ -90,6 +90,7 @@ struct SubDataset{D<:AbstractDataset, S<:AbstractIndex, T<:AbstractVector{Int}} 
     parent::D
     colindex::S
     rows::T # maps from subds row indexes to parent row indexes
+    created::DateTime
 end
 
 _attributes(sds::SubDataset) = getfield(parent(sds), :attributes)
@@ -111,11 +112,25 @@ Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVect
     sindex = SubIndex(index(parent), cols)
     # SubDataset without columns should not have any row
     if all(==(0), sindex.remap)
-        SubDataset(parent, sindex, Int[])
+        SubDataset(parent, sindex, Int[], _get_lastmodified(_attributes(parent)))
     else
-        SubDataset(parent,sindex , rows)
+        SubDataset(parent,sindex , rows, _get_lastmodified(_attributes(parent)))
     end
 end
+
+Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVector{Int}, cols, created)
+    @boundscheck if !checkindex(Bool, axes(parent, 1), rows)
+        throw(BoundsError(parent, (rows, cols)))
+    end
+    sindex = SubIndex(index(parent), cols)
+    # SubDataset without columns should not have any row
+    if all(==(0), sindex.remap)
+        SubDataset(parent, sindex, Int[], created)
+    else
+        SubDataset(parent,sindex , rows, created)
+    end
+end
+
 Base.@propagate_inbounds SubDataset(parent::Dataset, ::Colon, cols) =
     SubDataset(parent, axes(parent, 1), cols)
 @inline SubDataset(parent::Dataset, row::Integer, cols) =
@@ -144,7 +159,7 @@ Base.@propagate_inbounds function SubDataset(parent::Dataset, rows::AbstractVect
 end
 
 Base.@propagate_inbounds SubDataset(sds::SubDataset, rowind, cols) =
-    SubDataset(parent(sds), rows(sds)[rowind], parentcols(index(sds), cols))
+    SubDataset(parent(sds), rows(sds)[rowind], parentcols(index(sds), cols), getfield(sds, :created))
 Base.@propagate_inbounds SubDataset(sds::SubDataset, rowind::Bool, cols) =
     throw(ArgumentError("invalid row index of type Bool"))
 
@@ -158,7 +173,7 @@ Base.@propagate_inbounds SubDataset(sds::SubDataset, rowind::Bool, cols) =
 Base.@propagate_inbounds SubDataset(sds::SubDataset, rowind::Bool, ::Colon) =
     throw(ArgumentError("invalid row index of type Bool"))
 Base.@propagate_inbounds SubDataset(sds::SubDataset, ::Colon, cols) =
-    SubDataset(parent(sds), rows(sds), parentcols(index(sds), cols))
+    SubDataset(parent(sds), rows(sds), parentcols(index(sds), cols), getfield(sds, :created))
 @inline SubDataset(sds::SubDataset, ::Colon, ::Colon) = sds
 
 # just for showing SubDataset
@@ -202,15 +217,15 @@ Base.@propagate_inbounds Base.view(ads::AbstractDataset, ::typeof(!), colind::Co
 
 @inline Base.view(ads::AbstractDataset, rowinds, colind::Bool) =
     throw(ArgumentError("invalid column index $colind of type `Bool`"))
-Base.@propagate_inbounds Base.view(ads::AbstractDataset, rowinds,
+Base.@propagate_inbounds Base.view(parent::AbstractDataset, rowinds,
                                    colinds::MultiColumnIndex) =
-    SubDataset(ads, rowinds, colinds)
-Base.@propagate_inbounds Base.view(ads::AbstractDataset, rowinds::typeof(!),
+    SubDataset(parent, rowinds, colinds)
+Base.@propagate_inbounds Base.view(parent::AbstractDataset, rowinds::typeof(!),
                                    colinds::MultiColumnIndex) =
-    SubDataset(ads, :, colinds)
-Base.@propagate_inbounds Base.view(ads::AbstractDataset, rowinds::Not,
+    SubDataset(parent, :, colinds)
+Base.@propagate_inbounds Base.view(parent::AbstractDataset, rowinds::Not,
                                    colinds::MultiColumnIndex) =
-    SubDataset(ads, axes(ads, 1)[rowinds], colinds)
+    SubDataset(parent, axes(parent, 1)[rowinds], colinds)
 
 ##############################################################################
 ##

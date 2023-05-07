@@ -226,7 +226,7 @@ function Base.Broadcast.broadcast_unalias(dest, src::AbstractDataset)
             if src isa SubDataset
                 if !wascopied
                     src = SubDataset(_our_copy(parent(src), copycols=false),
-                                       index(src), rows(src))
+                                       index(src), rows(src), _get_lastmodified(_attributes(parent(src))))
                 end
                 parentidx = parentcols(index(src), i)
                 parent(src)[!, parentidx] = Base.unaliascopy(_columns(parent(src))[parentidx])
@@ -254,7 +254,7 @@ function _broadcast_unalias_helper(dest::AbstractDataset, scol::AbstractVector,
             if src isa SubDataset
                 if !wascopied
                     src =SubDataset(_our_copy(parent(src), copycols=false),
-                                      index(src), rows(src))
+                                      index(src), rows(src), _get_lastmodified(_attributes(parent(src))))
                 end
                 parentidx = parentcols(index(src), col2)
                 parent(src)[!, parentidx] = Base.unaliascopy(_columns(parent(src))[parentidx])

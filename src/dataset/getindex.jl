@@ -61,6 +61,8 @@ function _check_consistency(ds::Dataset)
 end
 
 function _check_consistency(ds::AbstractDataset)
+    # FIXME We should check the created date of sub-data, however, it is not working in some situations, e.g. modify!(sds, ...) 
+    # TODO However, We should add this whenever it is possible :   getfield(ds, :created) == _get_lastmodified(_attributes(parent(ds)))
     if ds isa SubDataset
         @assert length(index(ds).remap) == length(index(parent(ds))) "The parent data set which this view is based on, has been modified. To fix the issue recreate the view"
     end
