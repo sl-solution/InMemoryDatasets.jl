@@ -8,10 +8,16 @@ minimum(f, x; threads = false) = Base.minimum(f, x)
 minimum(x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS, TimeType}= isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : threads ? hp_minimum(identity, x) : stat_minimum(identity, x)
 minimum(x; threads = false) = Base.minimum(x)
 # TODO not optimised for simd - threads option is useless here / it is here because we have it for other types of data
-maximum(f, x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = mapreduce(f, _stat_max_fun, x)
-minimum(f, x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = mapreduce(f, _stat_min_fun, x)
-maximum(x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = maximum(identity, x)
-minimum(x::AbstractVector{Union{Missing, T}}; threads = false) where T <: AbstractString = minimum(identity, x)
+# using Union{Missing, AbstractString} force to fall back to this definition for Vector{Missing} Julia >= 1.9
+if VERSION >= v"1.9"
+    _TASM_14329 = Union{Missing, AbstractString}
+else
+    _TASM_14329 = AbstractString
+end
+maximum(f, x::AbstractVector{Union{Missing, T}}; threads = false) where T <: _TASM_14329 = mapreduce(f, _stat_max_fun, x)
+minimum(f, x::AbstractVector{Union{Missing, T}}; threads = false) where T <: _TASM_14329 = mapreduce(f, _stat_min_fun, x)
+maximum(x::AbstractVector{Union{Missing, T}}; threads = false) where T <: _TASM_14329 = maximum(identity, x)
+minimum(x::AbstractVector{Union{Missing, T}}; threads = false) where T <: _TASM_14329 = minimum(identity, x)
 
 sum(f, x::AbstractArray{Union{Missing, T},1}; threads = false) where T <: Union{INTEGERS, FLOATS} = isempty(x) ? throw(ArgumentError("empty arrays are not allowed")) : threads ? hp_sum(f, x) : stat_sum(f, x)
 sum(f, x; threads = false)=Base.sum(f, x)
