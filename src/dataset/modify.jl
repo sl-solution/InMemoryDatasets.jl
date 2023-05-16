@@ -597,7 +597,7 @@ end
 
 # the number of destination can be smaller or greater than the number of elements of Tuple,
 function _modify_multiple_out!(ds, x, dst)
-    !(nonmissingtype(eltype(x)) <: Tuple) && throw(ArgumentError("to use `splitter`, the source column must be a vector of Tuple"))
+    !(our_nonmissingtype(eltype(x)) <: Tuple) && throw(ArgumentError("to use `splitter`, the source column must be a vector of Tuple"))
     tb = Tables.columntable(x)
     for j in 1:length(dst)
         try

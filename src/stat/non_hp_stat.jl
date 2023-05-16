@@ -137,7 +137,7 @@ end
 # this is manual simd version for max(min) function
 function stat_maximum(f::typeof(identity), x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T}
     all(ismissing, view(x, lo:hi)) && return missing
-    _dmiss(x) = ismissing(x) ? typemin(nonmissingtype(T)) : x
+    _dmiss(x) = ismissing(x) ? typemin(our_nonmissingtype(T)) : x
     Base.mapreduce_impl(_dmiss, max, x, lo, hi)
 end
 function stat_maximum(f::F, x::AbstractArray{T,1}; lo=1, hi=length(x)) where {F,T}
@@ -162,7 +162,7 @@ stat_findmax(x::AbstractArray{T,1}) where {T} = stat_findmax(identity, x)
 
 function stat_minimum(f::typeof(identity), x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T}
     all(ismissing, view(x, lo:hi)) && return missing
-    @inline _dmiss(x) = ismissing(x) ? typemax(nonmissingtype(T)) : x
+    @inline _dmiss(x) = ismissing(x) ? typemax(our_nonmissingtype(T)) : x
     Base.mapreduce_impl(_dmiss, min, x, lo, hi)
 end
 function stat_minimum(f::F, x::AbstractArray{T,1}; lo=1, hi=length(x)) where {F,T}
@@ -331,7 +331,7 @@ stat_std(x::AbstractArray{T,1}, dof=true) where {T} = stat_std(identity, x, dof)
 function stat_median(v::AbstractArray{T,1}) where {T}
     isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))
     all(ismissing, v) && return missing
-    (nonmissingtype(eltype(v)) <: AbstractFloat || nonmissingtype(eltype(v)) >: AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
+    (our_nonmissingtype(eltype(v)) <: AbstractFloat || our_nonmissingtype(eltype(v)) >: AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
     nmis::Int = mapreduce(ismissing, +, v)
     n = length(v) - nmis
     mid = div(1 + n, 2)
@@ -346,7 +346,7 @@ end
 function stat_median!(v::AbstractArray{T,1}) where {T}
     isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))
     all(ismissing, v) && return missing
-    (nonmissingtype(eltype(v)) <: AbstractFloat || nonmissingtype(eltype(v)) >: AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
+    (our_nonmissingtype(eltype(v)) <: AbstractFloat || our_nonmissingtype(eltype(v)) >: AbstractFloat) && any(ISNAN, v) && return convert(eltype(v), NaN)
     nmis::Int = mapreduce(ismissing, +, v)
     n = length(v) - nmis
     mid = div(1 + n, 2)

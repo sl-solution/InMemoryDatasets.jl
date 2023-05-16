@@ -60,7 +60,7 @@ function _create_dictionary_for_join(f, v, fl, vl, ::Val{T}) where T
         maxval = hp_maximum(DataAPI.refarray(v))
         rangelen = maxval - minval + 1
         _create_dictionary_for_join_int(identity, DataAPI.refarray(v), minval, rangelen, Val(T))
-    elseif nonmissingtype(return_type(f, v)) <: AbstractVector{<:Union{Missing, INTEGERS}} && nonmissingtype(return_type(fl, vl)) <: AbstractVector{<:Union{Missing, INTEGERS}}
+    elseif our_nonmissingtype(return_type(f, v)) <: AbstractVector{<:Union{Missing, INTEGERS}} && our_nonmissingtype(return_type(fl, vl)) <: AbstractVector{<:Union{Missing, INTEGERS}}
         minval = hp_minimum(f, v)
         # if minval is missing all values are missing
         if ismissing(minval)
@@ -531,8 +531,8 @@ function _update!_dict(dsl, dsr, ranges, onleft, onright, right_cols, ::Val{T}; 
     for j in 1:length(right_cols)
         if haskey(index(dsl).lookup, _names(dsr)[right_cols[j]])
             left_cols_idx = index(dsl)[_names(dsr)[right_cols[j]]]
-            TL = nonmissingtype(eltype(_columns(dsl)[left_cols_idx]))
-            TR = nonmissingtype(eltype(_columns(dsr)[right_cols[j]]))
+            TL = our_nonmissingtype(eltype(_columns(dsl)[left_cols_idx]))
+            TR = our_nonmissingtype(eltype(_columns(dsr)[right_cols[j]]))
             if promote_type(TR, TL) <: TL
                 _update_left_with_right!(_columns(dsl)[left_cols_idx], _columns(dsr)[right_cols[j]], ranges, allowmissing, f_mode, threads = threads, op = op)
             end

@@ -261,7 +261,7 @@ end
 
 function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = nrow(ds)>1000, allowmissing::Bool = true)
 	if threads
-		T = Core.Compiler.return_type(f, Tuple{nonmissingtype(eltype(ds[!, col]))})
+		T = Core.Compiler.return_type(f, Tuple{our_nonmissingtype(eltype(ds[!, col]))})
 		if allowmissing
 			res = Vector{Union{Missing, T}}(undef, nrow(ds))
 		else
@@ -269,7 +269,7 @@ function byrow(ds::AbstractDataset, f::Function, col::ColumnIndex; threads = nro
 		end
 		_hp_map_a_function!(res, f, _columns(ds)[index(ds)[col]])
 	else
-		T = Core.Compiler.return_type(f, Tuple{nonmissingtype(eltype(ds[!, col]))})
+		T = Core.Compiler.return_type(f, Tuple{our_nonmissingtype(eltype(ds[!, col]))})
 		if allowmissing
 			res = Vector{Union{Missing, T}}(undef, nrow(ds))
 		else

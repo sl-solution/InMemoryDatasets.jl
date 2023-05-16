@@ -133,7 +133,7 @@ end
     end
     ds4 = (x -> ds[1, 1]).(ds)
     @test names(ds4) == names(ds)
-    @test all(isa.(eachcol(ds4), Ref(CategoricalArray)))
+    @test all(isa.(eachcol(ds4), DatasetColumn{Dataset, CategoricalVector{Union{Missing, String}, UInt32, String, CategoricalValue{String, UInt32}, Missing}}))
     @test all(eachcol(ds4) .== Ref(categorical(["a", "a"])))
 
     ds5 = Dataset(x=Any[1, 2, 3], y=Any[1, 2.0, big(3)])

@@ -173,7 +173,8 @@ function warmup()
     findall(duplicates(ds, :a, mapformats = true)) == 2:12
     unique(ds) == ds1
     unique(ds, 2:3) == ds1
-
+    ds = Dataset(x=[rand(10) for _ in 1:100])
+    flatten!(ds, 1)
     t2 = now()
     Dataset(x1 = "Finished warmup in", x2 = t2-t1)
 end

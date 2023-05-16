@@ -1,6 +1,16 @@
 const INTEGERS = Union{Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Bool}
 const FLOATS = Union{Float16, Float32, Float64}
 
+function our_nonmissingtype(x)
+    T = nonmissingtype(x)
+    if T === Union{}
+        Missing
+    else
+        T
+    end
+end
+
+
 # work around slow allocation of type union in julia
 function _our_vect_alloc(T, len)
 	if len > 0
@@ -34,7 +44,7 @@ function return_type(f::Function, x)
     if eltype(x) <: AbstractVector
         return return_type_tuple(f, x)
     end
-    CT = nonmissingtype(eltype(x))
+    CT = our_nonmissingtype(eltype(x))
     T = Core.Compiler.return_type(f, Tuple{Vector{CT}})
     # workaround for SubArray type
     if T <: SubArray
@@ -50,7 +60,7 @@ function return_type(f::Function, x)
 end
 
 function return_type_tuple(f::Function, x)
-    CT = ntuple(i -> nonmissingtype(eltype(x[i])), length(x))
+    CT = ntuple(i -> our_nonmissingtype(eltype(x[i])), length(x))
     T = Core.Compiler.return_type(f, Tuple{ntuple(i->Vector{CT[i]}, length(x))...})
     # workaround for SubArray type
     if T <: SubArray
@@ -454,7 +464,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true, t
         else
             v = _columns(ds)[colidx[j]]
         end
-        if nonmissingtype(Core.Compiler.return_type(_f, Tuple{nonmissingtype(eltype(v))})) <: Union{Missing, INTEGERS}
+        if our_nonmissingtype(Core.Compiler.return_type(_f, Tuple{our_nonmissingtype(eltype(v))})) <: Union{Missing, INTEGERS}
 			if threads
 				_minval = hp_minimum(_f, v)
 			else

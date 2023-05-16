@@ -118,7 +118,7 @@ function compacttype(T::Type, maxwidth::Int=8)
     textwidth(sT) ≤ maxwidth && return sT
 
     if T >: Missing
-        T = nonmissingtype(T)
+        T = our_nonmissingtype(T)
         sT = string(T)
         suffix = "?"
         textwidth(sT) ≤ maxwidth && return sT * suffix
@@ -223,7 +223,7 @@ function _show(io::IO,
     alignment_regex_complex = [r"(?<!^)(?<!e)[+-]"]
 
     for i = 1:num_cols
-        type_i = nonmissingtype(types[i])
+        type_i = our_nonmissingtype(types[i])
 
         if type_i <: Complex
             alignment_anchor_regex[i] = alignment_regex_complex

@@ -1429,53 +1429,51 @@ end
           s([:id, :fid]) == Dataset([[1, 3], [1, 3]], [:id, :fid])
     @test typeof.(eachcol(s(:id))) ==
           typeof.(eachcol(s(:fid))) ==
-          typeof.(eachcol(s([:id, :fid]))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+          typeof.(eachcol(s([:id, :fid]))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
     @test a(:id) ==
           a(:fid) ==
           a([:id, :fid]) == Dataset([[5], [5]], [:id, :fid])
     @test typeof.(eachcol(a(:id))) ==
           typeof.(eachcol(a(:fid))) ==
-          typeof.(eachcol(a([:id, :fid]))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+          typeof.(eachcol(a([:id, :fid]))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
     on = :id
     @test i(on) == Dataset([[1, 3], [1, 3], [1, 3]], [:id, :fid, :fid_1])
-    @test typeof.(eachcol(i(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}, Vector{Union{Missing, Float64}}]
+    @test typeof.(eachcol(i(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
     @test l(on) ≅ Dataset(id = [1, 3, 5],
                             fid = [1, 3, 5],
                             fid_1 = [1, 3, missing])
     @test typeof.(eachcol(l(on))) ==
-        [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}, Vector{Union{Float64, Missing}}]
+    [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
 
     @test o(on) ≅ Dataset(id = [1, 3, 5, 0, 2, 4],
                             fid = [1, 3, 5, missing, missing, missing],
                             fid_1 = [1, 3, missing, 0, 2, 4])
     @test typeof.(eachcol(o(on))) ==
-        [Vector{Union{Missing, Int}}, Vector{Union{Float64, Missing}}, Vector{Union{Float64, Missing}}]
+    [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
     on = :fid
     @test i(on) == Dataset([[1, 3], [1.0, 3.0], [1, 3]], [:id, :fid, :id_1])
-    @test typeof.(eachcol(i(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}, Vector{Union{Missing, Int}}]
+    @test typeof.(eachcol(i(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Int}}}]
     @test l(on) ≅ Dataset(id = [1, 3, 5],
                             fid = [1, 3, 5],
                             id_1 = [1, 3, missing])
-    @test typeof.(eachcol(l(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}},
-                                     Vector{Union{Int, Missing}}]
+    @test typeof.(eachcol(l(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Int}}}]
 
     @test o(on) ≅ Dataset(id = [1, 3, 5, missing, missing, missing],
                             fid = [1, 3, 5, 0, 2, 4],
                             id_1 = [1, 3, missing, 0, 2, 4])
-    @test typeof.(eachcol(o(on))) == [Vector{Union{Int, Missing}}, Vector{Union{Missing, Float64}},
-                                     Vector{Union{Int, Missing}}]
+    @test typeof.(eachcol(o(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Int}}}]
 
     on = [:id, :fid]
     @test i(on) == Dataset([[1, 3], [1, 3]], [:id, :fid])
-    @test typeof.(eachcol(i(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+    @test typeof.(eachcol(i(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
     @test l(on) == Dataset(id = [1, 3, 5], fid = [1, 3, 5])
-    @test typeof.(eachcol(l(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+    @test typeof.(eachcol(l(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
     @test o(on) == Dataset(id = [1, 3, 5, 0, 2, 4], fid = [1, 3, 5, 0, 2, 4])
-    @test typeof.(eachcol(o(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+    @test typeof.(eachcol(o(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
 
     i_hash(on) = innerjoin(ds1, ds2, on = on, makeunique=true, method = :hash)
@@ -1489,53 +1487,52 @@ end
           s_hash([:id, :fid]) == Dataset([[1, 3], [1, 3]], [:id, :fid])
     @test typeof.(eachcol(s_hash(:id))) ==
           typeof.(eachcol(s_hash(:fid))) ==
-          typeof.(eachcol(s_hash([:id, :fid]))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+          typeof.(eachcol(s_hash([:id, :fid]))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
     @test a_hash(:id) ==
           a_hash(:fid) ==
           a_hash([:id, :fid]) == Dataset([[5], [5]], [:id, :fid])
     @test typeof.(eachcol(a_hash(:id))) ==
           typeof.(eachcol(a_hash(:fid))) ==
-          typeof.(eachcol(a_hash([:id, :fid]))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+          typeof.(eachcol(a_hash([:id, :fid]))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
     on = :id
     @test i_hash(on) == Dataset([[1, 3], [1, 3], [1, 3]], [:id, :fid, :fid_1])
-    @test typeof.(eachcol(i_hash(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}, Vector{Union{Missing, Float64}}]
+    @test typeof.(eachcol(i_hash(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
     @test l_hash(on) ≅ Dataset(id = [1, 3, 5],
                             fid = [1, 3, 5],
                             fid_1 = [1, 3, missing])
     @test typeof.(eachcol(l_hash(on))) ==
-        [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}, Vector{Union{Float64, Missing}}]
+        [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}},DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
 
     @test o_hash(on) ≅ Dataset(id = [1, 3, 5, 0, 2, 4],
                             fid = [1, 3, 5, missing, missing, missing],
                             fid_1 = [1, 3, missing, 0, 2, 4])
     @test typeof.(eachcol(o_hash(on))) ==
-        [Vector{Union{Missing, Int}}, Vector{Union{Float64, Missing}}, Vector{Union{Float64, Missing}}]
+    [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}},DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
     on = :fid
     @test i_hash(on) == Dataset([[1, 3], [1.0, 3.0], [1, 3]], [:id, :fid, :id_1])
-    @test typeof.(eachcol(i_hash(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}, Vector{Union{Missing, Int}}]
+    @test typeof.(eachcol(i_hash(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Int}}}]
     @test l_hash(on) ≅ Dataset(id = [1, 3, 5],
                             fid = [1, 3, 5],
                             id_1 = [1, 3, missing])
-    @test typeof.(eachcol(l_hash(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}},
-                                     Vector{Union{Int, Missing}}]
+    @test typeof.(eachcol(l_hash(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}},
+                                     DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}]
 
     @test o_hash(on) ≅ Dataset(id = [1, 3, 5, missing, missing, missing],
                             fid = [1, 3, 5, 0, 2, 4],
                             id_1 = [1, 3, missing, 0, 2, 4])
-    @test typeof.(eachcol(o_hash(on))) == [Vector{Union{Int, Missing}}, Vector{Union{Missing, Float64}},
-                                     Vector{Union{Int, Missing}}]
+    @test typeof.(eachcol(o_hash(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}},DatasetColumn{Dataset, Vector{Union{Missing, Int}}}]
 
     on = [:id, :fid]
     @test i_hash(on) == Dataset([[1, 3], [1, 3]], [:id, :fid])
-    @test typeof.(eachcol(i_hash(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+    @test typeof.(eachcol(i_hash(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
     @test l_hash(on) == Dataset(id = [1, 3, 5], fid = [1, 3, 5])
-    @test typeof.(eachcol(l_hash(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+    @test typeof.(eachcol(l_hash(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
     @test o_hash(on) == Dataset(id = [1, 3, 5, 0, 2, 4], fid = [1, 3, 5, 0, 2, 4])
-    @test typeof.(eachcol(o_hash(on))) == [Vector{Union{Missing, Int}}, Vector{Union{Missing, Float64}}]
+    @test typeof.(eachcol(o_hash(on))) == [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Float64}}}]
 
     #####
     dsl = Dataset(x=[1,2], y=[3,4])
