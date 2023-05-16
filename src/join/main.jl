@@ -131,7 +131,7 @@ julia> leftjoin(dsl, dsr, on = :year, mapformats = true) # Use formats for datas
    4 │ 2012        true  missing
 ```
 """
-function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
+function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, check = true, accelerate = false, onlyreturnrange = false, droprangecols::Bool = true, strict_inequality = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -151,18 +151,30 @@ function DataAPI.leftjoin(dsl::AbstractDataset, dsr::AbstractDataset; on = nothi
         length(obs_id) !== 2 && throw(ArgumentError("`obs_id` must be a Bool or a vector of Bool with size two"))
     end
 
+    # strict_inequality
+    if !(strict_inequality isa AbstractVector)
+        strict_inequality = repeat([strict_inequality], 2)
+    else
+        length(strict_inequality) !== 2 && throw(ArgumentError("`strict_inequality` must be a Bool or a vector of Bool with size two"))
+    end
+
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = multiple_getindex(index(dsl), on)
         onright = multiple_getindex(index(dsr), on)
-
+        onright_range = nothing
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = multiple_getindex(index(dsl), map(x->x.first, on))
         onright = multiple_getindex(index(dsr), map(x->x.second, on))
-
+        onright_range = nothing
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:Any}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:Any}})
+        onleft = multiple_getindex(index(dsl), map(x->x.first, on))
+        onright = multiple_getindex(index(dsr), map(x->x.second, on[1:end-1]))
+        onright_range = on[end].second
+        !(onright_range isa Tuple) && throw(ArgumentError("For range join the last element of `on` keyword argument for the right table must be a Tuple of column names"))
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
-    _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, stable = stable, alg = alg, check = check, accelerate = accelerate, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
+    _join_left(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, stable = stable, onlyreturnrange = onlyreturnrange, strict_inequality = strict_inequality, makeunique = makeunique, mapformats = mapformats,accelerate = accelerate, check = false,droprangecols = droprangecols, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
 
 end
 """
@@ -170,7 +182,7 @@ end
 
 Variant of `leftjoin` that performs `leftjoin` in place for special case that the number of matching rows from the right data set is at most one.
 """
-function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, method::Symbol = :sort, threads::Bool = true, multiple_match::Bool=false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
+function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique = false, mapformats::Union{Bool, Vector{Bool}} = true, stable = false, alg = HeapSort, accelerate = false, strict_inequality = false, method::Symbol = :sort, threads::Bool = true, droprangecols::Bool = true, multiple_match::Bool=false, multiple_match_name = :multiple, obs_id::Union{Bool, Vector{Bool}} = false, obs_id_name = :obs_id)
     !(method in (:hash, :sort)) && throw(ArgumentError("method must be :hash or :sort"))
     on === nothing && throw(ArgumentError("`on` keyword must be specified"))
     if !(on isa AbstractVector)
@@ -188,18 +200,30 @@ function leftjoin!(dsl::Dataset, dsr::AbstractDataset; on = nothing, makeunique 
     else
         length(obs_id) !== 2 && throw(ArgumentError("`obs_id` must be a Bool or a vector of Bool with size two"))
     end
+    # strict_inequality
+    if !(strict_inequality isa AbstractVector)
+        strict_inequality = repeat([strict_inequality], 2)
+    else
+        length(strict_inequality) !== 2 && throw(ArgumentError("`strict_inequality` must be a Bool or a vector of Bool with size two"))
+    end
+
     if typeof(on) <: AbstractVector{<:Union{AbstractString, Symbol}}
         onleft = multiple_getindex(index(dsl), on)
         onright = multiple_getindex(index(dsr), on)
-
+        onright_range = nothing
     elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:ColumnIndex}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:AbstractString}})
         onleft = multiple_getindex(index(dsl), map(x->x.first, on))
         onright = multiple_getindex(index(dsr), map(x->x.second, on))
-
+        onright_range = nothing
+    elseif (typeof(on) <: AbstractVector{<:Pair{<:ColumnIndex, <:Any}}) || (typeof(on) <: AbstractVector{<:Pair{<:AbstractString, <:Any}})
+        onleft = multiple_getindex(index(dsl), map(x->x.first, on))
+        onright = multiple_getindex(index(dsr), map(x->x.second, on[1:end-1]))
+        onright_range = on[end].second
+        !(onright_range isa Tuple) && throw(ArgumentError("For range join the last element of `on` keyword argument for the right table must be a Tuple of column names"))
     else
         throw(ArgumentError("`on` keyword must be a vector of column names or a vector of pairs of column names"))
     end
-    _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, makeunique = makeunique, mapformats = mapformats, check = false, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
+    _join_left!(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, stable = stable, strict_inequality = strict_inequality, makeunique = makeunique, mapformats = mapformats,accelerate = accelerate, check = false,droprangecols = droprangecols, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
 end
 
 """

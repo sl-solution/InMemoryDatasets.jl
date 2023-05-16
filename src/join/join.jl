@@ -146,6 +146,7 @@ function _fill_val_join!(x, r2, val, inbits, r)
         end
     end
 end
+
 # F1 and F2 are here for type stability when threads = false
 function _find_ranges_for_join!(ranges, x, y, _fl::F1, _fr::F2, ::Val{T1}, ::Val{T2}; type = :both, threads = true) where {T1, T2, F1, F2}
     if type == :both
@@ -226,12 +227,31 @@ function _find_ranges_for_join_pa!(ranges, x, invpool, y, _fl::F1, _fr::F2, ::Va
 end
 
 
-function _fill_oncols_left_table_left!(_res, x, ranges, en, total, fill_val; threads = true)
-    @_threadsfor threads for i in 1:length(x)
-        i == 1 ? lo = 1 : lo = en[i - 1] + 1
-        hi = en[i]
-        _fill_val_join!(_res, lo:hi, x[i])
+function _fill_oncols_left_table_left!(_res, x, ranges, en, total, fill_val; inbits = nothing, en2 = nothing, threads = true)
+    if inbits === nothing
+        @_threadsfor threads for i in 1:length(x)
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            _fill_val_join!(_res, lo:hi, x[i])
+        end
+    else
+        @_threadsfor threads for i in 1:length(x)
+            if i == 1
+                lo = 1
+                lo2 = 1
+            else
+                lo = en[i - 1] + 1
+                lo2 = en2[i-1] + 1
+            end
+            hi = en[i]
+            # @show sum(view(inbits, lo:hi))
+            # sum(view(inbits, lo:hi)) == 0 && continue
+            hi2 = en2[i]
+            length(ranges[i]) ===0 ? _fill_val_join!(_res, lo2:hi2, x[i]) : _fill_val_join!(_res, lo2:hi2, x[i], inbits, lo:hi)
+            
+        end
     end
+
     @_threadsfor threads for i in en[length(x)]+1:total
         _res[i] = fill_val
     end
@@ -273,11 +293,26 @@ function _fill_oncols_left_table_anti!(_res, x, ranges, en, total; threads = tru
     end
 end
 
-function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val; threads = true)
-    @_threadsfor threads for i in 1:length(ranges)
-        i == 1 ? lo = 1 : lo = en[i - 1] + 1
-        hi = en[i]
-        length(ranges[i]) == 0 ? _fill_val_join!(_res, lo:hi, fill_val) : copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
+function _fill_right_cols_table_left!(_res, x, ranges, en, total, fill_val; inbits = nothing, en2 = nothing, threads = true)
+    if inbits === nothing
+        @_threadsfor threads for i in 1:length(ranges)   
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            length(ranges[i]) == 0 ? _fill_val_join!(_res, lo:hi, fill_val) : copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
+        end
+    else
+        @_threadsfor threads for i in 1:length(ranges)
+            if i == 1
+                lo = 1
+                lo2 = 1
+            else
+                lo = en[i - 1] + 1
+                lo2 = en2[i-1] + 1
+            end
+            hi = en[i]
+            hi2 = en2[i]
+            _fill_right_col_range!(_res, lo2:hi2, x, ranges[i], inbits, lo:hi, fill_val)
+        end
     end
 end
 
@@ -294,13 +329,30 @@ function _fill_right_col_range!(_res, r2, x, ranges, inbits, r)
     end
 end
 
+function _fill_right_col_range!(_res, r2, x, ranges, inbits, r, fill_val)
+    cnt = 1
+    cnt_r = 1
+    lo = r2.start
+    for i in r
+        if inbits[i]
+            _res[lo+cnt-1] = x[ranges[cnt_r]]
+            cnt += 1
+        end
+        if !inbits[i] && length(ranges) === 0
+            _res[cnt+lo-1] = fill_val
+        end
+        cnt_r += 1
+    end
+end
+
+
 function _fill_right_cols_table_inner!(_res, x, ranges, en, total; inbits = nothing, en2 = nothing, threads = true)
     if inbits === nothing
         @_threadsfor threads for i in 1:length(ranges)
             length(ranges[i]) == 0 && continue
             i == 1 ? lo = 1 : lo = en[i - 1] + 1
             hi = en[i]
-            copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))
+            copyto!(_res, lo, x, ranges[i].start, length(ranges[i]))  
         end
     else
         @_threadsfor threads for i in 1:length(ranges)
@@ -320,19 +372,42 @@ function _fill_right_cols_table_inner!(_res, x, ranges, en, total; inbits = noth
     end
 end
 
-function _create_multiple_match_col_left(ranges, total_length)
+function _create_multiple_match_col_left(ranges, en, total_length)
     res = allocatecol(Bool, total_length)
     cnt = 0
-    for i in 1:length(ranges)
-        if length(ranges[i]) == 0
-            cnt += 1
-            res[cnt] = false
-        else
-            if length(ranges[i]) == 1
+    if en === nothing
+        for i in 1:length(ranges)
+            if length(ranges[i]) == 0
                 cnt += 1
                 res[cnt] = false
             else
-                for j in ranges[i]
+                if length(ranges[i]) == 1
+                    cnt += 1
+                    res[cnt] = false
+                else
+                    for j in ranges[i]
+                        cnt += 1
+                        res[cnt] = true
+                    end
+                end
+            end
+        end
+    else
+        for i in 1:length(ranges)
+            if i == 1
+                lo = 1
+            else
+                lo = en[i - 1] + 1
+            end
+            hi = en[i]
+            if length(lo:hi) == 0
+                cnt+=1
+                res[cnt] = false
+            elseif length(lo:hi) == 1
+                cnt += 1
+                res[cnt] = false
+            else
+                for j in lo:hi
                     cnt += 1
                     res[cnt] = true
                 end
@@ -341,6 +416,7 @@ function _create_multiple_match_col_left(ranges, total_length)
     end
     res
 end
+
 function _create_multiple_match_col_inner(ranges, en, total_length)
     res = allocatecol(Bool, total_length)
     cnt = 0
@@ -381,7 +457,6 @@ function _create_multiple_match_col_inner(ranges, en, total_length)
             end
         end
     end
-
     res
 end
 
@@ -393,31 +468,58 @@ ISLE(::Missing, y) = false
 ISLE(::Missing, ::Missing) = false
 
 
-function _mark_lt_part!(inbits, x_l, x_r, _fl::F1, _fr::F2, ranges, r_perms, en, ::Val{T}; strict = false, threads = true) where {T, F1, F2}
+function _mark_lt_part!(inbits, x_l, x_r, _fl::F1, _fr::F2, ranges, r_perms, en, ::Val{T}; strict = false, threads = true, join_type) where {T, F1, F2}
     revised_ends = zeros(T, length(en))
-    @_threadsfor threads for i in 1:length(ranges)
-        if length(ranges[i]) == 0
-            if i !== 1
-                revised_ends[i] = 0
+    if join_type === :left
+        @_threadsfor threads for i in 1:length(ranges)
+            if length(ranges[i]) == 0
+                revised_ends[i] = 1
+                continue
             end
-            continue
-        end
-        i == 1 ? lo = 1 : lo = en[i - 1] + 1
-        hi = en[i]
-        total = 0
-        cnt = 1
-        for j in ranges[i]
-            if strict
-                inbits[lo + cnt - 1] = isless(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
-            else
-                inbits[lo + cnt - 1] = ISLE(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            total = 0
+            cnt = 1
+            for j in ranges[i]
+                if strict
+                    inbits[lo + cnt - 1] = isless(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+                else
+                    inbits[lo + cnt - 1] = ISLE(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+                end
+                total += inbits[lo + cnt - 1]
+                cnt += 1
             end
-            total += inbits[lo + cnt - 1]
-            cnt += 1
+            revised_ends[i] = total
+            if total == 0
+                ranges[i] = 1:0
+                revised_ends[i] += 1
+            end
         end
-        revised_ends[i] = total
-        if total == 0
-            ranges[i] = 1:0
+    else
+        @_threadsfor threads for i in 1:length(ranges)
+            if length(ranges[i]) == 0
+                if i !== 1
+                    revised_ends[i] = 0
+                end
+                continue
+            end
+            i == 1 ? lo = 1 : lo = en[i - 1] + 1
+            hi = en[i]
+            total = 0
+            cnt = 1
+            for j in ranges[i]
+                if strict
+                    inbits[lo + cnt - 1] = isless(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+                else
+                    inbits[lo + cnt - 1] = ISLE(_fl(x_l[i]), _fr(x_r[r_perms[j]]))
+                end
+                total += inbits[lo + cnt - 1]
+                cnt += 1
+            end
+            revised_ends[i] = total
+            if total == 0
+                ranges[i] = 1:0
+            end
         end
     end
     our_cumsum!(revised_ends)
@@ -459,96 +561,218 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_
     end
 end
 
+function _ranges_join(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeunique = false, mapformats = [true, true], stable = false,onlyreturnrange = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], method = :sort, threads = true,  multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id, join_type) where T
+    oncols_left = onleft
+    oncols_right = onright
+    type = :both
+    right_range_cols = Int[]
 
-
-function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
-    isempty(dsl) && return copy(dsl)
-    if method == :hash
-        ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
-    elseif method == :sort
-        oncols_left = onleft
-        oncols_right = onright
-        right_cols = setdiff(1:length(index(dsr)), oncols_right)
-        if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
-            throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
+    if onright_range !== nothing
+        left_range_col = oncols_left[end]
+        right_range_cols = index(dsr)[filter!(!isequal(nothing), collect(onright_range))]
+        if droprangecols
+            right_cols = setdiff(1:length(index(dsr)), [oncols_right; right_range_cols])
+        else
+            right_cols = setdiff(1:length(index(dsr)), oncols_right)
         end
+        
+        oncols_right = [oncols_right; first(right_range_cols)]
+        if onright_range[1] !== nothing
+            if strict_inequality[1]
+                type = :leftstrict
+            else
+                type = :left
+            end
+        else
+            if strict_inequality[2]
+                type = :rightstrict
+            else
+                type = :right
+            end
+        end
+    else
+        right_cols = setdiff(1:length(index(dsr)), oncols_right)
+    end
 
+    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
+        throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
+    end
+
+    nsfpaj = true
+    # if the columns for inequality like join are PA we cannot use the fast path
+    if type != :both
+        if any(i-> DataAPI.refpool(_columns(dsr)[i]) !== nothing, right_range_cols)
+            nsfpaj = false
+        end
+    end
+
+    if method == :hash && (onright_range === nothing || length(onleft) > 1) 
+        if onright_range !== nothing
+            ranges, a, idx, minval, reps, sz, right_cols_2 = _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], oncols_right[1:end-1], mapformats, true, Val(T); threads = threads)
+            filter!(!=(0), reps)
+            pushfirst!(reps, 1)
+            our_cumsum!(reps)
+            pop!(reps)
+            grng = GIVENRANGE(idx, reps, Int[], length(reps))
+            starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, right_range_cols[1], stable, alg, mapformats, nsfpaj, grng; threads = threads)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj, threads = threads)
+        else
+            ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
+        end
+    else
         ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-        if length(oncols_left) == 1 && nrow(dsr)>1
-            success, result = _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
+        if length(oncols_left) == 1 && type == :both && nrow(dsr)>1
+            if join_type === :left
+                success, result =  _join_left_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
+            else 
+                success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
+            end
             if success
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate; threads = threads)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1); nsfpaj = nsfpaj, threads = threads)
 
-        for j in 1:length(oncols_left)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; threads = threads)
+        for j in 1:length(oncols_left)-1
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj, threads = threads)
         end
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj, threads = threads)
     end
-    new_ends = map(x -> max(1, length(x)), ranges)
+
+    if join_type === :left
+        new_ends = map(x -> max(length(x),1), ranges)
+    else
+        new_ends = map(length,ranges)
+    end
     our_cumsum!(new_ends)
     total_length = new_ends[end]
+
+    inbits = nothing
+    revised_ends = nothing
+    if length(right_range_cols) == 2
+        inbits = zeros(Bool, total_length)
+        # TODO any optimisation is needed for pa?
+        _fl = identity
+        _fr = identity
+        if mapformats[1]
+            _fl = getformat(dsl, left_range_col)
+        end
+        if mapformats[2]
+            _fr = getformat(dsr, right_range_cols[2])
+        end
+        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], _fl, _fr, ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64); strict = strict_inequality[2], threads = threads, join_type)   
+        if join_type === :left
+            total_length = revised_ends[end]
+        else
+            total_length = sum(inbits)
+        end
+    end
+
+    if onlyreturnrange
+        return ranges
+    end
 
     if check
         @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly, alternatively, pass `check = false` to ignore this error."
     end
 
     if multiple_match
-        multiple_match_col = _create_multiple_match_col_left(ranges, total_length)
+        if join_type === :left
+            multiple_match_col = _create_multiple_match_col_left(ranges,revised_ends, total_length)
+        else
+            multiple_match_col = _create_multiple_match_col_inner(ranges, revised_ends, total_length)
+        end
     end
 
     res = []
     for j in 1:length(index(dsl))
-        addmissing = false
         _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
         if DataAPI.refpool(_res) !== nothing
-            # fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, missing;  threads = threads)
+            if join_type === :left
+                _fill_oncols_left_table_left!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends, threads = threads)
+            else
+                _fill_oncols_left_table_inner!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
+            end
         else
-            _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing; threads = threads)
+            if join_type === :left
+                _fill_oncols_left_table_left!(_res, _columns(dsl)[j], ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends, threads = threads)
+            else
+                _fill_oncols_left_table_inner!(_res, _columns(dsl)[j], ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
+            end
         end
         push!(res, _res)
-
     end
+
     if dsl isa SubDataset
         newds = Dataset(res, copy(index(dsl)), copycols = false)
     else
         newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
     end
 
-
     for j in 1:length(right_cols)
-        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length)
-        if DataAPI.refpool(_res) !== nothing
-            fill_val = DataAPI.invrefpool(_res)[missing]
-            _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val; threads = threads)
+        if join_type === :left
+            if dsr isa SubDataset
+                _res = allocatecol(_columns(copy(dsr))[right_cols[j]], total_length, addmissing = true)
+            else
+                _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = true)
+            end
         else
-            _fill_right_cols_table_left!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length, missing; threads = threads)
+            _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
+        end
+
+        if DataAPI.refpool(_res) !== nothing
+            if join_type === :left
+                fill_val = DataAPI.invrefpool(_res)[missing]
+                _fill_right_cols_table_left!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, fill_val; inbits = inbits, en2 = revised_ends, threads = threads)
+            else
+                _fill_right_cols_table_inner!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
+            end
+        else
+            if join_type === :left
+                _fill_right_cols_table_left!(_res, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends, threads = threads)
+            else
+                _fill_right_cols_table_inner!(_res, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
+            end
         end
         push!(_columns(newds), _res)
-
         new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
         push!(index(newds), new_var_name)
         setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
     end
+    
     if multiple_match
         insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false, makeunique = makeunique)
     end
+    
     if obs_id[1]
         obs_id_name1 = Symbol(obs_id_name, "_left")
         obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
-        _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; threads = threads)
+        if join_type === :left
+            _fill_oncols_left_table_left!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends, threads = threads)
+        else
+            _fill_oncols_left_table_inner!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
+        end
         insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false, makeunique = makeunique)
     end
     if obs_id[2]
         obs_id_name2 = Symbol(obs_id_name, "_right")
         obs_id_right = allocatecol(T, total_length)
-        _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing, threads = threads)
+        if join_type === :left
+            _fill_right_cols_table_left!(obs_id_right, idx, ranges, new_ends, total_length, missing; inbits = inbits, en2 = revised_ends,  threads = threads)
+        else
+            _fill_right_cols_table_inner!(obs_id_right, idx, ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends,  threads = threads)
+        end
         insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false, makeunique = makeunique)
     end
     newds
 
+end
+
+
+
+function _join_left(dsl, dsr, ::Val{T}; onleft, onright,onright_range, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], onlyreturnrange = false, method = :sort, threads = true,  multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
+    isempty(dsl) && return copy(dsl)
+    _ranges_join(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, stable = stable, onlyreturnrange = onlyreturnrange, strict_inequality = strict_inequality, makeunique = makeunique, mapformats = mapformats,accelerate = accelerate, check = check, droprangecols = droprangecols, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name, join_type=:left)
 end
 
 function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
@@ -569,11 +793,14 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
                 return result
             end
         end
+        
         idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, threads = threads)
+        
         for j in 1:length(oncols_left)
             _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, threads = threads)
         end
     end
+    
     if !all(x->length(x) <= 1, ranges)
         throw(ArgumentError("`leftjoin!` can only be used when each observation in left data set matches at most one observation from right data set"))
     end
@@ -625,159 +852,7 @@ end
 
 function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onright_range = nothing , makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, droprangecols = true, strict_inequality = [false, false], method = :sort, threads = true, onlyreturnrange = false, multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
     (isempty(dsl) || isempty(dsr)) && throw(ArgumentError("in `innerjoin` both left and right tables must be non-empty"))
-    oncols_left = onleft
-    oncols_right = onright
-    type = :both
-    right_range_cols = Int[]
-    if onright_range !== nothing
-        left_range_col = oncols_left[end]
-
-        right_range_cols = index(dsr)[filter!(!isequal(nothing), collect(onright_range))]
-        if droprangecols
-            right_cols = setdiff(1:length(index(dsr)), [oncols_right; right_range_cols])
-        else
-            right_cols = setdiff(1:length(index(dsr)), oncols_right)
-        end
-
-        oncols_right = [oncols_right; first(right_range_cols)]
-        if onright_range[1] !== nothing
-            if strict_inequality[1]
-                type = :leftstrict
-            else
-                type = :left
-            end
-        else
-            if strict_inequality[2]
-                type = :rightstrict
-            else
-                type = :right
-            end
-        end
-    else
-        right_cols = setdiff(1:length(index(dsr)), oncols_right)
-    end
-    if !makeunique && !isempty(intersect(_names(dsl), _names(dsr)[right_cols]))
-        throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
-    end
-
-    nsfpaj = true
-    # if the columns for inequality like join are PA we cannot use the fast path
-    if type != :both
-        if any(i-> DataAPI.refpool(_columns(dsr)[i]) !== nothing, right_range_cols)
-            nsfpaj = false
-        end
-    end
-    # if (onright_range === nothing || length(onleft) > 1) is false, then we have inequality kind join with no exact match join
-    if method == :hash && (onright_range === nothing || length(onleft) > 1)
-        if onright_range !== nothing
-            ranges, a, idx, minval, reps, sz, right_cols_2 = _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], oncols_right[1:end-1], mapformats, true, Val(T); threads = threads)
-            filter!(!=(0), reps)
-            pushfirst!(reps, 1)
-            our_cumsum!(reps)
-            pop!(reps)
-            grng = GIVENRANGE(idx, reps, Int[], length(reps))
-            starts, idx, last_valid_range = _sort_for_join_after_hash(dsr, right_range_cols[1], stable, alg, mapformats, nsfpaj, grng; threads = threads)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj, threads = threads)
-        else
-            ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
-        end
-    else
-        ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-        if length(oncols_left) == 1 && type == :both && nrow(dsr)>1
-            success, result =  _join_inner_dict(dsl, dsr, ranges, oncols_left, oncols_right, right_cols, Val(T); makeunique = makeunique, mapformats = mapformats, check = check, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name)
-            if success
-                return result
-            end
-        end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1); nsfpaj = nsfpaj, threads = threads)
-
-        for j in 1:length(oncols_left)-1
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj, threads = threads)
-        end
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], length(oncols_left); type = type, nsfpaj = nsfpaj, threads = threads)
-    end
-
-
-
-    new_ends = map(length, ranges)
-    our_cumsum!(new_ends)
-    total_length = new_ends[end]
-
-    inbits = nothing
-    revised_ends = nothing
-    if length(right_range_cols) == 2
-        inbits = zeros(Bool, total_length)
-        # TODO any optimisation is needed for pa?
-        _fl = identity
-        _fr = identity
-        if mapformats[1]
-            _fl = getformat(dsl, left_range_col)
-        end
-        if mapformats[2]
-            _fr = getformat(dsr, right_range_cols[2])
-        end
-        revised_ends = _mark_lt_part!(inbits, _columns(dsl)[left_range_col], _columns(dsr)[right_range_cols[2]], _fl, _fr, ranges, idx, new_ends, total_length < typemax(Int32) ? Val(Int32) : Val(Int64); strict = strict_inequality[2], threads = threads)
-    end
-    if length(right_range_cols) == 2
-        total_length = sum(inbits)
-    end
-
-    if onlyreturnrange
-        return ranges
-    end
-    if check
-        @assert total_length < 10*nrow(dsl) "the output data set will be very large ($(total_length)×$(ncol(dsl)+length(right_cols))) compared to the left data set size ($(nrow(dsl))×$(ncol(dsl))), make sure that the `on` keyword is selected properly, alternatively, pass `check = false` to ignore this error."
-    end
-    if multiple_match
-        multiple_match_col = _create_multiple_match_col_inner(ranges, revised_ends, total_length)
-    end
-
-    res = []
-    for j in 1:length(index(dsl))
-        _res = allocatecol(_columns(dsl)[j], total_length, addmissing = false)
-        if DataAPI.refpool(_res) !== nothing
-            _fill_oncols_left_table_inner!(_res.refs, DataAPI.refarray(_columns(dsl)[j]), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
-        else
-            _fill_oncols_left_table_inner!(_res, _columns(dsl)[j], ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
-        end
-        push!(res, _res)
-    end
-    if dsl isa SubDataset
-        newds = Dataset(res, copy(index(dsl)), copycols = false)
-    else
-        newds = Dataset(res, Index(copy(index(dsl).lookup), copy(index(dsl).names), copy(index(dsl).format)), copycols = false)
-    end
-
-    for j in 1:length(right_cols)
-        _res = allocatecol(_columns(dsr)[right_cols[j]], total_length, addmissing = false)
-        if DataAPI.refpool(_res) !== nothing
-            _fill_right_cols_table_inner!(_res.refs, view(DataAPI.refarray(_columns(dsr)[right_cols[j]]), idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
-        else
-            _fill_right_cols_table_inner!(_res, view(_columns(dsr)[right_cols[j]], idx), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
-        end
-        push!(_columns(newds), _res)
-
-        new_var_name = make_unique([_names(dsl); _names(dsr)[right_cols[j]]], makeunique = makeunique)[end]
-        push!(index(newds), new_var_name)
-        setformat!(newds, index(newds)[new_var_name], getformat(dsr, _names(dsr)[right_cols[j]]))
-    end
-    if multiple_match
-        insertcols!(newds, ncol(newds)+1, multiple_match_name => multiple_match_col, unsupported_copy_cols = false, makeunique = makeunique)
-    end
-    if obs_id[1]
-        obs_id_name1 = Symbol(obs_id_name, "_left")
-        obs_id_left = allocatecol(nrow(dsl) < typemax(Int32) ? Int32 : Int64, total_length)
-        _fill_oncols_left_table_inner!(obs_id_left, 1:nrow(dsl), ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
-        insertcols!(newds, ncol(newds)+1, obs_id_name1 => obs_id_left, unsupported_copy_cols = false, makeunique = makeunique)
-    end
-    if obs_id[2]
-        obs_id_name2 = Symbol(obs_id_name, "_right")
-        obs_id_right = allocatecol(T, total_length)
-        _fill_right_cols_table_inner!(obs_id_right, idx, ranges, new_ends, total_length; inbits = inbits, en2 = revised_ends, threads = threads)
-        insertcols!(newds, ncol(newds)+1, obs_id_name2 => obs_id_right, unsupported_copy_cols = false, makeunique = makeunique)
-    end
-    newds
-
+    _ranges_join(dsl, dsr, nrow(dsr) < typemax(Int32) ? Val(Int32) : Val(Int64), onleft = onleft, onright = onright, onright_range = onright_range, stable = stable, onlyreturnrange = onlyreturnrange, strict_inequality = strict_inequality, makeunique = makeunique, mapformats = mapformats,accelerate = accelerate, check = check, droprangecols = droprangecols, method = method, threads = threads, multiple_match = multiple_match, multiple_match_name = multiple_match_name, obs_id = obs_id, obs_id_name = obs_id_name, join_type=:inner)
 end
 
 function _in(dsl::AbstractDataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, mapformats = [true, true], stable = false, alg = HeapSort, accelerate = false, threads = true) where T
