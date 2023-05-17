@@ -234,7 +234,7 @@ Base.ndims(::DatasetColumns) = 1
 Base.ndims(::Type{<:DatasetColumns}) = 1
 
 Base.length(itr::DatasetColumns) = size(itr)[1]
-Base.eltype(::Type{<:DatasetColumns}) = AbstractVector
+Base.eltype(::Type{<:DatasetColumns}) = AbstractDatasetColumn
 
 Base.firstindex(itr::DatasetColumns) = 1
 Base.lastindex(itr::DatasetColumns) = length(itr)

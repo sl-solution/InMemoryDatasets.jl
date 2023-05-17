@@ -59,8 +59,8 @@ function _update!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright,
     for j in 1:length(right_cols)
         if haskey(index(dsl).lookup, _names(dsr)[right_cols[j]])
             left_cols_idx = index(dsl)[_names(dsr)[right_cols[j]]]
-            TL = nonmissingtype(eltype(_columns(dsl)[left_cols_idx]))
-            TR = nonmissingtype(eltype(_columns(dsr)[right_cols[j]]))
+            TL = our_nonmissingtype(eltype(_columns(dsl)[left_cols_idx]))
+            TR = our_nonmissingtype(eltype(_columns(dsr)[right_cols[j]]))
             if promote_type(TR, TL) <: TL
                 _update_left_with_right!(_columns(dsl)[left_cols_idx], view(_columns(dsr)[right_cols[j]], idx), ranges, allowmissing, f_mode, threads = threads, op = op)
             end

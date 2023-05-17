@@ -546,6 +546,6 @@ function _precompile()
         Base.precompile(Tuple{Core.kwftype(typeof(transpose)),NamedTuple{(:id, :threads), Tuple{Symbol, Bool}},typeof(transpose),Dataset,Vector{Symbol}})
         Base.precompile(Tuple{Core.kwftype(typeof(transpose)),NamedTuple{(:threads,), Tuple{Bool}},typeof(transpose),Dataset,UnitRange{Int64}})
         Base.precompile(Tuple{Core.kwftype(typeof(transpose)),NamedTuple{(:threads,), Tuple{Bool}},typeof(transpose),GroupBy,Vector{Int64}})
-
+        VERSION >= v"1.9" && IMD.warmup()
     return nothing
 end

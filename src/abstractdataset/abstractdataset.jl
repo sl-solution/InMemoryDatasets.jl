@@ -42,16 +42,18 @@ In broadcasting `AbstractDataset` behavior is similar to a `Matrix`.
 """
 abstract type AbstractDataset end
 
+abstract type AbstractDatasetColumn end
+
 # DatasetColumn is a representation of a column of data set
 # it is wrapped into a new type to make sure that when ever a column is
 # selected, the data set is attached to it
-struct DatasetColumn{T <: AbstractDataset, E}
+struct DatasetColumn{T <: AbstractDataset, E} <: AbstractDatasetColumn
     col::Int
     ds::T
     val::E
 end
 
-struct SubDatasetColumn{T <: AbstractDataset, E}
+struct SubDatasetColumn{T <: AbstractDataset, E} <: AbstractDatasetColumn
     col::Int
     ds::T
     val::E
@@ -308,7 +310,7 @@ function content(ds::AbstractDataset; output = false)
     for i in 1:ncol(ds)
         push!(f_v[1], all_names[i])
         push!(f_v[2], getformat(ds, i))
-        push!(f_v[3], nonmissingtype(eltype(ds[!, i])))
+        push!(f_v[3], our_nonmissingtype(eltype(ds[!, i])))
     end
     format_ds = Dataset(f_v, [:column, :format, :eltype], copycols = false)
     if !output

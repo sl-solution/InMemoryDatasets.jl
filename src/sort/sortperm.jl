@@ -133,7 +133,7 @@ end
 function _apply_by_f_barrier(x::AbstractVector{T}, by, rev, threads) where T
     needrev = rev
     missat = :right
-    CT = Core.Compiler.return_type(_date_value∘by, Tuple{nonmissingtype(T)})
+    CT = Core.Compiler.return_type(_date_value∘by, Tuple{our_nonmissingtype(T)})
     if CT == Bool
         CT = Int8
     end
@@ -141,7 +141,7 @@ function _apply_by_f_barrier(x::AbstractVector{T}, by, rev, threads) where T
     # _temp = Vector{CT}(undef, length(x))
     _temp = _our_vect_alloc(CT, length(x))
     # we should make sure changing sign doesn't overflow
-    if rev && nonmissingtype(CT) <: Union{Bool, Int8, Int16, Int32, Int64} && isless(typemin(nonmissingtype(CT)), threads ? hp_minimum(_date_value∘by, x) : stat_minimum(_date_value∘by, x))
+    if rev && our_nonmissingtype(CT) <: Union{Bool, Int8, Int16, Int32, Int64} && isless(typemin(our_nonmissingtype(CT)), threads ? hp_minimum(_date_value∘by, x) : stat_minimum(_date_value∘by, x))
         _by = x-> -_date_value(by(x))
         needrev = false
         missat = :left

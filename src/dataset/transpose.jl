@@ -408,7 +408,7 @@ end
 
 function _fill_outputmat_withoutid(T, in_cols, ds, starts, perms, new_col_names, row_names_length, threads; default_fill = missing)
 
-    @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data set is huge and there is not enough resource, check the passed arguments."
+    @assert _check_allocation_limit(our_nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data set is huge and there is not enough resource, check the passed arguments."
     CT = promote_type(T, typeof(default_fill))
     # outputmat = [__fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
     outputmat = Vector{typeof(_our_vect_alloc(CT, 0))}(undef, length(new_col_names))
@@ -420,7 +420,7 @@ end
 
 function _fill_outputmat_withid(T, in_cols, ds, starts, perms, ids, new_col_names, row_names_length, threads; default_fill = missing)
 
-    @assert _check_allocation_limit(nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data set is huge and there is not enough resource, check the passed arguments."
+    @assert _check_allocation_limit(our_nonmissingtype(T), row_names_length*_ngroups(ds), length(new_col_names)) < 1.0 "The output data set is huge and there is not enough resource, check the passed arguments."
     CT = promote_type(T, typeof(default_fill))
     # outputmat = [fill!(_our_vect_alloc(CT, row_names_length*_ngroups(ds)), default_fill) for _ in 1:length(new_col_names)]
     outputmat = Vector{typeof(_our_vect_alloc(CT, 0))}(undef, length(new_col_names))
@@ -787,7 +787,7 @@ function flatten!(ds::Dataset,
         for col in 2:length(idxcols)
              if mapformats
                  f_fmt = getformat(ds, idxcols[col])
-                 push!(all_idxcols, byrow(ds, f_fmt, idxcols[col]), threads = threads)
+                 push!(all_idxcols, byrow(ds, f_fmt, idxcols[col], threads = threads))
              else
                  push!(all_idxcols, _columns(ds)[idxcols[col]])
              end
@@ -854,7 +854,7 @@ function flatten(ds::AbstractDataset,
         for col in 2:length(idxcols)
              if mapformats
                  f_fmt = getformat(ds, idxcols[col])
-                 push!(all_idxcols, byrow(ds, f_fmt, idxcols[col]), threads = threads)
+                 push!(all_idxcols, byrow(ds, f_fmt, idxcols[col], threads = threads))
              else
                  push!(all_idxcols, _columns(ds)[idxcols[col]])
              end

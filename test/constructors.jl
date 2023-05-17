@@ -318,13 +318,13 @@ end
 
 @testset "column types" begin
     ds = Dataset(A = 1:3, B = 2:4, C = 3:5)
-    answer = [Array{Union{Missing, Int}, 1}, Array{Union{Missing, Int}, 1}, Array{Union{Missing, Int}, 1}]
+    answer = [DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}, DatasetColumn{Dataset, Vector{Union{Missing, Int64}}}]
     @test typeof.(eachcol(ds)) == answer
     ds[!, :D] = [4, 5, missing]
-    push!(answer, Vector{Union{Int, Missing}})
+    push!(answer, DatasetColumn{Dataset, Vector{Union{Missing, Int64}}})
     @test typeof.(eachcol(ds)) == answer
     ds[!, :E] .= 'c'
-    push!(answer, Vector{Union{Missing, Char}})
+    push!(answer, DatasetColumn{Dataset, Vector{Union{Missing, Char}}})
     @test typeof.(eachcol(ds)) == answer
 end
 
