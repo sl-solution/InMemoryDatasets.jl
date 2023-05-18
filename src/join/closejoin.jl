@@ -274,7 +274,8 @@ function  _fill_right_cols_table_close!(_res, x, ranges, total, borderval, fill_
 
 end
 
-function _change_refpool_find_range_for_close!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, direction, lmf, rmf, j; nsfpaj = true, threads = true)
+function _change_refpool_find_range_for_close!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, direction, lmf, rmf, j; nsfpaj=nsfpaj, threads = true)
+    nsfpaj_in = nsfpaj[1]
     var_l = _columns(dsl)[oncols_left[j]]
     var_r = _columns(dsr)[oncols_right[j]]
     l_idx = oncols_left[j]
@@ -292,8 +293,8 @@ function _change_refpool_find_range_for_close!(ranges, dsl, dsr, r_perms, oncols
 
     T1 = Core.Compiler.return_type(_fl, Tuple{eltype(var_l)})
 
-    if DataAPI.refpool(var_r) !== nothing && nsfpaj
-        true && throw(ErrorException("we shouldn't end up here"))
+    if DataAPI.refpool(var_r) !== nothing && nsfpaj_in
+        throw(ErrorException("we shouldn't end up here"))
     else
         T2 = Core.Compiler.return_type(_fr, Tuple{eltype(var_r)})
         if direction == :backward
@@ -327,10 +328,10 @@ function _join_closejoin(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, m
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
 
-    nsfpaj = true
+    nsfpaj = [true]
     # if the column for close join is a PA we cannot use the fast path
     if DataAPI.refpool(_columns(dsr)[oncols_right[end]]) !== nothing
-        nsfpaj = false
+        nsfpaj = [false]
     end
     if length(oncols_left) > 1 && method == :hash
         ranges, a, idx, minval, reps, sz, right_cols_2= _find_ranges_for_join_using_hash(dsl, dsr, onleft[1:end-1], onright[1:end-1], mapformats, true, Val(T), threads = threads)

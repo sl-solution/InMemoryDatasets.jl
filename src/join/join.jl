@@ -70,48 +70,63 @@ function _fill_range_for_accelerated_join!(ranges, starts, loc, x, f, sz, chunk;
     end
 end
 # TODO how the hashing behave for Categorical Arrays?
-function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, chunk = 2^10; nsfpaj = true, threads = true)
+function _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, chunk = 2^10; nsfpaj=nsfpaj, threads = true)
+    # nsfpaj has no value by default to make sure caller passes it
+    # we use vector to represent nsfpaj, because we may override its value
+    nsfpaj_in = nsfpaj[1]
+
     if isempty(dsr)
         idx = []
         fill!(ranges, 1:nrow(dsr))
         last_valid_range = -1
     else
-        if accelerate
-            if mapformats[2]
-                _fr = getformat(dsr, oncols_right[1])
-            else
-                _fr = identity
-            end
-            grng = _divide_for_fast_join(_columns(dsr)[oncols_right[1]], _fr, chunk; threads = threads)
-            if mapformats[1]
-                _fl = getformat(dsl, oncols_left[1])
-            else
-                _fl = identity
-            end
-            _fill_range_for_accelerated_join!(ranges, grng.starts, grng.starts_loc, _columns(dsl)[oncols_left[1]], _fl, nrow(dsr), chunk; threads = threads)
-            if dsr isa SubDataset
-                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng, threads = threads)
-
-            else
-                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng, threads = threads)
-            end
-        else
-            if dsr isa SubDataset
-                starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, threads = threads)
-            else
-                starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, threads = threads)
-            end
+         # check if data already sorted, if so it overrides accelerate 
+        if _check_for_fast_sort(dsr, oncols_right, fill(false, length(oncols_right)), mapformats[2]; notsortpaforjoin = false, givenrange = nothing) == 0
+            # if it is already sorted based on what we want we can saftly change nsfpaj to false
+            nsfpaj[1] = false
+            idx = 1:nrow(dsr)
+            last_valid_range = _ngroups(dsr)
             fill!(ranges, 1:nrow(dsr))
+        else
+
+            if accelerate
+                if mapformats[2]
+                    _fr = getformat(dsr, oncols_right[1])
+                else
+                    _fr = identity
+                end
+                grng = _divide_for_fast_join(_columns(dsr)[oncols_right[1]], _fr, chunk; threads = threads)
+                if mapformats[1]
+                    _fl = getformat(dsl, oncols_left[1])
+                else
+                    _fl = identity
+                end
+                _fill_range_for_accelerated_join!(ranges, grng.starts, grng.starts_loc, _columns(dsl)[oncols_left[1]], _fl, nrow(dsr), chunk; threads = threads)
+                if dsr isa SubDataset
+                    starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj_in, givenrange = grng, threads = threads)
+
+                else
+                    starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj_in, givenrange = grng, threads = threads)
+                end
+            else
+                if dsr isa SubDataset
+                    starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj_in, threads = threads)
+                else
+                    starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj_in, threads = threads)
+                end
+                fill!(ranges, 1:nrow(dsr))
+            end
         end
     end
     idx, last_valid_range == length(idx)
 end
 
 function _sort_for_join_after_hash(dsr, oncols_right, stable, alg, mapformats, nsfpaj, grng; threads = true)
+    nsfpaj_in = nsfpaj[1]
     if dsr isa SubDataset
-        starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng, threads = threads)
+        starts, idx, last_valid_range =  _sortperm_v(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj_in, givenrange = grng, threads = threads)
     else
-        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj, givenrange = grng, threads = threads)
+        starts, idx, last_valid_range =  _sortperm(dsr, oncols_right, stable = stable, a = alg, mapformats = mapformats[2], notsortpaforjoin = nsfpaj_in, givenrange = grng, threads = threads)
     end
 end
 
@@ -423,7 +438,8 @@ function _mark_lt_part!(inbits, x_l, x_r, _fl::F1, _fr::F2, ranges, r_perms, en,
     our_cumsum!(revised_ends)
 end
 
-function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, lmf, rmf, j; type = :both, nsfpaj = true, threads = true)
+function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_left, oncols_right, lmf, rmf, j; type = :both, nsfpaj=nsfpaj, threads = true)
+    nsfpaj_in = nsfpaj[1]
     var_l = _columns(dsl)[oncols_left[j]]
     var_r = _columns(dsr)[oncols_right[j]]
     l_idx = oncols_left[j]
@@ -441,7 +457,7 @@ function _change_refpool_find_range_for_join!(ranges, dsl, dsr, r_perms, oncols_
 
     T1 = Core.Compiler.return_type(DataAPI.unwrap∘_fl, Tuple{eltype(var_l)})
 
-    if DataAPI.refpool(var_r) !== nothing && nsfpaj
+    if DataAPI.refpool(var_r) !== nothing && nsfpaj_in
         # sort taken care for refs ordering of modified values, but we still need to change refs
         if _fr == identity
             var_r_cpy = var_r
@@ -463,6 +479,7 @@ end
 
 function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match::Bool = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
     isempty(dsl) && return copy(dsl)
+    nsfpaj = [true]
     if method == :hash
         ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
     elseif method == :sort
@@ -480,10 +497,10 @@ function _join_left(dsl, dsr, ::Val{T}; onleft, onright, makeunique = false, map
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate; threads = threads)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate;nsfpaj = nsfpaj, threads = threads)
 
         for j in 1:length(oncols_left)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; threads = threads)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj, threads = threads)
         end
     end
     new_ends = map(x -> max(1, length(x)), ranges)
@@ -553,6 +570,7 @@ end
 
 function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeunique = false, mapformats = [true, true], stable = false, alg = HeapSort, check = true, accelerate = false, method = :sort, threads = true, multiple_match = false, multiple_match_name = :multiple, obs_id = [false, false], obs_id_name = :obs_id) where T
     isempty(dsl) && return dsl
+    nsfpaj = [true]
     if method == :hash
         ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
     elseif method == :sort
@@ -569,9 +587,9 @@ function _join_left!(dsl::Dataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, threads = threads)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, nsfpaj = nsfpaj, threads = threads)
         for j in 1:length(oncols_left)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, threads = threads)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, nsfpaj = nsfpaj, threads = threads)
         end
     end
     if !all(x->length(x) <= 1, ranges)
@@ -660,11 +678,11 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
         throw(ArgumentError("duplicate column names, pass `makeunique = true` to make them unique using a suffix automatically." ))
     end
 
-    nsfpaj = true
+    nsfpaj = [true]
     # if the columns for inequality like join are PA we cannot use the fast path
     if type != :both
         if any(i-> DataAPI.refpool(_columns(dsr)[i]) !== nothing, right_range_cols)
-            nsfpaj = false
+            nsfpaj = [false]
         end
     end
     # if (onright_range === nothing || length(onleft) > 1) is false, then we have inequality kind join with no exact match join
@@ -689,7 +707,7 @@ function _join_inner(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, onrig
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range == nothing || length(oncols_right)>1); nsfpaj = nsfpaj, threads = threads)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate && (onright_range === nothing || length(oncols_right)>1); nsfpaj = nsfpaj, threads = threads)
 
         for j in 1:length(oncols_left)-1
             _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j; nsfpaj = nsfpaj, threads = threads)
@@ -784,7 +802,7 @@ function _in(dsl::AbstractDataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
     isempty(dsl) && return Bool[]
     oncols_left = onleft
     oncols_right = onright
-
+    nsfpaj = [true]
     # use Set when there is only one column in `on`
     if length(oncols_right) == 1
         if mapformats[1]
@@ -800,9 +818,9 @@ function _in(dsl::AbstractDataset, dsr::AbstractDataset, ::Val{T}; onleft, onrig
         return _in_use_Set(_columns(dsl)[oncols_left[1]], _columns(dsr)[oncols_right[1]], _fl, _fr, threads = threads)
     end
     ranges = Vector{UnitRange{T}}(undef, nrow(dsl))
-    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, threads = threads)
+    idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, nsfpaj = nsfpaj, threads = threads)
     for j in 1:length(oncols_left)
-        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, threads = threads)
+        _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, nsfpaj = nsfpaj, threads = threads)
     end
     map(x -> length(x) == 0 ? false : true, ranges)
 end
@@ -875,6 +893,7 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
     (isempty(dsl) || isempty(dsr)) && throw(ArgumentError("in `outerjoin` both left and right tables must be non-empty"))
     oncols_left = onleft
     oncols_right = onright
+    nsfpaj = [true]
     if method == :hash
         ranges, a, idx, minval, reps, sz, right_cols = _find_ranges_for_join_using_hash(dsl, dsr, onleft, onright, mapformats, makeunique, Val(T); threads = threads)
     elseif method == :sort
@@ -889,9 +908,9 @@ function _join_outer(dsl, dsr::AbstractDataset, ::Val{T}; onleft, onright, makeu
                 return result
             end
         end
-        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, threads = threads)
+        idx, uniquemode = _find_permute_and_fill_range_for_join!(ranges, dsr, dsl, oncols_right, oncols_left, stable, alg, mapformats, accelerate, nsfpaj = nsfpaj, threads = threads)
         for j in 1:length(oncols_left)
-            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, threads = threads)
+            _change_refpool_find_range_for_join!(ranges, dsl, dsr, idx, oncols_left, oncols_right, mapformats[1], mapformats[2], j, nsfpaj = nsfpaj, threads = threads)
         end
     end
     new_ends = map(x -> max(1, length(x)), ranges)

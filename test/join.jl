@@ -93,18 +93,25 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test closejoin(trades, quotes, on = :time, makeunique = true) == closefinance1 == closejoin(trades, quotes, on = :time, makeunique = true, method = :hash)
 
     @test innerjoin(name, job, on = :ID) == inner == innerjoin(name, job, on = :ID, threads = false)
+    @test innerjoin(name, sort(job, :ID), on = :ID) == inner == innerjoin(name, sort(job, :ID), on = :ID, threads = false) == innerjoin(name, sort(job, :ID, rev=true), on = :ID)
     @test innerjoin(name, job, on = :ID) == inner == innerjoin(name, job, on = :ID, method = :hash, threads = false)
     @test outerjoin(name, job, on = :ID) == outer == outerjoin(name, job, on = :ID, threads = false)
+    @test outerjoin(name, sort(job, :ID), on = :ID) == outer == outerjoin(name, sort(job, :ID), on = :ID, threads = false) == outerjoin(name, sort(job, :ID, rev=true), on = :ID)
     @test outerjoin(name, job, on = :ID) == outer == outerjoin(name, job, on = :ID, method = :hash, threads = false)
     @test leftjoin(name, job, on = :ID) == left == leftjoin(name, job, on = :ID, threads = false)
+    @test leftjoin(name, sort(job, :ID), on = :ID) == left == leftjoin(name, sort(job, :ID), on = :ID, threads = false) == leftjoin(name, sort(job, :ID, rev=true), on = :ID)
     @test leftjoin(name, job, on = :ID) == left == leftjoin(name, job, on = :ID, method = :hash, threads = false)
-    @test semijoin(name, job, on = :ID) == semi == semijoin(name, job, on = :ID, threads = false)
+    @test semijoin(name, job, on = :ID, method=:sort) == semi == semijoin(name, job, on = :ID, threads = false, method=:sort)
+    @test semijoin(name, sort(job, :ID), on = :ID, method=:sort) == semi == semijoin(name, sort(job, :ID), on = :ID, threads = false, method=:sort) == semijoin(name, sort(job, :ID, rev=true), on = :ID, method=:sort)
     @test semijoin(name, job, on = :ID) == semi == semijoin(name, job, on = :ID, method = :hash, threads = false)
-    @test antijoin(name, job, on = :ID) == anti == antijoin(name, job, on = :ID, threads = false)
+    @test antijoin(name, job, on = :ID, method=:sort) == anti == antijoin(name, job, on = :ID, threads = false, method=:sort)
+    @test antijoin(name, sort(job, :ID), on = :ID, method=:sort) == anti == antijoin(name, sort(job, :ID), on = :ID, threads = false, method=:sort) == antijoin(name, sort(job, :ID, rev=true), on = :ID, method=:sort)
     @test antijoin(name, job, on = :ID) == anti == antijoin(name, job, on = :ID, method = :hash, threads = false)
     @test closejoin(classA, grades, on = :mark) == closeone == closejoin(classA, grades, on = :mark, threads = false)
+    @test closejoin(classA, sort(grades, :mark), on = :mark) == closeone == closejoin(classA, sort(grades, :mark), on = :mark, threads = false) == closejoin(classA, sort(grades, :mark, rev=true), on = :mark)
     @test closejoin(classA, grades, on = :mark) == closeone == closejoin(classA, grades, on = :mark, method = :hash, threads = false)
     @test closejoin(trades, quotes, on = :time, makeunique = true) == closefinance1 == closejoin(trades, quotes, on = :time, makeunique = true, threads = false)
+    @test closejoin(trades, sort(quotes, :time), on = :time, makeunique = true) == closefinance1 == closejoin(trades, sort(quotes, :time), on = :time, makeunique = true, threads = false) == closejoin(trades, sort(quotes, :time, rev=true), on = :time, makeunique = true)
     @test closejoin(trades, quotes, on = :time, makeunique = true) == closefinance1 == closejoin(trades, quotes, on = :time, makeunique = true, method = :hash, threads = false)
 
     @test innerjoin(name, view(job, :, :), on = :ID) == inner
@@ -139,13 +146,20 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
 
 
     @test closejoin(trades, quotes, on =[:ticker, :time], tol = Millisecond(2)) == closfinance_tol2ms
+    @test closejoin(trades, sort(quotes, [:ticker, :time]), on =[:ticker, :time], tol = Millisecond(2)) == closfinance_tol2ms == closejoin(trades, sort(quotes, [:ticker, :time], rev=[true, false]), on =[:ticker, :time], tol = Millisecond(2))
     @test closejoin(trades, quotes, on =[:ticker, :time], tol = Day(2)) == closejoin(trades, quotes, on =[:ticker, :time])
+    @test closejoin(trades, sort(quotes, [:ticker, :time]), on =[:ticker, :time], tol = Day(2)) == closejoin(trades, quotes, on =[:ticker, :time]) == closejoin(trades, sort(quotes, [:ticker, :time], rev=[true, false]), on =[:ticker, :time], tol = Day(2))
     @test closejoin(trades, quotes, on =[:ticker, :time], tol = Millisecond(0)) == closfinance_tol0ms
+    @test closejoin(trades, sort(quotes, [:ticker, :time]), on =[:ticker, :time], tol = Millisecond(0)) == closfinance_tol0ms == closejoin(trades, sort(quotes, [:ticker, :time], rev=[true, false]), on =[:ticker, :time], tol = Millisecond(0))
     @test closejoin(trades, quotes, on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false) == closefinance_tol10ms_noexact
+    @test closejoin(trades, sort(quotes, [:ticker, :time]), on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false) == closefinance_tol10ms_noexact == closejoin(trades, sort(quotes, [:ticker, :time], rev=[true, false]), on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false)
     @test closejoin!(copy(trades), quotes, on =[:ticker, :time], tol = Millisecond(2)) == closfinance_tol2ms
+    @test closejoin!(copy(trades), sort(quotes, [:ticker, :time]), on =[:ticker, :time], tol = Millisecond(2)) == closfinance_tol2ms == closejoin!(copy(trades), sort(quotes, [:ticker, :time], rev=true), on =[:ticker, :time], tol = Millisecond(2))
     @test closejoin!(copy(trades), quotes, on =[:ticker, :time], tol = Day(2)) == closejoin(trades, quotes, on =[:ticker, :time])
     @test closejoin!(copy(trades), quotes, on =[:ticker, :time], tol = Millisecond(0)) == closfinance_tol0ms
     @test closejoin!(copy(trades), quotes, on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false) == closefinance_tol10ms_noexact
+    @test closejoin!(copy(trades), sort(quotes, [:ticker, :time]), on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false) == closefinance_tol10ms_noexact == closejoin!(copy(trades), sort(quotes, [:ticker, :time], rev=true), on = [:ticker, :time], tol = Millisecond(10), allow_exact_match = false)
+
 
     @test closejoin(trades, quotes, on =[:ticker, :time], tol = Millisecond(2), method = :hash) == closfinance_tol2ms
     @test closejoin(trades, quotes, on =[:ticker, :time], tol = Day(2), method = :hash) == closejoin(trades, quotes, on =[:ticker, :time])
@@ -261,6 +275,13 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test leftjoin(nameid, jobid, on = :ID) == left[:, on]
     @test semijoin(nameid, jobid, on = :ID) == semi[:, on]
     @test antijoin(nameid, jobid, on = :ID) == anti[:, on]
+
+    @test innerjoin(nameid, sort(jobid, :ID), on = :ID) == inner[:, on]
+    @test outerjoin(nameid, sort(jobid, :ID), on = :ID) == outer[:, on]
+    @test leftjoin(nameid, sort(jobid, :ID), on = :ID) == left[:, on]
+    @test semijoin(nameid, sort(jobid, :ID), on = :ID) == semi[:, on]
+    @test antijoin(nameid, sort(jobid, :ID), on = :ID) == anti[:, on]
+
     @test innerjoin(nameid, view(jobid, :, :), on = :ID) == inner[:, on]
     @test outerjoin(nameid, view(jobid, :, :), on = :ID) == outer[:, on]
     @test leftjoin(nameid, view(jobid, :, :), on = :ID) == left[:, on]
@@ -821,6 +842,10 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
         @test left2 == leftjoin(dsl, dsr, on = [:x1, :x2], makeunique = true, accelerate = false, stable = true, check = false, threads = false)
         @test left2 == leftjoin(dsl, dsr, on = [:x1, :x2], makeunique = true, accelerate = false, stable = true, check = false, method = :hash, threads = false)
 
+        @test left2 == leftjoin(dsl, sort(dsr, [:x1, :x2]), on = [:x1, :x2], makeunique = true, accelerate = false, stable = true, check = false, method = :hash)
+        @test left2 == leftjoin(dsl, sort(dsr, [:x1, :x2]), on = [:x1, :x2], makeunique = true, accelerate = false, stable = true, check = false, threads = false)
+        @test left2 == leftjoin(dsl, sort(dsr, [:x1, :x2]), on = [:x1, :x2], makeunique = true, accelerate = false, stable = true, check = false, method = :hash, threads = false)
+
 
         @test left1 == left2
         @test unique(select!(left1, [:x1, :x2, :x3]), [:x1, :x2]) == unique(dsl, [:x1, :x2])
@@ -845,7 +870,10 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     semi1 = semijoin(dsl, dsr, on = [:x1, :x2])
     @test semi1 == semijoin(dsl, dsr, on = [:x1, :x2], method = :hash)
     @test semi1 == semijoin(dsl, dsr, on = [:x1, :x2], threads = false)
+    @test semi1 == semijoin(dsl, sort(dsr, [:x1, :x2]), on = [:x1, :x2], threads = false)
     @test semi1 == semijoin(dsl, dsr, on = [:x1, :x2], method = :hash, threads = false)
+    @test semi1 == semijoin(dsl, sort(dsr, [:x1, :x2]), on = [:x1, :x2], method = :hash, threads = false)
+
 
     semi2 = semijoin(dsl, dsr, on = [:x1, :x2], accelerate = true)
     @test semi1 == dsl
@@ -866,12 +894,16 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test inn1 == innerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true, method = :hash)
     @test out1 == outerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true, method = :hash)
     @test left1 == leftjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], accelerate = true, stable =true, method = :hash)
+    @test left1 == leftjoin(dsl, sort(dsr, [:x1, :x2]), on =[:x1, :x2], mapformats = [true, false], accelerate = true, stable =true, method = :sort)
+
 
     @test inn1 == innerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true, threads = false)
     @test inn1 == innerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true, method = :hash, threads = false)
     @test out1 == outerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true, threads = false)
     @test out1 == outerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true, method = :hash, threads = false)
     @test left1 == leftjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], accelerate = true, stable =true, threads = false)
+    @test left1 == leftjoin(dsl, sort(dsr, [:x1, :x2]), on =[:x1, :x2], mapformats = [true, false], accelerate = true, stable =true, threads = false) == leftjoin(dsl, sort(dsr, [:x1, :x2], rev=true), on =[:x1, :x2], mapformats = [true, false], accelerate = true, stable =true, threads = false)
+
     @test left1 == leftjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], accelerate = true, stable =true, method = :hash, threads = false)
 
     @test inn1 == out1 == left1
@@ -915,7 +947,10 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     setformat!(dsl, 1:2=>fmtfun)
     semi1 = semijoin(dsl, dsr, on = [:x1, :x2], mapformats = [true, false])
     @test semi1 == semijoin(dsl, dsr, on = [:x1, :x2], mapformats = [true, false], method =:hash)
-    @test semi1 == semijoin(dsl, dsr, on = [:x1, :x2], mapformats = [true, false], threads = false)
+    @test semi1 == semijoin(dsl, dsr, on = [:x1, :x2], mapformats = [true, false], threads = false, method=:sort)
+    @test semi1 == semijoin(dsl, sort(dsr, [:x1, :x2]), on = [:x1, :x2], mapformats = [true, false], threads = false, method=:sort)
+    @test semi1 == semijoin(dsl, sort(dsr, [:x1, :x2, :y2]), on = [:x1, :x2], mapformats = [true, false], threads = false, method=:sort)
+
     @test semi1 == semijoin(dsl, dsr, on = [:x1, :x2], mapformats = [true, false], method = :hash, threads = false)
 
 
@@ -924,6 +959,8 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test semi2 == dsl
     inn1 = innerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true)
     out1 = outerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true)
+    out1 = outerjoin(dsl, sort(dsr, [:x1, :x2]), on =[:x1, :x2], mapformats = [true, false], stable = true)
+
     left1 = leftjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], accelerate = true, stable =true)
 
     @test inn1 == innerjoin(dsl, dsr, on =[:x1, :x2], mapformats = [true, false], stable = true, method = :hash)
@@ -995,9 +1032,26 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
     @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
 
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
     @test closejoin(dsl, dsr, on = [:x, :y], method = :hash,  makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
     @test closejoin(dsl, dsr, on = [:x, :y], method = :hash,  makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
     @test closejoin(dsl, dsr, on = [:x, :y], method = :hash,  makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, method=:hash) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, method=:hash) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
 
     dsl = Dataset(x = [1,1,1,2,2,2], y = ([6,4,1,2,5,3]))
     dsr = Dataset(x = [1,1,2], y = PooledArray([0,3,1]), z=[100,200,300])
@@ -1005,10 +1059,25 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
     @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
 
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+    
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z], rev=true), on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z], rev=true), on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z], rev=true), on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
     @test closejoin(dsl, dsr, on = [:x, :y], method = :hash, makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
     @test closejoin(dsl, dsr, on = [:x, :y], method = :hash, makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
     @test closejoin(dsl, dsr, on = [:x, :y], method = :hash, makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
 
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, method=:hash) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+    
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z], rev=true), on = [:x, :y], makeunique = true, method=:hash) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z], rev=true), on = [:x, :y], makeunique = true, method=:hash, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z], rev=true), on = [:x, :y], makeunique = true, method=:hash, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
 
     dsl = Dataset(x = [1,1,1,2,2,2], y = PooledArray([6,4,1,2,5,3]))
     dsr = Dataset(x = [1,1,2], y = ([0,3,1]), z=[100,200,300])
@@ -1046,9 +1115,30 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
     @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
     @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
 
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+    
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
     @test closejoin(dsl, dsr, on = [:x, :y], method = :hash, makeunique = true) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
     @test closejoin(dsl, dsr, on = [:x, :y], method = :hash, makeunique = true, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
     @test closejoin(dsl, dsr, on = [:x, :y], method = :hash, makeunique = true, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, method=:hash) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+    
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, method=:hash) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,100, 300,300,300])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, missing, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y, :z]), on = [:x, :y], makeunique = true, method=:hash, direction = :forward, border = :nearest) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[200,200,200, 300,300,300])
+
+    pushfirst!(dsr, (1,4,100))
+    @test closejoin(dsl, dsr, on = [:x, :y], makeunique = true, direction=:forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, 100, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y]), on = [:x, :y], makeunique = true, direction=:forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, 100, 200, missing, missing, missing])
+    @test closejoin(dsl, sort(dsr, [:x, :y], rev=true), on = [:x, :y], makeunique = true, direction=:forward) == Dataset(x=[1,1,1,2,2,2], y=[6,4,1,2,5,3],z=[missing, 100, 200, missing, missing, missing])
 
     #views
     for i in 1:100
@@ -1062,6 +1152,14 @@ closefinance_tol10ms_noexact = Dataset([Union{Missing, DateTime}[DateTime("2016-
         @test leftjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1], makeunique=true, check = false) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1], makeunique=true, check = false)
         @test innerjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1], makeunique=true, check = false) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1], makeunique=true, check = false)
         @test outerjoin(view(dsl, l_ridx, l_cidx), dsr, on =[:x1], makeunique=true, check = false) == outerjoin(Dataset(view(dsl, l_ridx, l_cidx)), dsr, on =[:x1], makeunique=true, check = false)
+
+
+        @test leftjoin(view(dsl, l_ridx, l_cidx), sort(dsr, [:x1, :x2]), on =[:x1, :x2], makeunique=true, check = false) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), sort(dsr, [:x1, :x2]), on =[:x1, :x2], makeunique=true, check = false)
+        @test innerjoin(view(dsl, l_ridx, l_cidx), sort(dsr, [:x1, :x2]), on =[:x1, :x2], makeunique=true, check = false) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), sort(dsr, [:x1, :x2]), on =[:x1, :x2], makeunique=true, check = false)
+        @test outerjoin(view(dsl, l_ridx, l_cidx), sort(dsr, [:x1, :x2]), on =[:x1, :x2], makeunique=true, check = false) == outerjoin(Dataset(view(dsl, l_ridx, l_cidx)), sort(dsr, [:x1, :x2]), on =[:x1, :x2], makeunique=true, check = false)
+        @test leftjoin(view(dsl, l_ridx, l_cidx), sort(dsr, [:x1, :x2]), on =[:x1], makeunique=true, check = false) == leftjoin(Dataset(view(dsl, l_ridx, l_cidx)), sort(dsr, [:x1, :x2]), on =[:x1], makeunique=true, check = false)
+        @test innerjoin(view(dsl, l_ridx, l_cidx), sort(dsr, [:x1, :x2]), on =[:x1], makeunique=true, check = false) == innerjoin(Dataset(view(dsl, l_ridx, l_cidx)), sort(dsr, [:x1, :x2]), on =[:x1], makeunique=true, check = false)
+        @test outerjoin(view(dsl, l_ridx, l_cidx), sort(dsr, [:x1, :x2]), on =[:x1], makeunique=true, check = false) == outerjoin(Dataset(view(dsl, l_ridx, l_cidx)), sort(dsr, [:x1, :x2]), on =[:x1], makeunique=true, check = false)
     end
 
     for i in 1:100
