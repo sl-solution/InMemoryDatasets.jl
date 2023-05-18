@@ -1,5 +1,13 @@
 # Dev
 
+## Fixes
+
+* Fix a problem that was causing tests fail in Julia 1.9
+* Fix an issue with `eltype` and the output of `eachcol`. Now `eltype(::Type{<:DatasetColumns})` properly returns `AbstractDatasetColumn` instead of `AbstractVector`.
+* Fix a problem with `nonmissingtype` with `Union{}` output.
+* Fix an issue that was causing the join functions sort already-sorted data sets, [issue #108](https://github.com/sl-solution/InMemoryDatasets.jl/issues/108)
+* Remove precompilation for Julia 1.9 - it causes enormous amount of allocation in precompiling and loading 
+
 ## Features
 
 * Now `IMD` throws errors when accesses a grouped data set which its parent is modified.
