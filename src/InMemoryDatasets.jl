@@ -198,7 +198,7 @@ include("precompile/precompile.jl")
 include("precompile/warmup.jl")
 include("precompile/create_sysimage.jl")
 # FIXME currently v1.9.0 precompilation and loading cause an enormous amount of allocation - v1.10 seems ok
-VERSION != v"1.9.0" &&  _precompile()
+_precompile()
 
 function __init__()
    if Threads.nthreads() == 1
