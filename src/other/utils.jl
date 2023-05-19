@@ -429,22 +429,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true, t
     colidx = index(ds)[cols]
     _max_level = nrow(ds)
 
-    # fast path for a common scenario
-    # PooledVectors are already gathered. However, note stable must be false, since the result is not stable
-    if (ds isa Dataset) && length(colidx) == 1 && (_columns(ds)[colidx[1]] isa PooledVector) && !stable
-        _f = _date_value
-        if mapformats
-            _f = _date_value∘getformat(ds, colidx[1])
-        end
-        if _f == _date_value∘identity || !mapformats
-            v = DataAPI.refarray(_columns(ds)[colidx[1]])
-        else
-            v = DataAPI.refarray(map(_f, _columns(ds)[colidx[1]]))
-        end
-        prev_groups = Vector{T}(undef, nrow(ds))
-        copy!(prev_groups, v)
-        return prev_groups, T[], threads ? hp_maximum(prev_groups) : stat_maximum(prev_groups)
-    end
+
 	if nrow(ds) > 2^23 && !stable && 5<length(colidx)<16 # the result is stable anyway
 		if !mapformats || all(==(identity), getformat.(Ref(ds), colidx))
 			return _gather_groups_hugeds_multicols(ds, cols, Val(T); threads = threads)
