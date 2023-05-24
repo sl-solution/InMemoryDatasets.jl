@@ -46,7 +46,7 @@ function fast_sortperm_int_threaded!(x, original_P, copy_P, ranges, rangelen, mi
     cnt = 1
     flag = false
     #Threads@threads now does not keep the order of the runs, we help starts be sorted before shaping ranges
-    sort!(starts, by=x->x[1])
+    sort!(starts, by=x->isempty(x) ? missing : x[1])
     @inbounds for i in 1:length(starts)
         for j in 1:length(starts[i])
             ranges[cnt] = starts[i][j]
