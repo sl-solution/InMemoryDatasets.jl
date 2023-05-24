@@ -229,9 +229,10 @@ function _fill_mapreduce_col!(x, f, op, y, loc)
     end
 end
 
-function _fill_mapreduce_col!(x, f::Vector, op, y, loc)
+# only for calculating var - mval is a vector of means
+function _fill_mapreduce_col!(x, mval::Vector, op, y, loc)
 	@inbounds for i in 1:length(y)
-        x[loc[i]] = op(x[loc[i]], f[loc[i]](y[i]))
+        x[loc[i]] = op(x[loc[i]], _abs2mean(y[i], mval[loc[i]]))
     end
 end
 
@@ -247,11 +248,12 @@ function _fill_mapreduce_col_threaded!(x, f, op, y, loc, nt)
     end
 end
 
-function _fill_mapreduce_col_threaded!(x, f::Vector, op, y, loc, nt)
+# only for calculating var - mval is a vector of means
+function _fill_mapreduce_col_threaded!(x, mval::Vector, op, y, loc, nt)
 	@sync for thid in 0:nt-1
 		Threads.@spawn for i in 1:length(y)
         	@inbounds if loc[i] % nt == thid
-				x[loc[i]] = op(x[loc[i]], f[loc[i]](y[i]))
+				x[loc[i]] = op(x[loc[i]], _abs2mean(y[i], mval[loc[i]]))
 			end
 		end
     end
@@ -345,6 +347,7 @@ function _fill_gatherby_var_barrier!(res, countnan, meanval, ss, nval, cal_std, 
 end
 
 # TODO directly calculating var should be a better approach
+_abs2mean(x, meanval) = abs2(x - meanval)
 function _gatherby_var(gds, col; dof = true, cal_std = false, threads = true)
 	if threads
 		nt = Threads.nthreads()
@@ -352,7 +355,7 @@ function _gatherby_var(gds, col; dof = true, cal_std = false, threads = true)
 		t1 = Threads.@spawn _gatherby_cntnan(gds, col, nt = nt2)
 		t2 = Threads.@spawn _gatherby_mean(gds, col, nt = nt2)
 		meanval = fetch(t2)
-		t3 = Threads.@spawn gatherby_mapreduce(gds, [x->abs2(x - meanval[i]) for i in 1:length(meanval)], _stat_add_sum, col, nt2, missing, Val(Float64))
+		t3 = Threads.@spawn gatherby_mapreduce(gds, meanval, _stat_add_sum, col, nt2, missing, Val(Float64))
 		t4 = Threads.@spawn _gatherby_n(gds, col, nt = nt2)
 		countnan = fetch(t1)
 		ss = fetch(t3)
@@ -361,7 +364,7 @@ function _gatherby_var(gds, col; dof = true, cal_std = false, threads = true)
 		t1 = _gatherby_cntnan(gds, col, threads = threads)
 		t2 = _gatherby_mean(gds, col, threads = threads)
 		meanval = t2
-		t3 = gatherby_mapreduce(gds, [x->abs2(x - meanval[i]) for i in 1:length(meanval)], _stat_add_sum, col, Threads.nthreads(), missing, Val(Float64), threads = threads)
+		t3 = gatherby_mapreduce(gds, meanval, _stat_add_sum, col, Threads.nthreads(), missing, Val(Float64), threads = threads)
 		t4 = _gatherby_n(gds, col, threads = threads)
 		countnan = t1
 		ss = t3
