@@ -554,24 +554,67 @@ isequal_row(cols1::Tuple{Vararg{AbstractVector}}, r1::Int,
 
 
 _grabrefs(x) = DataAPI.refpool(x) == nothing ? x : DataAPI.refarray(x)
-function _gather_groups_hugeds_multicols(ds, cols, ::Val{T}; threads = true) where T
+function _gather_groups_hugeds_multicols(ds, cols, ::Val{T}; threads::Bool = true) where T
 	colidx = index(ds)[cols]
 	rhashes = byrow(ds, hash, cols, threads = threads)
 	colsvals = ntuple(i->_grabrefs(_columns(ds)[colidx[i]]), length(colidx))
-	create_dict_hugeds_multicols(colsvals, rhashes, Val(T))
+    if threads
+        rngs = _gather_groups_hugeds_splitter(rhashes, Val(T))
+        groups = Vector{T}(undef, length(rhashes))
+        ngroups_all = _gather_groups_hugeds_collector(groups, rngs, rhashes, colsvals, Val(T))
+        ngroups = _gather_groups_hugeds_cleanup!(groups, ngroups_all, rngs)
+    else
+        groups = Vector{T}(undef, length(rhashes))
+        rng = 1:length(rhashes)
+        ngroups = create_dict_hugeds_multicols!(groups, rng, colsvals, rhashes, Val(T))
+    end
+    groups, T[], ngroups
 end
 
-function create_dict_hugeds_multicols(colvals, rhashes, ::Val{T}) where T
-	sz = max(1 + ((5 * length(rhashes)) >> 2), 16)
+# TODO what happen if the values are not randomly grouped based on cols
+function _gather_groups_hugeds_splitter(rhashes, ::Val{T}) where T
+    nt = 997 # TODO this should be an argument, however, we must be careful that this value doesn't degrade actual dictionary creation in Subsequent steps
+    sz = div(length(rhashes), nt)
+    rngs = [sizehint!(T[], sz) for _ in 1:nt]
+    for i in eachindex(rhashes)
+        push!(rngs[(rhashes[i] % nt)+1], i)
+    end
+    rngs
+end
+
+function _gather_groups_hugeds_collector(groups, rngs, rhashes, colsvals, ::Val{T}) where T
+    ngroups = Vector{Int}(undef, length(rngs))
+    Threads.@threads for i in 1:length(rngs)
+        _tmp = view(groups, rngs[i])
+        ngroups[i] = create_dict_hugeds_multicols!(_tmp, rngs[i], colsvals, rhashes, Val(T))
+    end
+    ngroups
+end
+
+function _gather_groups_hugeds_cleanup!(groups, ngroups, rngs)
+    our_cumsum!(ngroups)
+    Threads.@threads for i in 2:length(rngs)
+        for j in rngs[i]
+            groups[j] += ngroups[i-1]
+        end
+    end
+    return ngroups[end]
+end
+
+# groups is a list of integeres for which the dict is going to be created
+# get index and set index should sometimes be adjusted based on rng
+# make sure groups is a vector{T}
+function create_dict_hugeds_multicols!(groups, rng, colvals, rhashes, ::Val{T}) where T
+    isempty(rng) && return 0
+	sz = max(1 + ((5 * length(groups)) >> 2), 16)
     sz = 1 << (8 * sizeof(sz) - leading_zeros(sz - 1))
-    @assert 4 * sz >= 5 * length(rhashes)
+    @assert 4 * sz >= 5 * length(groups)
     szm1 = sz-1
     gslots = zeros(T, sz)
-	groups = Vector{T}(undef, length(rhashes))
     ngroups = 0
-    @inbounds for i in eachindex(rhashes)
+    @inbounds for i in eachindex(rng)
         # find the slot and group index for a row
-        slotix = rhashes[i] & szm1 + 1
+        slotix = rhashes[rng[i]] & szm1 + 1
         gix = -1
         probe = 0
         while true
@@ -580,8 +623,8 @@ function create_dict_hugeds_multicols(colvals, rhashes, ::Val{T}) where T
                 gslots[slotix] = i
                 gix = ngroups += 1
                 break
-            elseif rhashes[i] == rhashes[g_row] # occupied slot, check if miss or hit
-                if isequal_row(colvals, i, Int(g_row)) # hit
+            elseif rhashes[rng[i]] == rhashes[rng[g_row]] # occupied slot, check if miss or hit
+                if isequal_row(colvals, Int(rng[i]), Int(rng[g_row])) # hit
                     gix = groups[g_row]
                     break
                 end
@@ -590,9 +633,10 @@ function create_dict_hugeds_multicols(colvals, rhashes, ::Val{T}) where T
             probe += 1
             @assert probe < sz
         end
+        # groups[i] has done its work we can modify it 
         groups[i] = gix
     end
-    return groups, gslots, ngroups
+    return ngroups
 end
 
 
