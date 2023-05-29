@@ -430,7 +430,7 @@ function _gather_groups(ds, cols, ::Val{T}; mapformats = false, stable = true, t
     _max_level = nrow(ds)
 
 
-	if nrow(ds) > 2^23 && !stable && 5<length(colidx)<16 # the result is stable anyway
+	if nrow(ds) > 2^23 && !stable && 5<length(colidx)<16 
 		if !mapformats || all(==(identity), getformat.(Ref(ds), colidx))
 			return _gather_groups_hugeds_multicols(ds, cols, Val(T); threads = threads)
 		end
@@ -559,10 +559,10 @@ function _gather_groups_hugeds_multicols(ds, cols, ::Val{T}; threads::Bool = tru
 	rhashes = byrow(ds, hash, cols, threads = threads)
 	colsvals = ntuple(i->_grabrefs(_columns(ds)[colidx[i]]), length(colidx))
     if threads
-        rngs = _gather_groups_hugeds_splitter(rhashes, Val(T))
+        rngs, sz = _gather_groups_hugeds_splitter(rhashes, Val(T))
         groups = Vector{T}(undef, length(rhashes))
-        ngroups_all = _gather_groups_hugeds_collector(groups, rngs, rhashes, colsvals, Val(T))
-        ngroups = _gather_groups_hugeds_cleanup!(groups, ngroups_all, rngs)
+        ngroups_all = _gather_groups_hugeds_collector(groups, rngs, sz, rhashes, colsvals, Val(T))
+        ngroups = _gather_groups_hugeds_cleanup!(groups, ngroups_all, rngs, sz)
     else
         groups = Vector{T}(undef, length(rhashes))
         rng = 1:length(rhashes)
@@ -574,28 +574,44 @@ end
 # TODO what happen if the values are not randomly grouped based on cols
 function _gather_groups_hugeds_splitter(rhashes, ::Val{T}) where T
     nt = 997 # TODO this should be an argument, however, we must be careful that this value doesn't degrade actual dictionary creation in Subsequent steps
-    sz = div(length(rhashes), nt)
-    rngs = [sizehint!(T[], sz) for _ in 1:nt]
+    sz = zeros(T, nt)
+    # It is safe to record _ids - memory will be released and it does not add extra memory to the total amount (we later need to allocate groups)
+    _id = Vector{Int16}(undef, length(rhashes))
     for i in eachindex(rhashes)
-        push!(rngs[(rhashes[i] % nt)+1], i)
+        _id[i] = (rhashes[i] % nt)+1
+        sz[_id[i]] += 1
     end
-    rngs
+    rngs = Vector{T}(undef, length(rhashes))
+    prepend!(sz, T(0))
+    our_cumsum!(sz)
+    sz_cp = copy(sz)
+   
+    for i in eachindex(rhashes)
+        idx=_id[i]
+        sz_cp[idx] += 1
+        rngs[sz_cp[idx]] = i
+    end
+    rngs, sz
 end
 
-function _gather_groups_hugeds_collector(groups, rngs, rhashes, colsvals, ::Val{T}) where T
-    ngroups = Vector{Int}(undef, length(rngs))
-    Threads.@threads for i in 1:length(rngs)
-        _tmp = view(groups, rngs[i])
-        ngroups[i] = create_dict_hugeds_multicols!(_tmp, rngs[i], colsvals, rhashes, Val(T))
+function _gather_groups_hugeds_collector(groups, rngs, sz, rhashes, colsvals, ::Val{T}) where T
+    ngroups = Vector{Int}(undef, length(sz)-1)
+    Threads.@threads for i in 2:length(sz)
+        hi = sz[i]
+        lo = sz[i-1]+1
+        _tmp = view(groups, view(rngs, lo:hi))
+        ngroups[i-1] = create_dict_hugeds_multicols!(_tmp, view(rngs, lo:hi), colsvals, rhashes, Val(T))
     end
     ngroups
 end
 
-function _gather_groups_hugeds_cleanup!(groups, ngroups, rngs)
+function _gather_groups_hugeds_cleanup!(groups, ngroups, rngs, sz)
     our_cumsum!(ngroups)
-    Threads.@threads for i in 2:length(rngs)
-        for j in rngs[i]
-            groups[j] += ngroups[i-1]
+    Threads.@threads for i in 3:length(sz)
+        hi=sz[i]
+        lo=sz[i-1]+1
+        for j in lo:hi
+            groups[rngs[j]] += ngroups[i-2]
         end
     end
     return ngroups[end]
