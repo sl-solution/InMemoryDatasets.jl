@@ -1,3 +1,20 @@
+# Dev
+
+## Features
+
+* Add `byrow(allequal)` as a special case of `byrow(isequal)`. (This feature need at least Julia 1.8)
+
+# Version 0.7.17
+
+## Fixes
+
+* Fix a performance issue in `sort` due to the recent change in `Threads.@threads`.
+* Fix the allocation problem in computing `var` and `std` in fast path of `gatherby`.
+
+## Performance
+
+* Now we exploit multithreading during gathering observation for huge data sets.
+
 # Version 0.7.16
 
 ## Fixes
