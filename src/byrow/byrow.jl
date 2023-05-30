@@ -111,6 +111,12 @@ byrow(ds::AbstractDataset, ::typeof(all), col::ColumnIndex; missings = missing, 
 byrow(ds::AbstractDataset, ::typeof(isequal), cols::MultiColumnIndex; with = nothing, threads = nrow(ds) > Threads.nthreads()*10) = row_isequal(ds, cols, by = with, threads = threads)
 byrow(ds::AbstractDataset, ::typeof(isequal), cols::ColumnIndex; with = nothing, threads = nrow(ds) > Threads.nthreads()*10) = row_isequal(ds, cols, by = with, threads = threads)
 
+if VERSION >= v"1.8"
+	byrow(ds::AbstractDataset, ::typeof(allequal), cols::MultiColumnIndex; threads = nrow(ds) > Threads.nthreads()*10) = row_isequal(ds, cols, by = nothing, threads = threads)
+	byrow(ds::AbstractDataset, ::typeof(allequal), cols::ColumnIndex;  threads = nrow(ds) > Threads.nthreads()*10) = row_isequal(ds, cols, by = nothing, threads = threads)
+end
+
+
 byrow(ds::AbstractDataset, ::typeof(isless), cols::MultiColumnIndex; with, threads = nrow(ds) > Threads.nthreads()*10, rev::Bool = false, lt = isless) = row_isless(ds, cols, with, threads = threads, rev = rev, lt = lt)
 byrow(ds::AbstractDataset, ::typeof(isless), col::ColumnIndex; with, threads = nrow(ds) > Threads.nthreads()*10, rev::Bool = false, lt = isless) = row_isless(ds, [col], with, threads = threads, rev = rev, lt = lt)
 

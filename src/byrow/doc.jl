@@ -16,6 +16,8 @@ function Docs.getdoc(x::typeof(byrow), y)
         return _get_doc_byrow("prod")
     elseif y == Tuple{typeof(isequal)}
         return _get_doc_byrow("isequal")
+    elseif VERSION >= v"1.8" && y == Tuple{typeof(allequal)}
+        return _get_doc_byrow("allequal")
     elseif y == Tuple{typeof(isless)}
         return _get_doc_byrow("isless")
     elseif y == Tuple{typeof(in)}
@@ -105,6 +107,7 @@ Perform a row-wise operation specified by `fun` on selected columns `cols`. Gene
 # Reduction operations
 
 - `all`
+- `allequal` (this needs Julia 1.8 or later)
 - `any`
 - `argmax`
 - `argmin`
@@ -369,6 +372,14 @@ julia> byrow(ds, isequal, [1,2], with = [2,2,2,3,3,3])
  0
  0
 ```
+@@@@allequal@@@@
+    byrow(ds::AbstractDataset, allequal, cols; [threads])
+
+Returns a boolean vector which is `true` if all values in the corresponding row are equal (using `isequal`).
+
+Passing `threads = false` disables multithreaded computations.
+
+See [`byrow(isequal)`](@ref), [`byrow(isless)`](@ref), [`byrow(in)`](@ref), [`byrow(issorted)`](@ref)
 @@@@isless@@@@
     byrow(ds::AbstractDataset, isless, cols, [with, threads, rev = false, lt = isless])
 
