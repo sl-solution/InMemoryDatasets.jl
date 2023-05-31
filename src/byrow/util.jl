@@ -296,6 +296,11 @@ end
     return pos
 end
 
+# before Julia 1.10 these functions where defined in Ryu, however, they moved to Base and their syntax has changed.
+# we only use them here so we define them for our purpose
+_memcpy(d, doff, s, soff, n) = (ccall(:memcpy, Ptr{Cvoid}, (Ptr{Cvoid}, Ptr{Cvoid}, Csize_t), d + doff - 1, s + soff - 1, n); nothing)
+_memmove(d, doff, s, soff, n) = (ccall(:memmove, Ptr{Cvoid}, (Ptr{Cvoid}, Ptr{Cvoid}, Csize_t), d + doff - 1, s + soff - 1, n); nothing)
+
 ### From Base.Ryu, because we need buf to be View of an array not vector (maybe we should change it in Ryu?)
 function _writeshortest(buf, pos, x::T,
                        plus=false, space=false, hash=true,
@@ -436,10 +441,10 @@ function _writeshortest(buf, pos, x::T,
         c1 = (c ÷ 100) << 1
         d0 = (d % 100) << 1
         d1 = (d ÷ 100) << 1
-        Base.Ryu.memcpy(ptr, pos + olength - 2, ptr2, c0 + 1, 2)
-        Base.Ryu.memcpy(ptr, pos + olength - 4, ptr2, c1 + 1, 2)
-        Base.Ryu.memcpy(ptr, pos + olength - 6, ptr2, d0 + 1, 2)
-        Base.Ryu.memcpy(ptr, pos + olength - 8, ptr2, d1 + 1, 2)
+        _memcpy(ptr, pos + olength - 2, ptr2, c0 + 1, 2)
+        _memcpy(ptr, pos + olength - 4, ptr2, c1 + 1, 2)
+        _memcpy(ptr, pos + olength - 6, ptr2, d0 + 1, 2)
+        _memcpy(ptr, pos + olength - 8, ptr2, d1 + 1, 2)
         i += 8
     end
     output2 = output % UInt32
@@ -448,14 +453,14 @@ function _writeshortest(buf, pos, x::T,
         output2 = div(output2, UInt32(10000))
         c0 = (c % 100) << 1
         c1 = (c ÷ 100) << 1
-        Base.Ryu.memcpy(ptr, pos + olength - i - 2, ptr2, c0 + 1, 2)
-        Base.Ryu.memcpy(ptr, pos + olength - i - 4, ptr2, c1 + 1, 2)
+        _memcpy(ptr, pos + olength - i - 2, ptr2, c0 + 1, 2)
+        _memcpy(ptr, pos + olength - i - 4, ptr2, c1 + 1, 2)
         i += 4
     end
     if output2 >= 100
         c = (output2 % UInt32(100)) << 1
         output2 = div(output2, UInt32(100))
-        Base.Ryu.memcpy(ptr, pos + olength - i - 2, ptr2, c + 1, 2)
+        _memcpy(ptr, pos + olength - i - 2, ptr2, c + 1, 2)
         i += 2
     end
     if output2 >= 10
@@ -498,7 +503,7 @@ function _writeshortest(buf, pos, x::T,
             end
         else
             pointoff = olength - abs(nexp)
-            Base.Ryu.memmove(ptr, pos + pointoff + 1, ptr, pos + pointoff, olength - pointoff + 1)
+            _memmove(ptr, pos + pointoff + 1, ptr, pos + pointoff, olength - pointoff + 1)
             buf[pos + pointoff] = decchar
             pos += olength + 1
             precision -= olength
@@ -543,11 +548,11 @@ function _writeshortest(buf, pos, x::T,
 
         if exp2 >= 100
             c = exp2 % 10
-            Base.Ryu.memcpy(ptr, pos, ptr2, 2 * div(exp2, 10) + 1, 2)
+            _memcpy(ptr, pos, ptr2, 2 * div(exp2, 10) + 1, 2)
             buf[pos + 2] = UInt8('0') + (c % UInt8)
             pos += 3
         elseif exp2 >= 10
-            Base.Ryu.memcpy(ptr, pos, ptr2, 2 * exp2 + 1, 2)
+            _memcpy(ptr, pos, ptr2, 2 * exp2 + 1, 2)
             pos += 2
         else
             if padexp

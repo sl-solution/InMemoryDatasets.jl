@@ -8,6 +8,8 @@ const SubOrDSCol = Union{SubDatasetColumn,DatasetColumn}
 # isequal also use for == , since we don't want missing be annoying
 Base.parent(col1::DatasetColumn) = col1.ds
 
+Base.eachindex(col1::SubOrDSCol) = Base.axes1(col1)
+
 Base.length(col1::SubOrDSCol) = length(__!(col1))
 Base.size(col1::SubOrDSCol) = size(__!(col1))
 Base.size(col1::SubOrDSCol, i::Integer) = size(__!(col1), i)
@@ -18,12 +20,14 @@ Base.eltype(col1::SubOrDSCol) = eltype(__!(col1))
 Base.ndims(col1::SubOrDSCol) = ndims(__!(col1))
 Base.ndims(::Type{<:SubDatasetColumn}) = 1
 Base.isassigned(col1::SubOrDSCol, i) = isassigned(__!(col1), i)
+# FIXME: unsafe method - an alias of col1 is out and it can be modified without any control
 Base.identity(col1::SubOrDSCol) = identity(__!(col1))
 Base.similar(col1::SubOrDSCol, args...) = similar(__!(col1), args...)
 Base.copy(col1::SubOrDSCol) = copy(__!(col1))
 Base.pairs(col1::SubOrDSCol) = pairs(IndexLinear(), __!(col1))
 Base.iterate(col1::SubOrDSCol, kwargs...) = iterate(__!(col1), kwargs...)
 PooledArrays.PooledArray(col1::SubOrDSCol; arg...) = PooledArray(__!(col1); arg...)
+# FIXME: unsafe when alias are created
 Base.convert(T::Type{<:AbstractVector}, col1::SubOrDSCol) = convert(T, __!(col1))
 DataAPI.refarray(col::SubOrDSCol) = DataAPI.refarray(__!(col))
 DataAPI.refpool(col::SubOrDSCol) = DataAPI.refpool(__!(col))
