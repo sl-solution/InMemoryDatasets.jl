@@ -10,6 +10,7 @@
 
 * Fix a performance issue in `sort` due to the recent change in `Threads.@threads`.
 * Fix the allocation problem in computing `var` and `std` in fast path of `gatherby`.
+* Fix an issue with Julia-latest.
 
 ## Performance
 
