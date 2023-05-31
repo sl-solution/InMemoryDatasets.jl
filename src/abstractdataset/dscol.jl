@@ -8,7 +8,7 @@ const SubOrDSCol = Union{SubDatasetColumn,DatasetColumn}
 # isequal also use for == , since we don't want missing be annoying
 Base.parent(col1::DatasetColumn) = col1.ds
 
-Base.eachindex(col1::SubOrDSCol) = (@inline(); Base.axes1(col1))
+Base.eachindex(col1::SubOrDSCol) = Base.axes1(col1)
 
 Base.length(col1::SubOrDSCol) = length(__!(col1))
 Base.size(col1::SubOrDSCol) = size(__!(col1))
