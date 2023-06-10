@@ -297,7 +297,8 @@ function stat_wmean(f, x::AbstractVector{T}, w::AbstractArray{S,1}) where {T} wh
 end
 stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where {T} where {S} = stat_wmean(identity, x, w)
 
-
+_abs2_var_barrier(x,y,f::F) where F = abs2(f(x)-y)
+_meanval_var_barrier(n, sval)::Union{Missing, Float64} = n == 0 ? missing : sval / n
 function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64,Missing} where {T<:Union{Missing,INTEGERS,FLOATS}}
     all(ismissing, x) && return missing
     # any(ISNAN, x) && return convert(eltype(x), NaN)
@@ -305,11 +306,12 @@ function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64,Missing} wh
     # n = mapreduce(!ismissing∘f, +, x)
     sval = stat_sum(y -> f(y) * 1.0, x)
     n = mapreduce(!ismissing ∘ f, +, x)
-    meanval = n == 0 ? missing : sval / n
+    meanval = _meanval_var_barrier(n, sval)
 
     ss = 0.0
     for i in 1:length(x)
-        ss = _stat_add_sum(ss, abs2(f(x[i]) - meanval))
+        # ss = _stat_add_sum(ss, abs2(f(x[i]) - meanval))
+        ss = _stat_add_sum(ss, _abs2_var_barrier(x[i], meanval, f))
     end
 
     if n == 0
