@@ -4,6 +4,11 @@
 
 * Add `byrow(allequal)` as a special case of `byrow(isequal)`. (This feature need at least Julia 1.8)
 
+## Fixes
+
+* Fix bug in stat routines - some corner cases
+* Fix unnecessary allocations in stat routins
+
 # Version 0.7.17
 
 ## Fixes
