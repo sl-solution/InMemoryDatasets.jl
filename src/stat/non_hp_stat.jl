@@ -141,7 +141,6 @@ function stat_maximum(f::typeof(identity), x::AbstractArray{T,1}; lo=1, hi=lengt
     Base.mapreduce_impl(_dmiss, max, x, lo, hi)
 end
 function stat_maximum(f::F, x::AbstractArray{T,1}; lo=1, hi=length(x)) where {F,T}
-    all(ismissing, view(x, lo:hi)) && return missing
     Base.mapreduce_impl(f, _stat_max_fun, x, lo, hi)
 end
 stat_maximum(x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T} = stat_maximum(identity, x; lo=lo, hi=hi)
@@ -166,7 +165,6 @@ function stat_minimum(f::typeof(identity), x::AbstractArray{T,1}; lo=1, hi=lengt
     Base.mapreduce_impl(_dmiss, min, x, lo, hi)
 end
 function stat_minimum(f::F, x::AbstractArray{T,1}; lo=1, hi=length(x)) where {F,T}
-    all(ismissing, view(x, lo:hi)) && return missing
     Base.mapreduce_impl(f, _stat_min_fun, x, lo, hi)
 end
 stat_minimum(x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T} = stat_minimum(identity, x; lo=lo, hi=hi)
@@ -180,9 +178,7 @@ stat_findmin(x::AbstractArray{T,1}) where {T} = stat_findmin(identity, x)
 
 
 function stat_sum(f, x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T<:Union{Missing,INTEGERS,FLOATS}}
-    all(ismissing, view(x, lo:hi)) && return f(first(x))
-    _dmiss(y) = ifelse(ismissing(f(y)), zero(T), f(y))
-    Base.mapreduce_impl(_dmiss, _stat_add_sum, x, lo, hi)
+    Base.mapreduce_impl(f, _stat_add_sum, x, lo, hi)
 end
 stat_sum(x::AbstractArray{T,1}; lo=1, hi=length(x)) where {T<:Union{Missing,INTEGERS,FLOATS}} = stat_sum(identity, x; lo=lo, hi=hi)
 
@@ -300,7 +296,7 @@ stat_wmean(x::AbstractVector{T}, w::AbstractArray{S,1}) where {T} where {S} = st
 _abs2_var_barrier(x,y,f::F) where F = abs2(f(x)-y)
 _meanval_var_barrier(n, sval)::Union{Missing, Float64} = n == 0 ? missing : sval / n
 function stat_var(f, x::AbstractArray{T,1}, dof=true)::Union{Float64,Missing} where {T<:Union{Missing,INTEGERS,FLOATS}}
-    all(ismissing, x) && return missing
+    # all(ismissing, x) && return missing
     # any(ISNAN, x) && return convert(eltype(x), NaN)
     # meanval = stat_mean(f, x)
     # n = mapreduce(!ismissing∘f, +, x)
@@ -345,6 +341,7 @@ function stat_median(v::AbstractArray{T,1}) where {T}
     end
 end
 
+# TODO in julia1.9+ partialsort! allocates, and it is not a good idea if we need to call stat_median! many times
 function stat_median!(v::AbstractArray{T,1}) where {T}
     isempty(v) && throw(ArgumentError("median of an empty array is undefined, $(repr(v))"))
     all(ismissing, v) && return missing

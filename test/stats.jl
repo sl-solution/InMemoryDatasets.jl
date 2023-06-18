@@ -164,3 +164,55 @@ end
     @test isequal(IMD.cumprod(x5, missings = :skip), [missing,missing,-9.0,-18.0])
     @test isequal(IMD.cumprod(x6, missings = :skip), [missing,missing, missing, missing])
 end
+@testset "IMD.sum & IMD.mean & IMD.var" begin
+    x = Union{Missing, Int32}[missing, missing, missing, missing]
+    @test isequal(IMD.sum(x), missing)
+    @test IMD.sum(y->ismissing(y) ? 1 : y, x) == 4
+    push!(x, 1)
+    @test IMD.sum(x) == 1
+    @test IMD.sum(y->ismissing(y) ? 1 : y, x) == 5
+
+    @test IMD.mean(x) == 1
+    @test ismissing(IMD.mean(y->isequal(y,1) ? missing : y, x) )
+    @test IMD.mean(y->ismissing(y) ? 1 : y, x) == 1
+
+    @test isequal(IMD.var(x),missing)
+    @test isequal(IMD.var(x, false), 0.0)
+
+    @test isequal(IMD.var(y->ismissing(y) ? 1 : y, x), 0.0)
+    @test isequal(IMD.var(y->ismissing(y) ? 1 : y, x, false), 0.0)
+
+    x = [true, false, true, missing]
+    @test IMD.sum(x) == 2
+    @test IMD.sum(y->isequal(y, true) ? 100 : y, x) == 200
+
+    for i in 1:10
+        x=rand(1:10000, 100)
+        @test IMD.sum(x) == sum(x)
+        x = allowmissing(x)
+        x[50] = missing
+        @test IMD.sum(y->ismissing(y) ? 0 : y, x) == sum(y->ismissing(y) ? 0 : y, x)
+    end
+
+    x = rand(10)
+    n_a = [@allocated IMD.sum(x) for _ in 1:10]
+    @test n_a[end] <= 16
+
+    x = Union{Int32, Missing}[1,2,missing, 4]
+    n_a = [@allocated IMD.sum(x) for _ in 1:10]
+    @test n_a[end] == 0
+
+    n_a = [@allocated IMD.sum(y->ismissing(y) ? 0 : y, x) for _ in 1:10]
+    @test n_a[end] <= 16
+
+    x = rand(10)
+    n_a = [@allocated IMD.mean(x) for _ in 1:10]
+    @test n_a[end] <= 16
+
+    x = Union{Int32, Missing}[1,2,missing, 4]
+    n_a = [@allocated IMD.mean(x) for _ in 1:10]
+    @test n_a[end] <= 16
+
+    n_a = [@allocated IMD.mean(y->ismissing(y) ? 0 : y, x) for _ in 1:10]
+    @test n_a[end] <= 16
+end
