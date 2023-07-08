@@ -5,7 +5,7 @@ Welcome to the InMemoryDatasets.jl documentation!
 This resource aims to teach you everything you need to know to get up and
 running with the InMemoryDatasets.jl package.
 
-In memory Datasets is a collection of tools for working (manipulating, wrangling, cleaning, summarising,...) with tabular data in Julia.
+InMemoryDatasets is a collection of tools for working (manipulating, wrangling, cleaning, summarising,...) with tabular data in Julia.
 
 If you are new to InMemoryDatasets.jl, probably **[First steps with Datasets](https://sl-solution.github.io/InMemoryDatasets.jl/stable/man/basics/)** or **[Tutorial](https://sl-solution.github.io/InMemoryDatasets.jl/stable/man/tutorial/)** in manual should be good starting points.
 
