@@ -155,6 +155,21 @@ julia> groupby(salary, 2)
        10       2
         3       3
         5       3
+
+julia> ds = Dataset(x=[1,1,2,2], y=[1,2,1,2], z=[1,1,1,1])
+
+julia> groupby!(ds, [:x, :y]) # groupby by more than one column
+4×3 Grouped Dataset with 4 groups
+Grouped by: x, y
+ Row │ x         y         z        
+     │ identity  identity  identity 
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         1         1
+   2 │        1         2         1
+   3 │        2         1         1
+   4 │        2         2         1
+
 ```
 
 The `groupby!` and `groupby` functions accept the output of the `groupby` function. Thus, some may use these functions to incrementally group a data set.
