@@ -428,7 +428,7 @@ function _writeshortest(buf, pos, x::T,
     end
     i = 0
     ptr = pointer(buf)
-    ptr2 = pointer(Base.Ryu.DIGIT_TABLE)
+    ptr2 = pointer(our_DIGIT_TABLE)
     if (output >> 32) != 0
         q = output ÷ 100000000
         output2 = (output % UInt32) - UInt32(100000000) * (q % UInt32)
@@ -465,8 +465,8 @@ function _writeshortest(buf, pos, x::T,
     end
     if output2 >= 10
         c = output2 << 1
-        buf[pos + 1] = Base.Ryu.DIGIT_TABLE[c + 2]
-        buf[pos - exp_form] = Base.Ryu.DIGIT_TABLE[c + 1]
+        buf[pos + 1] = our_DIGIT_TABLE[c + 2]
+        buf[pos - exp_form] = our_DIGIT_TABLE[c + 1]
     else
         buf[pos - exp_form] = UInt8('0') + (output2 % UInt8)
     end
@@ -570,3 +570,17 @@ function _writeshortest(buf, pos, x::T,
 
     return pos
 end
+
+# FIXME in versions > 1.11 julia has change DIGIT_TABLE, we nee to update this for our purpose
+const our_DIGIT_TABLE = UInt8[
+  '0','0','0','1','0','2','0','3','0','4','0','5','0','6','0','7','0','8','0','9',
+  '1','0','1','1','1','2','1','3','1','4','1','5','1','6','1','7','1','8','1','9',
+  '2','0','2','1','2','2','2','3','2','4','2','5','2','6','2','7','2','8','2','9',
+  '3','0','3','1','3','2','3','3','3','4','3','5','3','6','3','7','3','8','3','9',
+  '4','0','4','1','4','2','4','3','4','4','4','5','4','6','4','7','4','8','4','9',
+  '5','0','5','1','5','2','5','3','5','4','5','5','5','6','5','7','5','8','5','9',
+  '6','0','6','1','6','2','6','3','6','4','6','5','6','6','6','7','6','8','6','9',
+  '7','0','7','1','7','2','7','3','7','4','7','5','7','6','7','7','7','8','7','9',
+  '8','0','8','1','8','2','8','3','8','4','8','5','8','6','8','7','8','8','8','9',
+  '9','0','9','1','9','2','9','3','9','4','9','5','9','6','9','7','9','8','9','9'
+]
