@@ -394,7 +394,10 @@ Base.show(dfcs::DatasetColumns;
 # prevent using broadcasting to mutate columns e.g. in pop!.(eachcol(ds))
 # TODO customise Base.broadcasted to handle the situation
 for f in filter(x->occursin(r"!$", String(x)), names(Base))
-  @eval Base.broadcasted(::typeof($f), ::DatasetColumns, args...) = throw(ArgumentError("broadcasting `$(nameof($f))` over DatasetColums is reserved."))
+    # FIXME due to a bug in Julia > 1.11 !?
+    if isdefined(Main, f)
+        @eval Base.broadcasted(::typeof($f), ::DatasetColumns, args...) = throw(ArgumentError("broadcasting `$(nameof($f))` over DatasetColums is reserved."))
+    end
 end
 for f in filter(x->occursin(r"!$", String(x)), names(Statistics))
   @eval Base.broadcasted(::typeof($f), ::DatasetColumns, args...) = throw(ArgumentError("broadcasting `$(nameof($f))` over DatasetColums is reserved."))

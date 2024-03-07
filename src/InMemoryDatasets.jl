@@ -25,6 +25,7 @@ import DataAPI,
        DataAPI.antijoin,
        DataAPI.nrow,
        DataAPI.ncol,
+       DataAPI.groupby,
        # DataAPI.crossjoin,
        Tables,
        Tables.columnindex
