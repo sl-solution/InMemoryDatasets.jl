@@ -21,7 +21,7 @@ we do our best to keep the overall complexity of the package as low as possible 
 * adding new features to the package
 * contributing to the package
 
-See [here](https://discourse.julialang.org/t/ann-a-new-lightning-fast-package-for-data-manipulation-in-pure-julia/78197) for some benchmarks.
+See [here](https://duckdblabs.github.io/db-benchmark/) for some benchmarks.
 # Features
 
 `InMemoryDatasets.jl` has many interesting features, here, we highlight some of our favourites (in no particular order):
