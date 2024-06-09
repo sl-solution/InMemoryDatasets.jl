@@ -98,7 +98,7 @@ end
 function _sort_chunks_int_right!(x, idx::Vector{<:Integer}, idx_cpy, where, number_of_chunks, rangelen, minval, o::Ordering)
     cz = div(length(x), number_of_chunks)
     en = length(x)
-    Threads.@threads for i in 1:number_of_chunks
+    Threads.@threads :static for i in 1:number_of_chunks
         ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()], (i-1)*cz+1,i*cz, rangelen, minval)
     end
     # take care of the last few observations
@@ -111,7 +111,7 @@ end
 function _sort_chunks_int_left!(x, idx::Vector{<:Integer}, idx_cpy, where, number_of_chunks, rangelen, minval, o::Ordering)
     cz = div(length(x), number_of_chunks)
     en = length(x)
-    Threads.@threads for i in 1:number_of_chunks
+    Threads.@threads :static for i in 1:number_of_chunks
         ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()], (i-1)*cz+1,i*cz, rangelen, minval)
     end
     # take care of the last few observations
@@ -262,7 +262,7 @@ function _ds_sort_int_missatright_nopermx_threaded!(x, original_P, copy_P, lo, h
         where[i][1] = 1
         where[i][2] = 1
     end
-    Threads.@threads for i = lo:hi
+    Threads.@threads :static for i = lo:hi
         @inbounds ismissing(x[i]) ? where[Threads.threadid()][rangelen+3] += 1 : where[Threads.threadid()][Int(x[i]) + offs + 2] += 1
     end
     for j in 3:length(where[1])
@@ -306,7 +306,7 @@ function _ds_sort_int_missatright_nopermx_threaded!(x, original_P, rangelen, min
         where[i][1] = 1
         where[i][2] = 1
     end
-    Threads.@threads for i = 1:length(x)
+    Threads.@threads :static for i = 1:length(x)
         @inbounds ismissing(x[i]) ? where[Threads.threadid()][rangelen+3] += 1 : where[Threads.threadid()][Int(x[i]) + offs + 2] += 1
     end
     for j in 3:length(where[1])
@@ -348,7 +348,7 @@ function _ds_sort_int_missatleft_nopermx_threaded!(x, original_P, copy_P, lo, hi
         where[i][1] = 1
         where[i][2] = 1
     end
-    Threads.@threads for i = lo:hi
+    Threads.@threads :static for i = lo:hi
         @inbounds ismissing(x[i]) ? where[Threads.threadid()][3] += 1 : where[Threads.threadid()][Int(x[i]) + offs + 3] += 1
     end
     for j in 3:length(where[1])
@@ -392,7 +392,7 @@ function _ds_sort_int_missatleft_nopermx_threaded!(x, original_P, rangelen, minv
         where[i][1] = 1
         where[i][2] = 1
     end
-    Threads.@threads for i = 1:length(x)
+    Threads.@threads :static for i = 1:length(x)
         @inbounds ismissing(x[i]) ? where[Threads.threadid()][3] += 1 : where[Threads.threadid()][Int(x[i]) + offs + 3] += 1
     end
     for j in 3:length(where[1])

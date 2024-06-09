@@ -213,11 +213,21 @@ end
 
 function _issorted_check_for_each_range(v, starts, lastvalid, _ord, nrows; threads = true)
     part_res = ones(Bool, threads ? Threads.nthreads() : 1)
-    @_threadsfor threads for rng in 1:lastvalid
-        lo = starts[rng]
-        rng == lastvalid ? hi = nrows : hi = starts[rng+1] - 1
-        part_res[Threads.threadid()] = _issorted_barrier(v, _ord, lo, hi)
-        !part_res[Threads.threadid()] &&  break
+    if threads
+
+        Threads.@threads :static for rng in 1:lastvalid
+            lo = starts[rng]
+            rng == lastvalid ? hi = nrows : hi = starts[rng+1] - 1
+            part_res[Threads.threadid()] = _issorted_barrier(v, _ord, lo, hi)
+            !part_res[Threads.threadid()] &&  break
+        end
+    else
+        for rng in 1:lastvalid
+            lo = starts[rng]
+            rng == lastvalid ? hi = nrows : hi = starts[rng+1] - 1
+            part_res[Threads.threadid()] = _issorted_barrier(v, _ord, lo, hi)
+            !part_res[Threads.threadid()] &&  break
+        end
     end
     all(part_res)
 end

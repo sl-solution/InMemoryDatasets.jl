@@ -92,7 +92,7 @@ function _hp_row_generic_vec!(res, ds, f, colsidx, ::Val{T}) where T
     max_cz = length(res) - 1000 - (loopsize - 1)*1000
     inmat_all = [Matrix{T}(undef, length(colsidx), max_cz) for i in 1:nt]
     # make sure that the variable inside the loop are not the same as the out of scope one
-    Threads.@threads for i in 1:loopsize
+    Threads.@threads :static for i in 1:loopsize
         t_st = i*1000 + 1
         i == loopsize ? t_en = length(res) : t_en = (i+1)*1000
         _fill_matrix!(inmat_all[Threads.threadid()], all_data, t_st:t_en, colsidx)

@@ -29,7 +29,7 @@ end
 # we should find starts here
 function fast_sortperm_int_threaded!(x, original_P, copy_P, ranges, rangelen, minval, misatleft, last_valid_range, ::Val{T}) where T
     starts = [T[] for i in 1:Threads.nthreads()]
-    Threads.@threads for i in 1:last_valid_range
+    Threads.@threads :static for i in 1:last_valid_range
         rangestart = ranges[i]
         i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
         # if (rangeend - rangestart) == 0
@@ -105,29 +105,57 @@ function fast_sortperm_int!(x, original_P, copy_P, ranges, rangelen, minval, mis
 end
 
 function _sortperm_int!(idx, idx_cpy, x, ranges, where, last_valid_range, missingatleft, ord, a; threads = true)
-    @_threadsfor threads for i in 1:last_valid_range
-        rangestart = ranges[i]
-        i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
-        if (rangeend - rangestart + 1) == 1
-            continue
-        end
-        _minval = stat_minimum(x, lo = rangestart, hi = rangeend)
-        if ismissing(_minval)
-            continue
-        else
-            minval::Int = _minval
-        end
-        maxval::Int = stat_maximum(x, lo = rangestart, hi = rangeend)
-        # the overflow is check before calling _sortperm_int!
-        rangelen = maxval - minval + 1
-        if rangelen < div(rangeend - rangestart + 1, 2)
-            if missingatleft
-                ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
-            else
-                ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
+    if threads
+        Threads.@threads :static for i in 1:last_valid_range
+            rangestart = ranges[i]
+            i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
+            if (rangeend - rangestart + 1) == 1
+                continue
             end
-        else
-            ds_sort!(x, idx, rangestart, rangeend, a, ord)
+            _minval = stat_minimum(x, lo = rangestart, hi = rangeend)
+            if ismissing(_minval)
+                continue
+            else
+                minval::Int = _minval
+            end
+            maxval::Int = stat_maximum(x, lo = rangestart, hi = rangeend)
+            # the overflow is check before calling _sortperm_int!
+            rangelen = maxval - minval + 1
+            if rangelen < div(rangeend - rangestart + 1, 2)
+                if missingatleft
+                    ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
+                else
+                    ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
+                end
+            else
+                ds_sort!(x, idx, rangestart, rangeend, a, ord)
+            end
+        end
+    else
+        for i in 1:last_valid_range
+            rangestart = ranges[i]
+            i == last_valid_range ? rangeend = length(x) : rangeend = ranges[i+1] - 1
+            if (rangeend - rangestart + 1) == 1
+                continue
+            end
+            _minval = stat_minimum(x, lo = rangestart, hi = rangeend)
+            if ismissing(_minval)
+                continue
+            else
+                minval::Int = _minval
+            end
+            maxval::Int = stat_maximum(x, lo = rangestart, hi = rangeend)
+            # the overflow is check before calling _sortperm_int!
+            rangelen = maxval - minval + 1
+            if rangelen < div(rangeend - rangestart + 1, 2)
+                if missingatleft
+                    ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
+                else
+                    ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
+                end
+            else
+                ds_sort!(x, idx, rangestart, rangeend, a, ord)
+            end
         end
     end
 end
