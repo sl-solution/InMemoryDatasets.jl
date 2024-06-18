@@ -120,7 +120,8 @@ export
       update!
 
 
-
+SMALLSIGNED = Union{Int16, Int32, Int8}
+SMALLUNSIGNED = Union{UInt16, UInt32, UInt8}
 
 
 include("other/index.jl")

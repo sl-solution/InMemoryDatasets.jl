@@ -34,8 +34,8 @@ function row_sum(ds::AbstractDataset, f::Function,  cols = names(ds, Union{Missi
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, Tuple{CT})
 	CT = our_nonmissingtype(T)
-	CT <: Base.SmallSigned ? CT = Int : nothing
-	CT <: Base.SmallUnsigned ? CT = UInt : nothing
+	CT <: SMALLSIGNED ? CT = Int : nothing
+	CT <: SMALLUNSIGNED ? CT = UInt : nothing
 	CT <: Bool ? CT = Int : nothing
 	T = Union{Missing, CT}
     init0 = _missings(T, nrow(ds))
@@ -69,8 +69,8 @@ function row_prod(ds::AbstractDataset, f::Function, cols = names(ds, Union{Missi
     CT = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     T = Core.Compiler.return_type(f, Tuple{CT})
 	CT = our_nonmissingtype(T)
-	CT <: Base.SmallSigned ? CT = Int : nothing
-	CT <: Base.SmallUnsigned ? CT = UInt : nothing
+	CT <: SMALLSIGNED ? CT = Int : nothing
+	CT <: SMALLUNSIGNED ? CT = UInt : nothing
 	CT <: Bool ? CT = Int : nothing
 	T = Union{Missing, CT}
     init0 = _missings(T, nrow(ds))
@@ -744,9 +744,9 @@ function row_cumsum!(ds::Dataset, cols = names(ds, Union{Missing, Number}); miss
     colsidx = index(ds)[cols]
     T = mapreduce(eltype, promote_type, view(_columns(ds),colsidx))
     if T <: Union{Missing, INTEGERS}
-        T <: Union{Missing, Base.SmallSigned}
-        T = T <: Union{Missing, Base.SmallSigned, Bool} ? Union{Int, Missing} : T
-        T = T <: Union{Missing, Base.SmallUnsigned} ?  Union{Missing, UInt} : T
+        T <: Union{Missing, SMALLSIGNED}
+        T = T <: Union{Missing, SMALLSIGNED, Bool} ? Union{Int, Missing} : T
+        T = T <: Union{Missing, SMALLUNSIGNED} ?  Union{Missing, UInt} : T
     end
     for i in colsidx
         if eltype(ds[!, i]) >: Missing

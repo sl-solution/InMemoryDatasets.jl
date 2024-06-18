@@ -248,8 +248,8 @@ end
 function gatherby_mapreduce(gds::GatherBy, f, op, col::ColumnIndex, nt, init, ::Val{T}; promotetypes = false, threads = true) where T
 	CT = T
 	if promotetypes
-	    T <: Base.SmallSigned ? CT = Int : nothing
-		T <: Base.SmallUnsigned ? CT = UInt : nothing
+	    T <: SMALLSIGNED ? CT = Int : nothing
+		T <: SMALLUNSIGNED ? CT = UInt : nothing
 	end
 	res = allocatecol(Union{CT, Missing}, gds.lastvalid)
     fill!(res, init)
