@@ -119,7 +119,7 @@ function rescale(x, minx, maxx, minval, maxval)
     -(-maxx * minval + minx * maxval) / (maxx - minx) + (-minval + maxval) * x / (maxx - minx)
 end
 rescale(::Missing, minx, maxx, minval, maxval) = missing
-rescale(x::Vector, minx, maxx, minval, maxval) = rescale.(x, minx, maxx, minval, maxval)
+rescale(x::AbstractVector, minx, maxx, minval, maxval) = rescale.(x, minx, maxx, minval, maxval)
 rescale(x, minx, maxx) = rescale(x, minx, maxx, 0.0, 1.0)
 
 """

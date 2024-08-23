@@ -255,7 +255,7 @@ function normalize_modify!(outidx::Index, idx,
                             @nospecialize(sel::Pair{<:ColumnIndex,
                                                     <:Vector{<:Base.Callable}}))
     colsidx = outidx[sel.first]
-    normalize_modify!(outidx, idx, colsidx .=> sel.second[i])
+    normalize_modify!(outidx, idx, colsidx .=> sel.second)
     return res
 end
 
