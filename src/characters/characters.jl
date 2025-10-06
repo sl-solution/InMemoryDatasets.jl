@@ -134,10 +134,12 @@ function write(io::IO, s::Characters{N}) where N
     return write(io, Ref(s))
 end
 
-function Base.hash(s::Characters{N}, h::UInt) where N
-    h += Base.memhash_seed
-    ref = Ref(s.data)
-    ccall(Base.memhash, UInt, (Ptr{UInt8}, Csize_t, UInt32), ref, length(s), h % UInt32) + h
+if isdefined(Base, :memhash)
+    function Base.hash(s::Characters{N}, h::UInt) where N
+        h += Base.memhash_seed
+        ref = Ref(s.data)
+        ccall(Base.memhash, UInt, (Ptr{UInt8}, Csize_t, UInt32), ref, length(s), h % UInt32) + h
+    end
 end
 
 
