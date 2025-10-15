@@ -955,5 +955,6 @@ Base.eltype(v::Cat2Vec{F1, F2, CT, T, S, A, B}) where {F1, F2, CT, T, S, A, B} =
 
 
 function tid(nt)
+    
     Threads.threadid() % nt + 1
 end
