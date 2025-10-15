@@ -95,9 +95,9 @@ function _hp_row_generic_vec!(res, ds, f, colsidx, ::Val{T}) where T
     Threads.@threads :static for i in 1:loopsize
         t_st = i*1000 + 1
         i == loopsize ? t_en = length(res) : t_en = (i+1)*1000
-        _fill_matrix!(inmat_all[Threads.threadid()], all_data, t_st:t_en, colsidx)
+        _fill_matrix!(inmat_all[tid(Threads.nthreads())], all_data, t_st:t_en, colsidx)
         for k in t_st:t_en
-            res[k] = f(view(inmat_all[Threads.threadid()], :, k - t_st + 1))
+            res[k] = f(view(inmat_all[tid(Threads.nthreads())], :, k - t_st + 1))
         end
     end
 end

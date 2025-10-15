@@ -952,3 +952,8 @@ Base.IndexStyle(::Type{<:Cat2Vec}) = Base.IndexLinear()
 Base.size(v::Cat2Vec) = (length(v),)
 Base.length(v::Cat2Vec) = v.len1 + v.len2
 Base.eltype(v::Cat2Vec{F1, F2, CT, T, S, A, B}) where {F1, F2, CT, T, S, A, B} = CT
+
+
+function tid(nt)
+    Threads.threadid() % nt + 1
+end

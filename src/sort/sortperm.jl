@@ -41,7 +41,7 @@ function fast_sortperm_int_threaded!(x, original_P, copy_P, ranges, rangelen, mi
             _start_vals = _ds_sort_int_missatright_nopermx!(x, original_P, copy_P, rangestart, rangeend, rangelen, minval, Val(T))
         end
         _cleanup_starts!(_start_vals, rangeend - rangestart + 1)
-        append!(starts[Threads.threadid()], _start_vals .+ rangestart .- 1)
+        append!(starts[tid(Threads.nthreads())], _start_vals .+ rangestart .- 1)
     end
     cnt = 1
     flag = false
@@ -123,9 +123,9 @@ function _sortperm_int!(idx, idx_cpy, x, ranges, where, last_valid_range, missin
             rangelen = maxval - minval + 1
             if rangelen < div(rangeend - rangestart + 1, 2)
                 if missingatleft
-                    ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
+                    ds_sort_int_missatleft!(x, idx, idx_cpy, where[tid(Threads.nthreads())], rangestart, rangeend, rangelen, minval)
                 else
-                    ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
+                    ds_sort_int_missatright!(x, idx, idx_cpy, where[tid(Threads.nthreads())], rangestart, rangeend, rangelen, minval)
                 end
             else
                 ds_sort!(x, idx, rangestart, rangeend, a, ord)
@@ -149,9 +149,9 @@ function _sortperm_int!(idx, idx_cpy, x, ranges, where, last_valid_range, missin
             rangelen = maxval - minval + 1
             if rangelen < div(rangeend - rangestart + 1, 2)
                 if missingatleft
-                    ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
+                    ds_sort_int_missatleft!(x, idx, idx_cpy, where[tid(1)], rangestart, rangeend, rangelen, minval)
                 else
-                    ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()], rangestart, rangeend, rangelen, minval)
+                    ds_sort_int_missatright!(x, idx, idx_cpy, where[tid(1)], rangestart, rangeend, rangelen, minval)
                 end
             else
                 ds_sort!(x, idx, rangestart, rangeend, a, ord)

@@ -99,11 +99,11 @@ function _sort_chunks_int_right!(x, idx::Vector{<:Integer}, idx_cpy, where, numb
     cz = div(length(x), number_of_chunks)
     en = length(x)
     Threads.@threads :static for i in 1:number_of_chunks
-        ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()], (i-1)*cz+1,i*cz, rangelen, minval)
+        ds_sort_int_missatright!(x, idx, idx_cpy, where[tid(Threads.nthreads())], (i-1)*cz+1,i*cz, rangelen, minval)
     end
     # take care of the last few observations
     if number_of_chunks*div(length(x), number_of_chunks) < en
-        ds_sort_int_missatright!(x, idx, idx_cpy, where[Threads.threadid()],  number_of_chunks*div(length(x), number_of_chunks)+1, en, rangelen, minval)
+        ds_sort_int_missatright!(x, idx, idx_cpy, where[tid(1)],  number_of_chunks*div(length(x), number_of_chunks)+1, en, rangelen, minval)
     end
 end
 
@@ -112,11 +112,11 @@ function _sort_chunks_int_left!(x, idx::Vector{<:Integer}, idx_cpy, where, numbe
     cz = div(length(x), number_of_chunks)
     en = length(x)
     Threads.@threads :static for i in 1:number_of_chunks
-        ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()], (i-1)*cz+1,i*cz, rangelen, minval)
+        ds_sort_int_missatleft!(x, idx, idx_cpy, where[tid(Threads.nthreads())], (i-1)*cz+1,i*cz, rangelen, minval)
     end
     # take care of the last few observations
     if number_of_chunks*div(length(x), number_of_chunks) < en
-        ds_sort_int_missatleft!(x, idx, idx_cpy, where[Threads.threadid()],  number_of_chunks*div(length(x), number_of_chunks)+1, en, rangelen, minval)
+        ds_sort_int_missatleft!(x, idx, idx_cpy, where[tid(1)],  number_of_chunks*div(length(x), number_of_chunks)+1, en, rangelen, minval)
     end
 end
 
@@ -263,7 +263,7 @@ function _ds_sort_int_missatright_nopermx_threaded!(x, original_P, copy_P, lo, h
         where[i][2] = 1
     end
     Threads.@threads :static for i = lo:hi
-        @inbounds ismissing(x[i]) ? where[Threads.threadid()][rangelen+3] += 1 : where[Threads.threadid()][Int(x[i]) + offs + 2] += 1
+        @inbounds ismissing(x[i]) ? where[tid(Threads.nthreads())][rangelen+3] += 1 : where[tid(Threads.nthreads())][Int(x[i]) + offs + 2] += 1
     end
     for j in 3:length(where[1])
         for i in 2:nt
@@ -307,7 +307,7 @@ function _ds_sort_int_missatright_nopermx_threaded!(x, original_P, rangelen, min
         where[i][2] = 1
     end
     Threads.@threads :static for i = 1:length(x)
-        @inbounds ismissing(x[i]) ? where[Threads.threadid()][rangelen+3] += 1 : where[Threads.threadid()][Int(x[i]) + offs + 2] += 1
+        @inbounds ismissing(x[i]) ? where[tid(Threads.nthreads())][rangelen+3] += 1 : where[tid(Threads.nthreads())][Int(x[i]) + offs + 2] += 1
     end
     for j in 3:length(where[1])
         for i in 2:nt
@@ -349,7 +349,7 @@ function _ds_sort_int_missatleft_nopermx_threaded!(x, original_P, copy_P, lo, hi
         where[i][2] = 1
     end
     Threads.@threads :static for i = lo:hi
-        @inbounds ismissing(x[i]) ? where[Threads.threadid()][3] += 1 : where[Threads.threadid()][Int(x[i]) + offs + 3] += 1
+        @inbounds ismissing(x[i]) ? where[tid(Threads.nthreads())][3] += 1 : where[tid(Threads.nthreads())][Int(x[i]) + offs + 3] += 1
     end
     for j in 3:length(where[1])
         for i in 2:nt
@@ -393,7 +393,7 @@ function _ds_sort_int_missatleft_nopermx_threaded!(x, original_P, rangelen, minv
         where[i][2] = 1
     end
     Threads.@threads :static for i = 1:length(x)
-        @inbounds ismissing(x[i]) ? where[Threads.threadid()][3] += 1 : where[Threads.threadid()][Int(x[i]) + offs + 3] += 1
+        @inbounds ismissing(x[i]) ? where[tid(Threads.nthreads())][3] += 1 : where[tid(Threads.nthreads())][Int(x[i]) + offs + 3] += 1
     end
     for j in 3:length(where[1])
         for i in 2:nt
