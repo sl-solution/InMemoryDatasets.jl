@@ -22,9 +22,13 @@ function _pretty_tables_highlighter_func(data, i::Integer, j::Integer)
         end
     end
 end
-
-const _PRETTY_TABLES_HIGHLIGHTER = Highlighter(_pretty_tables_highlighter_func,
+if isdefined(PrettyTables, :Highlighter)
+    const _PRETTY_TABLES_HIGHLIGHTER = Highlighter(_pretty_tables_highlighter_func,
                                                Crayon(foreground = :dark_gray))
+else
+    const _PRETTY_TABLES_HIGHLIGHTER = TextHighlighter(_pretty_tables_highlighter_func,
+                                               Crayon(foreground = :dark_gray))
+end
 
 # Default DataFrames formatter for text backend.
 #
