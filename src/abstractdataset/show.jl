@@ -155,165 +155,317 @@ function compacttype(T::Type, maxwidth::Int=8)
     end
     return first(sT, stop) * "…" * suffix
 end
+@static if pkgversion(PrettyTables).major == 2
+    function _show(io::IO,
+                ds::AbstractDataset;
+                allrows::Bool = !get(io, :limit, false),
+                allcols::Bool = !get(io, :limit, false),
+                rowlabel::Symbol = :Row,
+                summary::Bool = true,
+                eltypes::Bool = true,
+                rowid = nothing,
+                truncate::Int = 32,
+                kwargs...)
 
-function _show(io::IO,
-               ds::AbstractDataset;
-               allrows::Bool = !get(io, :limit, false),
-               allcols::Bool = !get(io, :limit, false),
-               rowlabel::Symbol = :Row,
-               summary::Bool = true,
-               eltypes::Bool = true,
-               rowid = nothing,
-               truncate::Int = 32,
-               kwargs...)
+        _check_consistency(ds)
 
-    _check_consistency(ds)
-
-    names_str = names(ds)
-    if typeof(ds) <: SubDataset
-        column_formats = _getformats_for_show(ds)
-    else
-        column_formats = _getformats(ds)
-    end
-    names_format = fill("identity", length(names_str))
-    _pt_formmatters_ = Function[]
-    # push!(_pt_formmatters_, _pretty_tables_general_formatter)
-    for (k,v) in column_formats
-        names_format[k] = string(v)
-        push!(_pt_formmatters_, (vv, i, j) -> j == k ? v(vv) : vv)
-    end
-    push!(_pt_formmatters_, _pretty_tables_general_formatter)
-
-    pt_formatter = ntuple(i->_pt_formmatters_[i], length(_pt_formmatters_))
-    names_len = Int[textwidth(n) for n in names_str]
-    maxwidth = Int[max(9, nl) for nl in names_len]
-    types = Any[eltype(c) for c in eachcol(ds)]
-    types_str = batch_compacttype(types, maxwidth)
-
-    if allcols && allrows
-        crop = :none
-    elseif allcols
-        crop = :vertical
-    elseif allrows
-        crop = :horizontal
-    else
-        crop = :both
-    end
-
-    # For consistency, if `kwargs` has `compact_printng`, we must use it.
-    compact_printing::Bool = get(kwargs, :compact_printing, get(io, :compact, true))
-
-    num_rows, num_cols = size(ds)
-
-    # By default, we align the columns to the left unless they are numbers,
-    # which is checked in the following.
-    alignment = fill(:l, num_cols)
-
-    # Create the dictionary with the anchor regex that is used to align the
-    # floating points.
-    alignment_anchor_regex = Dict{Int, Vector{Regex}}()
-
-    # Regex to align real numbers.
-    alignment_regex_real = [r"\."]
-
-    # Regex for columns with complex numbers.
-    #
-    # Here we are matching `+` or `-` unless it is not at the beginning of the
-    # string or an `e` precedes it.
-    alignment_regex_complex = [r"(?<!^)(?<!e)[+-]"]
-
-    for i = 1:num_cols
-        type_i = our_nonmissingtype(types[i])
-
-        if type_i <: Complex
-            alignment_anchor_regex[i] = alignment_regex_complex
-            alignment[i] = :r
-        elseif type_i <: Real
-            alignment_anchor_regex[i] = alignment_regex_real
-            alignment[i] = :r
-        elseif type_i <: Number
-            alignment[i] = :r
-        end
-    end
-
-    # Make sure that `truncate` does not hide the type and the column name.
-    maximum_columns_width = Int[truncate == 0 ? 0 : max(truncate + 1, l, textwidth(t))
-                                for (l, t) in zip(names_len, types_str)]
-
-    # Check if the user wants to display a summary about the DataFrame that is
-    # being printed. This will be shown using the `title` option of
-    # `pretty_table`.
-    title = summary ? Base.summary(ds) : ""
-
-    # If `rowid` is not `nothing`, then we are printing a data row. In this
-    # case, we will add this information using the row name column of
-    # PrettyTables.jl. Otherwise, we can just use the row number column.
-    if (rowid === nothing) || (ncol(ds) == 0)
-        show_row_number::Bool = get(kwargs, :show_row_number, true)
-        row_names = nothing
-
-        # If the columns with row numbers is not shown, then we should not
-        # display a vertical line after the first column.
-        vlines = fill(1, show_row_number)
-    else
-        nrow(ds) != 1 &&
-            throw(ArgumentError("rowid may be passed only with a single row data frame"))
-
-        # In this case, if the user does not want to show the row number, then
-        # we must hide the row name column, which is used to display the
-        # `rowid`.
-        if !get(kwargs, :show_row_number, true)
-            row_names = nothing
-            vlines = Int[]
+        names_str = names(ds)
+        if typeof(ds) <: SubDataset
+            column_formats = _getformats_for_show(ds)
         else
-            row_names = [string(rowid)]
-            vlines = Int[1]
+            column_formats = _getformats(ds)
+        end
+        names_format = fill("identity", length(names_str))
+        _pt_formmatters_ = Function[]
+        # push!(_pt_formmatters_, _pretty_tables_general_formatter)
+        for (k,v) in column_formats
+            names_format[k] = string(v)
+            push!(_pt_formmatters_, (vv, i, j) -> j == k ? v(vv) : vv)
+        end
+        push!(_pt_formmatters_, _pretty_tables_general_formatter)
+
+        pt_formatter = ntuple(i->_pt_formmatters_[i], length(_pt_formmatters_))
+        names_len = Int[textwidth(n) for n in names_str]
+        maxwidth = Int[max(9, nl) for nl in names_len]
+        types = Any[eltype(c) for c in eachcol(ds)]
+        types_str = batch_compacttype(types, maxwidth)
+
+        if allcols && allrows
+            crop = :none
+        elseif allcols
+            crop = :vertical
+        elseif allrows
+            crop = :horizontal
+        else
+            crop = :both
         end
 
-        show_row_number = false
-    end
-    # if isgrouped(ds)
-    #     extrahlines = view(index(ds).starts,1:index(ds).ngroups[]) .- 1
-    # else
-        extrahlines = [0]
-    # end
-    # Print the table with the selected options.
-    # currently pretty_table is very slow for large tables, the workaround is to use only few rows
-    if nrow(ds) > 10^7*5
-        vcm = :bottom
-    else
-        vcm = :middle
-    end
-    pretty_table(io, ds;
-                 alignment                   = alignment,
-                 alignment_anchor_fallback   = :r,
-                 alignment_anchor_regex      = alignment_anchor_regex,
-                 body_hlines                 = extrahlines,
-                 compact_printing            = compact_printing,
-                 crop                        = crop,
-                 reserved_display_lines      = 2,
-                 ellipsis_line_skip          = 3,
-                 formatters                  = pt_formatter,
-                 header                      = (names_str, names_format, types_str),
-                 header_alignment            = :l,
-                 hlines                      = [:header],
-                 highlighters                = (_PRETTY_TABLES_HIGHLIGHTER,),
-                 maximum_columns_width       = maximum_columns_width,
-                 newline_at_end              = false,
-                 show_subheader              = eltypes,
-                 row_label_alignment          = :r,
-                 row_label_crayon             = Crayon(),
-                 row_label_column_title       = string(rowlabel),
-                 row_labels                   = row_names,
-                 row_number_alignment        = :r,
-                 row_number_column_title     = string(rowlabel),
-                 show_row_number             = show_row_number,
-                 title                       = title,
-                 vcrop_mode                  = vcm,
-                 vlines                      = vlines,
-                 kwargs...)
+        # For consistency, if `kwargs` has `compact_printng`, we must use it.
+        compact_printing::Bool = get(kwargs, :compact_printing, get(io, :compact, true))
 
-    return nothing
+        num_rows, num_cols = size(ds)
+
+        # By default, we align the columns to the left unless they are numbers,
+        # which is checked in the following.
+        alignment = fill(:l, num_cols)
+
+        # Create the dictionary with the anchor regex that is used to align the
+        # floating points.
+        alignment_anchor_regex = Dict{Int, Vector{Regex}}()
+
+        # Regex to align real numbers.
+        alignment_regex_real = [r"\."]
+
+        # Regex for columns with complex numbers.
+        #
+        # Here we are matching `+` or `-` unless it is not at the beginning of the
+        # string or an `e` precedes it.
+        alignment_regex_complex = [r"(?<!^)(?<!e)[+-]"]
+
+        for i = 1:num_cols
+            type_i = our_nonmissingtype(types[i])
+
+            if type_i <: Complex
+                alignment_anchor_regex[i] = alignment_regex_complex
+                alignment[i] = :r
+            elseif type_i <: Real
+                alignment_anchor_regex[i] = alignment_regex_real
+                alignment[i] = :r
+            elseif type_i <: Number
+                alignment[i] = :r
+            end
+        end
+
+        # Make sure that `truncate` does not hide the type and the column name.
+        maximum_columns_width = Int[truncate == 0 ? 0 : max(truncate + 1, l, textwidth(t))
+                                    for (l, t) in zip(names_len, types_str)]
+
+        # Check if the user wants to display a summary about the DataFrame that is
+        # being printed. This will be shown using the `title` option of
+        # `pretty_table`.
+        title = summary ? Base.summary(ds) : ""
+
+        # If `rowid` is not `nothing`, then we are printing a data row. In this
+        # case, we will add this information using the row name column of
+        # PrettyTables.jl. Otherwise, we can just use the row number column.
+        if (rowid === nothing) || (ncol(ds) == 0)
+            show_row_number::Bool = get(kwargs, :show_row_number, true)
+            row_names = nothing
+
+            # If the columns with row numbers is not shown, then we should not
+            # display a vertical line after the first column.
+            vlines = fill(1, show_row_number)
+        else
+            nrow(ds) != 1 &&
+                throw(ArgumentError("rowid may be passed only with a single row data frame"))
+
+            # In this case, if the user does not want to show the row number, then
+            # we must hide the row name column, which is used to display the
+            # `rowid`.
+            if !get(kwargs, :show_row_number, true)
+                row_names = nothing
+                vlines = Int[]
+            else
+                row_names = [string(rowid)]
+                vlines = Int[1]
+            end
+
+            show_row_number = false
+        end
+        # if isgrouped(ds)
+        #     extrahlines = view(index(ds).starts,1:index(ds).ngroups[]) .- 1
+        # else
+            extrahlines = [0]
+        # end
+        # Print the table with the selected options.
+        # currently pretty_table is very slow for large tables, the workaround is to use only few rows
+        if nrow(ds) > 10^7*5
+            vcm = :bottom
+        else
+            vcm = :middle
+        end
+        pretty_table(io, ds;
+                    alignment                   = alignment,
+                    alignment_anchor_fallback   = :r,
+                    alignment_anchor_regex      = alignment_anchor_regex,
+                    body_hlines                 = extrahlines,
+                    compact_printing            = compact_printing,
+                    crop                        = crop,
+                    reserved_display_lines      = 2,
+                    ellipsis_line_skip          = 3,
+                    formatters                  = pt_formatter,
+                    header                      = (names_str, names_format, types_str),
+                    header_alignment            = :l,
+                    hlines                      = [:header],
+                    highlighters                = (_PRETTY_TABLES_HIGHLIGHTER,),
+                    maximum_columns_width       = maximum_columns_width,
+                    newline_at_end              = false,
+                    show_subheader              = eltypes,
+                    row_label_alignment          = :r,
+                    row_label_crayon             = Crayon(),
+                    row_label_column_title       = string(rowlabel),
+                    row_labels                   = row_names,
+                    row_number_alignment        = :r,
+                    row_number_column_title     = string(rowlabel),
+                    show_row_number             = show_row_number,
+                    title                       = title,
+                    vcrop_mode                  = vcm,
+                    vlines                      = vlines,
+                    kwargs...)
+
+        return nothing
+    end
+else
+    function _show(io::IO,
+            ds::AbstractDataset;
+            allrows::Bool = !get(io, :limit, false),
+            allcols::Bool = !get(io, :limit, false),
+            rowlabel::Symbol = :Row,
+            summary::Bool = true,
+            eltypes::Bool = true,
+            rowid = nothing,
+            truncate::Int = 32,
+            kwargs...)
+
+        _check_consistency(ds)
+
+        names_str = names(ds)
+        if typeof(ds) <: SubDataset
+            column_formats = _getformats_for_show(ds)
+        else
+            column_formats = _getformats(ds)
+        end
+        names_format = fill("identity", length(names_str))
+        _pt_formmatters_ = Function[]
+        # push!(_pt_formmatters_, _pretty_tables_general_formatter)
+        for (k,v) in column_formats
+            names_format[k] = string(v)
+            push!(_pt_formmatters_, (vv, i, j) -> j == k ? v(vv) : vv)
+        end
+        push!(_pt_formmatters_, _pretty_tables_general_formatter)
+
+        pt_formatter = _pt_formmatters_
+        names_len = Int[textwidth(n) for n in names_str]
+        maxwidth = Int[max(9, nl) for nl in names_len]
+        types = Any[eltype(c) for c in eachcol(ds)]
+        types_str = batch_compacttype(types, maxwidth)
+
+        if allcols && allrows
+            crop = :none
+        elseif allcols
+            crop = :vertical
+        elseif allrows
+            crop = :horizontal
+        else
+            crop = :both
+        end
+
+        # For consistency, if `kwargs` has `compact_printng`, we must use it.
+        compact_printing::Bool = get(kwargs, :compact_printing, get(io, :compact, true))
+
+        num_rows, num_cols = size(ds)
+
+        # By default, we align the columns to the left unless they are numbers,
+        # which is checked in the following.
+        alignment = fill(:l, num_cols)
+
+        # Create the dictionary with the anchor regex that is used to align the
+        # floating points.
+        alignment_anchor_regex = Pair{Int, Vector{Regex}}[]
+
+        # Regex to align real numbers.
+        alignment_regex_real = [r"\."]
+
+        # Regex for columns with complex numbers.
+        #
+        # Here we are matching `+` or `-` unless it is not at the beginning of the
+        # string or an `e` precedes it.
+        alignment_regex_complex = [r"(?<!^)(?<!e)[+-]"]
+
+        for i = 1:num_cols
+            type_i = our_nonmissingtype(types[i])
+
+            if type_i <: Complex
+                push!(alignment_anchor_regex, i => alignment_regex_complex)
+                alignment[i] = :r
+            elseif type_i <: Real
+                push!(alignment_anchor_regex, i => alignment_regex_real)
+                alignment[i] = :r
+            elseif type_i <: Number
+                alignment[i] = :r
+            end
+        end
+
+        # Make sure that `truncate` does not hide the type and the column name.
+        maximum_columns_width = Int[truncate == 0 ? 0 : max(truncate + 1, l, textwidth(t))
+                                    for (l, t) in zip(names_len, types_str)]
+
+        # Check if the user wants to display a summary about the DataFrame that is
+        # being printed. This will be shown using the `title` option of
+        # `pretty_table`.
+        title = summary ? Base.summary(ds) : ""
+
+        # If `rowid` is not `nothing`, then we are printing a data row. In this
+        # case, we will add this information using the row name column of
+        # PrettyTables.jl. Otherwise, we can just use the row number column.
+        if (rowid === nothing) || (ncol(ds) == 0)
+            show_row_number::Bool = get(kwargs, :show_row_number, true)
+            row_names = nothing
+
+            # If the columns with row numbers is not shown, then we should not
+            # display a vertical line after the first column.
+            vlines = fill(1, show_row_number)
+        else
+            nrow(ds) != 1 &&
+                throw(ArgumentError("rowid may be passed only with a single row data frame"))
+
+            # In this case, if the user does not want to show the row number, then
+            # we must hide the row name column, which is used to display the
+            # `rowid`.
+            if !get(kwargs, :show_row_number, true)
+                row_names = nothing
+                vlines = Int[]
+            else
+                row_names = [string(rowid)]
+                vlines = Int[1]
+            end
+
+            show_row_number = false
+        end
+        # if isgrouped(ds)
+        #     extrahlines = view(index(ds).starts,1:index(ds).ngroups[]) .- 1
+        # else
+            extrahlines = [0]
+        # end
+        # Print the table with the selected options.
+        # currently pretty_table is very slow for large tables, the workaround is to use only few rows
+        if nrow(ds) > 10^7*5
+            vcm = :bottom
+        else
+            vcm = :middle
+        end
+        pretty_table(io, ds;
+                    alignment                   = alignment,
+                    alignment_anchor_fallback   = :r,
+                    alignment_anchor_regex      = alignment_anchor_regex,
+                    compact_printing            = compact_printing,
+                    reserved_display_lines      = 2,
+                    formatters                  = pt_formatter,
+                    column_labels                      = [names_str, names_format, types_str],
+                    column_label_alignment            = :l,
+                    highlighters                = [_PRETTY_TABLES_HIGHLIGHTER],
+                    maximum_data_column_widths       = maximum_columns_width,
+                    new_line_at_end              = false,
+                    row_label_column_alignment          = :r,
+                    stubhead_label       = string(rowlabel),
+                    row_labels                   = row_names,
+                    show_row_number_column             = show_row_number,
+                    title                       = title,
+                    vertical_crop_mode                  = vcm,
+                    kwargs...)
+
+        return nothing
+    end
 end
 
 """

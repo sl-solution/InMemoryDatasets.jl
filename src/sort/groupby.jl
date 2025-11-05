@@ -443,16 +443,29 @@ end
 Base.summary(gds::GroupBy) =
 @sprintf("%d×%d View of Grouped Dataset, Grouped by: %s", size(gds.parent)..., join(_names(gds.parent)[gds.groupcols], " ,"))
 
+@static if pkgversion(PrettyTables).major == 2
+	function Base.show(io::IO, gds::GroupBy;
 
-function Base.show(io::IO, gds::GroupBy;
+		kwargs...)
+		_check_consistency(gds)
+		#TODO pretty_table is very slow for large views, temporary workaround, later we should fix this
+		if length(gds.perm) > 200
+			_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+		else
+			_show(io, view(gds.parent, gds.perm, :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+		end
+	end
+else
+	function Base.show(io::IO, gds::GroupBy;
 
-	kwargs...)
-	_check_consistency(gds)
-	#TODO pretty_table is very slow for large views, temporary workaround, later we should fix this
-	if length(gds.perm) > 200
-		_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
-	else
-		_show(io, view(gds.parent, gds.perm, :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+		kwargs...)
+		_check_consistency(gds)
+		#TODO pretty_table is very slow for large views, temporary workaround, later we should fix this
+		if length(gds.perm) > 200
+			_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number_column  = false, kwargs...)
+		else
+			_show(io, view(gds.parent, gds.perm, :); title = summary(gds), show_omitted_cell_summary=false, show_row_number_column  = false, kwargs...)
+		end
 	end
 end
 

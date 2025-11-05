@@ -147,14 +147,27 @@ Base.summary(gds::GatherBy) =
         @sprintf("%d×%d View of GatherBy Dataset, Gathered by: %s", size(gds.parent)..., join(_names(gds.parent)[gds.groupcols], " ,"))
 
 
-function Base.show(io::IO, gds::GatherBy;
+@static if pkgversion(PrettyTables).major == 2		
+	function Base.show(io::IO, gds::GatherBy;
 
-	kwargs...)
-	_check_consistency(gds)
-	if length(_get_perms(gds)) > 200
-		_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
-	else
-		_show(io, view(gds.parent, gds.perm, :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+		kwargs...)
+		_check_consistency(gds)
+		if length(_get_perms(gds)) > 200
+			_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+		else
+			_show(io, view(gds.parent, gds.perm, :); title = summary(gds), show_omitted_cell_summary=false, show_row_number  = false, kwargs...)
+		end
+	end
+else
+	function Base.show(io::IO, gds::GatherBy;
+
+		kwargs...)
+		_check_consistency(gds)
+		if length(_get_perms(gds)) > 200
+			_show(io, view(gds.parent, [first(gds.perm, 100);last(gds.perm, 100)], :); title = summary(gds), show_omitted_cell_summary=false, show_row_number_column  = false, kwargs...)
+		else
+			_show(io, view(gds.parent, gds.perm, :); title = summary(gds), show_omitted_cell_summary=false, show_row_number_column  = false, kwargs...)
+		end
 	end
 end
 
