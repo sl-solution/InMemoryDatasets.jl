@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Formats · InMemoryDatasets</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">InMemoryDatasets</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><a class="tocitem" href="../basics/">First Steps</a></li><li><a class="tocitem" href="../tutorial/">Tutorial</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../missing/">Missing Values</a></li><li class="is-active"><a class="tocitem" href>Formats</a><ul class="internal"><li><a class="tocitem" href="#Introduction"><span>Introduction</span></a></li><li><a class="tocitem" href="#Manipulating-formats"><span>Manipulating formats</span></a></li><li><a class="tocitem" href="#Modifying-a-data-set"><span>Modifying a data set</span></a></li><li><a class="tocitem" href="#Using-Dictionary"><span>Using Dictionary</span></a></li><li><a class="tocitem" href="#format-validation"><span><code>format</code> validation</span></a></li></ul></li><li><a class="tocitem" href="../map/">Call functions on each observation</a></li><li><a class="tocitem" href="../byrow/">Row-wise operations</a></li><li><a class="tocitem" href="../modify/">Transform columns</a></li><li><a class="tocitem" href="../filter/">Filter observations</a></li><li><a class="tocitem" href="../sorting/">Sort</a></li><li><a class="tocitem" href="../grouping/">Group observations</a></li><li><a class="tocitem" href="../aggregation/">Aggregation</a></li><li><a class="tocitem" href="../transpose/">Transpose data</a></li><li><a class="tocitem" href="../joins/">Joins</a></li></ul></li><li><a class="tocitem" href="../gallery/">Gallery</a></li><li><a class="tocitem" href="../performance/">Performance tips</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Formats</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Formats</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/sl-solution/InMemoryDatasets.jl/blob/master/docs/src/man/formats.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Formats"><a class="docs-heading-anchor" href="#Formats">Formats</a><a id="Formats-1"></a><a class="docs-heading-anchor-permalink" href="#Formats" title="Permalink"></a></h1><h2 id="Introduction"><a class="docs-heading-anchor" href="#Introduction">Introduction</a><a id="Introduction-1"></a><a class="docs-heading-anchor-permalink" href="#Introduction" title="Permalink"></a></h2><p><code>format</code> is a named function that is assigned to a column (variable). The <code>format</code> of a column will be called on the individual values of the column before some operations (like <code>show</code>, <code>sort</code>,...) are done on the data set. Each column (variable) in a data set has a <code>format</code> property. The initial <code>format</code> of any column is <code>identity</code>, however, <code>setformat!</code> and <code>removeformat!</code> can be used to modify the <code>format</code> of columns in a data set. By default, the <code>format</code> of a column will be shown in the header when a data set is displayed.</p><p>The <code>format</code> of a column doesn&#39;t change the actual values of the column, thus, the actual  values of a column will be untouched during adding or removing <code>format</code>s.</p><p>The processing of <code>format</code> is lazy, i.e. Datasets doesn&#39;t process <code>format</code> unless an operation needs to access the formatted values. This also means that modifying the <code>format</code> of a column is instance. However, be aware that modifying a column&#39;s <code>format</code> changes the <code>modified</code> meta information (i.e. the last time that the data set has been modified) of the data set.</p><blockquote><p>Note that processing of formats are usually done in parallel, thus, it is not safe to use a function which is not parallel safe, unless <code>threads = false</code> is passed to the function which uses the formatted values.</p></blockquote><p>In this section, we discuss the overall aspects of <code>format</code> and we postpone the practical use case of <code>format</code> to later sections when we introduce operations which access the formatted values.</p><h3 id="Examples"><a class="docs-heading-anchor" href="#Examples">Examples</a><a id="Examples-1"></a><a class="docs-heading-anchor-permalink" href="#Examples" title="Permalink"></a></h3><p>In this example, we create a simple data set and assign <code>iseven</code> function as the <code>format</code> for <code>:x1</code>, by using <code>setformat!(ds, 1 =&gt; iseven)</code>, note that we can also use the columns&#39; names to assign <code>format</code>, i.e. the function can be called like <code>setformat!(ds, :x1 =&gt; iseven)</code>. After calling <code>setformat!</code>, the format of the column will be set, and from this point any operation which support <code>format</code> will use these formatted values. One of the operations which uses formatted values is <code>show</code>. For instance, in the following example, the printed data set shows the formatted values.</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = 1:5, x2 = [1,2,1,2,1])
+5×2 Dataset
+ Row │ x1        x2
+     │ identity  identity
+     │ Int64?    Int64?
+─────┼────────────────────
+   1 │        1         1
+   2 │        2         2
+   3 │        3         1
+   4 │        4         2
+   5 │        5         1
+julia&gt; setformat!(ds, 1 =&gt; iseven)
+5×2 Dataset
+ Row │ x1      x2
+     │ iseven  identity
+     │ Int64?  Int64?
+─────┼──────────────────
+   1 │  false         1
+   2 │   true         2
+   3 │  false         1
+   4 │   true         2
+   5 │  false         1
+
+julia&gt; ds[1,1] # note that the actual value is not changed
+1</code></pre><h2 id="Manipulating-formats"><a class="docs-heading-anchor" href="#Manipulating-formats">Manipulating formats</a><a id="Manipulating-formats-1"></a><a class="docs-heading-anchor-permalink" href="#Manipulating-formats" title="Permalink"></a></h2><p>There are two functions that are handy for manipulating the columns&#39; <code>format</code>s, <code>setformat!</code> and <code>removeformat!</code>.</p><p><code>setformat!</code> and <code>removeformat!</code> are for setting and removing columns&#39; <code>format</code>, respectively. The syntax of these functions are</p><blockquote><p><code>setformat!(ds, arg...)</code></p></blockquote><blockquote><p><code>removeformat!(ds, cols...)</code></p></blockquote><p>For <code>setformat!</code> each <code>arg</code> in the argument must be of the <code>cols =&gt; fmt</code> form, where <code>fmt</code> is the named function and <code>cols</code> is either column(s) name(s), column(s) index(s), or regular expression, thus, expressions like <code>setformat!(ds, 1:10=&gt;sqrt)</code>, <code>setformat!(ds, r&quot;x&quot;=&gt;iseven, :y=&gt;sqrt)</code> are valid in InMemoryDatasets. When <code>cols</code> refers to more than one column, <code>fmt</code> will be assigned to all of those columns.</p><p>For <code>removeformat!</code> each <code>cols</code> in the argument is any column selector like column(s) name(s), column(s) index(s), or regular expression.</p><p>Beside these two functions, there exists the <code>getformat</code> function to query <code>format</code> of a column. The syntax of <code>getformat</code> is</p><blockquote><p><code>getformat(ds, col)</code></p></blockquote><p>where <code>col</code> is a single column identifier, i.e. column index or column&#39;s name.</p><h3 id="Examples-2"><a class="docs-heading-anchor" href="#Examples-2">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-2" title="Permalink"></a></h3><p>In the following example we assign user defined functions as the format for the first and the last column and use the <code>month</code> function (predefined in Julia Dates) as the format for the column <code>:date</code>. Note that, the actual values of columns haven&#39;t been modified, they are only shown with the formatted value. As you may observe, the formatted values can help us to scan easily the sale of each store in different month</p><pre><code class="language-julia-repl hljs">julia&gt; sale = Dataset(store = [&quot;store1&quot;, &quot;store1&quot;, &quot;store2&quot;,
+ 				&quot;store2&quot;, &quot;store3&quot;, &quot;store3&quot;, &quot;store3&quot;],
+				date = [Date(&quot;2020-05-01&quot;), Date(&quot;2020-06-01&quot;),
+				Date(&quot;2020-05-01&quot;), Date(&quot;2020-06-01&quot;),
+				Date(&quot;2020-05-01&quot;), Date(&quot;2020-06-01&quot;), Date(&quot;2020-07-01&quot;)],
+				sale = [10000, 10100, 20020, 21000, 20300, 20400, 5000])
+7×3 Dataset
+ Row │ store       date        sale
+     │ identity    identity    identity
+     │ String?     Date?       Int64?
+─────┼──────────────────────────────────
+   1 │ store1      2020-05-01     10000
+   2 │ store1      2020-06-01     10100
+   3 │ store2      2020-05-01     20020
+   4 │ store2      2020-06-01     21000
+   5 │ store3      2020-05-01     20300
+   6 │ store3      2020-06-01     20400
+   7 │ store3      2020-07-01      5000
+
+julia&gt; storeid(x) = parse(Int, replace(x, &quot;store&quot;=&gt;&quot;&quot;))
+storeid (generic function with 1 method)
+julia&gt; function SALE(x)
+           if x &lt; 10000
+               &quot;low&quot;
+           elseif x &lt; 20000
+               &quot;average&quot;
+           elseif x &lt; 21000
+               &quot;high&quot;
+           elseif x &gt;= 21000
+               &quot;excellent&quot;
+           else
+               missing
+           end
+       end
+SALE (generic function with 1 method)
+
+julia&gt; setformat!(sale, 1 =&gt; storeid, :date =&gt; month, :sale =&gt; SALE)
+7×3 Dataset
+ Row │ store       date   sale
+     │ storeid     month  SALE
+     │ String?     Date?  Int64?
+─────┼──────────────────────────────
+   1 │ 1           5        average
+   2 │ 1           6        average
+   3 │ 2           5           high
+   4 │ 2           6      excellent
+   5 │ 3           5           high
+   6 │ 3           6           high
+   7 │ 3           7            low
+
+julia&gt; getformat(sale, &quot;date&quot;)
+month (generic function with 3 methods)</code></pre><p>When the formatted values are not needed for some columns, a call to <code>removeformat!</code> can remove them,</p><pre><code class="language-julia-repl hljs">julia&gt; removeformat!(sale, [1,2])
+7×3 Dataset
+ Row │ store       date        sale
+     │ identity    identity    SALE
+     │ String?     Date?       Int64?
+─────┼───────────────────────────────────
+   1 │ store1      2020-05-01    average
+   2 │ store1      2020-06-01    average
+   3 │ store2      2020-05-01       high
+   4 │ store2      2020-06-01  excellent
+   5 │ store3      2020-05-01       high
+   6 │ store3      2020-06-01       high
+   7 │ store3      2020-07-01        low</code></pre><h2 id="Modifying-a-data-set"><a class="docs-heading-anchor" href="#Modifying-a-data-set">Modifying a data set</a><a id="Modifying-a-data-set-1"></a><a class="docs-heading-anchor-permalink" href="#Modifying-a-data-set" title="Permalink"></a></h2><p>The following rules administrate how a column format will automatically be changed if a data set is modified:</p><ul><li><p>As a general rule, the <code>format</code> of a column is preserved during different operations. For example, adding/removing a column to a data set don&#39;t change the <code>format</code> of the original/remaining columns.</p></li><li><p>The <code>format</code> of a column wouldn&#39;t change if only few observations are updated, modified, added, or deleted, however, if a column goes through a significant change (e.g. all values change, or the column is replaced), its <code>format</code> will be automatically removed.</p></li><li><p>The <code>format</code> of a column will be preserved during some operations where a new data set is created. For example, the <code>combine</code> function preserve the format of grouping variables. This feature will be discussed, in more details, when those operations are introduced in later sections.</p></li></ul><h2 id="Using-Dictionary"><a class="docs-heading-anchor" href="#Using-Dictionary">Using Dictionary</a><a id="Using-Dictionary-1"></a><a class="docs-heading-anchor-permalink" href="#Using-Dictionary" title="Permalink"></a></h2><p>One way to recode values of a data set is by using <code>format</code> which picks the formatted values from a dictionary. Since it is not possible to feed <code>format</code> with any extra positional argument rather than the actual values of observations, the dictionary that defines recoded values must be placed with a default value or must be set as keyword argument with a default value which refers to the actual dictionary that has been defined for this purpose. This argument should be type annotated to avoid any unnecessary allocation.</p><h3 id="Example"><a class="docs-heading-anchor" href="#Example">Example</a><a id="Example-1"></a><a class="docs-heading-anchor-permalink" href="#Example" title="Permalink"></a></h3><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(rand(1:2, 10, 3), :auto)
+10×3 Dataset
+ Row │ x1        x2        x3       
+     │ identity  identity  identity
+     │ Int64?    Int64?    Int64?   
+─────┼──────────────────────────────
+   1 │        1         2         1
+   2 │        1         2         2
+   3 │        1         2         2
+   4 │        2         1         1
+   5 │        1         1         2
+   6 │        1         2         2
+   7 │        2         2         1
+   8 │        2         1         2
+   9 │        2         1         1
+  10 │        1         1         1
+
+julia&gt; dict = Dict(1=&gt;&quot;yes&quot;, 2=&gt;&quot;no&quot;)
+Dict{Int64, String} with 2 entries:
+  2 =&gt; &quot;no&quot;
+  1 =&gt; &quot;yes&quot;
+
+julia&gt; fmt1(x, dict::Dict{Int, String} = dict) = get(dict, x, missing)
+fmt1 (generic function with 2 methods)
+
+julia&gt; setformat!(ds, 1:3 =&gt; fmt1)
+10×3 Dataset
+ Row │ x1      x2      x3     
+     │ fmt1    fmt1    fmt1   
+     │ Int64?  Int64?  Int64?
+─────┼────────────────────────
+   1 │    yes      no     yes
+   2 │    yes      no      no
+   3 │    yes      no      no
+   4 │     no     yes     yes
+   5 │    yes     yes      no
+   6 │    yes      no      no
+   7 │     no      no     yes
+   8 │     no     yes      no
+   9 │     no     yes     yes
+  10 │    yes     yes     yes
+</code></pre><h2 id="format-validation"><a class="docs-heading-anchor" href="#format-validation"><code>format</code> validation</a><a id="format-validation-1"></a><a class="docs-heading-anchor-permalink" href="#format-validation" title="Permalink"></a></h2><p>InMemoryDatasets doesn&#39;t validate the supplied <code>format</code> until it needs to use the formatted values for an operation, in that case, if the supplied <code>format</code> is not a valid <code>format</code>, InMemoryDatasets will throw errors. Also it is important to note that InMemoryDatasets is not aware of changing the definition of a <code>format</code> by users, thus, changing the definition of a function which is used as a <code>format</code> during a workflow may have some side effects. For example if a data set is <code>groupby!</code> with <code>mapformats = true</code> option, changing the definition of the formats invalidates the sorting order of the data set, but InMemoryDatasets is unaware of this, so, it is the user responsibility to remove the invalid formats in these situations.</p><p>In the following examples we demonstrate some scenarios which end up with an invalid <code>format</code>, and provide some remedies to fix the issues. Nevertheless, note that supplying an invalid <code>format</code> will not damage a data set and a simple call to <code>removeformat!</code> can be helpful to recover the original data set.</p><h3 id="Examples-3"><a class="docs-heading-anchor" href="#Examples-3">Examples</a><a class="docs-heading-anchor-permalink" href="#Examples-3" title="Permalink"></a></h3><p>First we create a data set and define a format.</p><pre><code class="language-julia-repl hljs">julia&gt; ds = Dataset(x1 = [-1, 0, 1], x2 = [1.1, missing, 2.2], x3 = [1,2,3])
+3×3 Dataset
+ Row │ x1        x2         x3
+     │ identity  identity   identity
+     │ Int64?    Float64?   Int64?
+─────┼───────────────────────────────
+   1 │       -1        1.1         1
+   2 │        0  missing           2
+   3 │        1        2.2         3
+
+julia&gt; custom_format(x) = x[2]
+custom_format (generic function with 1 method)</code></pre><ul><li><strong>The function supplied as <code>format</code> is not defined for some values</strong>: In this example, we use <code>sqrt</code> as <code>:x1</code>&#39;s <code>format</code>, but <code>:x1</code> contains negative values and <code>sqrt</code> is not defined for negative integers. Running the following expression will throw bunch of errors, because after setting <code>format</code> InMemoryDatasets is trying to display the data set, but it cannot do that.</li></ul><pre><code class="language-julia-repl hljs">julia&gt; setformat!(ds, 1 =&gt; sqrt)
+Error showing value of type Dataset:
+ERROR: DomainError with -1.0:
+sqrt will only return a complex result if called with a complex argument. Try sqrt(Complex(x)).
+[...]</code></pre><p>This issue can be solve manually by defining a user defined <code>format</code>:</p><pre><code class="language-julia-repl hljs">julia&gt; sqrt_fmt(x) = isless(x, 0) ? &quot;invalid&quot; : sqrt(x)
+sqrt_fmt (generic function with 1 method)
+
+julia&gt; setformat!(ds, 1 =&gt; sqrt_fmt)
+3×3 Dataset
+ Row │ x1         x2         x3
+     │ sqrt_fmt   identity   identity
+     │ Int64?     Float64?   Int64?
+─────┼────────────────────────────────
+   1 │ invalid          1.1         1
+   2 │       0.0  missing           2
+   3 │       1.0        2.2         3</code></pre><ul><li><strong>Ignoring <code>missing</code> values</strong>: In this example, we use <code>ROUND(x) = round(Int, x)</code> as <code>:x2</code> <code>format</code>, however, <code>round(Int, x)</code> doesn&#39;t know how to deal with <code>missing</code> values, thus, the same as the above example, InMemoryDatasets will throw errors.</li></ul><pre><code class="language-julia-repl hljs">julia&gt; ROUND(x) = round(Int, x)
+ROUND (generic function with 1 method)
+
+julia&gt; setformat!(ds, 2 =&gt; ROUND)
+Error showing value of type Dataset:
+ERROR: MissingException: cannot convert a missing value to type Int64: use Union{Int64, Missing} instead
+[...]</code></pre><p>To solve this issue, we can redefine <code>ROUND</code> as</p><blockquote><p><code>ROUND(x) = ismissing(x) ? missing : round(Int, x)</code></p></blockquote><p>or</p><blockquote><p><code>ROUND(x) = round(Union{Int, Missing}, x)</code></p></blockquote><p>and every thing should be fine. Note that after updating the definition of <code>ROUND</code>, Datasets automatically fixes the formatted values of <code>:x2</code></p><pre><code class="language-julia-repl hljs">julia&gt; ROUND(x) = ismissing(x) ? missing : round(Int, x)
+ROUND (generic function with 1 method)
+
+julia&gt; ds
+3×3 Dataset
+ Row │ x1         x2        x3
+     │ sqrt_fmt   ROUND     identity
+     │ Int64?     Float64?  Int64?
+─────┼───────────────────────────────
+   1 │ invalid           1         1
+   2 │       0.0   missing         2
+   3 │       1.0         2         3</code></pre><ul><li><strong>The function defined as format assumes the input argument is a vector</strong>: In this example <code>custom_format</code> (defined earlier) is used for the third column. <code>custom_format</code> is defined in such a way that it assumes the input argument is a vector, but Datasets applies <code>format</code> to each value.</li></ul><pre><code class="language-julia-repl hljs">julia&gt; setformat!(ds, 3=&gt;custom_format)
+Error showing value of type Dataset:
+ERROR: BoundsError
+[...]</code></pre><p>To fix the issue we should redefine <code>custom_format</code> or simply remove the column&#39;s <code>format</code>:</p><pre><code class="language-julia-repl hljs">julia&gt; removeformat!(ds, 3)
+3×3 Dataset
+ Row │ x1         x2        x3
+     │ sqrt_fmt   ROUND     identity
+     │ Int64?     Float64?  Int64?
+─────┼───────────────────────────────
+   1 │ invalid           1         1
+   2 │       0.0   missing         2
+   3 │       1.0         2         3</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../missing/">« Missing Values</a><a class="docs-footer-nextpage" href="../map/">Call functions on each observation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Wednesday 5 November 2025 01:19">Wednesday 5 November 2025</span>. Using Julia version 1.12.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
